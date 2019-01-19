@@ -3,63 +3,63 @@ local entMETA = FindMetaTable("Entity")
 local plyMETA = FindMetaTable("Player")
 local npcMETA = FindMetaTable("NPC")
 
-function entMETA:IsDrGBaseNextbot()
-  return self._DrGBaseNextbot == true
-end
-
-function entMETA:Timer_DrG(duration, callback)
-  timer.Simple(duration, function()
-    if not IsValid(self) then return end
-    callback()
-  end)
-end
-
-function entMETA:EmitSound_DrG(soundname, options, callback)
-  DrGBase.Utils.EmitSound(soundname, self, options, callback)
-end
-
-function entMETA:SetVar_DrG(name, value)
-  return DrGBase.Net.SetVar(name, value, self)
-end
-
-function entMETA:GetVar_DrG(name)
+function entMETA:GetDrGVar(name)
   return DrGBase.Net.GetVar(name, self)
 end
 
+function plyMETA:DrG_Possessing()
+  return DrGBase.Nextbot.Possessing(self)
+end
+
+function entMETA:DrG_IsTargettable()
+  if not IsValid(self) then return false end
+  if self:GetClass() == "npc_bullseye" then return false end
+  if self:IsPlayer() or self:IsNPC() or self.Type == "nextbot" or
+  self:IsFlagSet(FL_OBJECT) then return true end
+end
+
 if SERVER then
-  util.AddNetworkString("DrGBaseMetaScreenShake")
 
-  function entMETA:Explode_DrG(options)
-    options = options or {}
-    if options.remove == nil then options.remove = true end
-    options.owner = self
-    local pos = self:GetPos()
-    if options.remove then self:Remove() end
-    DrGBase.Utils.Explosion(pos, options)
+  function entMETA:SetDrGVar(name, value)
+    return DrGBase.Net.SetVar(name, value, self)
   end
 
-  function plyMETA:ScreenShake_DrG(amplitude, frequency, duration)
-    if amplitude == nil or frequency == nil or duration == nil then return end
-    net.Start("DrGBaseMetaScreenShake")
-    net.WriteFloat(amplitude)
-    net.WriteFloat(frequency)
-    net.WriteFloat(duration)
-    net.Send(self)
+  function plyMETA:DrG_JoinFaction(faction)
+    self:DrG_InitFactions()
+    self._DrGBaseFactions[string.upper(faction)] = true
   end
+  function plyMETA:DrG_LeaveFaction(faction)
+    self:DrG_InitFactions()
+    self._DrGBaseFactions[string.upper(faction)] = false
+  end
+  function plyMETA:DrG_IsInFaction(faction)
+    self:DrG_InitFactions()
+    return self._DrGBaseFactions[string.upper(faction)] or false
+  end
+  function plyMETA:DrG_GetFactions()
+    self:DrG_InitFactions()
+    local factions = {}
+    for faction, joined in pairs(self._DrGBaseFactions) do
+      if joined then table.insert(factions, faction) end
+    end
+    return factions
+  end
+  function plyMETA:DrG_InitFactions()
+    self._DrGBaseFactions = self._DrGBaseFactions or {}
+  end
+
+  -- Callbacks --
+
+  DrGBase.Net.DefineCallback("DrGBaseFetchCreationID", function(data)
+    local ent = Entity(data.ent)
+    if not IsValid(ent) then return -1
+    else return ent:GetCreationID() end
+  end)
 
 else
 
-  function plyMETA:ScreenShake_DrG(amplitude, frequency, duration)
-    if self:EntIndex() ~= LocalPlayer():EntIndex() then return end
-    if amplitude == nil or frequency == nil or duration == nil then return end
-    util.ScreenShake(self:GetPos(), amplitude, frequency, duration, 999999)
+  function entMETA:DrG_FetchCreationID(callback)
+    DrGBase.Net.UseCallback("DrGBaseFetchCreationID", callback)
   end
-
-  net.Receive("DrGBaseMetaScreenShake", function()
-    local amplitude = net.ReadFloat()
-    local frequency = net.ReadFloat()
-    local duration = net.ReadFloat()
-    LocalPlayer():ScreenShake_DrG(amplitude, frequency, duration)
-  end)
 
 end

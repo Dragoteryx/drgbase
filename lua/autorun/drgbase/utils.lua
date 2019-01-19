@@ -25,8 +25,55 @@ function DrGBase.Utils.RunTraces(starts, ends, data, callback)
   }
 end
 
-function DrGBase.Utils.PackTable(...)
-  return {n = select("#", ...); ...}
+local coroutines = {}
+hook.Add("Think", "DrGBaseCoroutines", function()
+  for i, co in ipairs(coroutines) do
+    local status = coroutine.status(co)
+    if status == "suspended" then
+			coroutine.resume(co)
+		elseif status == "dead" then
+			table.RemoveByValue(coroutines, co)
+		end
+  end
+end)
+
+function DrGBase.Utils.Coroutine(callback)
+  local co = coroutine.create(callback)
+  table.insert(coroutines, co)
+end
+
+function DrGBase.Utils.ConvertDamage(dmg)
+  local data = {}
+  data.ammoType = dmg:GetAmmoType()
+  data.attacker = dmg:GetAttacker()
+  data.baseDamage = dmg:GetBaseDamage()
+  data.damage = dmg:GetDamage()
+  data.damageBonus = dmg:GetDamageBonus()
+  data.damageCustom = dmg:GetDamageCustom()
+  data.damageForce = dmg:GetDamageForce()
+  data.damagePosition = dmg:GetDamagePosition()
+  data.damageType = dmg:GetDamageType()
+  data.inflictor = dmg:GetInflictor()
+  data.maxDamage = dmg:GetMaxDamage()
+  data.reportedPosition = dmg:GetReportedPosition()
+  return data
+end
+
+function DrGBase.Utils.RecreateDamage(data)
+  local dmg = DamageInfo()
+  dmg:SetAmmoType(data.ammoType)
+  if IsValid(data.attacker) then dmg:SetAttacker(data.attacker) end
+  -- data.baseDamage is not used
+  dmg:SetDamage(data.damage)
+  dmg:SetDamageBonus(data.damageBonus)
+  dmg:SetDamageCustom(data.damageCustom)
+  dmg:SetDamageForce(data.damageForce)
+  dmg:SetDamagePosition(data.damagePosition)
+  dmg:SetDamageType(data.damageType)
+  if IsValid(data.inflictor) then dmg:SetInflictor(data.inflictor) end
+  dmg:SetMaxDamage(data.maxDamage)
+  dmg:SetReportedPosition(data.reportedPosition)
+  return dmg
 end
 
 function DrGBase.Utils.RandomPos(pos, maxradius, minradius, nodegraph)
@@ -48,63 +95,11 @@ function DrGBase.Utils.RandomPos(pos, maxradius, minradius, nodegraph)
   end
 end
 
-local realisticSounds = {}
-hook.Add("Think", "DrGBaseRealisticSoundsThink", function()
-  for i, co in ipairs(realisticSounds) do
-    if coroutine.status(co) == "dead" then
-      table.RemoveByValue(realisticSounds, co)
-    else coroutine.resume(co) end
-  end
-end)
-
-function DrGBase.Utils.EmitSound(soundname, pos, options, callback)
-  if soundname == nil or pos == nil then return end
-  options = options or {}
-  if options.radius == nil then options.radius = 999999999 end
-  if options.volume == nil then options.volume = 1 end
-  if options.pitch == nil then options.pitch = 100 end
-  if options.channel == nil then options.channel = CHAN_AUTO end
-  if pos.EmitSound ~= nil then
-    pos:EmitSound(soundname, 75, options.pitch, 0, options.channel)
-    pos = pos:GetPos()
-  end
-  if callback == nil then callback = function() end end
-  local co = coroutine.create(function()
-    local now = CurTime()
-    local reached = {}
-    local soundDistance = 0
-    while soundDistance <= options.radius do
-      local players = {}
-      if SERVER then entities = ents.GetAll()
-      else entities = {LocalPlayer()} end
-      soundDistance = (340/0.01905)*(CurTime()-now)
-      local soundDistsqr = math.pow(soundDistance, 2)
-      for i, ent in ipairs(entities) do
-        if reached[ent:EntIndex()] then continue end
-        local distsqr = ent:GetPos():DistToSqr(pos)
-        if soundDistsqr >= distsqr then
-          local distance = math.sqrt(distsqr)
-          reached[ent:EntIndex()] = true
-          local res = callback(ent, distance, CurTime()-now)
-          if (res == nil or res) and ent:IsPlayer() then
-            if SERVER then
-              net.Start("DrGBaseUtilsEmitSound")
-              net.WriteString(soundname)
-              net.WriteFloat(options.volume*-(distance/options.radius)+1)
-              net.WriteFloat(options.pitch)
-              net.Send(ent)
-            else sound.Play(soundname, LocalPlayer():GetPos(), 75, options.pitch, options.volume) end
-          end
-        end
-      end
-      coroutine.yield()
-    end
-  end)
-  table.insert(realisticSounds, co)
+function DrGBase.Utils.BitFlag(num, flag)
+  return bit.band(num, flag) ~= 0
 end
 
 if SERVER then
-  util.AddNetworkString("DrGBaseUtilsEmitSound")
 
   function DrGBase.Utils.Explosion(pos, options)
     if options == nil then options = {} end
@@ -120,12 +115,5 @@ if SERVER then
   end
 
 else
-
-  net.Receive("DrGBaseUtilsEmitSound", function()
-    local soundname = net.ReadString()
-    local volume = net.ReadFloat()
-    local pitch = net.ReadFloat()
-    sound.Play(soundname, LocalPlayer():GetPos(), 75, pitch, volume)
-  end)
 
 end

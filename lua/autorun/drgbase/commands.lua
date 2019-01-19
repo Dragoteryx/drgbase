@@ -1,11 +1,11 @@
 
 DrGBase.Commands = DrGBase.Commands or {}
-DrGBase.Commands._List = DrGBase.Commands._List or {}
+local commands = {}
 
 function DrGBase.Commands.Add(prefix, name, callback, autoComplete, helpText, flags)
   if string.find(name, " ") ~= nil then return false end
   concommand.Add(name, callback, autoComplete, helpText, flags)
-  DrGBase.Commands._List[name] = {
+  commands[name] = {
     prefix = prefix,
     callback = callback
   }
@@ -15,16 +15,16 @@ end
 function DrGBase.Commands.Remove(name)
   if not DrGBase.Commands.Exists(name) then return false end
   concommand.Remove(name)
-  DrGBase.Commands._List[name] = nil
+  commands[name] = nil
   return true
 end
 
 function DrGBase.Commands.Exists(name)
-  return DrGBase.Commands._List[name] ~= nil
+  return commands[name] ~= nil
 end
 
 local function CheckChatCommands(ply, str)
-  for name, command in pairs(DrGBase.Commands._List) do
+  for name, command in pairs(commands) do
     if string.Split(str, " ")[1] ~= command.prefix..name then continue end
     local argstr = string.Trim(string.Replace(str, command.prefix..name, ""))
     local args = string.Split(argstr, " ")

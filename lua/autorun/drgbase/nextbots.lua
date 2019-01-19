@@ -21,9 +21,9 @@ end
 function DrGBase.Nextbot.GetLoaded()
   return list.Get("DrGBaseNextbot")
 end
-function DrGBase.Nextbot.IsLoaded(class)
-  if type(class) ~= "string" then class = nextbot:GetClass() end
-  return list.Get("DrGBaseNextbot")[class] ~= nil
+function DrGBase.Nextbot.IsLoaded(nextbot)
+  if not isstring(nextbot) then nextbot = nextbot:GetClass() end
+  return list.Get("DrGBaseNextbot")[nextbot] ~= nil
 end
 
 function DrGBase.Nextbot.Possessing(ply)
@@ -43,30 +43,10 @@ else
   function DrGBase.Nextbot.GetAll()
     local nextbots = {}
     for i, ent in ipairs(ents.GetAll()) do
-      if ent:IsDrGBaseNextbot() then
-        table.insert(nextbots, ent)
-      end
+      if not ent.IsDrGNextbot then continue end
+      table.insert(nextbots, ent)
     end
     return nextbots
   end
-
-  -- draw nextbot info
-  hook.Add("PostDrawOpaqueRenderables", "DrGBaseNextbotDrawDebug", function()
-    if not DrGBase.Nextbot.ConVars.Debug:GetBool() then return end
-    for i, ent in ipairs(DrGBase.Nextbot.GetAll()) do
-      local bound1, bound2 = ent:GetCollisionBounds()
-      render.DrawWireframeBox(ent:GetPos(), Angle(0, 0, 0), bound1, bound2, DrGBase.Colors.White, false)
-      render.DrawLine(ent:BullseyePos(), ent:BullseyePos() + ent:GetVelocity(), DrGBase.Colors.Orange, false)
-      if ent:EyesPos() ~= ent:BullseyePos() then
-        render.DrawWireframeSphere(ent:BullseyePos(), 2, 4, 4, DrGBase.Colors.Orange, false)
-      end
-      local los = DrGBase.Colors.Red
-      if ent:LineOfSight(LocalPlayer()) then los = DrGBase.Colors.Green end
-      render.DrawWireframeSphere(ent:EyesPos(), 2, 4, 4, los, false)
-      if LocalPlayer():Alive() then
-        render.DrawLine(ent:EyesPos(), LocalPlayer():WorldSpaceCenter(), los, true)
-      end
-    end
-  end)
 
 end
