@@ -5,35 +5,25 @@ if SERVER then
     if self.EnableBodyMoveXY then
       self:BodyMoveXY()
     else
-      if self:IsPossessed() then
-        local moveX = math.Round(self:GetPoseParameter("move_x"), 1)
-        local moveY = math.Round(self:GetPoseParameter("move_y"), 1)
-        local possessor = self:GetPossessor()
-        local front = possessor:KeyDown(IN_FORWARD)
-        local back = possessor:KeyDown(IN_BACK)
-        local left = possessor:KeyDown(IN_MOVELEFT)
-        local right = possessor:KeyDown(IN_MOVERIGHT)
-        if front and not back then
-          self:SetPoseParameter("move_x", moveX+0.1)
-        elseif back and not front then
-          self:SetPoseParameter("move_x", moveX-0.1)
-        elseif moveX > 0 then
-          self:SetPoseParameter("move_x", moveX-0.1)
-        elseif moveX < 0 then
-          self:SetPoseParameter("move_x", moveX+0.1)
-        end
-        if right and not left then
-          self:SetPoseParameter("move_y", moveY+0.1)
-        elseif left and not right then
-          self:SetPoseParameter("move_y", moveY-0.1)
-        elseif moveY > 0 then
-          self:SetPoseParameter("move_y", moveY-0.1)
-        elseif moveY < 0 then
-          self:SetPoseParameter("move_y", moveY+0.1)
-        end
-      else
-        self:SetPoseParameter("move_x", 1)
-        self:SetPoseParameter("move_y", 0)
+      local moveX = math.Round(self:GetPoseParameter("move_x"), 1)
+      local moveY = math.Round(self:GetPoseParameter("move_y"), 1)
+      if self:IsMovingForward() then
+        self:SetPoseParameter("move_x", moveX+0.1)
+      elseif self:IsMovingBackward() then
+        self:SetPoseParameter("move_x", moveX-0.1)
+      elseif moveX > 0 then
+        self:SetPoseParameter("move_x", moveX-0.1)
+      elseif moveX < 0 then
+        self:SetPoseParameter("move_x", moveX+0.1)
+      end
+      if self:IsMovingRight() then
+        self:SetPoseParameter("move_y", moveY+0.1)
+      elseif self:IsMovingLeft() then
+        self:SetPoseParameter("move_y", moveY-0.1)
+      elseif moveY > 0 then
+        self:SetPoseParameter("move_y", moveY-0.1)
+      elseif moveY < 0 then
+        self:SetPoseParameter("move_y", moveY+0.1)
       end
       self:FrameAdvance()
     end
@@ -64,13 +54,13 @@ if SERVER then
     return true
   end
 
-  function ENT:AddSequenceCallback(seq, delays, callback)
+  function ENT:AddSequenceCallback(seq, cycles, callback)
     if isstring(seq) then seq = self:LookupSequence(seq) end
     self._DrGBaseSequenceCallbacks[seq] = self._DrGBaseSequenceCallbacks[seq] or {}
-    if not istable(delays) then delays = {delays} end
-    for i, delay in ipairs(delays) do
+    if not istable(cycles) then cycles = {cycles} end
+    for i, cycle in ipairs(cycles) do
       table.insert(self._DrGBaseSequenceCallbacks[seq], {
-        delay = delay,
+        cycle = cycle,
         callback = callback
       })
     end
@@ -96,50 +86,27 @@ if SERVER then
       angles.r = 0
       self:SetAngles(angles)
     end
-    if CurTime() < self._DrGBaseHandleAnimDelay then return end
-    self._DrGBaseHandleAnimDelay = CurTime() + 0.1
-    local curr = self._DrGBaseCurrentAnimCount
-    local speed = self:Speed()
-    local upOnly = false
-    local downOnly = false
-    if self:IsFlying() then
-      if self:IsPossessed() then
-        local possessor = self:GetPossessor()
-        local up = possessor:KeyDown(IN_JUMP)
-        local down = possessor:KeyDown(IN_DUCK)
-        upOnly = up and not down
-        downOnly = down and not up
-      end
-    end
     local seq, rate
     if self:EnableSyncedAnimations() then
-      seq, rate = self:SyncAnimation(speed, self:IsOnGround(), self:IsFlying(), upOnly, downOnly)
-    else seq = self:GetSequenceName(self:GetSequence()) end
-    if seq == nil then return end
-    seq = string.lower(seq)
-    if rate == nil then
-      if self:EnableSyncedAnimations() then rate = 1
-      else rate = self:GetPlaybackRate() end
+      seq, rate = self:SyncAnimation(self:Speed(), self:IsOnGround(), self:IsFlying())
+    else
+      seq = self:GetSequence()
+      rate = self:GetPlaybackRate()
     end
-    if self._DrGBaseCurrentAnimLastCycle > self:GetCycle() or
-    seq ~= self._DrGBaseCurrentAnim or
-    math.Round(rate, 1) ~= math.Round(self._DrGBaseCurrentAnimRate, 1) then
-      self:ResetSequence(seq)
-      self:SetPlaybackRate(rate)
-      self._DrGBaseCurrentAnimCount = self._DrGBaseCurrentAnimCount + 1
-      local curr = self._DrGBaseCurrentAnimCount
-      if self._DrGBaseSequenceCallbacks[self:LookupSequence(seq)] ~= nil then
-        for i, todo in ipairs(self._DrGBaseSequenceCallbacks[self:LookupSequence(seq)]) do
-          self:Timer(todo.delay*(self:SequenceDuration(self:LookupSequence(seq))/rate), function()
-            if curr ~= self._DrGBaseCurrentAnimCount then return end
-            todo.callback(todo.delay, self:GetCycle())
-          end)
+    if isstring(seq) then seq = self:LookupSequence(seq) end
+    local callbacks = self._DrGBaseSequenceCallbacks[seq]
+    if callbacks ~= nil then
+      for i, todo in ipairs(callbacks) do
+        if self._DrGBaseLastAnimCycle < todo.cycle and self:GetCycle() >= todo.cycle then
+          todo.callback(todo.cycle, self:GetCycle())
         end
       end
     end
-    self._DrGBaseCurrentAnim = string.lower(self:GetSequenceName(self:GetSequence()))
-    self._DrGBaseCurrentAnimRate = self:GetPlaybackRate()
-    self._DrGBaseCurrentAnimLastCycle = self:GetCycle()
+    self._DrGBaseLastAnimCycle = self:GetCycle()
+    self:SetPlaybackRate(rate or 1)
+    if seq ~= -1 and (seq ~= self:GetSequence() or self:GetCycle() == 1) then
+      self:ResetSequence(seq)
+    end
   end
   function ENT:SyncAnimation() end
 

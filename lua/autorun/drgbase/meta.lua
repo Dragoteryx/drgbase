@@ -11,17 +11,23 @@ function plyMETA:DrG_Possessing()
   return DrGBase.Nextbot.Possessing(self)
 end
 
-function entMETA:DrG_IsTargettable()
-  if not IsValid(self) then return false end
-  if self:GetClass() == "npc_bullseye" then return false end
-  if self:IsPlayer() or self:IsNPC() or self.Type == "nextbot" or
-  self:IsFlagSet(FL_OBJECT) then return true end
-end
-
 if SERVER then
 
   function entMETA:SetDrGVar(name, value)
     return DrGBase.Net.SetVar(name, value, self)
+  end
+
+  function entMETA:DrG_IsSanic()
+    return self.OnReloaded ~= nil and
+    self.GetNearestTarget ~= nil and
+    self.AttackNearbyTargets ~= nil and
+    self.IsHidingSpotFull ~= nil and
+    self.GetNearestUsableHidingSpot ~= nil and
+    self.ClaimHidingSpot ~= nil and
+    self.AttemptJumpAtTarget ~= nil and
+    self.LastPathingInfraction ~= nil and
+    self.RecomputeTargetPath ~= nil and
+    self.UnstickFromCeiling ~= nil
   end
 
   function plyMETA:DrG_JoinFaction(faction)

@@ -4,19 +4,50 @@ function ENT:GetSpeed()
 end
 
 function ENT:Speed()
-  return self:GetVelocity():Length()
+  return math.Round(self:GetVelocity():Length())
+end
+function ENT:SpeedSqr()
+  return math.Round(self:GetVelocity():LengthSqr())
 end
 
-function ENT:SpeedSqr()
-  return self:GetVelocity():LengthSqr()
+function ENT:IsFlying()
+  return false
 end
 
 function ENT:IsMoving()
   return self:SpeedSqr() ~= 0
 end
 
-function ENT:IsFlying()
-  return false
+function ENT:IsMovingForward()
+  if SERVER and self:IsPossessed() or
+  CLIENT and self:IsPossessedByLocalPlayer() then
+    return self:GetPossessor():KeyDown(IN_FORWARD) and
+    not self:GetPossessor():KeyDown(IN_BACK)
+  else return true end
+end
+
+function ENT:IsMovingBackward()
+  if SERVER and self:IsPossessed() or
+  CLIENT and self:IsPossessedByLocalPlayer() then
+    return self:GetPossessor():KeyDown(IN_BACK) and
+    not self:GetPossessor():KeyDown(IN_FORWARD)
+  else return false end
+end
+
+function ENT:IsMovingLeft()
+  if SERVER and self:IsPossessed() or
+  CLIENT and self:IsPossessedByLocalPlayer() then
+    return self:GetPossessor():KeyDown(IN_MOVELEFT) and
+    not self:GetPossessor():KeyDown(IN_MOVERIGHT)
+  else return false end
+end
+
+function ENT:IsMovingRight()
+  if SERVER and self:IsPossessed() or
+  CLIENT and self:IsPossessedByLocalPlayer() then
+    return self:GetPossessor():KeyDown(IN_MOVERIGHT) and
+    not self:GetPossessor():KeyDown(IN_MOVELEFT)
+  else return false end
 end
 
 if SERVER then
@@ -49,7 +80,7 @@ if SERVER then
     	path:Update(self)
     	if options.draw then path:Draw() end
     	if self.loco:IsStuck() then
-    		self:OnStuck()
+    		self:HandleStuck()
     		return "stuck"
     	end
     	if options.maxage and path:GetAge() > options.maxage then
@@ -130,21 +161,27 @@ if SERVER then
 
   -- Handlers --
 
+  function ENT:EnableSpeedFetch(bool)
+    if bool == nil then return self._DrGBaseSpeedFetch
+    elseif bool then self._DrGBaseSpeedFetch = true
+    else self._DrGBaseSpeedFetch = false end
+  end
+
   function ENT:_HandleMovement()
+    if not self:EnableSpeedFetch() then return end
+    local speed
     if self:IsPossessed() then
       local possessor = self:GetPossessor()
-      self:SetSpeed(self:PossessionGroundSpeed(possessor:KeyDown(IN_SPEED)))
-    else
-      self:SetSpeed(self:GroundSpeed(self:GetState()))
-    end
+      if self:IsFlying() then speed = self:PossessionFlightSpeed(possessor:KeyDown(IN_SPEED))
+      else speed = self:PossessionGroundSpeed(possessor:KeyDown(IN_SPEED)) end
+    elseif self:IsFlying() then speed = self:FlightSpeed(self:GetState())
+    else speed = self:GroundSpeed(self:GetState()) end
+    self:SetSpeed(speed)
   end
   function ENT:GroundSpeed() end
   function ENT:FlightSpeed() end
   function ENT:PossessionGroundSpeed() end
   function ENT:PossessionFlightSpeed() end
-  function ENT:PossessionFlightBuoyancy() end
-  function ENT:OnStartFlying() end
-  function ENT:OnStopFlying() end
 
 else
 

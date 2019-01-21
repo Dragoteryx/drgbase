@@ -12,14 +12,18 @@ end
 
 function ENT:DrG_EyePos()
   local bound1, bound2 = self:GetCollisionBounds()
-  local eyespos = self:GetPos() + (bound1 + bound2)/2
+  local eyepos = self:GetPos() + (bound1 + bound2)/2
   if self.EyeBone ~= nil then
     local boneid = self:LookupBone(self.EyeBone)
     if boneid ~= nil then
-      eyespos = self:GetBonePosition(boneid)
+      eyepos = self:GetBonePosition(boneid)
     end
   end
-  return eyespos
+  eyepos = eyepos +
+  self:GetForward()*self.EyeOffset.x +
+  self:GetRight()*self.EyeOffset.y +
+  self:GetUp()*self.EyeOffset.z
+  return eyepos
 end
 
 function ENT:Height()
@@ -44,13 +48,18 @@ function ENT:IsDying()
 end
 
 function ENT:IsDead()
-  return self:GetDrGVar("DrGBaseDead")
+  return self:IsDying() or self:GetDrGVar("DrGBaseDead")
 end
 
 function ENT:CombineBall(value)
   if CLIENT then return self:GetDrGVar("DrGBaseCombineBall")
   elseif isstring(value) then self:SetDrGVar("DrGBaseCombineBall", value)
   else return self:GetDrGVar("DrGBaseCombineBall") end
+end
+
+function ENT:HealthNetworked()
+  if SERVER then return self:Health()
+  else return self:GetDrGVar("DrGBaseHealthNetworked") end
 end
 
 if SERVER then
@@ -87,17 +96,6 @@ if SERVER then
   end)
 
   -- Handlers --
-
-  function ENT:_HandleAmbientSounds()
-    if #self.AmbientSounds > 0 and self._DrGBaseAmbientSound == nil then
-      local ambient = self.AmbientSounds[math.random(#self.AmbientSounds)]
-      self._DrGBaseAmbientSound = ambient.sound
-      self:EmitSound(ambient.sound)
-      self:Timer(ambient.duration, function()
-        self._DrGBaseAmbientSound = nil
-      end)
-    end
-  end
 
   function ENT:_HandleHealthRegen()
     if CurTime() < self._DrGBaseHealthRegenDelay then return end

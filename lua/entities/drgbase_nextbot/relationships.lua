@@ -6,9 +6,14 @@ hook.Add("Think", "DrGBaseRefreshTargettableEntitiesList", function()
   targettablesDelay = CurTime() + 1
   local newTargettables = {}
   for i, ent in ipairs(ents.GetAll()) do
-    if ent:DrG_IsTargettable() then table.insert(newTargettables, ent) end
+    if not IsValid(ent) then continue end
+    if ent:GetClass() == "npc_bullseye" then continue end
+    if ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot" or
+    ent:IsFlagSet(FL_OBJECT) then
+      table.insert(newTargettables, ent)
+    end
   end
-  targettables = newTargettables
+  table.CopyFromTo(newTargettables, targettables)
 end)
 
 function ENT:GetTargettableEntities()
@@ -75,18 +80,13 @@ if SERVER then
     [D_ER] = 0
   }
 
-  function ENT:GetDefaultRelationship()
-    return self._DrGBaseDefaultRelationship
-  end
-  function ENT:SetDefaultRelationship(relationship)
-    self._DrGBaseDefaultRelationship = relationship
-  end
-
   function ENT:GetRelationship(ent)
     if not IsValid(ent) then return D_ER end
     if self:EntIndex() == ent:EntIndex() then return D_ER end
     if not ent:DrG_IsTargettable() then return D_ER end
-    if ent:IsPlayer() and (GetConVar("ai_ignoreplayers"):GetBool() or IsValid(ent:DrG_Possessing())) then return D_NU end
+    if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool() or IsValid(ent:DrG_Possessing())) then return D_NU end
+    if ent.IsDrGNextbot and ent:IsDead() then return D_NU end
+    if ent:Health() <= 0 then return D_NU end
     local individual = self:GetEntityRelationship(ent)
     if individual then return individual end
     local relationships = {}
@@ -102,15 +102,26 @@ if SERVER then
         if ent:IsInFaction(faction) then
           table.insert(relationships, relationship)
         end
+      elseif ent:DrG_IsSanic() then
+        if faction == DRGBASE_FACTION_SANIC then
+          table.insert(relationships, relationship)
+        end
       elseif ent:IsNPC() then
         local def = HL2Factions[ent:GetClass()]
         if def ~= nil then
-          if def == faction then table.insert(relationships, relationship) end
-        elseif ent.IsVJBaseSNPC then
-          for i, class in ipairs(ent.VJ_NPC_Class) do
-            if string.upper(class) == faction then
+          if def == faction then
+            table.insert(relationships, relationship)
+          end
+        else
+          if ent.IsVJBaseSNPC then
+            for i, class in ipairs(ent.VJ_NPC_Class) do
+              if string.upper(class) ~= faction then continue end
               table.insert(relationships, relationship)
               break
+            end
+          elseif ent.CPTBase_NPC then
+            if string.upper(ent.Faction) == faction then
+              table.insert(relationships, relationship)
             end
           end
         end
@@ -127,8 +138,14 @@ if SERVER then
         return relPrios[rel1] > relPrios[rel2]
       end)
       return relationships[1]
-    end
-    return self:GetDefaultRelationship()
+    else return self:GetDefaultRelationship() end
+  end
+
+  function ENT:GetDefaultRelationship()
+    return self._DrGBaseDefaultRelationship
+  end
+  function ENT:SetDefaultRelationship(relationship)
+    self._DrGBaseDefaultRelationship = relationship
   end
 
   function ENT:GetEntityRelationship(ent)
@@ -270,7 +287,7 @@ if SERVER then
   DrGBase.Net.DefineCallback("DrGBaseNextbotEntityRelationship", function(data)
     local nextbot = Entity(data.nextbot)
     local ent = Entity(data.ent)
-    if not IsValid(nextbot) or not IsValid(ent) then return D_ER end
+    if not IsValid(nextbot) then return D_ER end
     return nextbot:GetRelationship(ent)
   end)
 
@@ -281,7 +298,7 @@ else
       nextbot = self:EntIndex(), ent = ent:EntIndex()
     }, function(res)
       if not IsValid(self) then return end
-      if IsValid(ent) then callback(D_ER)
+      if not IsValid(ent) then callback(D_ER)
       else callback(res) end
     end)
   end

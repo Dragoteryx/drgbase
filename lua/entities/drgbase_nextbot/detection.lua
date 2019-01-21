@@ -4,8 +4,7 @@ function ENT:LineOfSight(ent, fov, range)
   if self:EntIndex() == ent:EntIndex() then return false end
   if range == nil then range = self.SightRange end
   if range <= 0 then return false end
-  local sqrdist = self:GetRangeSquaredTo(ent)
-  if sqrdist > math.pow(range, 2) then return false end
+  if self:DrG_EyePos():DistToSqr(ent:GetPos()) > math.pow(range, 2) then return false end
   if fov == nil then fov = self.SightFOV end
   if fov > 360 then fov = 360 end
   if fov <= 0 then return false end
@@ -46,9 +45,7 @@ if SERVER then
   function ENT:SpotEntity(ent)
     if not IsValid(ent) then return end
     if self:EntIndex() == ent:EntIndex() then return end
-    if not self:HasSpottedEntity(ent) then
-      self:_Debug("spotted entity '"..ent:GetClass().."' ("..ent:EntIndex()..").")
-    end
+    self:_Debug("spotted entity '"..ent:GetClass().."' ("..ent:EntIndex()..").")
     self._DrGBaseSpotted[ent:GetCreationID()] = CurTime()
     if not onspotentity then
       onspotentity = true
@@ -60,19 +57,20 @@ if SERVER then
 
   function ENT:ForgetEntity(ent)
     if not IsValid(ent) then return end
+    self:_Debug("spotted entity '"..ent:GetClass().."' ("..ent:EntIndex()..").")
     self._DrGBaseSpotted[ent:GetCreationID()] = 0
   end
 
   hook.Add("PostPlayerDeath", "DrGBaseNextbotPostPlayerDeathForget", function(ply)
-    for i, nextbot in ipairs(DrGBase.Nextbot.GetAll()) do
-      nextbot:ForgetEntity(ply)
+    for i, ent in ipairs(DrGBase.Nextbot.GetAll()) do      
+      ent:ForgetEntity(ply)
     end
   end)
 
   function ENT:CanSeeEntity(ent)
     if self:LineOfSight(ent) then
       local res = self:OnSeeEntity(ent)
-      if res == nil or res then return true end
+      if res ~= false then return true end
     end
     return false
   end
@@ -90,26 +88,24 @@ if SERVER then
   function ENT:OnSeeEntity() end
 
   hook.Add("EntityEmitSound", "DrGBaseEntityEmitSoundHearing", function(sound)
-    if not IsValid(sound.Entity) or GetConVar("ai_disabled"):GetBool() then return end
-    if not sound.Entity:DrG_IsTargettable() then return end
+    if not IsValid(sound.Entity) then return end
     for i, ent in ipairs(DrGBase.Nextbot.GetAll()) do
       if ent.HearingRange <= 0 then continue end
       if ent:GetRangeSquaredTo(sound.Entity) <= math.pow(ent.HearingRange, 2) then
         local heard = ent:OnHearEntity(sound.Entity, sound)
-        if heard == nil or heard then ent:SpotEntity(sound.Entity) end
+        if heard ~= false then ent:SpotEntity(sound.Entity) end
       end
     end
   end)
   function ENT:OnHearEntity() end
 
   hook.Add("EntityFireBullets", "DrGBaseEntityFireBullets", function(ent2, bullet)
-    if not IsValid(ent2) or GetConVar("ai_disabled"):GetBool() then return end
-    if not ent2:DrG_IsTargettable() then return end
+    if not IsValid(ent2) then return end
     for i, ent in ipairs(DrGBase.Nextbot.GetAll()) do
       if ent.HearingRangeBullets <= 0 then continue end
       if ent:GetRangeSquaredTo(ent2) <= math.pow(ent.HearingRangeBullets, 2) then
         local heard = ent:OnHearGunshot(ent2, bullet)
-        if heard == nil or heard then ent:SpotEntity(ent2) end
+        if heard ~= false then ent:SpotEntity(ent2) end
       end
     end
   end)

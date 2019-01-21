@@ -136,31 +136,15 @@ if SERVER then
     local possessor = self:GetPossessor()
     self:_SetState(DRGBASE_STATE_POSSESSED)
     if not self:PossessionBlockInput() then
-      local sprint = possessor:KeyDown(IN_SPEED)
-      if not self:IsFlying() then
-        local speed = self:PossessionGroundSpeed(sprint)
-        if speed ~= nil then self:SetSpeed(speed) end
-        local front = possessor:KeyDown(IN_FORWARD)
-        local back = possessor:KeyDown(IN_BACK)
-        local left = possessor:KeyDown(IN_MOVELEFT)
-        local right = possessor:KeyDown(IN_MOVERIGHT)
-        if front and not back then
-          self:GoForward()
-        elseif back and not front then
-          self:GoBackward()
-        end
-        if left and not right then
-          self:StrafeLeft()
-        elseif right and not left then
-          self:StrafeRight()
-        end
-      else
-        local up = possessor:KeyDown(IN_JUMP)
-        local down = possessor:KeyDown(IN_DUCK)
-        local upOnly = up and not down
-        local downOnly = down and not up
-        self:SetSpeed(self:PossessionFlightSpeed(sprint, upOnly, downOnly) or 0)
-        self:SetFlightBuoyancy(self:PossessionFlightBuoyancy(sprint, upOnly, downOnly) or 0)
+      if self:IsMovingForward() then
+        self:GoForward()
+      elseif self:IsMovingBackward() then
+        self:GoBackward()
+      end
+      if self:IsMovingLeft() then
+        self:StrafeLeft()
+      elseif self:IsMovingRight() then
+        self:StrafeRight()
       end
       self:_HandlePossessionBinds(true)
     end

@@ -10,13 +10,21 @@ function DrGBase.Nextbot.Debug(nextbot, text)
 end
 
 function DrGBase.Nextbot.Load(nextbot)
-  if CLIENT then
-    language.Add(nextbot.Class, nextbot.Name)
-    killicon.Add(nextbot.Class, nextbot.Killicon.icon, nextbot.Killicon.color)
+  if nextbot.Name == nil or nextbot.Class == nil or nextbot.Category == nil then
+    DrGBase.Error("Couldn't load nextbot: name, class or category nil.")
+  else
+    nextbot.Killicon = nextbot.Killicon or {
+      icon = "HUD/killicons/default",
+      color = Color(255, 80, 0, 255)
+    }
+    if CLIENT then
+      language.Add(nextbot.Class, nextbot.Name)
+      killicon.Add(nextbot.Class, nextbot.Killicon.icon, nextbot.Killicon.color)
+    end
+    list.Set("NPC", nextbot.Class, nextbot)
+    list.Set("DrGBaseNextbot", nextbot.Class, nextbot)
+    DrGBase.Print("Nextbot '"..nextbot.Class.."': loaded.")
   end
-  list.Set("NPC", nextbot.Class, nextbot)
-  list.Set("DrGBaseNextbot", nextbot.Class, nextbot)
-  DrGBase.Print("Nextbot '"..nextbot.Class.."': loaded.")
 end
 function DrGBase.Nextbot.GetLoaded()
   return list.Get("DrGBaseNextbot")

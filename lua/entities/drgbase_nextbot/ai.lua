@@ -23,6 +23,7 @@ if SERVER then
       end
     elseif self:HaveEnemy() then
       self:_SetState(DRGBASE_STATE_AI_FIGHT)
+      self:SetDestination(nil)
       local enemy = self:GetEnemy()
       local insist = self:OnPursueEnemy(enemy)
       if self:GetRangeSquaredTo(enemy) < math.pow(self.KeepDistance, 2) then
@@ -33,14 +34,14 @@ if SERVER then
         }, function()
           if self:IsPossessed() then return "possession" end
           if self:CoroutineCallbacks() then return "callbacks" end
-          if insist and self:LineOfSight(enemy, 360, self.EnemyReach) then return "ok" end
+          if insist or not self:LineOfSight(enemy) then return end
+          if self:GetRangeSquaredTo(enemy) < math.pow(self.EnemyReach, 2) then return "ok" end
         end)
       end
       if IsValid(enemy) then
         if self:LineOfSight(enemy, 360, self.EnemyReach) then
-          self:SetDestination(nil)
           self:EnemyInRange(enemy)
-        else self:SetDestination(enemy:GetPos()) end
+        end
       end
     elseif destination ~= nil then
       self:_SetState(DRGBASE_STATE_AI_WANDER)

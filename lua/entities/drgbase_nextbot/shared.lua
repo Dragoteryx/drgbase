@@ -8,8 +8,9 @@ end
 
 DrGBase.IncludeFile("ai.lua")
 DrGBase.IncludeFile("animations.lua")
-DrGBase.IncludeFile("awareness.lua")
 DrGBase.IncludeFile("behaviours.lua")
+DrGBase.IncludeFile("default.lua")
+DrGBase.IncludeFile("detection.lua")
 DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("misc.lua")
 DrGBase.IncludeFile("movement.lua")
@@ -43,14 +44,12 @@ if SERVER then
     self.loco:SetDeathDropHeight(self.loco:GetStepHeight())
     self:SetPlaybackRate(1)
     self:AddFlags(FL_OBJECT + FL_CLIENT)
+    self:CombineBall("dissolve")
     self._DrGBaseCoroutineCallbacks = {} -- call functions inside coroutine
     self._DrGBaseSpotted = {} -- list of spotted entities
     self._DrGBaseHandleAnimDelay = 0 -- delay between animations handles
     self._DrGBaseSyncAnimations = false -- sync animations with speed
     self._DrGBaseCurrentAnimLastCycle = 0 -- current anim cycle
-    self._DrGBaseCurrentAnim = "" -- current playing sequence
-    self._DrGBaseCurrentAnimRate = 1 -- current animation rate
-    self._DrGBaseCurrentAnimCount = 1 -- count animations
     self._DrGBaseCustomThinkDelay = 0 -- delay for custom think
     self._DrGBaseLOSCheckDelay = 0 -- los checks delay
     self._DrGBaseCustomBehaviour = false -- whether or not to use the custom behaviour
@@ -68,15 +67,17 @@ if SERVER then
     self._DrGBaseReady = false -- called after self:OnSpawn()
     self._DrGBaseFactions = {} -- list of factions that the nextbot is part of
     self._DrGBaseHealthRegenDelay = 0 -- health regen delay
-    self:ResetRelationships()
-    self:CombineBall("dissolve")
+    self._DrGBaseDefinedAttacks = {} -- attacks table
+    self._DrGBaseSpeedFetch = true -- fetch speed ?
+    self._DrGBaseLastAnimCycle = 0 -- for animation callbacks
     self:SetDrGVar("DrGBaseState", DRGBASE_STATE_NONE)
     self:SetDrGVar("DrGBaseSpeed", 0)
     self:SetDrGVar("DrGBaseDying", false)
     self:SetDrGVar("DrGBaseDead", false)
     self:SetDrGVar("DrGBaseEnemy", nil)
     self:SetDrGVar("DrGBaseDestination", nil)
-    table.insert(DrGBase.Nextbot._Spawned, self)
+    self:SetDrGVar("DrGBaseHealthNetworked", self.MaxHealth)
+    self:ResetRelationships()
     self:NPCRelationship()
     self:CustomInitialize()
     self:CallOnRemove("DrGBaseCallOnRemove", function()
@@ -86,6 +87,7 @@ if SERVER then
         self:StopSound(self._DrGBaseAmbientSound)
       end
     end)
+    table.insert(DrGBase.Nextbot._Spawned, self)
   end
   function ENT:CustomInitialize() end
 
@@ -189,9 +191,10 @@ if SERVER then
     return #self._DrGBaseCoroutineCallbacks > 0
   end
 
-  -- SLV Base --
+  -- SLVBase --
   if file.Exists("autorun/slvbase", "LUA") then
     function ENT:PercentageFrozen() return 0 end
+    function ENT:GetNoTarget() return false end
   end
 
 else
@@ -243,6 +246,7 @@ else
       local los = DrGBase.Colors.Red
       if self:LineOfSight(LocalPlayer()) then los = DrGBase.Colors.Green end
       render.DrawWireframeSphere(eyepos, 2, 4, 4, los, false)
+      render.DrawLine(eyepos, eyepos+self:GetForward()*30, los, false)
       if LocalPlayer():Alive() then
         render.DrawLine(eyepos, LocalPlayer():WorldSpaceCenter(), los, true)
       end

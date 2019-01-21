@@ -121,17 +121,19 @@ if SERVER then
   function ENT:OnStuck()
     if self:IsPossessed() then return end
     self:_Debug("stuck.")
-    if self:HandleStuck() then
-      self.loco:ClearStuck()
-    end
   end
 
   function ENT:OnUnStuck()
+    if self:IsPossessed() then return end
     self:_Debug("unstuck.")
   end
 
   function ENT:HandleStuck()
-    return true
+    if self:IsPossessed() then return end
+    local pos = self:RandomPos(100)
+    if pos ~= nil then self:SetPos(pos) end
+    self:SetDestination(nil)
+    self.loco:ClearStuck()
   end
 
   -- Handlers --
@@ -167,11 +169,7 @@ if SERVER then
     if self:Health() ~= self._DrGBaseHealth then
       self:_Debug("health change from "..self._DrGBaseHealth.." to "..self:Health()..".")
       self:OnHealthChange(self._DrGBaseHealth, self:Health())
-      --[[net.Start("DrGBaseNextbotOnHealthChange")
-      net.WriteEntity(self)
-      net.WriteFloat(self._DrGBaseHealth)
-      net.WriteFloat(self:Health())
-      net.Broadcast()]]
+      self:SetDrGVar("DrGBaseHealthNetworked", self:Health())
     end
     self._DrGBaseHealth = self:Health()
   end
