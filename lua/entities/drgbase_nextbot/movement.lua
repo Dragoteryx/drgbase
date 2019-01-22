@@ -3,8 +3,10 @@ function ENT:GetSpeed()
   return self:GetDrGVar("DrGBaseSpeed")
 end
 
-function ENT:Speed()
-  return math.Round(self:GetVelocity():Length())
+function ENT:Speed(scale)
+  local speed = self:GetVelocity():Length()
+  if scale then return math.Round(speed/self:GetScale())
+  else return math.Round(speed) end
 end
 function ENT:SpeedSqr()
   return math.Round(self:GetVelocity():LengthSqr())
@@ -55,10 +57,11 @@ if SERVER then
   function ENT:SetSpeed(speed)
     if speed == nil then return end
     if speed < 0 then speed = 0 end
-    if speed == self:GetDrGVar("DrGBaseSpeed") then return end
-    self:SetDrGVar("DrGBaseSpeed", speed)
-    self:_Debug("speed set to "..speed..".")
-    return self.loco:SetDesiredSpeed(speed)
+    if speed ~= self:GetDrGVar("DrGBaseSpeed") then
+      self:SetDrGVar("DrGBaseSpeed", speed)
+      self:_Debug("speed set to "..speed..".")
+    end
+    return self.loco:SetDesiredSpeed(speed*self:GetScale())
   end
 
   function ENT:InvalidatePath()

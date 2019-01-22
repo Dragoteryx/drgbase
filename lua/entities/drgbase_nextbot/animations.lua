@@ -88,7 +88,7 @@ if SERVER then
     end
     local seq, rate
     if self:EnableSyncedAnimations() then
-      seq, rate = self:SyncAnimation(self:Speed(), self:IsOnGround(), self:IsFlying())
+      seq, rate = self:SyncAnimation(self:Speed(true), self:IsOnGround(), self:IsFlying())
     else
       seq = self:GetSequence()
       rate = self:GetPlaybackRate()

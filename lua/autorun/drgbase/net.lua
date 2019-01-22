@@ -114,7 +114,7 @@ else
         value = net.ReadAngle()
       elseif typ == DRGBASE_VARS_BOOL then
         value = net.ReadBool()
-      elseif typ == DRGBASE_VARSentITY then
+      elseif typ == DRGBASE_VARS_ENTITY then
         value = net.ReadEntity()
       elseif typ == DRGBASE_VARS_NUMBER then
         value = net.ReadFloat()

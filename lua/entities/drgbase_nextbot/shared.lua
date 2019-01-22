@@ -77,6 +77,7 @@ if SERVER then
     self:SetDrGVar("DrGBaseEnemy", nil)
     self:SetDrGVar("DrGBaseDestination", nil)
     self:SetDrGVar("DrGBaseHealthNetworked", self.MaxHealth)
+    self:SetDrGVar("DrGBaseScale", 1)
     self:ResetRelationships()
     self:NPCRelationship()
     self:CustomInitialize()
@@ -249,6 +250,11 @@ else
       render.DrawLine(eyepos, eyepos+self:GetForward()*30, los, false)
       if LocalPlayer():Alive() then
         render.DrawLine(eyepos, LocalPlayer():WorldSpaceCenter(), los, true)
+      end
+      if self:HaveEnemy() then
+        local enemy = self:GetEnemy()
+        render.DrawLine(center, enemy:WorldSpaceCenter(), DrGBase.Colors.Red, false)
+        render.DrawWireframeSphere(self:GetPos(), self.EnemyReach*self:GetScale(), 25, 25, DrGBase.Colors.White, true)
       end
     end
     return self:CustomDraw()

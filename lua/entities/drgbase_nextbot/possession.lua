@@ -25,16 +25,16 @@ function ENT:PossessorView()
   local bound1, bound2 = self:GetCollisionBounds()
   local center = self:GetPos() + (bound1 + bound2)/2
   local offset = center +
-  self:GetForward()*self.Possession.offset.x +
-  self:GetRight()*self.Possession.offset.y +
-  self:GetUp()*self.Possession.offset.z
+  self:GetForward()*self.Possession.offset.x*self:GetModelScale() +
+  self:GetRight()*self.Possession.offset.y*self:GetModelScale() +
+  self:GetUp()*self.Possession.offset.z*self:GetModelScale()
   local tr1 = util.TraceLine({
     start = center,
     endpos = offset,
     collisiongroup = COLLISION_GROUP_IN_VEHICLE
   })
   if tr1.HitWorld then offset = tr1.HitPos + tr1.Normal*-10 end
-  local endpos = offset + angles:Forward()*self.Possession.distance
+  local endpos = offset + angles:Forward()*self.Possession.distance*self:GetModelScale()
   local tr2 = util.TraceLine({
     start = offset,
     endpos = endpos,
@@ -62,6 +62,7 @@ if SERVER then
     if hookres ~= nil and not hookres then return DRGBASE_POSSESS_NOT_ALLOWED end
     drive.PlayerStartDriving(ply, self, "drive_drgbase_nextbot")
     if not ply:IsDrivingEntity(self) then return DRGBASE_POSSESS_ERROR end
+    self:SetEnemy(nil)
     self:SetDestination(nil)
     ply._DrGBasePossessing = self
     self._DrGBasePossessor = ply

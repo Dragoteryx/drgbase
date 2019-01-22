@@ -30,7 +30,7 @@ if SERVER then
       }).Normal)
     elseif isnumber(pos) then
       local jumpheight = self.loco:GetMaxJumpHeight()
-      self.loco:SetJumpHeight(pos)
+      self.loco:SetJumpHeight(pos*self:GetScale())
       self.loco:Jump()
       self.loco:SetJumpHeight(jumpheight)
     end
@@ -105,7 +105,7 @@ if SERVER then
       if attack.lineofsight == nil then attack.lineofsight = true end
       self:Timer(attack.delay, function()
         if not attack._cooldown then
-          local targets = ents.FindInSphere(self:GetPos(), attack.range)
+          local targets = ents.FindInSphere(self:GetPos(), attack.range*self:GetScale())
           local hit = {}
           for i, target in ipairs(targets) do
             if target:EntIndex() == self:EntIndex() then continue end

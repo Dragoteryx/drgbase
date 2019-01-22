@@ -20,9 +20,9 @@ function ENT:DrG_EyePos()
     end
   end
   eyepos = eyepos +
-  self:GetForward()*self.EyeOffset.x +
-  self:GetRight()*self.EyeOffset.y +
-  self:GetUp()*self.EyeOffset.z
+  self:GetForward()*self.EyeOffset.x*self:GetModelScale() +
+  self:GetRight()*self.EyeOffset.y*self:GetModelScale() +
+  self:GetUp()*self.EyeOffset.z*self:GetModelScale()
   return eyepos
 end
 
@@ -62,6 +62,10 @@ function ENT:HealthNetworked()
   else return self:GetDrGVar("DrGBaseHealthNetworked") end
 end
 
+function ENT:GetScale()
+  return self:GetDrGVar("DrGBaseScale")
+end
+
 if SERVER then
 
   function ENT:RandomPos(maxradius, minradius)
@@ -94,6 +98,15 @@ if SERVER then
       ent.loco:SetVelocity(Vector(0, 0, 0))
     end)
   end)
+
+  function ENT:SetScale(scale)
+    self:SetDrGVar("DrGBaseScale", scale)
+    self:SetModelScale(self.ModelScale*scale)
+  end
+
+  function ENT:Scale(mult)
+    self:SetScale(self:GetScale()*mult)
+  end
 
   -- Handlers --
 

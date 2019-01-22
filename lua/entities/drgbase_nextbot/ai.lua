@@ -15,7 +15,7 @@ if SERVER then
   function ENT:_DefaultBehaviour()
     local scared = self:FindClosestScaredOf()
     local destination = self:GetDestination() or self:FetchDestination()
-    if IsValid(scared) and self:GetRangeSquaredTo(scared) < math.pow(self.AvoidRadius, 2) then
+    if IsValid(scared) and self:GetRangeSquaredTo(scared) < math.pow(self.AvoidRadius*self:GetScale(), 2) then
       self:_SetState(DRGBASE_STATE_AI_AVOID)
       if not self:OnAvoidEntity(scared) then
         self:InvalidatePath()
@@ -25,23 +25,24 @@ if SERVER then
       self:_SetState(DRGBASE_STATE_AI_FIGHT)
       self:SetDestination(nil)
       local enemy = self:GetEnemy()
-      local insist = self:OnPursueEnemy(enemy)
-      if self:GetRangeSquaredTo(enemy) < math.pow(self.KeepDistance, 2) then
+      local dist = self:GetPos():DistToSqr(enemy:GetPos())
+      local keep = math.pow(self.KeepDistance*self:GetScale(), 2)
+      self:OnPursueEnemy(enemy)
+      if dist < keep then
         self:StepAwayFromPos(enemy:GetPos())
-      elseif insist or not self:LineOfSight(enemy, 360, self.EnemyReach) then
+      elseif dist > keep or
+      not self:LineOfSight(enemy, 360, math.huge) then
         self:FollowEntity(enemy, {
           maxage = 0.5, draw = DrGBase.Nextbot.ConVars.Debug:GetBool()
         }, function()
           if self:IsPossessed() then return "possession" end
           if self:CoroutineCallbacks() then return "callbacks" end
-          if insist or not self:LineOfSight(enemy) then return end
-          if self:GetRangeSquaredTo(enemy) < math.pow(self.EnemyReach, 2) then return "ok" end
+          if self:GetPos():DistToSqr(enemy:GetPos()) < keep then return "keepdistance" end
         end)
       end
-      if IsValid(enemy) then
-        if self:LineOfSight(enemy, 360, self.EnemyReach) then
-          self:EnemyInRange(enemy)
-        end
+      if IsValid(enemy) and self:LineOfSight(enemy, 360, math.huge) and
+      self:GetPos():DistToSqr(enemy:GetPos()) <= math.pow(self.EnemyReach*self:GetScale(), 2) then
+        self:EnemyInRange(enemy)
       end
     elseif destination ~= nil then
       self:_SetState(DRGBASE_STATE_AI_WANDER)
