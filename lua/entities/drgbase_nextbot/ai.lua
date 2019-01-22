@@ -17,8 +17,8 @@ if SERVER then
     local destination = self:GetDestination() or self:FetchDestination()
     if IsValid(scared) and self:GetRangeSquaredTo(scared) < math.pow(self.AvoidRadius, 2) then
       self:_SetState(DRGBASE_STATE_AI_AVOID)
-      if self:OnAvoidEntity(scared) ~= false then
-        if IsValid(self._DrGBasePath) then self._DrGBasePath:Invalidate() end
+      if not self:OnAvoidEntity(scared) then
+        self:InvalidatePath()
         self:StepAwayFromPos(scared:GetPos())
       end
     elseif self:HaveEnemy() then

@@ -83,7 +83,6 @@ if SERVER then
   function ENT:GetRelationship(ent)
     if not IsValid(ent) then return D_ER end
     if self:EntIndex() == ent:EntIndex() then return D_ER end
-    if not ent:DrG_IsTargettable() then return D_ER end
     if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool() or IsValid(ent:DrG_Possessing())) then return D_NU end
     if ent.IsDrGNextbot and ent:IsDead() then return D_NU end
     if ent:Health() <= 0 then return D_NU end

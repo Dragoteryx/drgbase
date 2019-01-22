@@ -4,7 +4,7 @@ if SERVER then
 
   function ENT:OnContact(ent)
     self:_Debug("contact with '"..ent:GetClass().."' ("..ent:EntIndex()..").")
-    if IsValid(ent) and ent:DrG_IsTargettable() then self:SpotEntity(ent) end
+    if IsValid(ent) then self:SpotEntity(ent) end
     if ent:GetClass() == "prop_combine_ball" then
       local reaction = self:CombineBall()
       if reaction == "dissolve" then
@@ -148,7 +148,7 @@ if SERVER then
       -- touch ground
       self:_Debug("touch ground.")
       self:_Debug("downwards velocity: "..self._DrGBaseDownwardsVelocity..".")
-      if IsValid(self._DrGBasePath) then self._DrGBasePath:Invalidate() end
+      self:InvalidatePath()
       if self._DrGBaseDownwardsVelocity > 0 and not self:IsFlying() then
         local val = self:OnFallDamage(self._DrGBaseDownwardsVelocity, self:WaterLevel()) or 0
         if val > 0 then

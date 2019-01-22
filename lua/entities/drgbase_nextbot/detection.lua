@@ -62,7 +62,7 @@ if SERVER then
   end
 
   hook.Add("PostPlayerDeath", "DrGBaseNextbotPostPlayerDeathForget", function(ply)
-    for i, ent in ipairs(DrGBase.Nextbot.GetAll()) do      
+    for i, ent in ipairs(DrGBase.Nextbot.GetAll()) do
       ent:ForgetEntity(ply)
     end
   end)

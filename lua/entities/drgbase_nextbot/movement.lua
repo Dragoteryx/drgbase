@@ -61,6 +61,12 @@ if SERVER then
     return self.loco:SetDesiredSpeed(speed)
   end
 
+  function ENT:InvalidatePath()
+    if IsValid(self._DrGBasePath) then
+      self._DrGBasePath:Invalidate()
+    end
+  end
+
   function ENT:MoveToPos(pos, options, callback)
     options = options or {}
     if callback == nil then callback = function() end end
