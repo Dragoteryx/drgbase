@@ -89,7 +89,7 @@ if SERVER then
 
   hook.Add("PhysgunDrop", "DrGBaseNextbotPhysgunDrop", function(ply, ent)
     if not ent.IsDrGNextbot then return end
-    self:InvalidatePath()
+    ent:InvalidatePath()
     ent:Timer(0, function()
       ent.loco:SetVelocity(Vector(0, 0, 0))
     end)

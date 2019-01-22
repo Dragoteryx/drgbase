@@ -13,6 +13,7 @@ ENT.EnableBodyMoveXY = true
 
 -- Relationships --
 ENT.Factions = {"DrGBase"}
+ENT.KeepDistance = 125
 
 -- Possession --
 ENT.PossessionEnabled = true
@@ -61,9 +62,7 @@ if SERVER then
   end
 
   -- AI --
-  function ENT:OnPursueEnemy(enemy)
-    return true
-  end
+  function ENT:OnPursueEnemy(enemy) end
   function ENT:EnemyInRange(enemy) end
   function ENT:FetchDestination()
     return self:RandomPos(1500)
