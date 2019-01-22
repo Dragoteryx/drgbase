@@ -250,11 +250,13 @@ if SERVER then
     end
   end
 
-  hook.Add("OnEntityCreated", "DrGBaseNextbotNPCRelationshipsOnEntityCreated", function(ent)
+  hook.Add("OnEntityCreated", "DrGBaseNextbotNPCRelationships", function(ent)
     if not ent:IsNPC() then return end
-    for i, nextbot in ipairs(DrGBase.Nextbot.GetAll()) do
-      nextbot:NPCRelationship(ent)
-    end
+    timer.Simple(0, function()
+      for i, nextbot in ipairs(DrGBase.Nextbot.GetAll()) do
+        nextbot:NPCRelationship(ent)
+      end
+    end)
   end)
 
   -- Aliases --
