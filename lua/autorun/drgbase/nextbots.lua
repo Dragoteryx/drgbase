@@ -16,7 +16,7 @@ function DrGBase.Nextbot.Load(nextbot)
     if CLIENT then
       language.Add(nextbot.Class, nextbot.Name)
       killicon.Add(nextbot.Class, nextbot.Killicon.icon, nextbot.Killicon.color)
-    end
+    else resource.AddFile("materials/entities/"..nextbot.Class..".png") end
     list.Set("NPC", nextbot.Class, nextbot)
     list.Set("DrGBaseNextbot", nextbot.Class, nextbot)
     DrGBase.Print("Nextbot '"..nextbot.Class.."': loaded.")

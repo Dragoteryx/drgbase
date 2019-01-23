@@ -98,7 +98,7 @@ if SERVER then
     if callbacks ~= nil then
       for i, todo in ipairs(callbacks) do
         if self._DrGBaseLastAnimCycle < todo.cycle and self:GetCycle() >= todo.cycle then
-          todo.callback(todo.cycle, self:GetCycle())
+          todo.callback(self, todo.cycle, self:GetCycle())
         end
       end
     end

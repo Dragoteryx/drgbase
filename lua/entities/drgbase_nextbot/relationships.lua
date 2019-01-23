@@ -159,6 +159,7 @@ if SERVER then
   end
 
   function ENT:GetClassRelationship(class)
+    if not isstring(class) then return D_ER end
     return self._DrGBaseClassRelationships[string.lower(class)]
   end
   function ENT:SetClassRelationship(class, relationship)
@@ -167,14 +168,16 @@ if SERVER then
   end
 
   function ENT:GetModelRelationship(model)
+    if not isstring(model) then return D_ER end
     return self._DrGBaseModelRelationships[string.lower(model)]
   end
   function ENT:SetModelRelationship(model, relationship)
-    self._DrGBaseModelRelationships[string.upper(model)] = relationship
+    self._DrGBaseModelRelationships[string.lower(model)] = relationship
     self:NPCRelationship()
   end
 
   function ENT:GetFactionRelationship(faction)
+    if not isstring(faction) then return D_ER end
     return self._DrGBaseFactionRelationships[string.upper(faction)]
   end
   function ENT:SetFactionRelationship(faction, relationship)

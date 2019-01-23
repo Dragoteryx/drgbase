@@ -23,7 +23,7 @@ ENT.EnemyAvoid = 50
 -- Awareness --
 ENT.EyeBone = "ValveBiped.Bip01_Head1"
 ENT.EyeOffset = Vector(5, 0, 2.5)
-ENT.EyeAngle = Angle(65, 0, 0)
+ENT.EyeAngle = Angle(75, 0, 0)
 
 -- Possession --
 ENT.PossessionEnabled = true
