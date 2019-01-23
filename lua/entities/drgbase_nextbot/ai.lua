@@ -15,7 +15,7 @@ if SERVER then
   function ENT:_DefaultBehaviour()
     local scared = self:FindClosestScaredOf()
     local destination = self:GetDestination() or self:FetchDestination()
-    if IsValid(scared) and self:GetRangeSquaredTo(scared) < math.pow(self.AvoidRadius*self:GetScale(), 2) then
+    if IsValid(scared) and self:InRange(scared, self.ScaredAvoid) then
       self:_SetState(DRGBASE_STATE_AI_AVOID)
       if not self:OnAvoidEntity(scared) then
         self:InvalidatePath()
@@ -25,36 +25,39 @@ if SERVER then
       self:_SetState(DRGBASE_STATE_AI_FIGHT)
       self:SetDestination(nil)
       local enemy = self:GetEnemy()
-      local dist = self:GetPos():DistToSqr(enemy:GetPos())
-      local keep = math.pow(self.KeepDistance*self:GetScale(), 2)
-      self:OnPursueEnemy(enemy)
-      if dist < keep then
-        self:StepAwayFromPos(enemy:GetPos())
-      elseif dist > keep or
-      not self:LineOfSight(enemy, 360, math.huge) then
-        self:FollowEntity(enemy, {
-          maxage = 0.5, draw = DrGBase.Nextbot.ConVars.Debug:GetBool()
-        }, function()
-          if self:IsPossessed() then return "possession" end
-          if self:CoroutineCallbacks() then return "callbacks" end
-          if self:GetPos():DistToSqr(enemy:GetPos()) < keep then return "keepdistance" end
-        end)
+      if not self:OnPursueEnemy(enemy) then
+        local stop = self.EnemyStop or self.EnemyReach
+        if self:InRange(enemy, self.EnemyAvoid) then
+          self:StepAwayFromPos(enemy:GetPos())
+        elseif not self:InRange(enemy, stop) or
+        not self:LineOfSight(enemy, 360, math.huge) then
+          self:FollowEntity(enemy, {
+            maxage = 0.5, draw = GetConVar("developer"):GetBool()
+          }, function()
+            if self:IsPossessed() then return "possession" end
+            if self:CoroutineCallbacks() then return "callbacks" end
+            if self:InRange(enemy, stop) then return "keepdistance" end
+          end)
+        end
       end
-      if IsValid(enemy) and self:LineOfSight(enemy, 360, math.huge) and
-      self:GetPos():DistToSqr(enemy:GetPos()) <= math.pow(self.EnemyReach*self:GetScale(), 2) then
+      if IsValid(enemy) and self:InRange(enemy, self.EnemyReach) and
+      self:LineOfSight(enemy, 360, math.huge) then
         self:EnemyInRange(enemy)
       end
     elseif destination ~= nil then
       self:_SetState(DRGBASE_STATE_AI_WANDER)
       if self:GetDestination() == nil then self:SetDestination(destination) end
-      self:MovingToDestination(destination)
-      local reached = self:MoveToPos(destination, {
-        maxage = 0.5, draw = DrGBase.Nextbot.ConVars.Debug:GetBool()
-      }, function()
-        if self:IsPossessed() then return "possession" end
-        if self:CoroutineCallbacks() then return "callbacks" end
-      end)
-      if reached == "ok" then
+      local reached = self:MovingToDestination(destination)
+      if reached == nil then
+        local res = self:MoveToPos(destination, {
+          maxage = 0.5, draw = GetConVar("developer"):GetBool()
+        }, function()
+          if self:IsPossessed() then return "possession" end
+          if self:CoroutineCallbacks() then return "callbacks" end
+        end)
+        reached = res == "ok"
+      end
+      if reached then
         self:ReachedDestination(destination)
         self:SetDestination(nil)
       end

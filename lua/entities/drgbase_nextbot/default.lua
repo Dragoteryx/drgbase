@@ -20,6 +20,7 @@ ENT.ForgetTime = 10
 ENT.Flight = false
 ENT.FlightMaxPitch = 45
 ENT.FlightMinPitch = 45
+ENT.FallDamage = false
 
 -- Relationships --
 ENT.Factions = {}
@@ -27,15 +28,17 @@ ENT.AlliedWithSelfFactions = true
 ENT.KnowAlliesPosition = false
 ENT.Frightening = false
 ENT.EnemyReach = 250
-ENT.KeepDistance = 0
-ENT.AvoidRadius = 250
+--ENT.EnemyStop = ENT.EnemyReach
+ENT.EnemyAvoid = 0
 ENT.AllyReach = 250
+ENT.ScaredAvoid = 500
 
 -- Detection --
 ENT.SightFOV = 150
 ENT.SightRange = 6000
 ENT.EyeBone = ""
 ENT.EyeOffset = Vector(0, 0, 0)
+ENT.EyeAngle = Angle(0, 0, 0)
 ENT.HearingRange = 250
 ENT.HearingRangeBullets = 5000
 

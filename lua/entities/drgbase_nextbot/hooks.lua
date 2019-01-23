@@ -149,7 +149,7 @@ if SERVER then
       self:_Debug("touch ground.")
       self:_Debug("downwards velocity: "..self._DrGBaseDownwardsVelocity..".")
       self:InvalidatePath()
-      if self._DrGBaseDownwardsVelocity > 0 and not self:IsFlying() then
+      if self._DrGBaseDownwardsVelocity > 0 and not self:IsFlying() and self.FallDamage then
         local val = self:OnFallDamage(self._DrGBaseDownwardsVelocity, self:WaterLevel()) or 0
         if val > 0 then
           local dmg = DamageInfo()
@@ -169,7 +169,10 @@ if SERVER then
     if self:Health() ~= self._DrGBaseHealth then
       self:_Debug("health change from "..self._DrGBaseHealth.." to "..self:Health()..".")
       self:OnHealthChange(self._DrGBaseHealth, self:Health())
-      self:SetDrGVar("DrGBaseHealthNetworked", self:Health())
+      self:SetDrGVar("DrGBaseHealth", self:Health())
+    end
+    if self:GetMaxHealth() ~= self._DrGBaseMaxHealth then
+      self:SetDrGVar("DrGBaseMaxHealth", self:GetMaxHealth())
     end
     self._DrGBaseHealth = self:Health()
   end

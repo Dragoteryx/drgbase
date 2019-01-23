@@ -1,11 +1,7 @@
 DrGBase.Nextbot = DrGBase.Nextbot or {}
 
-DrGBase.Nextbot.ConVars = DrGBase.Nextbot.ConVars or {}
-DrGBase.Nextbot.ConVars.Debug = CreateConVar("drgbase_nextbots_debug", "0")
-DrGBase.Nextbot.ConVars.Possession = CreateConVar("drgbase_nextbots_possession", "1")
-
 function DrGBase.Nextbot.Debug(nextbot, text)
-  if not DrGBase.Nextbot.ConVars.Debug:GetBool() then return end
+  if not GetConVar("developer"):GetBool() then return end
   DrGBase.Print("Nextbot '"..nextbot:GetClass().."' ("..nextbot:EntIndex().."): "..text)
 end
 

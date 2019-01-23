@@ -12,10 +12,12 @@ DrGBase.IncludeFile("behaviours.lua")
 DrGBase.IncludeFile("default.lua")
 DrGBase.IncludeFile("detection.lua")
 DrGBase.IncludeFile("hooks.lua")
+DrGBase.IncludeFile("meta.lua")
 DrGBase.IncludeFile("misc.lua")
 DrGBase.IncludeFile("movement.lua")
 DrGBase.IncludeFile("possession.lua")
 DrGBase.IncludeFile("relationships.lua")
+DrGBase.IncludeFile("scale.lua")
 DrGBase.IncludeFile("sounds.lua")
 DrGBase.IncludeFile("weapons.lua")
 
@@ -57,11 +59,13 @@ if SERVER then
     self._DrGBaseOnFire = false -- save if the nextbot is on fire or not
     self._DrGBaseDownwardsVelocity = 0 -- used for fall damage
     self._DrGBaseHealth = self.MaxHealth -- log current health
+    self._DrGBaseMaxHealth = self.MaxHealth -- log max health
     self._DrGBaseSequenceCallbacks = {} -- custom animation callbacks
     self._DrGBaseDefaultRelationship = D_NU -- default relationship
     self._DrGBaseEntityRelationships = {} -- relationships with entities
     self._DrGBaseClassRelationships = {} -- relationships with classes
     self._DrGBaseFactionRelationships = {} -- relationships with factions
+    self._DrGBaseModelRelationships = {} -- model relationships
     self._DrGBaseCustomRelationships = {} -- custom relationship checks
     self._DrGBaseHandleEnemy = 0 -- search for enemy delay
     self._DrGBaseReady = false -- called after self:OnSpawn()
@@ -76,7 +80,8 @@ if SERVER then
     self:SetDrGVar("DrGBaseDead", false)
     self:SetDrGVar("DrGBaseEnemy", nil)
     self:SetDrGVar("DrGBaseDestination", nil)
-    self:SetDrGVar("DrGBaseHealthNetworked", self.MaxHealth)
+    self:SetDrGVar("DrGBaseHealth", self.MaxHealth)
+    self:SetDrGVar("DrGBaseMaxHealth", self.MaxHealth)
     self:SetDrGVar("DrGBaseScale", 1)
     self:ResetRelationships()
     self:NPCRelationship()
@@ -200,6 +205,10 @@ if SERVER then
 
 else
 
+  local DebugInfo = CreateClientConVar("drgbase_debug_info", "0")
+  local DebugLOS = CreateClientConVar("drgbase_debug_los", "0")
+  local DebugRange = CreateClientConVar("drgbase_debug_range", "0")
+
   -- Client Init --
 
   function ENT:Initialize()
@@ -235,26 +244,33 @@ else
 
   function ENT:Draw()
     self:DrawModel()
-    if DrGBase.Nextbot.ConVars.Debug:GetBool() then
+    if GetConVar("developer"):GetBool() then
       local bound1, bound2 = self:GetCollisionBounds()
       local center = self:GetPos() + (bound1 + bound2)/2
-      local eyepos = self:DrG_EyePos()
-      render.DrawWireframeBox(self:GetPos(), Angle(0, 0, 0), bound1, bound2, DrGBase.Colors.White, false)
-      render.DrawLine(center, center + self:GetVelocity(), DrGBase.Colors.Orange, false)
-      if eyepos ~= center then
-        render.DrawWireframeSphere(center, 2, 4, 4, DrGBase.Colors.Orange, false)
+      local eyepos = self:EyePos()
+      if DebugInfo:GetBool() then
+        render.DrawWireframeBox(self:GetPos(), Angle(0, 0, 0), bound1, bound2, DrGBase.Colors.White, false)
+        render.DrawLine(center, center + self:GetVelocity(), DrGBase.Colors.Orange, false)
+        render.DrawWireframeSphere(center, 2*self:GetScale(), 4, 4, DrGBase.Colors.Orange, false)
+        if self:HaveEnemy() then
+          render.DrawLine(center, self:GetEnemy():WorldSpaceCenter(), DrGBase.Colors.Red, false)
+        end
       end
-      local los = DrGBase.Colors.Red
-      if self:LineOfSight(LocalPlayer()) then los = DrGBase.Colors.Green end
-      render.DrawWireframeSphere(eyepos, 2, 4, 4, los, false)
-      render.DrawLine(eyepos, eyepos+self:GetForward()*30, los, false)
-      if LocalPlayer():Alive() then
-        render.DrawLine(eyepos, LocalPlayer():WorldSpaceCenter(), los, true)
+      if DebugLOS:GetBool() then
+        local los = DrGBase.Colors.Red
+        if self:LineOfSight(LocalPlayer()) then los = DrGBase.Colors.Green end
+        render.DrawWireframeSphere(eyepos, 2*self:GetScale(), 4, 4, los, false)
+        render.DrawLine(eyepos, eyepos+self:EyeAngles():Forward()*30*self:GetScale(), los, false)
+        if LocalPlayer():Alive() then
+          render.DrawLine(eyepos, LocalPlayer():WorldSpaceCenter(), los, true)
+        end
       end
-      if self:HaveEnemy() then
-        local enemy = self:GetEnemy()
-        render.DrawLine(center, enemy:WorldSpaceCenter(), DrGBase.Colors.Red, false)
-        render.DrawWireframeSphere(self:GetPos(), self.EnemyReach*self:GetScale(), 25, 25, DrGBase.Colors.White, true)
+      if DebugRange:GetBool() then
+        render.DrawWireframeSphere(self:GetPos(), self.AllyReach*self:GetScale(), 25, 25, DrGBase.Colors.Green, true)
+        render.DrawWireframeSphere(self:GetPos(), self.EnemyReach*self:GetScale(), 25, 25, DrGBase.Colors.Red, true)
+        render.DrawWireframeSphere(self:GetPos(), self.EnemyStop*self:GetScale(), 25, 25, DrGBase.Colors.Orange, true)
+        render.DrawWireframeSphere(self:GetPos(), self.EnemyAvoid*self:GetScale(), 25, 25, DrGBase.Colors.Purple, true)
+        render.DrawWireframeSphere(self:GetPos(), self.ScaredAvoid*self:GetScale(), 25, 25, DrGBase.Colors.Cyan, true)
       end
     end
     return self:CustomDraw()
@@ -265,7 +281,7 @@ else
   hook.Add("HUDPaint", "DrGBasePossessionHUD", function()
     if not IsValid(LocalPlayer():DrG_Possessing()) then return end
     local hookres = LocalPlayer():DrG_Possessing():PossessionHUD()
-    if hookres == false then return end
+    if hookres then return end
     -- draw possession hud
 
   end)

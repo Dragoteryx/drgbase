@@ -52,8 +52,8 @@ if SERVER then
       local velocity = self:GetVelocity()
       if velocity.z < 0 and options.buoyancy ~= nil and options.speed ~= nil then
         local forward = self:GetForward()
-        forward = forward*options.speed
-        forward.z = options.buoyancy
+        forward = forward*options.speed*self:GetScale()
+        forward.z = options.buoyancy*self:GetScale()
         self.loco:SetVelocity(forward)
       end
       jumping(options)
@@ -111,7 +111,7 @@ if SERVER then
             if target:EntIndex() == self:EntIndex() then continue end
             if self:IsPossessed() and self:GetPossessor():EntIndex() == target:EntIndex() then continue end
             if self:IsAlly(target) and (not attack.friendlyfire or self:IsPossessed()) then continue end
-            if DrGBase.Math.VectorsAngle(self:GetPos() + self:GetForward(), target:GetPos(), self:GetPos()) > attack.angle/2 then continue end
+            if self:AngleEntity(target) > attack.angle/2 then continue end
             if attack.lineofsight and not self:LineOfSight(target) then continue end
             local dmg = DamageInfo()
             dmg:SetAttacker(self)
@@ -129,7 +129,7 @@ if SERVER then
       end)
     end
     if options.sequence ~= nil then
-      if options.gesture then self:PlayGesture(options.sequence)
+      if options.gesture then self:PlayGesture(options.sequence, options.rate)
       else self:PlaySequenceAndWait(options.sequence, options.rate) end
     end
   end

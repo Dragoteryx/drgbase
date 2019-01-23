@@ -91,6 +91,8 @@ if SERVER then
     local relationships = {}
     local class = self:GetClassRelationship(ent:GetClass())
     if class then table.insert(relationships, class) end
+    local model = self:GetModelRelationship(ent:GetModel())
+    if model then table.insert(relationships, model) end
     for faction, relationship in pairs(self._DrGBaseFactionRelationships) do
       if relationship == nil then continue end
       if ent:IsPlayer() then
@@ -161,6 +163,14 @@ if SERVER then
   end
   function ENT:SetClassRelationship(class, relationship)
     self._DrGBaseClassRelationships[string.lower(class)] = relationship
+    self:NPCRelationship()
+  end
+
+  function ENT:GetModelRelationship(model)
+    return self._DrGBaseModelRelationships[string.lower(model)]
+  end
+  function ENT:SetModelRelationship(model, relationship)
+    self._DrGBaseModelRelationships[string.upper(model)] = relationship
     self:NPCRelationship()
   end
 

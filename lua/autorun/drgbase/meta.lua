@@ -7,6 +7,9 @@ function entMETA:GetDrGVar(name)
   return DrGBase.Net.GetVar(name, self)
 end
 
+function plyMETA:DrG_IsPossessing()
+  return IsValid(self:DrG_Possessing())
+end
 function plyMETA:DrG_Possessing()
   return DrGBase.Nextbot.Possessing(self)
 end
@@ -16,7 +19,6 @@ if SERVER then
   function entMETA:SetDrGVar(name, value)
     return DrGBase.Net.SetVar(name, value, self)
   end
-
   function entMETA:DrG_IsSanic()
     return self.OnReloaded ~= nil and
     self.GetNearestTarget ~= nil and

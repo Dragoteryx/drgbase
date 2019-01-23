@@ -10,22 +10,6 @@ function ENT:Timer(delay, callback)
   end)
 end
 
-function ENT:DrG_EyePos()
-  local bound1, bound2 = self:GetCollisionBounds()
-  local eyepos = self:GetPos() + (bound1 + bound2)/2
-  if self.EyeBone ~= nil then
-    local boneid = self:LookupBone(self.EyeBone)
-    if boneid ~= nil then
-      eyepos = self:GetBonePosition(boneid)
-    end
-  end
-  eyepos = eyepos +
-  self:GetForward()*self.EyeOffset.x*self:GetModelScale() +
-  self:GetRight()*self.EyeOffset.y*self:GetModelScale() +
-  self:GetUp()*self.EyeOffset.z*self:GetModelScale()
-  return eyepos
-end
-
 function ENT:Height()
   local bound1, bound2 = self:GetCollisionBounds()
   if bound1.z > bound2.z then return bound1.z-bound2.z
@@ -57,13 +41,16 @@ function ENT:CombineBall(value)
   else return self:GetDrGVar("DrGBaseCombineBall") end
 end
 
-function ENT:HealthNetworked()
-  if SERVER then return self:Health()
-  else return self:GetDrGVar("DrGBaseHealthNetworked") end
+function ENT:AnglePos(pos)
+  return DrGBase.Math.VectorsAngle(self:GetPos() + self:GetForward(), pos, self:GetPos())
 end
 
-function ENT:GetScale()
-  return self:GetDrGVar("DrGBaseScale")
+function ENT:AngleEntity(ent)
+  return self:AnglePos(ent:GetPos())
+end
+
+function ENT:DrG_EyePos()
+
 end
 
 if SERVER then
@@ -98,15 +85,6 @@ if SERVER then
       ent.loco:SetVelocity(Vector(0, 0, 0))
     end)
   end)
-
-  function ENT:SetScale(scale)
-    self:SetDrGVar("DrGBaseScale", scale)
-    self:SetModelScale(self.ModelScale*scale)
-  end
-
-  function ENT:Scale(mult)
-    self:SetScale(self:GetScale()*mult)
-  end
 
   -- Handlers --
 

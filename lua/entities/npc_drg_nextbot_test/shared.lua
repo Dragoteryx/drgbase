@@ -11,30 +11,37 @@ ENT.Models = {
 }
 ENT.EnableBodyMoveXY = true
 
+-- Stats --
+ENT.FallDamage = true
+
 -- Relationships --
 ENT.Factions = {"DrGBase"}
-ENT.KeepDistance = 125
+ENT.EnemyReach = 250
+ENT.EnemyStop = 125
+ENT.EnemyAvoid = 50
+
+-- Awareness --
+ENT.EyeBone = "ValveBiped.Bip01_Head1"
+ENT.EyeOffset = Vector(5, 0, 2.5)
+ENT.EyeAngle = Angle(65, 0, 0)
 
 -- Possession --
 ENT.PossessionEnabled = true
 ENT.Possession = {
   distance = 100,
-  offset = Vector(0, 30, 20),
+  offset = Vector(0, 0, 20),
   binds = {
     {
       bind = IN_ATTACK,
-      onkeypressed = function(self)
-        DrGBase.Utils.Explosion(self:PossessorTrace().HitPos, {
-          damage = self:Health(),
-          owner = self
-        })
+      onkeydown = function(self)
+        self:Scale(1.01)
       end,
       coroutine = false
     },
     {
       bind = IN_ATTACK2,
       onkeydown = function(self)
-        self:Kill(self:GetPossessor())
+        self:Scale(0.99)
       end,
       coroutine = false
     },
@@ -42,6 +49,13 @@ ENT.Possession = {
       bind = IN_JUMP,
       onkeydown = function(self)
         self:QuickJump(100)
+      end,
+      coroutine = false
+    },
+    {
+      bind = IN_RELOAD,
+      onkeypressed = function(self)
+        self:SetScale(1)
       end,
       coroutine = false
     }
@@ -63,7 +77,10 @@ if SERVER then
 
   -- AI --
   function ENT:OnPursueEnemy(enemy) end
-  function ENT:EnemyInRange(enemy) end
+  function ENT:EnemyInRange(enemy)
+    self.loco:FaceTowards(enemy:GetPos())
+    self:PlayGesture("gesture_wave")
+  end
   function ENT:FetchDestination()
     return self:RandomPos(1500)
   end

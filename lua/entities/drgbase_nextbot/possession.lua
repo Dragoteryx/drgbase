@@ -51,6 +51,7 @@ if SERVER then
   util.AddNetworkString("DrGBaseNextbotCantPossess")
 
   function ENT:Possess(ply, _client)
+    if not self.PossessionEnabled then return DRGBASE_POSSESS_DISABLED end
     if not IsValid(ply) then return DRGBASE_POSSESS_INVALID end
     if not ply:IsPlayer() then return DRGBASE_POSSESS_NOT_PLAYER end
     if not ply:Alive() then return DRGBASE_POSSESS_NOT_ALIVE end

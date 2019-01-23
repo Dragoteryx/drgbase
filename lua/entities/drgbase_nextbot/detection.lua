@@ -2,9 +2,9 @@
 function ENT:LineOfSight(ent, fov, range)
   if not IsValid(ent) then return false end
   if self:EntIndex() == ent:EntIndex() then return false end
-  if range == nil then range = self.SightRange end
+  if range == nil then range = self.SightRange*self:GetScale() end
   if range <= 0 then return false end
-  if self:DrG_EyePos():DistToSqr(ent:GetPos()) > math.pow(range, 2) then return false end
+  if self:EyePos():DistToSqr(ent:GetPos()) > math.pow(range, 2) then return false end
   if fov == nil then fov = self.SightFOV end
   if fov > 360 then fov = 360 end
   if fov <= 0 then return false end
@@ -16,12 +16,12 @@ function ENT:LineOfSight(ent, fov, range)
       table.insert(endpos, entpos + Vector(0, 0, i*10))
     end
   end
-  local eyepos = self:DrG_EyePos()
+  local eyepos = self:EyePos()
   return DrGBase.Utils.RunTraces({eyepos}, endpos, {filter = {self}}, function(tr)
     if IsValid(tr.Entity) and
     (tr.Entity:EntIndex() == ent:EntIndex() or
     (SERVER and tr.Entity:IsVehicle() and IsValid(tr.Entity:GetDriver()) and tr.Entity:GetDriver():EntIndex() == ent:EntIndex())) then
-      local angle = DrGBase.Math.VectorsAngle(eyepos + self:GetForward(), tr.HitPos, eyepos)
+      local angle = DrGBase.Math.VectorsAngle(eyepos + self:EyeAngles():Forward(), tr.HitPos, eyepos)
       return angle <= fov/2
     end
   end).res or false

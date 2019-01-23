@@ -10,7 +10,7 @@ function DrGBase.Math.ParabolicTrajectory(start, endpos, maxforce)
 end
 
 function DrGBase.Math.VectorsAngle(v1, v2, origin)
-  if origin == nil then origin = Vector(0, 0, 0) end
+  origin = origin or Vector(0, 0, 0)
   v1:Sub(origin)
   v2:Sub(origin)
   v1:Normalize()

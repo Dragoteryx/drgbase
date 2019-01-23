@@ -95,7 +95,7 @@ if SERVER then
     	if options.maxage and path:GetAge() > options.maxage then
         return "timeout"
     	end
-      local res = callback(options)
+      local res = callback(path, options)
       if isstring(res) then return res
       elseif isvector(res) then pos = res end
       if options.repath and path:GetAge() > options.repath then
@@ -111,9 +111,9 @@ if SERVER then
   end
 
   function ENT:FollowEntity(ent, options, callback)
-    self:MoveToPos(ent:GetPos(), options, function()
+    self:MoveToPos(ent:GetPos(), options, function(path)
       if not IsValid(ent) then return "invalid" end
-      local res = callback(options)
+      local res = callback(path, options)
       if isstring(res) then return res
       else return ent:GetPos() end
     end)

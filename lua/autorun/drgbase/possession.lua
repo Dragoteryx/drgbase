@@ -1,12 +1,13 @@
 
+local DrGPossessionEnabled = CreateConVar("drgbase_possession", "1")
+
 properties.Add("drgbasepossess", {
 	MenuLabel = "Possess",
 	Order = 999,
 	MenuIcon = "drgbase/icon16.png",
 	Filter = function(self, ent, ply)
     return ent.IsDrGNextbot and
-		ent.PossessionEnabled and
-		DrGBase.Nextbot.ConVars.Possession:GetBool()
+		DrGPossessionEnabled:GetBool()
 	end,
 	Action = function(self, ent)
     self:MsgStart()
@@ -45,6 +46,7 @@ net.Receive("DrGBaseNextbotCantPossess", function()
 	elseif enum == DRGBASE_POSSESS_ERROR then reason = "unknown error."
 	elseif enum == DRGBASE_POSSESS_NOT_ALIVE then reason = "you are dead."
 	elseif enum == DRGBASE_POSSESS_ALREADY then reason = "you are already possessing a nextbot."
+	elseif enum == DRGBASE_POSSESS_DISABLED then reason = "possession is not available for this nextbot."
 	end
 	notification.AddLegacy("You can't possess this nextbot ("..ent.Name.."): "..reason, NOTIFY_ERROR, 4)
 	surface.PlaySound("buttons/button10.wav")
