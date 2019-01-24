@@ -9,7 +9,6 @@ end
 DrGBase.IncludeFile("ai.lua")
 DrGBase.IncludeFile("animations.lua")
 DrGBase.IncludeFile("behaviours.lua")
-DrGBase.IncludeFile("default.lua")
 DrGBase.IncludeFile("detection.lua")
 DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("meta.lua")
@@ -20,6 +19,53 @@ DrGBase.IncludeFile("relationships.lua")
 DrGBase.IncludeFile("scale.lua")
 DrGBase.IncludeFile("sounds.lua")
 DrGBase.IncludeFile("weapons.lua")
+
+-- Misc --
+ENT.Models = {"models/Kleiner.mdl"}
+ENT.Skins = {0}
+ENT.ModelScale = 1
+ENT.RagdollOnDeath = true
+ENT.EnableBodyMoveXY = false
+ENT.AmbientSounds = {}
+
+-- Stats --
+ENT.MaxHealth = 100
+ENT.HealthRegen = 0
+ENT.Radius = 10000
+ENT.Omniscient = false
+ENT.ForgetTime = 10
+ENT.Flight = false
+ENT.FlightMaxPitch = 45
+ENT.FlightMinPitch = 45
+ENT.FallDamage = false
+
+-- Relationships --
+ENT.Factions = {}
+ENT.AlliedWithSelfFactions = true
+ENT.KnowAlliesPosition = false
+ENT.Frightening = false
+ENT.EnemyReach = 250
+--ENT.EnemyStop = ENT.EnemyReach
+ENT.EnemyAvoid = 0
+ENT.AllyReach = 250
+ENT.ScaredAvoid = 500
+
+-- Detection --
+ENT.SightFOV = 150
+ENT.SightRange = 6000
+ENT.EyeBone = ""
+ENT.EyeOffset = Vector(0, 0, 0)
+ENT.EyeAngle = Angle(0, 0, 0)
+ENT.HearingRange = 250
+ENT.HearingRangeBullets = 5000
+
+-- Possession --
+ENT.PossessionEnabled = false
+ENT.Possession = {
+  distance = 100,
+  offset = Vector(0, 0, 20),
+  binds = {}
+}
 
 if SERVER then
   AddCSLuaFile("shared.lua")
@@ -185,13 +231,10 @@ if SERVER then
   -- Coroutine callbacks --
 
   function ENT:CallInCoroutine(callback)
-    if coroutine.running() then callback(0)
-    else
-      table.insert(self._DrGBaseCoroutineCallbacks, {
-        callback = callback,
-        now = CurTime()
-      })
-    end
+    table.insert(self._DrGBaseCoroutineCallbacks, {
+      callback = callback,
+      now = CurTime()
+    })
   end
   function ENT:CoroutineCallbacks()
     return #self._DrGBaseCoroutineCallbacks > 0
@@ -267,10 +310,13 @@ else
       end
       if DebugRange:GetBool() then
         render.DrawWireframeSphere(self:GetPos(), self.AllyReach*self:GetScale(), 25, 25, DrGBase.Colors.Green, true)
-        render.DrawWireframeSphere(self:GetPos(), self.EnemyReach*self:GetScale(), 25, 25, DrGBase.Colors.Red, true)
-        render.DrawWireframeSphere(self:GetPos(), self.EnemyStop*self:GetScale(), 25, 25, DrGBase.Colors.Orange, true)
-        render.DrawWireframeSphere(self:GetPos(), self.EnemyAvoid*self:GetScale(), 25, 25, DrGBase.Colors.Purple, true)
         render.DrawWireframeSphere(self:GetPos(), self.ScaredAvoid*self:GetScale(), 25, 25, DrGBase.Colors.Cyan, true)
+        render.DrawWireframeSphere(self:GetPos(), self.EnemyReach*self:GetScale(), 25, 25, DrGBase.Colors.Red, true)
+        render.DrawWireframeSphere(self:GetPos(), self.EnemyAvoid*self:GetScale(), 25, 25, DrGBase.Colors.Purple, true)
+        if self.EnemyStop ~= nil then
+          render.DrawWireframeSphere(self:GetPos(), self.EnemyStop*self:GetScale(), 25, 25, DrGBase.Colors.Orange, true)
+        end
+
       end
     end
     return self:CustomDraw()

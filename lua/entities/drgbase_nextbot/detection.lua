@@ -31,6 +31,33 @@ function ENT:IsBlind()
   return self.SightFOV <= 0 or self.SightRange <= 0
 end
 
+function ENT:IsSeenBy(ent)
+  if ent.IsDrGNextbot then
+    return ent:CanSeeEntity(self)
+  elseif ent:IsPlayer() then
+    if GetConVar("ai_ignoreplayers"):GetBool() then return false end
+    if ent:DrG_IsPossessing() then return false end
+    return ent:VisibleVec(self:WorldSpaceCenter()) and
+    DrGBase.Math.VectorsAngle(ent:EyePos() + ent:EyeAngles():Forward(), self:GetPos(), ent:EyePos()) < ent:GetFOV()/2 + 10
+  elseif ent:IsNPC() then
+    return ent:Visible(self)
+  else return false end
+end
+function ENT:SeenBy(ignoreallies)
+  local entities = {}
+  for i, ent in ipairs(self:GetTargettableEntities()) do
+    if not IsValid(ent) then continue end
+    if ent:EntIndex() == self:EntIndex() then continue end
+    if self:IsSeenBy(ent) and not (ignoreallies and self:IsAlly(ent)) then
+      table.insert(entities, ent)
+    end
+  end
+  return entities
+end
+function ENT:IsSeen(ignoreallies)
+  return #self:SeenBy(ignoreallies) ~= 0
+end
+
 if SERVER then
 
   function ENT:HasSpottedEntity(ent)
@@ -90,6 +117,7 @@ if SERVER then
   hook.Add("EntityEmitSound", "DrGBaseEntityEmitSoundHearing", function(sound)
     if not IsValid(sound.Entity) then return end
     for i, ent in ipairs(DrGBase.Nextbot.GetAll()) do
+      if ent.HearingRange == nil then continue end
       if ent.HearingRange <= 0 then continue end
       if ent:GetRangeSquaredTo(sound.Entity) <= math.pow(ent.HearingRange, 2) then
         local heard = ent:OnHearEntity(sound.Entity, sound)
@@ -102,6 +130,7 @@ if SERVER then
   hook.Add("EntityFireBullets", "DrGBaseEntityFireBullets", function(ent2, bullet)
     if not IsValid(ent2) then return end
     for i, ent in ipairs(DrGBase.Nextbot.GetAll()) do
+      if ent.HearingRangeBullets == nil then continue end
       if ent.HearingRangeBullets <= 0 then continue end
       if ent:GetRangeSquaredTo(ent2) <= math.pow(ent.HearingRangeBullets, 2) then
         local heard = ent:OnHearGunshot(ent2, bullet)

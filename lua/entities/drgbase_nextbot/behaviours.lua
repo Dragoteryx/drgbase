@@ -112,7 +112,7 @@ if SERVER then
             if self:IsPossessed() and self:GetPossessor():EntIndex() == target:EntIndex() then continue end
             if self:IsAlly(target) and (not attack.friendlyfire or self:IsPossessed()) then continue end
             if self:AngleEntity(target) > attack.angle/2 then continue end
-            if attack.lineofsight and not self:LineOfSight(target) then continue end
+            if attack.lineofsight and not self:CanSeeEntity(target) then continue end
             local dmg = DamageInfo()
             dmg:SetAttacker(self)
             dmg:SetDamage(attack.damage)

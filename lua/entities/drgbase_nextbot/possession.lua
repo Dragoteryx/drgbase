@@ -21,7 +21,7 @@ function ENT:PossessorView()
   if not self:IsPossessed() then return end
   local forward = self:GetAngles()
   local eyes = self:GetPossessor():EyeAngles()
-  local angles = Angle(-eyes.p, forward.y + 180, forward.r)
+  local angles = Angle(-eyes.p, eyes.y, 0)
   local bound1, bound2 = self:GetCollisionBounds()
   local center = self:GetPos() + (bound1 + bound2)/2
   local offset = center +
@@ -151,6 +151,7 @@ if SERVER then
       self:_HandlePossessionBinds(true)
     end
   end
+  function ENT:PossessionCustomControls() end
 
   -- Hooks (move spawned ents when possessing) --
 

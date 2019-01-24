@@ -54,6 +54,10 @@ end
 
 if SERVER then
 
+  function ENT:CanMove()
+    return true
+  end
+
   function ENT:SetSpeed(speed)
     if speed == nil then return end
     if speed < 0 then speed = 0 end
@@ -62,6 +66,10 @@ if SERVER then
       self:_Debug("speed set to "..speed..".")
     end
     return self.loco:SetDesiredSpeed(speed*self:GetScale())
+  end
+
+  function ENT:GetPath()
+    return self._DrGBasePath
   end
 
   function ENT:InvalidatePath()
@@ -86,7 +94,9 @@ if SERVER then
     if not IsValid(path) then return "failed" end
     while IsValid(path) do
       if self:IsDying() then return "dying" end
-    	path:Update(self)
+      if self:CanMove(self:GetPossessor()) then
+    	  path:Update(self)
+      end
     	if options.draw then path:Draw() end
     	if self.loco:IsStuck() then
     		self:HandleStuck()
@@ -120,6 +130,7 @@ if SERVER then
   end
 
   function ENT:StepAwayFromPos(pos)
+    if not self:CanMove(self:GetPossessor()) then return end
     local tr = util.TraceLine({
       start = self:GetPos() + Vector(0, 0, 10),
       endpos = pos + Vector(0, 0, 10),
@@ -145,27 +156,23 @@ if SERVER then
   end
 
   function ENT:GoForward()
+    if not self:CanMove(self:GetPossessor()) then return end
     self.loco:Approach(self:GetPos() + self:GetForward(), 1)
   end
 
   function ENT:GoBackward()
+    if not self:CanMove(self:GetPossessor()) then return end
     self.loco:Approach(self:GetPos() + self:GetForward()*-1, 1)
   end
 
   function ENT:StrafeLeft()
+    if not self:CanMove(self:GetPossessor()) then return end
     self.loco:Approach(self:GetPos() + self:GetRight()*-1, 1)
   end
 
   function ENT:StrafeRight()
+    if not self:CanMove(self:GetPossessor()) then return end
     self.loco:Approach(self:GetPos() + self:GetRight(), 1)
-  end
-
-  function ENT:TurnLeft()
-    self:SetAngles(self:GetAngles() + Angle(0, 2, 0))
-  end
-
-  function ENT:TurnRight()
-    self:SetAngles(self:GetAngles() + Angle(0, -2, 0))
   end
 
   -- Handlers --

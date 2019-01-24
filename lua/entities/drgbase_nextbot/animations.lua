@@ -104,7 +104,7 @@ if SERVER then
     end
     self._DrGBaseLastAnimCycle = self:GetCycle()
     self:SetPlaybackRate(rate or 1)
-    if seq ~= -1 and (seq ~= self:GetSequence() or self:GetCycle() == 1) then
+    if seq ~= nil and seq ~= -1 and (seq ~= self:GetSequence() or self:GetCycle() == 1) then
       self:ResetSequence(seq)
     end
   end

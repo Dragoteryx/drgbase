@@ -14,12 +14,11 @@ drive.Register("drive_drgbase_nextbot", {
   end,
 	Move = function(self)
     if not self.Entity.IsDrGNextbot then return end
-    local angles = self.Entity:GetAngles()
-    angles.y = self.Player:EyeAngles().y
+    if not self.Entity:CanMove(self.Player) then return end
+    local origin, angles = self.Entity:PossessorView()
     if self.Entity:IsFlying() then
-      angles.p = self.Player:EyeAngles().p
-    end
-    self.Entity:SetAngles(angles)
+      self.Entity:SetAngles(Angle(angles.p, angles.y, 0))
+    else self.Entity:SetAngles(Angle(0, angles.y, 0)) end
   end,
   FinishMove = function(self)
     if not self.Entity.IsDrGNextbot then return end
