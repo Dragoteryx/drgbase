@@ -20,39 +20,43 @@ function ENT:IsMoving()
   return self:SpeedSqr() ~= 0
 end
 
-function ENT:IsMovingForward()
-  if SERVER and self:IsPossessed() or
-  CLIENT and self:IsPossessedByLocalPlayer() then
-    return self:GetPossessor():KeyDown(IN_FORWARD) and
-    not self:GetPossessor():KeyDown(IN_BACK)
-  else return true end
-end
-
-function ENT:IsMovingBackward()
-  if SERVER and self:IsPossessed() or
-  CLIENT and self:IsPossessedByLocalPlayer() then
-    return self:GetPossessor():KeyDown(IN_BACK) and
-    not self:GetPossessor():KeyDown(IN_FORWARD)
-  else return false end
-end
-
-function ENT:IsMovingLeft()
-  if SERVER and self:IsPossessed() or
-  CLIENT and self:IsPossessedByLocalPlayer() then
-    return self:GetPossessor():KeyDown(IN_MOVELEFT) and
-    not self:GetPossessor():KeyDown(IN_MOVERIGHT)
-  else return false end
-end
-
-function ENT:IsMovingRight()
-  if SERVER and self:IsPossessed() or
-  CLIENT and self:IsPossessedByLocalPlayer() then
-    return self:GetPossessor():KeyDown(IN_MOVERIGHT) and
-    not self:GetPossessor():KeyDown(IN_MOVELEFT)
-  else return false end
-end
-
 if SERVER then
+
+  -- Getters --
+
+  function ENT:IsMovingForward()
+    if not self:IsMoving() then return false end
+    if self:IsPossessed() then return self:PossessorForward() end
+    return math.Round(DrGBase.Math.VectorsAngle(self:GetForward(), self.loco:GetGroundMotionVector())) < 90
+  end
+
+  function ENT:IsMovingBackward()
+    if not self:IsMoving() then return false end
+    if self:IsPossessed() then return self:PossessorBackward() end
+    return math.Round(DrGBase.Math.VectorsAngle(self:GetForward(), self.loco:GetGroundMotionVector())) > 90
+  end
+
+  function ENT:IsMovingLeft()
+    if not self:IsMoving() then return false end
+    if self:IsPossessed() then return self:PossessorLeft() end
+    return math.Round(DrGBase.Math.VectorsAngle(self:GetRight(), self.loco:GetGroundMotionVector())) > 90
+  end
+
+  function ENT:IsMovingRight()
+    if not self:IsMoving() then return false end
+    if self:IsPossessed() then return self:PossessorRight() end
+    return math.Round(DrGBase.Math.VectorsAngle(self:GetRight(), self.loco:GetGroundMotionVector())) < 90
+  end
+
+  function ENT:IsMovingUp()
+    return self.loco:GetVelocity().z > 0
+  end
+
+  function ENT:IsMovingDown()
+    return self.loco:GetVelocity().z < 0
+  end
+
+  -- Setters --
 
   function ENT:CanMove()
     return true
@@ -78,11 +82,13 @@ if SERVER then
     end
   end
 
+  -- Movements --
+
   function ENT:MoveToPos(pos, options, callback)
-    options = options or {}
-    if callback == nil then callback = function() end end
+    options = options or {}  
     options.lookahead = options.lookahead or 300
     options.tolerance = options.tolerance or 20
+    if callback == nil then callback = function() end end
     self._DrGBasePath = self._DrGBasePath or Path("Follow")
     local path = self._DrGBasePath
     path:SetMinLookAheadDistance(options.lookahead)

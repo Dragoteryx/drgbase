@@ -54,7 +54,7 @@ if SERVER then
         local forward = self:GetForward()
         forward = forward*options.speed*self:GetScale()
         forward.z = options.buoyancy*self:GetScale()
-        self.loco:SetVelocity(forward)
+        self:SetVelocity(forward)
       end
       jumping(options)
     end)
@@ -80,8 +80,12 @@ if SERVER then
 
   -- Attacks --
 
+  function ENT:IsAttacking()
+    return self._DrGBaseAttacking
+  end
+
   function ENT:Attack(attacks, options, onattack)
-    if self._DrGBaseAttacking then return end
+    if self:IsAttacking() then return end
     options = options or {}
     if options.cooldown ~= nil and options.cooldown > 0 then
       table.insert(attacks, {
@@ -97,8 +101,9 @@ if SERVER then
     for i, attack in ipairs(attacks) do
       self._DrGBaseAttacking = true
       attack.delay = attack.delay or 0
+      if attack.delay < 0 then attack.delay = 0 end
       attack.damage = attack.damage or 0
-      attack.type = attack.type or DMG_DIRECT
+      attack.type = attack.type or DMG_GENERIC
       attack.force = attack.force or self:GetForward()*attack.damage
       attack.range = attack.range or self.EnemyReach
       attack.angle = attack.angle or 90

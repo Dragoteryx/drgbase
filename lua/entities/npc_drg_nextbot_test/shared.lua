@@ -9,13 +9,13 @@ ENT.Models = {
   "models/player/police.mdl",
   "models/player/police_fem.mdl"
 }
-ENT.EnableBodyMoveXY = true
+ENT.AnimationType = DRGBASE_ANIMTYPE_BODYMOVEXY
 
 -- Stats --
 ENT.FallDamage = true
 
 -- Relationships --
-ENT.Factions = {"DrGBase"}
+ENT.Factions = {}
 ENT.EnemyReach = 250
 ENT.EnemyStop = 125
 ENT.EnemyAvoid = 50
@@ -27,38 +27,38 @@ ENT.EyeAngle = Angle(75, 0, 0)
 
 -- Possession --
 ENT.PossessionEnabled = true
-ENT.Possession = {
-  distance = 100,
-  offset = Vector(0, 0, 20),
-  binds = {
-    {
-      bind = IN_ATTACK,
-      onkeydown = function(self)
-        self:Scale(1.01)
-      end,
-      coroutine = false
-    },
-    {
-      bind = IN_ATTACK2,
-      onkeydown = function(self)
-        self:Scale(0.99)
-      end,
-      coroutine = false
-    },
-    {
-      bind = IN_JUMP,
-      onkeydown = function(self)
-        self:QuickJump(100)
-      end,
-      coroutine = false
-    },
-    {
-      bind = IN_RELOAD,
-      onkeypressed = function(self)
-        self:SetScale(1)
-      end,
-      coroutine = false
-    }
+ENT.PossessionViews = {
+  {
+    offset = Vector(0, 0, 20),
+    distance = 100
+  },
+  {
+    offset = Vector(7.5, 0, 0),
+    distance = 0,
+    eyepos = true
+  }
+}
+ENT.PossessionBinds = {
+  {
+    bind = IN_ATTACK,
+    coroutine = false,
+    onkeydown = function(self)
+
+    end
+  },
+  {
+    bind = IN_ATTACK2,
+    coroutine = false,
+    onkeydown = function(self)
+      self:PlayGesture("gesture_salute")
+    end
+  },
+  {
+    bind = IN_JUMP,
+    coroutine = false,
+    onkeydown = function(self)
+      self:QuickJump(100)
+    end
   }
 }
 
@@ -66,21 +66,11 @@ if SERVER then
 
   -- Misc --
   function ENT:CustomInitialize()
-    self:SetDefaultRelationship(D_HT)
+    self:SetDefaultRelationship(D_FR)
     self:SetPlayersRelationship(D_LI)
-    self:SetFactionRelationship(DRGBASE_FACTION_SANIC, D_FR)
-  end
-  function ENT:Use(ply)
-    if self:IsEnemy(ply) then self:SetEntityRelationship(ply, D_LI)
-    else self:SetEntityRelationship(ply, D_HT) end
   end
 
   -- AI --
-  function ENT:OnPursueEnemy(enemy) end
-  function ENT:EnemyInRange(enemy)
-    self.loco:FaceTowards(enemy:GetPos())
-    self:PlayGesture("gesture_wave")
-  end
   function ENT:FetchDestination()
     return self:RandomPos(1500)
   end
@@ -90,12 +80,14 @@ if SERVER then
 
   -- Movement --
   function ENT:GroundSpeed(state)
-    if state == DRGBASE_STATE_AI_FIGHT or
-    state == DRGBASE_STATE_AI_AVOID then return 200
+    if state == DRGBASE_STATE_AI_AVOID then return 200
     else return 100 end
   end
 
   -- Possession --
+  function ENT:PossessionThink(ply, tr)
+    self:LookAt(tr.HitPos)
+  end
   function ENT:PossessionGroundSpeed(sprint)
     if sprint then return 200
     else return 100 end
@@ -106,7 +98,7 @@ if SERVER then
     if not onground then return "jump_knife"
     elseif speed == 0 then return "idle_all_01"
     elseif speed < 120 then return "walk_all"
-    else return "run_all_charging" end
+    else return "run_all_01" end
   end
 
   -- Hooks --

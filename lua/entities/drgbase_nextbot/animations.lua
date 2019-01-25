@@ -1,43 +1,59 @@
 
+function ENT:PrintPoseParameters()
+  for i = 0, self:GetNumPoseParameters() - 1 do
+  	local min, max = self:GetPoseParameterRange(i)
+  	print(self:GetPoseParameterName(i).." "..min.." / "..max)
+  end
+end
+
 if SERVER then
 
   function ENT:BodyUpdate()
-    if self.EnableBodyMoveXY then
-      self:BodyMoveXY()
-    else
-      local moveX = math.Round(self:GetPoseParameter("move_x"), 1)
-      local moveY = math.Round(self:GetPoseParameter("move_y"), 1)
-      if self:IsMovingForward() then
-        self:SetPoseParameter("move_x", moveX+0.1)
-      elseif self:IsMovingBackward() then
-        self:SetPoseParameter("move_x", moveX-0.1)
-      elseif moveX > 0 then
-        self:SetPoseParameter("move_x", moveX-0.1)
-      elseif moveX < 0 then
-        self:SetPoseParameter("move_x", moveX+0.1)
-      end
-      if self:IsMovingRight() then
-        self:SetPoseParameter("move_y", moveY+0.1)
-      elseif self:IsMovingLeft() then
-        self:SetPoseParameter("move_y", moveY-0.1)
-      elseif moveY > 0 then
-        self:SetPoseParameter("move_y", moveY-0.1)
-      elseif moveY < 0 then
-        self:SetPoseParameter("move_y", moveY+0.1)
+    if self.AnimationType == DRGBASE_ANIMTYPE_SIMPLE then
+      self:FrameAdvance()
+    elseif self.AnimationType == DRGBASE_ANIMTYPE_COMPLEX then
+      if self:IsPossessed() then
+        local moveX = math.Round(self:GetPoseParameter("move_x"), 1)
+        local moveY = math.Round(self:GetPoseParameter("move_y"), 1)
+        if self:IsMovingForward() then
+          self:SetPoseParameter("move_x", moveX+0.1)
+        elseif self:IsMovingBackward() then
+          self:SetPoseParameter("move_x", moveX-0.1)
+        elseif moveX > 0 then
+          self:SetPoseParameter("move_x", moveX-0.1)
+        elseif moveX < 0 then
+          self:SetPoseParameter("move_x", moveX+0.1)
+        end
+        if self:IsMovingRight() then
+          self:SetPoseParameter("move_y", moveY+0.1)
+        elseif self:IsMovingLeft() then
+          self:SetPoseParameter("move_y", moveY-0.1)
+        elseif moveY > 0 then
+          self:SetPoseParameter("move_y", moveY-0.1)
+        elseif moveY < 0 then
+          self:SetPoseParameter("move_y", moveY+0.1)
+        end
+      else
+        self:SetPoseParameter("move_x", 1)
+        self:SetPoseParameter("move_y", 0)
       end
       self:FrameAdvance()
+    elseif self.AnimationType == DRGBASE_ANIMTYPE_BODYMOVEXY then
+      self:BodyMoveXY()
     end
   end
 
-  function ENT:PlaySequenceAndWait(name, speed, callback)
-    local len = self:SetSequence(name)
+  function ENT:PlaySequenceAndWait(seq, speed, callback)
+    if isstring(seq) then seq = self:LookupSequence(seq) end
+    if seq == -1 then return end
     speed = speed or 1
     if callback == nil then callback = function() end end
+    local synced = self:EnableSyncedAnimations()
+    self:EnableSyncedAnimations(false)
+    local len = self:SetSequence(seq)
     self:ResetSequenceInfo()
     self:SetCycle(0)
     self:SetPlaybackRate(speed)
-    local synced = self:EnableSyncedAnimations()
-    self:EnableSyncedAnimations(false)
     local delay = CurTime() + len/speed
     while CurTime() < delay and not self:IsDying() do
       if callback() then break end
@@ -46,8 +62,16 @@ if SERVER then
     self:EnableSyncedAnimations(synced)
   end
 
+  function ENT:PlaySequenceAndMove(seq, speed, callback)
+    if isstring(seq) then seq = self:LookupSequence(seq) end
+    if seq == -1 then return end
+    self:PlaySequenceAndWait(seq, speed, callback)
+
+  end
+
   function ENT:PlayGesture(seq)
     if isstring(seq) then seq = self:LookupSequence(seq) end
+    if seq == -1 then return false end
     if self._DrGBaseCurrentGestures[seq] ~= nil and CurTime() <= self._DrGBaseCurrentGestures[seq] then return false end
     self._DrGBaseCurrentGestures[seq] = CurTime() + self:SequenceDuration(seq)
     self:AddGestureSequence(seq)
@@ -56,6 +80,7 @@ if SERVER then
 
   function ENT:AddSequenceCallback(seq, cycles, callback)
     if isstring(seq) then seq = self:LookupSequence(seq) end
+    if seq == -1 then return end
     self._DrGBaseSequenceCallbacks[seq] = self._DrGBaseSequenceCallbacks[seq] or {}
     if not istable(cycles) then cycles = {cycles} end
     for i, cycle in ipairs(cycles) do
@@ -69,6 +94,66 @@ if SERVER then
   function ENT:RemoveSequenceCallbacks(seq)
     if isstring(seq) then seq = self:LookupSequence(seq) end
     self._DrGBaseSequenceCallbacks[seq] = {}
+  end
+
+  function ENT:GetHeadYaw()
+    return self:GetPoseParameter(self.HeadYaw)
+  end
+  function ENT:GetHeadPitch()
+    return self:GetPoseParameter(self.HeadPitch)
+  end
+  function ENT:SetHeadYaw(yaw)
+    self:SetPoseParameter(self.HeadYaw, yaw)
+  end
+  function ENT:SetHeadPitch(pitch)
+    self:SetPoseParameter(self.HeadPitch, pitch)
+  end
+
+  function ENT:GetAimYaw()
+    return self:GetPoseParameter(self.AimYaw)
+  end
+  function ENT:GetAimPitch()
+    return self:GetPoseParameter(self.AimPitch)
+  end
+  function ENT:SetAimYaw(yaw)
+    self:SetPoseParameter(self.AimYaw, yaw)
+  end
+  function ENT:SetAimPitch(pitch)
+    self:SetPoseParameter(self.AimPitch, pitch)
+  end
+
+  function ENT:LookAt(pos)
+    if not isvector(pos) and not isentity(pos) then
+      self:SetHeadYaw(0)
+      self:SetHeadPitch(0)
+    else
+      if isentity(pos) then pos = pos:WorldSpaceCenter() end
+      local tr = util.TraceLine({
+        start = self:EyePos(),
+        endpos = pos,
+        filter = {self}
+      })
+      local angle = tr.Normal:Angle()
+      self:SetHeadYaw(math.AngleDifference(angle.y, self:GetAngles().y))
+      self:SetHeadPitch(math.AngleDifference(angle.p, self:GetAngles().p))
+    end
+  end
+
+  function ENT:AimAt(pos)
+    if not isvector(pos) and not isentity(pos) then
+      self:SetAimYaw(0)
+      self:SetAimPitch(0)
+    else
+      if isentity(pos) then pos = pos:WorldSpaceCenter() end
+      local tr = util.TraceLine({
+        start = self:EyePos(),
+        endpos = pos,
+        filter = {self}
+      })
+      local angle = tr.Normal:Angle()
+      self:SetAimYaw(math.AngleDifference(angle.y, self:GetAngles().y))
+      self:SetAimPitch(math.AngleDifference(angle.p, self:GetAngles().p))
+    end
   end
 
   -- Handlers --

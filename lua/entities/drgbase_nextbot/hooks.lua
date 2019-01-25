@@ -150,7 +150,7 @@ if SERVER then
       self:_Debug("downwards velocity: "..self._DrGBaseDownwardsVelocity..".")
       self:InvalidatePath()
       if self._DrGBaseDownwardsVelocity > 0 and not self:IsFlying() and self.FallDamage then
-        local val = self:OnFallDamage(self._DrGBaseDownwardsVelocity, self:WaterLevel()) or 0
+        local val = self:OnFallDamage(self._DrGBaseDownwardsVelocity/self:GetScale(), self:WaterLevel()) or 0
         if val > 0 then
           local dmg = DamageInfo()
           dmg:SetDamage(val)

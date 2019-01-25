@@ -17,24 +17,37 @@ function ENT:PossessorTrace()
   })
 end
 
-function ENT:PossessorView()
+function ENT:PossessorView(view)
   if not self:IsPossessed() then return end
-  local forward = self:GetAngles()
+  view = view or self:CurrentPossessionView()
   local eyes = self:GetPossessor():EyeAngles()
-  local angles = Angle(-eyes.p, eyes.y, 0)
+  local angles = Angle(-eyes.p, eyes.y + 180, 0)
+  if view.invertpitch then
+    angles.p = -angles.p
+  end
   local bound1, bound2 = self:GetCollisionBounds()
   local center = self:GetPos() + (bound1 + bound2)/2
+  if view.eyepos then
+    center = self:EyePos()
+  elseif isstring(view.bone) then
+    local boneid = self:LookupBone(view.bone)
+    if boneid ~= nil then
+      center = self:GetBonePosition(boneid)
+    end
+  end
   local offset = center +
-  self:GetForward()*self.Possession.offset.x*self:GetModelScale() +
-  self:GetRight()*self.Possession.offset.y*self:GetModelScale() +
-  self:GetUp()*self.Possession.offset.z*self:GetModelScale()
+  self:GetForward()*view.offset.x*self:GetModelScale() +
+  self:GetRight()*view.offset.y*self:GetModelScale() +
+  self:GetUp()*view.offset.z*self:GetModelScale()
   local tr1 = util.TraceLine({
     start = center,
     endpos = offset,
     collisiongroup = COLLISION_GROUP_IN_VEHICLE
   })
   if tr1.HitWorld then offset = tr1.HitPos + tr1.Normal*-10 end
-  local endpos = offset + angles:Forward()*self.Possession.distance*self:GetModelScale()
+  local distance = view.distance
+  if distance < 1 then distance = 1 end
+  local endpos = offset + angles:Forward()*distance*self:GetModelScale()
   local tr2 = util.TraceLine({
     start = offset,
     endpos = endpos,
@@ -44,11 +57,49 @@ function ENT:PossessorView()
   return endpos, (tr2.Normal*-1):Angle()
 end
 
+function ENT:CurrentPossessionView()
+  if not self:IsPossessed() then return end
+  return self.PossessionViews[self:GetDrGVar("DrGBasePossessionView")], self:GetDrGVar("DrGBasePossessionView")
+end
+
+function ENT:PossessorForward()
+  if SERVER and self:IsPossessed() or
+  CLIENT and self:IsPossessedByLocalPlayer() then
+    return self:GetPossessor():KeyDown(IN_FORWARD) and
+    not self:GetPossessor():KeyDown(IN_BACK)
+  else return false end
+end
+
+function ENT:PossessorBackward()
+  if SERVER and self:IsPossessed() or
+  CLIENT and self:IsPossessedByLocalPlayer() then
+    return self:GetPossessor():KeyDown(IN_BACK) and
+    not self:GetPossessor():KeyDown(IN_FORWARD)
+  else return false end
+end
+
+function ENT:PossessorLeft()
+  if SERVER and self:IsPossessed() or
+  CLIENT and self:IsPossessedByLocalPlayer() then
+    return self:GetPossessor():KeyDown(IN_MOVELEFT) and
+    not self:GetPossessor():KeyDown(IN_MOVERIGHT)
+  else return false end
+end
+
+function ENT:PossessorRight()
+  if SERVER and self:IsPossessed() or
+  CLIENT and self:IsPossessedByLocalPlayer() then
+    return self:GetPossessor():KeyDown(IN_MOVERIGHT) and
+    not self:GetPossessor():KeyDown(IN_MOVELEFT)
+  else return false end
+end
+
 if SERVER then
   util.AddNetworkString("DrGBaseNextbotPossess")
   util.AddNetworkString("DrGBaseNextbotDispossess")
   util.AddNetworkString("DrGBaseNextbotCanPossess")
   util.AddNetworkString("DrGBaseNextbotCantPossess")
+  util.AddNetworkString("DrGBaseNextbotCyclePossessionViews")
 
   function ENT:Possess(ply, _client)
     if not self.PossessionEnabled then return DRGBASE_POSSESS_DISABLED end
@@ -57,6 +108,7 @@ if SERVER then
     if not ply:Alive() then return DRGBASE_POSSESS_NOT_ALIVE end
     if IsValid(ply:DrG_Possessing()) then return DRGBASE_POSSESS_ALREADY end
     if self:IsPossessed() then return DRGBASE_POSSESS_NOT_EMPTY end
+    if #self.PossessionViews == 0 then return DRGBASE_POSSESS_NOVIEWS end
     local hookres = hook.Run("DrGBase/Possess", self, ply, _client or false)
     if hookres ~= nil and not hookres then return DRGBASE_POSSESS_NOT_ALLOWED end
     hookres = self:OnPossess(ply)
@@ -71,6 +123,7 @@ if SERVER then
     net.WriteEntity(self)
     net.WriteEntity(ply)
     net.Broadcast()
+    self:SetDrGVar("DrGBasePossessionView", 1)
     self:_Debug("possessed by player '"..ply:Nick().."' ("..ply:EntIndex()..").")
     return DRGBASE_POSSESS_OK
   end
@@ -91,10 +144,23 @@ if SERVER then
     net.WriteEntity(self)
     net.WriteEntity(possessor)
     net.Broadcast()
+    self:SetDrGVar("DrGBasePossessionView", 1)
     self:_Debug("no longer possessed by player '"..possessor:Nick().."' ("..possessor:EntIndex()..").")
     return DRGBASE_DISPOSSESS_OK
   end
   function ENT:OnDispossess() end
+
+  function ENT:CyclePossessionViews()
+    local view = self:GetDrGVar("DrGBasePossessionView")
+    view = view+1
+    if view > #self.PossessionViews then view = 1 end
+    self:SetDrGVar("DrGBasePossessionView", view)
+  end
+
+  net.Receive("DrGBaseNextbotCyclePossessionViews", function(len, ply)
+    if not ply:DrG_IsPossessing() then return end
+    ply:DrG_Possessing():CyclePossessionViews()
+  end)
 
   -- Handlers --
 
@@ -112,7 +178,7 @@ if SERVER then
         return
       end
       if self._DrGBaseReady and not self:PossessionBlockInput() then
-        for i, move in ipairs(self.Possession.binds) do
+        for i, move in ipairs(self.PossessionBinds) do
           if (not coroutine and move.coroutine) or (coroutine and not move.coroutine) then continue end
           if move.onkeypressed == nil then move.onkeypressed = function() end end
           if move.onkeydown == nil then move.onkeydown = function() end end
@@ -138,14 +204,14 @@ if SERVER then
     local possessor = self:GetPossessor()
     self:_SetState(DRGBASE_STATE_POSSESSED)
     if not self:PossessionBlockInput() then
-      if self:IsMovingForward() then
+      if self:PossessorForward() then
         self:GoForward()
-      elseif self:IsMovingBackward() then
+      elseif self:PossessorBackward() then
         self:GoBackward()
       end
-      if self:IsMovingLeft() then
+      if self:PossessorLeft() then
         self:StrafeLeft()
-      elseif self:IsMovingRight() then
+      elseif self:PossessorRight() then
         self:StrafeRight()
       end
       self:_HandlePossessionBinds(true)
@@ -173,6 +239,12 @@ if SERVER then
 
 else
 
+  function ENT:CyclePossessionViews()
+    if not self:IsPossessedByLocalPlayer() then return end
+    net.Start("DrGBaseNextbotCyclePossessionViews")
+    net.SendToServer()
+  end
+
   function ENT:IsPossessedByLocalPlayer()
     return self:IsPossessed() and self:GetPossessor():EntIndex() == LocalPlayer():EntIndex()
   end
@@ -199,6 +271,23 @@ else
       if ent.OnDispossess == nil then return end
       ent:OnDispossess(dispossessor)
     end
+  end)
+
+  function ENT:PossessionHUD() end
+  hook.Add("HUDPaint", "DrGBasePossessionHUD", function()
+    local possessing = LocalPlayer():DrG_Possessing()
+    if not IsValid(possessing) then return end
+    local hookres = possessing:PossessionHUD(possessing:CurrentPossessionView())
+    if hookres then return end
+    -- draw possession hud
+
+  end)
+
+  function ENT:PossessionRender() end
+  hook.Add("RenderScreenspaceEffects", "DrGBasePossessionDraw", function()
+    local possessing = LocalPlayer():DrG_Possessing()
+    if not IsValid(possessing) then return end
+    possessing:PossessionRender(possessing:CurrentPossessionView())
   end)
 
 end

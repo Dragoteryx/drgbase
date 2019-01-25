@@ -107,24 +107,20 @@ if SERVER then
         if faction == DRGBASE_FACTION_SANIC then
           table.insert(relationships, relationship)
         end
+      elseif ent.IsVJBaseSNPC then
+        for i, class in ipairs(ent.VJ_NPC_Class) do
+          if string.upper(class) ~= faction then continue end
+          table.insert(relationships, relationship)
+          break
+        end
+      elseif ent.CPTBase_NPC or ent.IV04NextBot then
+        if string.upper(ent.Faction) == faction then
+          table.insert(relationships, relationship)
+        end
       elseif ent:IsNPC() then
         local def = HL2Factions[ent:GetClass()]
-        if def ~= nil then
-          if def == faction then
-            table.insert(relationships, relationship)
-          end
-        else
-          if ent.IsVJBaseSNPC then
-            for i, class in ipairs(ent.VJ_NPC_Class) do
-              if string.upper(class) ~= faction then continue end
-              table.insert(relationships, relationship)
-              break
-            end
-          elseif ent.CPTBase_NPC then
-            if string.upper(ent.Faction) == faction then
-              table.insert(relationships, relationship)
-            end
-          end
+        if def == faction then
+          table.insert(relationships, relationship)
         end
       end
     end
@@ -203,7 +199,8 @@ if SERVER then
   function ENT:ResetRelationships()
     self._DrGBaseEntityRelationships = {}
     self._DrGBaseClassRelationships = {}
-    self._DrGBaseFactionRelationships = {}
+    self._DrGBaseModelRelationships = {}
+    self._DrGBaseFactionRelationships = {}    
     self._DrGBaseCustomRelationships = {}
     self._DrGBaseFactions = {}
     for i, faction in ipairs(self.Factions) do

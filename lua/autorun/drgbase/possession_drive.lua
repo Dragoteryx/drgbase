@@ -22,6 +22,7 @@ drive.Register("drive_drgbase_nextbot", {
   end,
   FinishMove = function(self)
     if not self.Entity.IsDrGNextbot then return end
-    if self.Player:KeyPressed(IN_USE) then self.Entity:Dispossess(true) end
+    if self.Player:KeyPressed(IN_USE) then self.Entity:Dispossess(true)
+    elseif self.Player:KeyPressed(IN_ZOOM) then self.Entity:CyclePossessionViews() end
   end
 }, "drive_base")

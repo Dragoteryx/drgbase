@@ -16,17 +16,24 @@ DrGBase.IncludeFile("misc.lua")
 DrGBase.IncludeFile("movement.lua")
 DrGBase.IncludeFile("possession.lua")
 DrGBase.IncludeFile("relationships.lua")
-DrGBase.IncludeFile("scale.lua")
 DrGBase.IncludeFile("sounds.lua")
 DrGBase.IncludeFile("weapons.lua")
 
 -- Misc --
-ENT.Models = {"models/Kleiner.mdl"}
+ENT.Models = {"models/player/kleiner.mdl"}
 ENT.Skins = {0}
 ENT.ModelScale = 1
 ENT.RagdollOnDeath = true
-ENT.EnableBodyMoveXY = false
+ENT.AnimationType = DRGBASE_ANIMTYPE_SIMPLE
 ENT.AmbientSounds = {}
+ENT.HeadYaw = "head_yaw"
+ENT.HeadPitch = "head_pitch"
+ENT.AimYaw = "weapon_yaw"
+ENT.AimPitch = "weapon_pitch"
+ENT.Killicon = {
+  icon = "HUD/killicons/default",
+  color = Color(255, 80, 0, 255)
+}
 
 -- Stats --
 ENT.MaxHealth = 100
@@ -34,10 +41,13 @@ ENT.HealthRegen = 0
 ENT.Radius = 10000
 ENT.Omniscient = false
 ENT.ForgetTime = 10
+ENT.FallDamage = false
+
+-- Flight --
 ENT.Flight = false
 ENT.FlightMaxPitch = 45
 ENT.FlightMinPitch = 45
-ENT.FallDamage = false
+ENT.FlightMatchPitch = false
 
 -- Relationships --
 ENT.Factions = {}
@@ -59,13 +69,14 @@ ENT.EyeAngle = Angle(0, 0, 0)
 ENT.HearingRange = 250
 ENT.HearingRangeBullets = 5000
 
+-- Weapons --
+ENT.UseWeapons = false
+ENT.WeaponBone = ""
+
 -- Possession --
 ENT.PossessionEnabled = false
-ENT.Possession = {
-  distance = 100,
-  offset = Vector(0, 0, 20),
-  binds = {}
-}
+ENT.PossessionViews = {}
+ENT.PossessionBinds = {}
 
 if SERVER then
   AddCSLuaFile("shared.lua")
@@ -110,8 +121,8 @@ if SERVER then
     self._DrGBaseDefaultRelationship = D_NU -- default relationship
     self._DrGBaseEntityRelationships = {} -- relationships with entities
     self._DrGBaseClassRelationships = {} -- relationships with classes
-    self._DrGBaseFactionRelationships = {} -- relationships with factions
     self._DrGBaseModelRelationships = {} -- model relationships
+    self._DrGBaseFactionRelationships = {} -- relationships with factions
     self._DrGBaseCustomRelationships = {} -- custom relationship checks
     self._DrGBaseHandleEnemy = 0 -- search for enemy delay
     self._DrGBaseReady = false -- called after self:OnSpawn()
@@ -120,6 +131,8 @@ if SERVER then
     self._DrGBaseDefinedAttacks = {} -- attacks table
     self._DrGBaseSpeedFetch = true -- fetch speed ?
     self._DrGBaseLastAnimCycle = 0 -- for animation callbacks
+    self._DrGBasePossessionThinkDelay = 0 -- possession think delay
+    self._DrGBaseAttacking = false -- whether or not the nextbot is currently attacking
     self:SetDrGVar("DrGBaseState", DRGBASE_STATE_NONE)
     self:SetDrGVar("DrGBaseSpeed", 0)
     self:SetDrGVar("DrGBaseDying", false)
@@ -129,14 +142,16 @@ if SERVER then
     self:SetDrGVar("DrGBaseHealth", self.MaxHealth)
     self:SetDrGVar("DrGBaseMaxHealth", self.MaxHealth)
     self:SetDrGVar("DrGBaseScale", 1)
+    self:SetDrGVar("DrGBasePossessionView", 1)
     self:ResetRelationships()
-    self:NPCRelationship()
     self:CustomInitialize()
+    self:NPCRelationship()
     self:CallOnRemove("DrGBaseCallOnRemove", function()
       table.RemoveByValue(DrGBase.Nextbot._Spawned, self)
       if self:IsPossessed() then self:Dispossess() end
       if self._DrGBaseAmbientSound ~= nil then
-        self:StopSound(self._DrGBaseAmbientSound)
+        self:StopLoopingSound(self._DrGBaseAmbientSound)
+        self._DrGBaseAmbientSound = nil
       end
     end)
     table.insert(DrGBase.Nextbot._Spawned, self)
@@ -158,8 +173,13 @@ if SERVER then
       local nextThink = self:CustomThink() or 0
       self._DrGBaseCustomThinkDelay = CurTime() + nextThink
     end
+    if self:IsPossessed() and CurTime() > self._DrGBasePossessionThinkDelay then
+      local nextThink = self:PossessionThink(self:GetPossessor(), self:PossessorTrace()) or 0
+      self._DrGBasePossessionThinkDelay = CurTime() + nextThink
+    end
   end
   function ENT:CustomThink() end
+  function ENT:PossessionThink() end
 
   -- RunBehaviour --
 
@@ -258,6 +278,7 @@ else
     if self._DrGBaseInitialized then return end
     self._DrGBaseInitialized = true
     self._DrGBaseCustomThinkDelay = 0
+    self._DrGBasePossessionThinkDelay = 0
     self._DrGBaseLastState = DRGBASE_STATE_NONE
     return self:CustomInitialize()
   end
@@ -279,9 +300,14 @@ else
       local nextThink = self:CustomThink() or 0
       self._DrGBaseCustomThinkDelay = CurTime() + nextThink
     end
+    if self:IsPossessedByLocalPlayer() and CurTime() > self._DrGBasePossessionThinkDelay then
+      local nextThink = self:PossessionThink(self:GetPossessor(), self:PossessorTrace()) or 0
+      self._DrGBasePossessionThinkDelay = CurTime() + nextThink
+    end
   end
   function ENT:OnStateChange() end
   function ENT:CustomThink() end
+  function ENT:PossessionThink() end
 
   -- Draw --
 
@@ -322,20 +348,6 @@ else
     return self:CustomDraw()
   end
   function ENT:CustomDraw() end
-
-  function ENT:PossessionHUD() end
-  hook.Add("HUDPaint", "DrGBasePossessionHUD", function()
-    if not IsValid(LocalPlayer():DrG_Possessing()) then return end
-    local hookres = LocalPlayer():DrG_Possessing():PossessionHUD()
-    if hookres then return end
-    -- draw possession hud
-
-  end)
-
-  function ENT:PossessionRender() end
-  hook.Add("RenderScreenspaceEffects", "DrGBasePossessionDraw", function()
-    if IsValid(LocalPlayer():DrG_Possessing()) then LocalPlayer():DrG_Possessing():PossessionRender() end
-  end)
 
   -- Misc --
 

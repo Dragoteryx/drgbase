@@ -49,8 +49,22 @@ function ENT:AngleEntity(ent)
   return self:AnglePos(ent:GetPos())
 end
 
-function ENT:DrG_EyePos()
+function ENT:GetScale()
+  return self:GetDrGVar("DrGBaseScale")
+end
 
+function ENT:InRange(ent, dist)
+  return self:GetPos():DistToSqr(ent:GetPos()) <= math.pow(dist*self:GetScale(), 2)
+end
+function ENT:FindInRange(dist)
+  local entities = {}
+  for i, ent in ipairs(self:GetTargettableEntities()) do
+    if not IsValid(ent) then continue end
+    if ent:EntIndex() == self:EntIndex() then continue end
+    if not self:InRange(ent, dist) then continue end
+    table.insert(entities, ent)
+  end
+  return entities
 end
 
 if SERVER then
@@ -85,6 +99,15 @@ if SERVER then
       ent.loco:SetVelocity(Vector(0, 0, 0))
     end)
   end)
+
+  function ENT:SetScale(scale)
+    self:SetDrGVar("DrGBaseScale", scale)
+    self:SetModelScale(self.ModelScale*scale)
+  end
+
+  function ENT:Scale(mult)
+    self:SetScale(self:GetScale()*mult)
+  end
 
   -- Handlers --
 

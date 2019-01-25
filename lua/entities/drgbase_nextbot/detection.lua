@@ -37,10 +37,11 @@ function ENT:IsSeenBy(ent)
   elseif ent:IsPlayer() then
     if GetConVar("ai_ignoreplayers"):GetBool() then return false end
     if ent:DrG_IsPossessing() then return false end
-    return ent:VisibleVec(self:WorldSpaceCenter()) and
+    return (ent:VisibleVec(self:GetPos()) or ent:VisibleVec(self:GetPos() + Vector(0, 0, self:Height()/2)) or ent:VisibleVec(self:GetPos() + Vector(0, 0, self:Height()))) and
     DrGBase.Math.VectorsAngle(ent:EyePos() + ent:EyeAngles():Forward(), self:GetPos(), ent:EyePos()) < ent:GetFOV()/2 + 10
   elseif ent:IsNPC() then
-    return ent:Visible(self)
+    return (ent:VisibleVec(self:GetPos()) or ent:VisibleVec(self:GetPos() + Vector(0, 0, self:Height()/2)) or ent:VisibleVec(self:GetPos() + Vector(0, 0, self:Height()))) and
+    DrGBase.Math.VectorsAngle(ent:EyePos() + ent:EyeAngles():Forward(), self:GetPos(), ent:EyePos()) < 75
   else return false end
 end
 function ENT:SeenBy(ignoreallies)

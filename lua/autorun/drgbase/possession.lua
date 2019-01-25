@@ -47,6 +47,7 @@ net.Receive("DrGBaseNextbotCantPossess", function()
 	elseif enum == DRGBASE_POSSESS_NOT_ALIVE then reason = "you are dead."
 	elseif enum == DRGBASE_POSSESS_ALREADY then reason = "you are already possessing a nextbot."
 	elseif enum == DRGBASE_POSSESS_DISABLED then reason = "possession is not available for this nextbot."
+	elseif enum == DRGBASE_POSSESS_NOVIEWS then reason = "no defined camera views."
 	end
 	notification.AddLegacy("You can't possess this nextbot ("..ent.Name.."): "..reason, NOTIFY_ERROR, 4)
 	surface.PlaySound("buttons/button10.wav")

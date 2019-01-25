@@ -6,7 +6,7 @@ function entMETA:EyePos()
   if self.IsDrGNextbot then
     local bound1, bound2 = self:GetCollisionBounds()
     local eyepos = self:GetPos() + (bound1 + bound2)/2
-    if self.EyeBone ~= nil then
+    if isstring(self.EyeBone) then
       local boneid = self:LookupBone(self.EyeBone)
       if boneid ~= nil then
         eyepos = self:GetBonePosition(boneid)
@@ -36,7 +36,19 @@ end
 
 if SERVER then
 
+  local old_GetVelocity = entMETA.GetVelocity
+  function entMETA:GetVelocity()
+    if self.IsDrGNextbot then
+      return self.loco:GetVelocity()
+    else return old_GetVelocity(self) end
+  end
 
+  local old_SetVelocity = entMETA.SetVelocity
+  function entMETA:SetVelocity(velocity)
+    if self.IsDrGNextbot then
+      return self.loco:SetVelocity(velocity)
+    else return old_SetVelocity(self, velocity) end
+  end
 
 else
 
