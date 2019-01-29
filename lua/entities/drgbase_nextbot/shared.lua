@@ -11,9 +11,11 @@ DrGBase.IncludeFile("animations.lua")
 DrGBase.IncludeFile("behaviours.lua")
 DrGBase.IncludeFile("detection.lua")
 DrGBase.IncludeFile("hooks.lua")
+DrGBase.IncludeFile("loco.lua")
 DrGBase.IncludeFile("meta.lua")
 DrGBase.IncludeFile("misc.lua")
 DrGBase.IncludeFile("movement.lua")
+DrGBase.IncludeFile("path.lua")
 DrGBase.IncludeFile("possession.lua")
 DrGBase.IncludeFile("relationships.lua")
 DrGBase.IncludeFile("sounds.lua")
@@ -28,8 +30,8 @@ ENT.AnimationType = DRGBASE_ANIMTYPE_SIMPLE
 ENT.AmbientSounds = {}
 ENT.HeadYaw = "head_yaw"
 ENT.HeadPitch = "head_pitch"
-ENT.AimYaw = "weapon_yaw"
-ENT.AimPitch = "weapon_pitch"
+ENT.AimYaw = "aim_yaw"
+ENT.AimPitch = "aim_pitch"
 ENT.Killicon = {
   icon = "HUD/killicons/default",
   color = Color(255, 80, 0, 255)
@@ -52,7 +54,7 @@ ENT.FlightMatchPitch = false
 -- Relationships --
 ENT.Factions = {}
 ENT.AlliedWithSelfFactions = true
-ENT.KnowAlliesPosition = false
+ENT.CommunicateWithAllies = false
 ENT.Frightening = false
 ENT.EnemyReach = 250
 --ENT.EnemyStop = ENT.EnemyReach
@@ -71,10 +73,13 @@ ENT.HearingRangeBullets = 5000
 
 -- Weapons --
 ENT.UseWeapons = false
-ENT.WeaponBone = ""
+ENT.WeaponAttachmentLH = "Anim_Attachment_LH"
+ENT.WeaponAttachmentRH = "Anim_Attachment_RH"
+ENT.DropWeaponOnDeath = false
 
 -- Possession --
 ENT.PossessionEnabled = false
+ENT.PossessionRemote = true
 ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
 
@@ -104,6 +109,7 @@ if SERVER then
     self:SetPlaybackRate(1)
     self:AddFlags(FL_OBJECT + FL_CLIENT)
     self:CombineBall("dissolve")
+    self.VJ_AddEntityToSNPCAttackList = true -- so vj snpcs can damage us
     self._DrGBaseCoroutineCallbacks = {} -- call functions inside coroutine
     self._DrGBaseSpotted = {} -- list of spotted entities
     self._DrGBaseHandleAnimDelay = 0 -- delay between animations handles
@@ -133,6 +139,82 @@ if SERVER then
     self._DrGBaseLastAnimCycle = 0 -- for animation callbacks
     self._DrGBasePossessionThinkDelay = 0 -- possession think delay
     self._DrGBaseAttacking = false -- whether or not the nextbot is currently attacking
+    self._DrGBaseHitGroups = {} -- list of hitgroups
+    self._DrGBaseBlockRotation = false -- block rotation
+    self._DrGBaseBlockInput = false -- block input
+    self:DefineHitGroup(HITGROUP_HEAD, {
+      "ValveBiped.Bip01_Neck1",
+      "ValveBiped.Bip01_Head1",
+      "ValveBiped.forward"
+    })
+    self:DefineHitGroup(HITGROUP_CHEST, {
+      "ValveBiped.Bip01_L_Clavicle",
+      "ValveBiped.Bip01_R_Clavicle",
+      "ValveBiped.Bip01_Spine2",
+      "ValveBiped.Bip01_Spine4"
+    })
+    self:DefineHitGroup(HITGROUP_STOMACH, {
+      "ValveBiped.Bip01_Spine",
+      "ValveBiped.Bip01_Spine1",
+      "ValveBiped.Bip01_Pelvis"
+    })
+    self:DefineHitGroup(HITGROUP_LEFTARM, {
+      "ValveBiped.Bip01_L_UpperArm",
+      "ValveBiped.Bip01_L_Forearm",
+      "ValveBiped.Bip01_L_Hand",
+      "ValveBiped.Anim_Attachment_LH",
+      "ValveBiped.Bip01_L_Finger4",
+      "ValveBiped.Bip01_L_Finger41",
+      "ValveBiped.Bip01_L_Finger42",
+      "ValveBiped.Bip01_L_Finger3",
+      "ValveBiped.Bip01_L_Finger31",
+      "ValveBiped.Bip01_L_Finger32",
+      "ValveBiped.Bip01_L_Finger2",
+      "ValveBiped.Bip01_L_Finger21",
+      "ValveBiped.Bip01_L_Finger22",
+      "ValveBiped.Bip01_L_Finger1",
+      "ValveBiped.Bip01_L_Finger11",
+      "ValveBiped.Bip01_L_Finger12",
+      "ValveBiped.Bip01_L_Finger0",
+      "ValveBiped.Bip01_L_Finger01",
+      "ValveBiped.Bip01_L_Finger02"
+    })
+    self:DefineHitGroup(HITGROUP_RIGHTARM, {
+      "ValveBiped.Bip01_R_UpperArm",
+      "ValveBiped.Bip01_R_Forearm",
+      "ValveBiped.Bip01_R_Hand",
+      "ValveBiped.Anim_Attachment_RH",
+      "ValveBiped.Bip01_R_Finger4",
+      "ValveBiped.Bip01_R_Finger41",
+      "ValveBiped.Bip01_R_Finger42",
+      "ValveBiped.Bip01_R_Finger3",
+      "ValveBiped.Bip01_R_Finger31",
+      "ValveBiped.Bip01_R_Finger32",
+      "ValveBiped.Bip01_R_Finger2",
+      "ValveBiped.Bip01_R_Finger21",
+      "ValveBiped.Bip01_R_Finger22",
+      "ValveBiped.Bip01_R_Finger1",
+      "ValveBiped.Bip01_R_Finger11",
+      "ValveBiped.Bip01_R_Finger12",
+      "ValveBiped.Bip01_R_Finger0",
+      "ValveBiped.Bip01_R_Finger01",
+      "ValveBiped.Bip01_R_Finger02"
+    })
+    self:DefineHitGroup(HITGROUP_LEFTLEG, {
+      "ValveBiped.Bip01_L_Thigh",
+      "ValveBiped.Bip01_L_Calf",
+      "ValveBiped.Bip01_L_Foot",
+      "ValveBiped.Bip01_L_Toe0"
+    })
+    self:DefineHitGroup(HITGROUP_RIGHTLEG, {
+      "ValveBiped.Bip01_R_Thigh",
+      "ValveBiped.Bip01_R_Calf",
+      "ValveBiped.Bip01_R_Foot",
+      "ValveBiped.Bip01_R_Toe0"
+    })
+    self:DefineHitGroup(HITGROUP_GEAR, {
+      "ValveBiped.Bip01_Pelvis"
+    })
     self:SetDrGVar("DrGBaseState", DRGBASE_STATE_NONE)
     self:SetDrGVar("DrGBaseSpeed", 0)
     self:SetDrGVar("DrGBaseDying", false)
@@ -144,8 +226,8 @@ if SERVER then
     self:SetDrGVar("DrGBaseScale", 1)
     self:SetDrGVar("DrGBasePossessionView", 1)
     self:ResetRelationships()
+    self:_BaseInitialize()
     self:CustomInitialize()
-    self:NPCRelationship()
     self:CallOnRemove("DrGBaseCallOnRemove", function()
       table.RemoveByValue(DrGBase.Nextbot._Spawned, self)
       if self:IsPossessed() then self:Dispossess() end
@@ -156,6 +238,7 @@ if SERVER then
     end)
     table.insert(DrGBase.Nextbot._Spawned, self)
   end
+  function ENT:_BaseInitialize() end
   function ENT:CustomInitialize() end
 
   -- Think --
@@ -169,8 +252,9 @@ if SERVER then
     self:_HandlePossessionThink()
     self:_HandleAmbientSounds()
     self:_HandleHealthRegen()
+    self:_BaseThink(self:GetState())
     if CurTime() > self._DrGBaseCustomThinkDelay then
-      local nextThink = self:CustomThink() or 0
+      local nextThink = self:CustomThink(self:GetState()) or 0
       self._DrGBaseCustomThinkDelay = CurTime() + nextThink
     end
     if self:IsPossessed() and CurTime() > self._DrGBasePossessionThinkDelay then
@@ -178,6 +262,7 @@ if SERVER then
       self._DrGBasePossessionThinkDelay = CurTime() + nextThink
     end
   end
+  function ENT:_BaseThink() end
   function ENT:CustomThink() end
   function ENT:PossessionThink() end
 
@@ -266,6 +351,17 @@ if SERVER then
     function ENT:GetNoTarget() return false end
   end
 
+  hook.Add("OnEntityCreated", "igugh", function(ent)
+    if ent:GetClass() == "replicator_melon" then
+      ent:AddFlags(FL_OBJECT)
+      for i, ent2 in ipairs(ents.GetAll()) do
+        if ent2:IsNPC() then
+          ent2:AddEntityRelationship(ent, D_FR, 100)
+        end
+      end
+    end
+  end)
+
 else
 
   local DebugInfo = CreateClientConVar("drgbase_debug_info", "0")
@@ -280,8 +376,10 @@ else
     self._DrGBaseCustomThinkDelay = 0
     self._DrGBasePossessionThinkDelay = 0
     self._DrGBaseLastState = DRGBASE_STATE_NONE
-    return self:CustomInitialize()
+    self:_BaseInitialize()
+    self:CustomInitialize()
   end
+  function ENT:_BaseInitialize() end
   function ENT:CustomInitialize() end
 
   -- Client Think --
@@ -295,9 +393,11 @@ else
       self:OnStateChange(self._DrGBaseLastState, self:GetState())
     end
     self._DrGBaseLastState = self:GetState()
+    -- custom base think
+    self:_BaseThink(self:GetState())
     -- custom
     if CurTime() > self._DrGBaseCustomThinkDelay then
-      local nextThink = self:CustomThink() or 0
+      local nextThink = self:CustomThink(self:GetState()) or 0
       self._DrGBaseCustomThinkDelay = CurTime() + nextThink
     end
     if self:IsPossessedByLocalPlayer() and CurTime() > self._DrGBasePossessionThinkDelay then
@@ -305,6 +405,7 @@ else
       self._DrGBasePossessionThinkDelay = CurTime() + nextThink
     end
   end
+  function ENT:_BaseThink() end
   function ENT:OnStateChange() end
   function ENT:CustomThink() end
   function ENT:PossessionThink() end

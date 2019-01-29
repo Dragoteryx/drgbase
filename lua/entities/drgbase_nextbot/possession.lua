@@ -7,14 +7,18 @@ function ENT:GetPossessor()
   return self._DrGBasePossessor
 end
 
-function ENT:PossessorTrace()
+function ENT:PossessorTrace(options)
   if not self:IsPossessed() then return end
   local origin, angles = self:PossessorView()
-  return util.TraceLine({
-    start = origin,
-    endpos = origin + angles:Forward()*999999999,
-    filter = {self}
-  })
+  options = options or {}
+  options.filter = options.filter or {}
+  table.insert(options.filter, self)
+  if IsValid(self:GetActiveWeapon()) then
+    table.insert(options.filter, self:GetActiveWeapon())
+  end
+  options.start = origin
+  options.endpos = origin + angles:Forward()*999999999
+  return util.TraceLine(options)
 end
 
 function ENT:PossessorView(view)
@@ -94,6 +98,23 @@ function ENT:PossessorRight()
   else return false end
 end
 
+function ENT:KeyPressed(key)
+  if self:IsPossessed() then return self:GetPossessor():KeyPressed(key)
+  else return false end
+end
+function ENT:KeyDown(key)
+  if self:IsPossessed() then return self:GetPossessor():KeyDown(key)
+  else return false end
+end
+function ENT:KeyReleased(key)
+  if self:IsPossessed() then return self:GetPossessor():KeyReleased(key)
+  else return false end
+end
+function ENT:KeyDownLast(key)
+  if self:IsPossessed() then return self:GetPossessor():KeyDownLast(key)
+  else return false end
+end
+
 if SERVER then
   util.AddNetworkString("DrGBaseNextbotPossess")
   util.AddNetworkString("DrGBaseNextbotDispossess")
@@ -170,6 +191,12 @@ if SERVER then
     else self._DrGBaseBlockInput = false end
   end
 
+  function ENT:PossessionBlockRotation(bool)
+    if bool == nil then return self._DrGBaseBlockRotation
+    elseif bool then self._DrGBaseBlockRotation = true
+    else self._DrGBaseBlockRotation = false end
+  end
+
   function ENT:_HandlePossessionBinds(coroutine)
     if self:IsPossessed() then
       local possessor = self:GetPossessor()
@@ -182,11 +209,11 @@ if SERVER then
           if (not coroutine and move.coroutine) or (coroutine and not move.coroutine) then continue end
           if move.onkeypressed == nil then move.onkeypressed = function() end end
           if move.onkeydown == nil then move.onkeydown = function() end end
-          if move.onkeynotdown == nil then move.onkeynotdown = function() end end
+          if move.onkeyup == nil then move.onkeyup = function() end end
           if move.onkeydownlast == nil then move.onkeydownlast = function() end end
           if move.onkeyreleased == nil then move.onkeyreleased = function() end end
           if possessor:KeyPressed(move.bind) then move.onkeypressed(self, possessor) end
-          if possessor:KeyDown(move.bind) then move.onkeydown(self, possessor) else move.onkeynotdown(self, possessor) end
+          if possessor:KeyDown(move.bind) then move.onkeydown(self, possessor) else move.onkeyup(self, possessor) end
           if possessor:KeyDownLast(move.bind) then move.onkeydownlast(self, possessor) end
           if possessor:KeyReleased(move.bind) then move.onkeyreleased(self, possessor) end
         end

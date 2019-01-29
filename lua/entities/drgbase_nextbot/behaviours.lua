@@ -83,7 +83,6 @@ if SERVER then
   function ENT:IsAttacking()
     return self._DrGBaseAttacking
   end
-
   function ENT:Attack(attacks, options, onattack)
     if self:IsAttacking() then return end
     options = options or {}
@@ -110,9 +109,8 @@ if SERVER then
       if attack.lineofsight == nil then attack.lineofsight = true end
       self:Timer(attack.delay, function()
         if not attack._cooldown then
-          local targets = ents.FindInSphere(self:GetPos(), attack.range*self:GetScale())
           local hit = {}
-          for i, target in ipairs(targets) do
+          for i, target in ipairs(ents.FindInSphere(self:GetPos(), attack.range*self:GetScale())) do
             if target:EntIndex() == self:EntIndex() then continue end
             if self:IsPossessed() and self:GetPossessor():EntIndex() == target:EntIndex() then continue end
             if self:IsAlly(target) and (not attack.friendlyfire or self:IsPossessed()) then continue end

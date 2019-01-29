@@ -20,7 +20,7 @@ ENT.EnemyReach = 250
 ENT.EnemyStop = 125
 ENT.EnemyAvoid = 50
 
--- Awareness --
+-- Detection --
 ENT.EyeBone = "ValveBiped.Bip01_Head1"
 ENT.EyeOffset = Vector(5, 0, 2.5)
 ENT.EyeAngle = Angle(75, 0, 0)
@@ -55,7 +55,7 @@ ENT.PossessionBinds = {
   },
   {
     bind = IN_JUMP,
-    coroutine = false,
+    coroutine = true,
     onkeydown = function(self)
       self:QuickJump(100)
     end
@@ -105,8 +105,7 @@ if SERVER then
   function ENT:OnSpawn()
     self:PlaySequenceAndWait("zombie_slump_rise_01")
   end
-  function ENT:OnTakeDamage(dmg, lethal)
-    if lethal then return end
+  function ENT:OnTakeDamage(dmg, hitgroups, bone)
     local sounds = {
       "npc/metropolice/pain1.wav",
       "npc/metropolice/pain2.wav",
@@ -114,10 +113,6 @@ if SERVER then
       "npc/metropolice/pain4.wav"
     }
     self:EmitSound(sounds[math.random(#sounds)])
-  end
-  function ENT:AfterTakeDamage(dmg, delay)
-    if delay > 0.05 then return end
-    --self:PlaySequenceAndWait("reload_dual_original")
   end
   function ENT:OnDeath(dmg)
     local sounds = {
@@ -129,7 +124,7 @@ if SERVER then
     self:EmitSound(sounds[math.random(#sounds)])
     return dmg:GetDamageForce():Length() < 10000
   end
-  function ENT:DoOnDeath(dmg, delay)
+  function ENT:DoOnDeath(dmg)
     local deaths = {
       "death_01", "death_02", "death_03", "death_04"
     }

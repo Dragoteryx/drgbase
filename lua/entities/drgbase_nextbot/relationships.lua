@@ -1,6 +1,12 @@
 
 local targettablesDelay = 0
 local targettables = {}
+local exceptions = {
+  ["replicator_melon"] = true,
+  ["replicator_queen"] = true,
+  ["replicator_queen_hive"] = true,
+  ["replicator_worker"] = true
+}
 hook.Add("Think", "DrGBaseRefreshTargettableEntitiesList", function()
   if CurTime() < targettablesDelay then return end
   targettablesDelay = CurTime() + 1
@@ -9,7 +15,8 @@ hook.Add("Think", "DrGBaseRefreshTargettableEntitiesList", function()
     if not IsValid(ent) then continue end
     if ent:GetClass() == "npc_bullseye" then continue end
     if ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot" or
-    ent:IsFlagSet(FL_OBJECT) then
+    ent:IsFlagSet(FL_OBJECT) or string.StartWith(ent:GetClass(), "npc_") or
+    exceptions[ent:GetClass()] then
       table.insert(newTargettables, ent)
     end
   end
@@ -69,7 +76,25 @@ if SERVER then
     ["npc_poisonzombie"] = DRGBASE_FACTION_ZOMBIES,
     ["npc_zombie"] = DRGBASE_FACTION_ZOMBIES,
     ["npc_zombie_torso"] = DRGBASE_FACTION_ZOMBIES,
-    ["npc_zombine"] = DRGBASE_FACTION_ZOMBIES
+    ["npc_zombine"] = DRGBASE_FACTION_ZOMBIES,
+    ["monster_alien_grunt"] = DRGBASE_FACTION_XEN_ARMY,
+    ["monster_alien_slave"] = DRGBASE_FACTION_XEN_ARMY,
+    ["monster_human_assassin"] = DRGBASE_FACTION_HECU,
+    ["monster_babycrab"] = DRGBASE_FACTION_ZOMBIES,
+    ["monster_bullchicken"] = DRGBASE_FACTION_XEN_WILDLIFE,
+    ["monster_cockroach"] = DRGBASE_FACTION_ANIMALS,
+    ["monster_alien_controller"] = DRGBASE_FACTION_XEN_ARMY,
+    ["monster_gargantua"] = DRGBASE_FACTION_XEN_ARMY,
+    ["monster_bigmomma"] = DRGBASE_FACTION_ZOMBIES,
+    ["monster_human_grunt"] = DRGBASE_FACTION_HECU,
+    ["monster_headcrab"] = DRGBASE_FACTION_ZOMBIES,
+    ["monster_houndeye"] = DRGBASE_FACTION_XEN_WILDLIFE,
+    ["monster_nihilanth"] = DRGBASE_FACTION_XEN_ARMY,
+    ["monster_scientist"] = DRGBASE_FACTION_REBELS,
+    ["monster_barney"] = DRGBASE_FACTION_REBELS,
+    ["monster_snark"] = DRGBASE_FACTION_XEN_WILDLIFE,
+    ["monster_tentacle"] = DRGBASE_FACTION_XEN_WILDLIFE,
+    ["monster_zombie"] = DRGBASE_FACTION_ZOMBIES
   }
 
   local relPrios = {
@@ -200,7 +225,7 @@ if SERVER then
     self._DrGBaseEntityRelationships = {}
     self._DrGBaseClassRelationships = {}
     self._DrGBaseModelRelationships = {}
-    self._DrGBaseFactionRelationships = {}    
+    self._DrGBaseFactionRelationships = {}
     self._DrGBaseCustomRelationships = {}
     self._DrGBaseFactions = {}
     for i, faction in ipairs(self.Factions) do
@@ -250,11 +275,15 @@ if SERVER then
       end
       ent:AddEntityRelationship(self, relationship, 100)
       if ent.IsVJBaseSNPC then
-        if relationship == D_HT then
-          table.insert(ent.VJ_AddCertainEntityAsEnemy, self)
+        if (relationship == D_HT or relationship == D_FR) then
+          if not table.HasValue(ent.VJ_AddCertainEntityAsEnemy, self) then
+            table.insert(ent.VJ_AddCertainEntityAsEnemy, self)
+          end
         else table.RemoveByValue(ent.VJ_AddCertainEntityAsEnemy, self) end
         if relationship == D_LI then
-          table.insert(ent.VJ_AddCertainEntityAsFriendly, self)
+          if not table.HasValue(ent.VJ_AddCertainEntityAsFriendly, self) then
+            table.insert(ent.VJ_AddCertainEntityAsFriendly, self)
+          end
         else table.RemoveByValue(ent.VJ_AddCertainEntityAsFriendly, self) end
       end
     end

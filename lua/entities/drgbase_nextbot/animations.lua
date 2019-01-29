@@ -60,22 +60,25 @@ if SERVER then
       coroutine.yield()
     end
     self:EnableSyncedAnimations(synced)
+    return len/speed
   end
 
   function ENT:PlaySequenceAndMove(seq, speed, callback)
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if seq == -1 then return end
-    self:PlaySequenceAndWait(seq, speed, callback)
+    self:PlaySequenceAndWait(seq, speed, function()
+      return callback()
+    end)
 
   end
 
   function ENT:PlayGesture(seq)
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if seq == -1 then return false end
-    if self._DrGBaseCurrentGestures[seq] ~= nil and CurTime() <= self._DrGBaseCurrentGestures[seq] then return false end
+    if self._DrGBaseCurrentGestures[seq] ~= nil and CurTime() <= self._DrGBaseCurrentGestures[seq] then return end
     self._DrGBaseCurrentGestures[seq] = CurTime() + self:SequenceDuration(seq)
     self:AddGestureSequence(seq)
-    return true
+    return self:SequenceDuration(seq)
   end
 
   function ENT:AddSequenceCallback(seq, cycles, callback)
@@ -131,7 +134,7 @@ if SERVER then
       local tr = util.TraceLine({
         start = self:EyePos(),
         endpos = pos,
-        filter = {self}
+        filter = {self, self:GetActiveWeapon()}
       })
       local angle = tr.Normal:Angle()
       self:SetHeadYaw(math.AngleDifference(angle.y, self:GetAngles().y))
@@ -148,7 +151,7 @@ if SERVER then
       local tr = util.TraceLine({
         start = self:EyePos(),
         endpos = pos,
-        filter = {self}
+        filter = {self, self:GetActiveWeapon()}
       })
       local angle = tr.Normal:Angle()
       self:SetAimYaw(math.AngleDifference(angle.y, self:GetAngles().y))
@@ -183,7 +186,7 @@ if SERVER then
     if callbacks ~= nil then
       for i, todo in ipairs(callbacks) do
         if self._DrGBaseLastAnimCycle < todo.cycle and self:GetCycle() >= todo.cycle then
-          todo.callback(self, todo.cycle, self:GetCycle())
+          todo.callback(todo.cycle, self:GetCycle())
         end
       end
     end

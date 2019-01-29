@@ -2,7 +2,7 @@ if SERVER then return end
 
 local defaultIcon = "drgbase/icon16.png"
 local hookName = "PopulateDrGBaseSpawnmenuHook"
-hook.Add(hookName, "AddDrGBaseContent", function(pnlContent, tree, node)
+hook.Add(hookName, "AddDrGBaseNextbots", function(pnlContent, tree, node)
 	local list = list.Get("DrGBaseNextbot")
 	local categories = {}
 	for class, ent in pairs(list) do
@@ -40,6 +40,45 @@ hook.Add(hookName, "AddDrGBaseContent", function(pnlContent, tree, node)
 		firstNode:InternalDoClick()
 	end
 end)
+
+--[[hook.Add(hookName, "AddDrGBaseWeapons", function(pnlContent, tree, node)
+	local list = list.Get("DrGBaseWeapons")
+	local categories = {}
+	for class, ent in pairs(list) do
+		local category = ent.Category or "Other"
+		local tab = categories[category] or {}
+		tab[class] = ent
+		categories[category] = tab
+	end
+	local weaponsTree = tree:AddNode("Weapons", "icon16/gun.png")
+	for categoryName, category in SortedPairs(categories) do
+		local icon = "icon16/gun.png"
+		if categoryName == "DrGBase" then icon = defaultIcon end
+		local node = weaponsTree:AddNode(categoryName, icon)
+		node.DoPopulate = function(self)
+			if self.PropPanel then return end
+			self.PropPanel = vgui.Create("ContentContainer", pnlContent)
+			self.PropPanel:SetVisible(false)
+			self.PropPanel:SetTriggerSpawnlistChange(false)
+			for class, ent in SortedPairsByMemberValue(category, "Name") do
+				spawnmenu.CreateContentIcon("weapon", self.PropPanel, {
+					nicename	= ent.PrintName or class,
+					spawnname	= class,
+					material	= "entities/"..class..".png",
+					admin	= ent.AdminOnly
+				})
+			end
+		end
+		node.DoClick = function(self)
+			self:DoPopulate()
+			pnlContent:SwitchPanel(self.PropPanel)
+		end
+	end
+	local firstNode = tree:Root():GetChildNode(0)
+	if IsValid(firstNode) then
+		firstNode:InternalDoClick()
+	end
+end)]]
 
 spawnmenu.AddCreationTab("DrGBase", function()
   local ctrl = vgui.Create("SpawnmenuContentPanel")

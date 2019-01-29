@@ -19,6 +19,9 @@ if SERVER then
       elseif reaction == "explode" then
         ent:Fire("explode", 0)
       end
+    elseif ent:GetClass() == "replicator_melon" and GetConVar("repmelon_target_npc"):GetInt() == 1 then
+      ent:Replicate(self)
+      self:Remove()
     else
       if self._DrGBaseCharging then
         self._DrGBaseChargingEnt = ent
@@ -81,10 +84,16 @@ if SERVER then
   hook.Add("EntityTakeDamage", "DrGBaseNextbotDamage", function(ent, dmg)
     if not ent.IsDrGNextbot then return end
     if dmg:GetDamage() <= 0 then return true end
-    if not ent:OnTakeDamage(dmg, dmg:GetDamage() >= ent:Health()) then
+    local hitgroups, bone = ent:FetchHitGroups(dmg)
+    local res = ent:OnTakeDamage(dmg, hitgroups, bone)
+    if isnumber(res) then
+      dmg:ScaleDamage(res)
+    end
+    if res ~= true then
       local data = DrGBase.Utils.ConvertDamage(dmg)
       ent:CallInCoroutine(function(delay)
-        ent:AfterTakeDamage(DrGBase.Utils.RecreateDamage(data), delay)
+        dmg = DrGBase.Utils.RecreateDamage(data)
+        ent:AfterTakeDamage(dmg, hitgroups, bone, delay)
       end)
       ent:_Debug("take damage => "..dmg:GetDamage()..".")
     else return true end
@@ -92,27 +101,34 @@ if SERVER then
   function ENT:OnTakeDamage() end
   function ENT:AfterTakeDamage() end
 
+  local function NextbotDeath(self, dmg)
+    if self:IsPossessed() and not self.PossessionRemote then
+      self:GetPossessor():TakeDamageInfo(dmg)
+    else hook.Run("OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor()) end
+    if self.DropWeaponOnDeath then
+      self:DropWeapon()
+    end
+    if self.RagdollOnDeath then
+      self:BecomeRagdoll(dmg)
+    else self:Remove() end
+  end
+
   function ENT:OnKilled(dmg)
-    if self:OnDeath(dmg) then
+    local hitgroups, bone = self:FetchHitGroups(dmg)
+    if self:OnDeath(dmg, hitgroups, bone) then
       self._DrGBaseCoroutineCallbacks = {}
       local data = DrGBase.Utils.ConvertDamage(dmg)
       self:CallInCoroutine(function(delay)
         dmg = DrGBase.Utils.RecreateDamage(data)
         self:SetDrGVar("DrGBaseDying", false)
         self:SetDrGVar("DrGBaseDead", true)
-        self:DoOnDeath(dmg, delay)
-        hook.Run("OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor())
-        if self.RagdollOnDeath then
-          self:BecomeRagdoll(dmg)
-        else self:Remove() end
+        self:DoOnDeath(dmg, hitgroups, bone, delay)
+        NextbotDeath(self, dmg)
       end)
       self:SetDrGVar("DrGBaseDying", true)
     else
       self:SetDrGVar("DrGBaseDead", true)
-      hook.Run("OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor())
-      if self.RagdollOnDeath then
-        self:BecomeRagdoll(dmg)
-      else self:Remove() end
+      NextbotDeath(self, dmg)
     end
   end
   function ENT:OnDeath() end

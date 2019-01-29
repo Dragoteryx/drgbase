@@ -28,6 +28,7 @@ DrGBase.IncludeFile("drgbase/possession.lua")
 DrGBase.IncludeFile("drgbase/nodegraph.lua")
 DrGBase.IncludeFile("drgbase/navmesh.lua")
 DrGBase.IncludeFile("drgbase/commands.lua")
+DrGBase.IncludeFile("drgbase/weapons.lua")
 
 DrGBase.IncludeFile("drgbase/resources.lua")
 DrGBase.IncludeFile("drgbase/spawnmenu.lua")

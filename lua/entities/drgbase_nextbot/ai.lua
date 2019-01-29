@@ -15,9 +15,10 @@ if SERVER then
   function ENT:_DefaultBehaviour()
     local scared = self:FindClosestScaredOf()
     local destination = self:GetDestination() or self:FetchDestination()
-    if IsValid(scared) and self:InRange(scared, self.ScaredAvoid) then
+    if IsValid(scared) and self:InRange(scared, self.ScaredAvoid) and
+    self:LineOfSight(scared, 360, math.huge) then
       self:_SetState(DRGBASE_STATE_AI_AVOID)
-      if not self:OnAvoidEntity(scared) then
+      if not self:OnAvoidScaredOf(scared) then
         self:InvalidatePath()
         self:StepAwayFromPos(scared:GetPos())
       end
@@ -25,12 +26,18 @@ if SERVER then
       self:_SetState(DRGBASE_STATE_AI_FIGHT)
       self:SetDestination(nil)
       local enemy = self:GetEnemy()
-      if not self:OnPursueEnemy(enemy) then
-        local stop = self.EnemyStop or self.EnemyReach
-        if self:InRange(enemy, self.EnemyAvoid) then
+      local stop = self.EnemyStop or self.EnemyReach
+      if self:InRange(enemy, self.EnemyAvoid) and self:LineOfSight(enemy, 360, math.huge) then
+        if not self:OnAvoidEnemy(enemy) then
           self:StepAwayFromPos(enemy:GetPos())
-        elseif not self:InRange(enemy, stop) or
-        not self:LineOfSight(enemy, 360, math.huge) then
+        end
+        if IsValid(enemy) and self:InRange(enemy, self.EnemyReach) and
+        self:LineOfSight(enemy, 360, math.huge) then
+          self:EnemyInRange(enemy)
+        end
+      elseif not self:InRange(enemy, stop) or
+      not self:LineOfSight(enemy, 360, math.huge) then
+        if not self:OnPursueEnemy(enemy) then
           self:FollowEntity(enemy, {
             maxage = 0.5, draw = GetConVar("developer"):GetBool()
           }, function()
@@ -39,8 +46,7 @@ if SERVER then
             if self:InRange(enemy, stop) then return "keepdistance" end
           end)
         end
-      end
-      if IsValid(enemy) and self:InRange(enemy, self.EnemyReach) and
+      elseif IsValid(enemy) and self:InRange(enemy, self.EnemyReach) and
       self:LineOfSight(enemy, 360, math.huge) then
         self:EnemyInRange(enemy)
       end
@@ -54,6 +60,7 @@ if SERVER then
         }, function()
           if self:IsPossessed() then return "possession" end
           if self:CoroutineCallbacks() then return "callbacks" end
+          if self:HaveEnemy() then return "enemy" end
         end)
         reached = res == "ok"
       end
@@ -65,9 +72,10 @@ if SERVER then
   end
 
   -- avoid
-  function ENT:OnAvoidEntity() end
+  function ENT:OnAvoidScaredOf() end
 
   -- enemy
+  function ENT:OnAvoidEnemy() end
   function ENT:OnPursueEnemy() end
   function ENT:EnemyInRange() end
 
@@ -87,7 +95,7 @@ if SERVER then
       if not IsValid(ent) then continue end
       if self:EntIndex() == ent:EntIndex() then continue end
       if not self:HasSpottedEntity(ent) then continue end
-      if self:GetRangeSquaredTo(ent) > math.pow(self.Radius, 2) then continue end
+      if self:GetRangeSquaredTo(ent) > math.pow(range, 2) then continue end
       if relationship and self:GetRelationship(ent) ~= relationship then continue end
       table.insert(entities, ent)
     end
@@ -124,6 +132,19 @@ if SERVER then
   end
   function ENT:IsNeutral(ent)
     return self:GetRelationship(ent) == D_NU
+  end
+
+  function ENT:GetAllies()
+    return self:FindEntities(self.Radius, D_LI)
+  end
+  function ENT:GetEnemies()
+    return self:FindEntities(self.Radius, D_HT)
+  end
+  function ENT:GetScaredOf()
+    return self:FindEntities(self.Radius, D_FR)
+  end
+  function ENT:GetNeutrals()
+    return self:FindEntities(self.Radius, D_NU)
   end
 
   -- Enemy --

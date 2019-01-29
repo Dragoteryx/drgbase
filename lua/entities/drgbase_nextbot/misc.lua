@@ -12,9 +12,11 @@ end
 
 function ENT:Height()
   local bound1, bound2 = self:GetCollisionBounds()
-  if bound1.z > bound2.z then return bound1.z-bound2.z
-  elseif bound1.z < bound2.z then return bound2.z-bound1.z
-  else return 0 end
+  return math.abs(bound1.z - bound2.z)
+end
+
+function ENT:HeightVector()
+  return Vector(0, 0, self:Height())
 end
 
 function ENT:Altitude()
@@ -30,9 +32,11 @@ end
 function ENT:IsDying()
   return self:GetDrGVar("DrGBaseDying")
 end
-
 function ENT:IsDead()
   return self:IsDying() or self:GetDrGVar("DrGBaseDead")
+end
+function ENT:Alive()
+  return not self:IsDead()
 end
 
 function ENT:CombineBall(value)
@@ -65,6 +69,14 @@ function ENT:FindInRange(dist)
     table.insert(entities, ent)
   end
   return entities
+end
+
+function ENT:PrintBones()
+  for i = 0, self:GetBoneCount() - 1 do
+    local bonename = self:GetBoneName(i)
+    if bonename == nil then continue end
+    print(i.." => "..bonename)
+  end
 end
 
 if SERVER then
@@ -107,6 +119,43 @@ if SERVER then
 
   function ENT:Scale(mult)
     self:SetScale(self:GetScale()*mult)
+  end
+
+  function ENT:DefineHitGroup(name, bones)
+    if not istable(bones) then bones = {bones} end
+    self._DrGBaseHitGroups[name] = {}
+    for i, bone in ipairs(bones) do
+      if isstring(bone) then bone = self:LookupBone(bone) end
+      if not isnumber(bone) then continue end
+      self._DrGBaseHitGroups[name][bone] = true
+    end
+  end
+  function ENT:RemoveHitGroup(name)
+    self._DrGBaseHitGroups[name] = nil
+  end
+  function ENT:FetchHitGroups(dmg)
+    local pos = dmg:GetDamagePosition()
+    local closestbone = nil
+    local dist = math.huge
+    for i = 0, self:GetBoneCount() - 1 do
+      local bonename = self:GetBoneName(i)
+      if bonename == nil then continue end
+      local bonepos = self:GetBonePosition(i)
+      local bonedist = pos:DistToSqr(bonepos)
+      if bonedist < dist then
+        closestbone = bonename
+        dist = bonedist
+      end
+    end
+    local hitgroups = {}
+    if closestbone ~= nil then
+      local closestboneid = self:LookupBone(closestbone)
+      for name, hitgroup in pairs(self._DrGBaseHitGroups) do
+        if hitgroup == nil then continue end
+        hitgroups[name] = hitgroup[closestboneid] or false
+      end
+    end
+    return hitgroups, closestbone
   end
 
   -- Handlers --

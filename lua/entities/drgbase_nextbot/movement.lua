@@ -49,11 +49,11 @@ if SERVER then
   end
 
   function ENT:IsMovingUp()
-    return self.loco:GetVelocity().z > 0
+    return self:GetVelocity().z > 0
   end
 
   function ENT:IsMovingDown()
-    return self.loco:GetVelocity().z < 0
+    return self:GetVelocity().z < 0
   end
 
   -- Setters --
@@ -85,7 +85,7 @@ if SERVER then
   -- Movements --
 
   function ENT:MoveToPos(pos, options, callback)
-    options = options or {}  
+    options = options or {}
     options.lookahead = options.lookahead or 300
     options.tolerance = options.tolerance or 20
     if callback == nil then callback = function() end end
@@ -95,7 +95,7 @@ if SERVER then
     path:SetGoalTolerance(options.tolerance)
     if not IsValid(path) or pos:DistToSqr(path:LastSegment().pos) > math.pow(options.tolerance, 2) then
       self:_Debug("generating path.")
-      DrGBase.Navmesh.ComputePath(path, self, pos, options.generator)
+      path:DrG_Compute(self, pos, options.generator)
     else path:ResetAge() end
     if not IsValid(path) then return "failed" end
     while IsValid(path) do
@@ -117,7 +117,7 @@ if SERVER then
       if options.repath and path:GetAge() > options.repath then
         if not IsValid(path) or pos:DistToSqr(path:LastSegment().pos) > math.pow(options.tolerance, 2) then
           self:_Debug("generating path.")
-          DrGBase.Navmesh.ComputePath(path, self, pos, options.generator)
+          path:DrG_Compute(self, pos, options.generator)
         else path:ResetAge() end
       end
     	coroutine.yield()
@@ -143,7 +143,7 @@ if SERVER then
       collisiongroup = COLLISION_GROUP_IN_VEHICLE
     })
     self.loco:FaceTowards(pos)
-    self.loco:Approach(self:GetPos() + tr.Normal*-1, 1)
+    self:GoBackward()
   end
 
   function ENT:FacePos(pos)
