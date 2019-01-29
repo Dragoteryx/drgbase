@@ -104,7 +104,7 @@ if SERVER then
     if not self:HasWeapon() then return end
     if self._DrGBaseReloading then return end
     self._DrGBaseReloading = true
-    local holtype = self:GetWeapon():GetHoldType()
+    local holdtype = self:GetWeapon():GetHoldType()
     if holdtype == "smg" then holdtype = "smg1" end
     self:Timer(self:PlayGesture("reload_"..holdtype) or 0, function()
       self._DrGBaseReloading = false
