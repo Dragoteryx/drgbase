@@ -17,6 +17,7 @@ if SERVER then
   function ENT:CustomInitialize()
     self:SetDefaultRelationship(D_HT)
     self:DefineCustomRelationshipCheck("SameOwner", function(ent)
+      if self:GetClass() ~= ent:GetClass() then return end
       if self._OwnerEntIndex == ent._OwnerEntIndex then return D_LI end
     end)
     self:GiveWeapon("weapon_drg_aug")

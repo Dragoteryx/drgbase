@@ -168,6 +168,7 @@ if SERVER then
   end
   function ENT:SetDefaultRelationship(relationship)
     self._DrGBaseDefaultRelationship = relationship
+    self:NPCRelationship()
   end
 
   function ENT:GetEntityRelationship(ent)
@@ -273,6 +274,7 @@ if SERVER then
       elseif relationship == D_HT and self.Frightening then
         relationship = D_FR
       end
+      self:_Debug("refresh relationship with NPC '"..ent:GetClass().."' ("..ent:EntIndex()..") => "..relationship..".")
       ent:AddEntityRelationship(self, relationship, 100)
       if ent.IsVJBaseSNPC then
         if (relationship == D_HT or relationship == D_FR) then

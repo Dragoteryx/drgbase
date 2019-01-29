@@ -228,15 +228,17 @@ if SERVER then
     self:ResetRelationships()
     self:_BaseInitialize()
     self:CustomInitialize()
-    self:CallOnRemove("DrGBaseCallOnRemove", function()
+    self:CallOnRemove("DrGBaseCallOnRemove", function()      
       table.RemoveByValue(DrGBase.Nextbot._Spawned, self)
       if self:IsPossessed() then self:Dispossess() end
       if self._DrGBaseAmbientSound ~= nil then
         self:StopLoopingSound(self._DrGBaseAmbientSound)
         self._DrGBaseAmbientSound = nil
       end
+      self:_Debug("remove.")
     end)
     table.insert(DrGBase.Nextbot._Spawned, self)
+    self:_Debug("spawn.")
   end
   function ENT:_BaseInitialize() end
   function ENT:CustomInitialize() end
