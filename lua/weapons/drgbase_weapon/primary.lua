@@ -1,4 +1,22 @@
 
+-- Shooting
+SWEP.Primary.Damage = 1
+SWEP.Primary.Bullets = 1
+SWEP.Primary.Spread = 0
+SWEP.Primary.Automatic = true
+SWEP.Primary.Delay = 0
+SWEP.Primary.Recoil = 0
+
+-- Ammo
+SWEP.Primary.Ammo	= "AR2"
+SWEP.Primary.Cost = 1
+SWEP.Primary.ClipSize	= 30
+SWEP.Primary.DefaultClip = 90
+
+-- Effects
+SWEP.Primary.Sound = ""
+SWEP.Primary.EmptySound = ""
+
 function SWEP:CanPrimaryAttack()
   if self:GetPrimaryAmmoType() < 0 then return true end
   if self.Primary.ClipSize > 0 then
@@ -7,24 +25,33 @@ function SWEP:CanPrimaryAttack()
 end
 function SWEP:TriedToPrimaryAttack()
   self:EmitSound(self.Primary.EmptySound)
-	self:SetNextPrimaryFire(CurTime() + self.Primary.Cooldown)
+	self:SetNextPrimaryFire(CurTime() + self.Primary.Delay)
 end
 function SWEP:PrimaryAttack()
-  if CLIENT then return end
 	if not self:CanPrimaryAttack() then
-    self:TriedToPrimaryAttack()
+    if IsFirstTimePredicted() then
+      self:TriedToPrimaryAttack()
+    end
     return false
   end
   if self:PrePrimaryAttack() == false then return false end
 	self:EmitSound(self.Primary.Sound)
-  self.Owner:ViewPunch(self.Primary.ViewPunch)
-	self:FirePrimary()
-	self:TakePrimaryAmmo(self.Primary.Cost)
-  if self.Primary.Cooldown >= 0 then
-    local delay = CurTime() + self.Primary.Cooldown
-    self:SetNextPrimaryFire(delay)
-    self:PostPrimaryAttack(delay)
-  else self:PostPrimaryAttack(CurTime()) end
+  if SERVER then
+    self:TakePrimaryAmmo(self.Primary.Cost)
+    if self.Owner:IsPlayer() then
+      local eyeangles = self.Owner:EyeAngles()
+      eyeangles.p = eyeangles.p - self.Primary.Recoil
+      self.Owner:SetEyeAngles(eyeangles)
+    end
+  end
+  if IsFirstTimePredicted() then
+	   self:FirePrimary()  
+    if self.Primary.Delay >= 0 then
+      local delay = CurTime() + self.Primary.Delay
+      self:SetNextPrimaryFire(delay)
+      self:PostPrimaryAttack(delay)
+    else self:PostPrimaryAttack(CurTime()) end
+  end
   return true
 end
 function SWEP:PrePrimaryAttack() end

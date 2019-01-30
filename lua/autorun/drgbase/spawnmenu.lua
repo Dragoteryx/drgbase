@@ -41,7 +41,7 @@ hook.Add(hookName, "AddDrGBaseNextbots", function(pnlContent, tree, node)
 	end
 end)
 
---[[hook.Add(hookName, "AddDrGBaseWeapons", function(pnlContent, tree, node)
+hook.Add(hookName, "AddDrGBaseWeapons", function(pnlContent, tree, node)
 	local list = list.Get("DrGBaseWeapons")
 	local categories = {}
 	for class, ent in pairs(list) do
@@ -62,7 +62,7 @@ end)
 			self.PropPanel:SetTriggerSpawnlistChange(false)
 			for class, ent in SortedPairsByMemberValue(category, "Name") do
 				spawnmenu.CreateContentIcon("weapon", self.PropPanel, {
-					nicename	= ent.PrintName or class,
+					nicename	= ent.Name or class,
 					spawnname	= class,
 					material	= "entities/"..class..".png",
 					admin	= ent.AdminOnly
@@ -78,7 +78,7 @@ end)
 	if IsValid(firstNode) then
 		firstNode:InternalDoClick()
 	end
-end)]]
+end)
 
 spawnmenu.AddCreationTab("DrGBase", function()
   local ctrl = vgui.Create("SpawnmenuContentPanel")

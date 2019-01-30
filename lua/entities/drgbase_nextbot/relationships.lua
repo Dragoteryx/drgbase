@@ -29,7 +29,7 @@ end
 
 if SERVER then
 
-  local HL2Factions = {
+  local defaultFactions = {
     ["npc_crow"] = DRGBASE_FACTION_ANIMALS,
     ["npc_monk"] = DRGBASE_FACTION_REBELS,
     ["npc_pigeon"] = DRGBASE_FACTION_ANIMALS,
@@ -94,7 +94,17 @@ if SERVER then
     ["monster_barney"] = DRGBASE_FACTION_REBELS,
     ["monster_snark"] = DRGBASE_FACTION_XEN_WILDLIFE,
     ["monster_tentacle"] = DRGBASE_FACTION_XEN_WILDLIFE,
-    ["monster_zombie"] = DRGBASE_FACTION_ZOMBIES
+    ["monster_zombie"] = DRGBASE_FACTION_ZOMBIES,
+    ["npc_apc_dropship"] = DRGBASE_FACTION_COMBINE,
+    ["npc_elite_overwatch_dropship"] = DRGBASE_FACTION_COMBINE,
+    ["npc_civil_protection_tier1_dropship"] = DRGBASE_FACTION_COMBINE,
+    ["npc_civil_protection_tier2_dropship"] = DRGBASE_FACTION_COMBINE,
+    ["npc_shotgunner_dropship"] = DRGBASE_FACTION_COMBINE,
+    ["npc_overwatch_squad_tier1_dropship"] = DRGBASE_FACTION_COMBINE,
+    ["npc_overwatch_squad_tier2_dropship"] = DRGBASE_FACTION_COMBINE,
+    ["npc_overwatch_squad_tier3_dropship"] = DRGBASE_FACTION_COMBINE,
+    ["npc_random_combine_dropship"] = DRGBASE_FACTION_COMBINE,
+    ["npc_strider_dropship"] = DRGBASE_FACTION_COMBINE
   }
 
   local relPrios = {
@@ -143,7 +153,7 @@ if SERVER then
           table.insert(relationships, relationship)
         end
       elseif ent:IsNPC() then
-        local def = HL2Factions[ent:GetClass()]
+        local def = defaultFactions[ent:GetClass()]
         if def == faction then
           table.insert(relationships, relationship)
         end

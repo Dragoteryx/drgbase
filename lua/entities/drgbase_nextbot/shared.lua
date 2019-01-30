@@ -45,11 +45,29 @@ ENT.Omniscient = false
 ENT.ForgetTime = 10
 ENT.FallDamage = false
 
--- Flight --
-ENT.Flight = false
-ENT.FlightMaxPitch = 45
-ENT.FlightMinPitch = 45
-ENT.FlightMatchPitch = false
+-- Movements --
+ENT.RunSpeed = 200
+ENT.RunAnimation = ACT_HL2MP_RUN
+ENT.RunAnimRate = 1
+ENT.WalkSpeed = 100
+ENT.WalkAnimation = ACT_HL2MP_WALK
+ENT.WalkAnimRate = 1
+ENT.IdleAnimation = ACT_HL2MP_IDLE
+ENT.IdleAnimRate = 1
+ENT.JumpAnimation = ACT_HL2MP_JUMP_KNIFE
+ENT.JumpAnimRate = 1
+
+-- Climbing --
+ENT.ClimbLadders = false
+ENT.ClimbWalls = false
+ENT.ClimbSpeed = 100
+ENT.ClimbAnimation = ACT_ZOMBIE_CLIMB_UP
+ENT.ClimbAnimRate = 1
+ENT.StopClimbing = 0
+ENT.StartClimbAnimation = ""
+ENT.StartClimbAnimRate = 1
+ENT.StopClimbAnimation = ""
+ENT.StopClimbAnimRate = 1
 
 -- Relationships --
 ENT.Factions = {}
@@ -61,6 +79,15 @@ ENT.EnemyReach = 250
 ENT.EnemyAvoid = 0
 ENT.AllyReach = 250
 ENT.ScaredAvoid = 500
+ENT.AttackScared = false
+
+-- Weapons --
+ENT.UseWeapons = false
+ENT.Weapons = {}
+ENT.WeaponAccuracy = 1
+ENT.WeaponAttachmentLH = "Anim_Attachment_LH"
+ENT.WeaponAttachmentRH = "Anim_Attachment_RH"
+ENT.DropWeaponOnDeath = false
 
 -- Detection --
 ENT.SightFOV = 150
@@ -70,12 +97,6 @@ ENT.EyeOffset = Vector(0, 0, 0)
 ENT.EyeAngle = Angle(0, 0, 0)
 ENT.HearingRange = 250
 ENT.HearingRangeBullets = 5000
-
--- Weapons --
-ENT.UseWeapons = false
-ENT.WeaponAttachmentLH = "Anim_Attachment_LH"
-ENT.WeaponAttachmentRH = "Anim_Attachment_RH"
-ENT.DropWeaponOnDeath = false
 
 -- Possession --
 ENT.PossessionEnabled = false
@@ -142,6 +163,9 @@ if SERVER then
     self._DrGBaseHitGroups = {} -- list of hitgroups
     self._DrGBaseBlockRotation = false -- block rotation
     self._DrGBaseBlockInput = false -- block input
+    self._DrGBaseLastSpeedCacheDelay = 0 -- speed cache delay
+    self._DrGBaseOnContactDelay = 0 -- to avoid lag
+    self._DrGBaseSlottedSounds = {} -- slotted sounds
     self:DefineHitGroup(HITGROUP_HEAD, {
       "ValveBiped.Bip01_Neck1",
       "ValveBiped.Bip01_Head1",
@@ -225,10 +249,14 @@ if SERVER then
     self:SetDrGVar("DrGBaseMaxHealth", self.MaxHealth)
     self:SetDrGVar("DrGBaseScale", 1)
     self:SetDrGVar("DrGBasePossessionView", 1)
+    self:SetDrGVar("DrGBaseAnimationSeed", math.random(0, 255))
     self:ResetRelationships()
+    if self.UseWeapons and #self.Weapons > 0 then
+      self:GiveWeapon(self.Weapons[math.random(#self.Weapons)])
+    end
     self:_BaseInitialize()
     self:CustomInitialize()
-    self:CallOnRemove("DrGBaseCallOnRemove", function()      
+    self:CallOnRemove("DrGBaseCallOnRemove", function()
       table.RemoveByValue(DrGBase.Nextbot._Spawned, self)
       if self:IsPossessed() then self:Dispossess() end
       if self._DrGBaseAmbientSound ~= nil then

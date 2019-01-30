@@ -3,6 +3,8 @@ if SERVER then
   util.AddNetworkString("DrGBaseNextbotOnHealthChange")
 
   function ENT:OnContact(ent)
+    if CurTime() < self._DrGBaseOnContactDelay then return end
+    self._DrGBaseOnContactDelay = CurTime() + 0.2
     self:_Debug("contact with '"..ent:GetClass().."' ("..ent:EntIndex()..").")
     if IsValid(ent) then self:SpotEntity(ent) end
     if ent:GetClass() == "prop_combine_ball" then

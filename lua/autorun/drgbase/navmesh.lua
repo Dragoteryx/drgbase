@@ -84,14 +84,3 @@ hook.Add("Think", "DrGBaseAstarCoroutines", function()
 		end
 	end
 end)
-
-function DrGBase.Navmesh.ComputePath(path, nextbot, pos, generator)
-	nextbot._DrGBaseLastComputeInfraction = nextbot._DrGBaseLastComputeInfraction or 0
-	if CurTime() < nextbot._DrGBaseLastComputeInfraction + 2 then return false end
-	local now = CurTime()
-	local compute = path:Compute(nextbot, pos, generator)
-	if CurTime() - now > 0.005 then
-		nextbot._DrGBaseLastComputeInfraction = CurTime()
-	end
-	return compute
-end

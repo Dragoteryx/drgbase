@@ -6,10 +6,16 @@ function ENT:PrintPoseParameters()
   end
 end
 
+function ENT:PrintAnimations()
+  for i, seq in pairs(self:GetSequenceList()) do
+    print(i.." - "..seq.." / "..self:GetSequenceActivityName(i))
+  end
+end
+
 if SERVER then
 
   function ENT:BodyUpdate()
-    if self.AnimationType == DRGBASE_ANIMTYPE_SIMPLE then
+    if self.AnimationType == DRGBASE_ANIMTYPE_SIMPLE or self:IsClimbing() then
       self:FrameAdvance()
     elseif self.AnimationType == DRGBASE_ANIMTYPE_COMPLEX then
       if self:IsPossessed() then
@@ -62,14 +68,35 @@ if SERVER then
     self:EnableSyncedAnimations(synced)
     return len/speed
   end
+  function ENT:PlayAnimationAndWait(anim, speed, callback)
+    if isnumber(anim) then
+      anim = self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
+    end
+    return self:PlaySequenceAndWait(anim, speed, callback)
+  end
 
   function ENT:PlaySequenceAndMove(seq, speed, callback)
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if seq == -1 then return end
-    self:PlaySequenceAndWait(seq, speed, function()
+    local cycle = 0
+    if callback == nil then callback = function() end end
+    local res = self:PlaySequenceAndWait(seq, speed, function()
+      local success, vec, angles = self:GetSequenceMovement(seq, cycle, self:GetCycle())
+      cycle = self:GetCycle()
+      if success then
+        self:SetVelocity(Vector(0, 0, 10))
+        self:SetPos(self:GetPos() + vec)
+        self:SetAngles(self:GetAngles() + angles)
+      end
       return callback()
     end)
-
+    return res
+  end
+  function ENT:PlayAnimationAndMove(anim, speed, callback)
+    if isnumber(anim) then
+      anim = self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
+    end
+    return self:PlaySequenceAndMove(anim, speed, callback)
   end
 
   function ENT:PlayGesture(seq)
@@ -79,6 +106,12 @@ if SERVER then
     self._DrGBaseCurrentGestures[seq] = CurTime() + self:SequenceDuration(seq)
     self:AddGestureSequence(seq)
     return self:SequenceDuration(seq)
+  end
+  function ENT:PlayAnimation(anim)
+    if isnumber(anim) then
+      anim = self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
+    end
+    return self:PlayGesture(anim)
   end
 
   function ENT:AddSequenceCallback(seq, cycles, callback)
@@ -176,11 +209,12 @@ if SERVER then
     end
     local seq, rate
     if self:EnableSyncedAnimations() then
-      seq, rate = self:SyncAnimation(self:Speed(true), self:IsOnGround(), self:IsFlying())
+      seq, rate = self:SyncAnimation(self:SpeedCached(true))
     else
       seq = self:GetSequence()
       rate = self:GetPlaybackRate()
     end
+    if isnumber(seq) then seq = self:SelectWeightedSequenceSeeded(seq, self:GetDrGVar("DrGBaseAnimationSeed")) end
     if isstring(seq) then seq = self:LookupSequence(seq) end
     local callbacks = self._DrGBaseSequenceCallbacks[seq]
     if callbacks ~= nil then
@@ -194,9 +228,17 @@ if SERVER then
     self:SetPlaybackRate(rate or 1)
     if seq ~= nil and seq ~= -1 and (seq ~= self:GetSequence() or self:GetCycle() == 1) then
       self:ResetSequence(seq)
+      self:SetDrGVar("DrGBaseAnimationSeed", math.random(0, 255))
     end
   end
-  function ENT:SyncAnimation() end
+
+  function ENT:SyncAnimation(speed)
+    if self:IsClimbing() then return self.ClimbAnimation, self.ClimbAnimRate
+    elseif not self:IsOnGround() then return self.JumpAnimation, self.JumpAnimRate
+    elseif speed > self.WalkSpeed*1.1 then return self.RunAnimation, self.RunAnimRate
+    elseif speed > 0 then return self.WalkAnimation, self.WalkAnimRate
+    else return self.IdleAnimation, self.IdleAnimRate end
+  end
 
 else
 

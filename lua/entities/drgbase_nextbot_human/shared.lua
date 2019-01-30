@@ -4,20 +4,31 @@ ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
 -- Misc --
 ENT.AnimationType = DRGBASE_ANIMTYPE_BODYMOVEXY
 
+-- Movements --
+ENT.CrouchSpeed = 50
+
+-- Climbing --
+ENT.ClimbLadders = true
+ENT.ClimbSpeed = 100
+ENT.ClimbAnimRate = 1
+ENT.StopClimbing = 105
+ENT.StopClimbAnimation = ACT_ZOMBIE_CLIMB_END
+
 -- Relationships --
 ENT.CommunicateWithAllies = true
 ENT.EnemyReach = 1500
 ENT.EnemyStop = 750
 ENT.EnemyAvoid = 375
+ENT.AttackScared = true
+
+-- Weapons --
+ENT.UseWeapons = true
+ENT.DropWeaponOnDeath = true
 
 -- Detection --
 ENT.EyeBone = "ValveBiped.Bip01_Head1"
 ENT.EyeOffset = Vector(5, 0, 2.5)
 ENT.EyeAngle = Angle(75, 0, 0)
-
--- Weapons --
-ENT.UseWeapons = true
-ENT.DropWeaponOnDeath = true
 
 -- Possession --
 ENT.PossessionEnabled = true
@@ -76,14 +87,9 @@ ENT.PossessionBinds = {
   }
 }
 
--- Human --
-ENT.RunSpeed = 200
-ENT.WalkSpeed = 100
-ENT.CrouchSpeed = 50
+DrGBase.IncludeFile("animations.lua")
+DrGBase.IncludeFile("weapons.lua")
 
-function ENT:IsSprinting()
-  return self:Speed() > self.WalkSpeed*1.1
-end
 function ENT:IsCrouching()
   return self:GetDrGVar("DrGBaseCrouching")
 end
@@ -121,84 +127,35 @@ if SERVER then
   function ENT:OnStateChange(oldstate, newstate)
     if oldstate == DRGBASE_STATE_AI_FIGHT then self:Idle(1) end
   end
-  function ENT:OnPursueEnemy(enemy)
-    local stop = self.EnemyStop or self.EnemyReach
-    self:FollowEntity(enemy, {
-      maxage = 0.5, draw = GetConVar("developer"):GetBool()
-    }, function()
-      if self:IsPossessed() then return "possession" end
-      if self:CoroutineCallbacks() then return "callbacks" end
-      if not IsValid(enemy) then return "invalid" end
-      if self:InRange(enemy, stop) then return "keepdistance" end
-      if IsValid(enemy) and self:InRange(enemy, self.EnemyReach) and
-      self:LineOfSight(enemy, 360, math.huge) then
-        self:EnemyInRange(enemy)
-      end
-    end)
-    return true
-  end
   function ENT:EnemyInRange(enemy)
     if math.random(50) == 1 then self:SetDrGVar("DrGBaseCrouching", true) end
     if not self._DrGBaseReadyToFire then return end
     if not self:HasWeapon() then return end
     self.loco:FaceTowards(enemy:GetPos())
     if not self:CanSeeEntity(enemy) then return end
-    self:WeaponPrimary()
+    local tr = util.TraceLine({
+      start = self:GetShootPos(),
+      endpos = self:GetShootPos() + self:GetAimVector()*999999999,
+      filter = {self, self:GetWeapon()}
+    })
+    if IsValid(tr.Entity) and tr.Entity:EntIndex() == enemy:EntIndex() then
+      self:WeaponPrimary()
+    end
   end
 
   -- Movement --
-  function ENT:GroundSpeed(state)
-    if self:IsCrouching() then return self.CrouchSpeed
-    elseif state == DRGBASE_STATE_AI_FIGHT or
-    state == DRGBASE_STATE_AI_AVOID then return self.RunSpeed
-    else return self.WalkSpeed end
-  end
-
-  -- Possession --
-  function ENT:PossessionGroundSpeed(sprint)
-    if self:IsCrouching() then return self.CrouchSpeed
+  function ENT:GroundSpeed(sprint)
+    if self:IsCrouching() then
+      if sprint then return self.WalkSpeed
+      else return self.CrouchSpeed end
     elseif sprint then return self.RunSpeed
     else return self.WalkSpeed end
   end
-
-  -- Animations --
-  local passives = {
-    ["ar2"] = true,
-    ["smg"] = true,
-    ["shotgun"] = true
-  }
-  local defaults = {
-    ["pistol"] = true,
-    ["revolver"] = true,
-    ["melee"] = true,
-    ["fist"] = true,
-    ["knife"] = true,
-    ["duel"] = true
-  }
-  function ENT:SyncAnimation(speed, onground, flying)
-    local holdtype = self:HasWeapon() and self:GetActiveWeapon():GetHoldType() or "normal"
-    if not self._DrGBaseReadyToFire then
-      if defaults[holdtype] then holdtype = "normal"
-      elseif passives[holdtype] then holdtype = "passive" end
-    end
-    if not self:HasWeapon() or holdtype == "normal" then
-      if not onground then return "jump_knife"
-      elseif self:IsCrouching() then
-        if speed > 0 then return "cwalk_all"
-        else return "cidle_all" end
-      elseif speed > 120 then return "run_all_01"
-      elseif speed > 0 then return "walk_all"
-      else return "idle_all_01" end
-    else
-      if holdtype == "grenade" then holdtype = "melee"
-      elseif holdtype == "smg" then holdtype = "smg1" end
-      if not onground then return "jump_"..holdtype
-      elseif self:IsCrouching() then
-        if speed > 0 then return "cwalk_"..holdtype
-        else return "cidle_"..holdtype end
-      elseif speed > 120 then return "run_"..holdtype
-      elseif speed > 0 then return "walk_"..holdtype
-      else return "idle_"..holdtype end
+  
+  -- Hooks
+  function ENT:WhileClimbing(left, ladder)
+    if IsValid(ladder) then
+      self:EmitSlottedSound("DrGBaseLadderClimbing", 0.3, "player/footsteps/ladder"..math.random(4)..".wav")
     end
   end
 

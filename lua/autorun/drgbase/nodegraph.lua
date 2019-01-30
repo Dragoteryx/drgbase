@@ -8,35 +8,35 @@ DrGBase.Nodegraph.ConVars.Draw = CreateConVar("drgbase_nodegraph_draw", "0")
 DrGBase.Nodegraph._Nodes = {}
 DrGBase.Nodegraph._Links = {}
 
-local DrGBaseNode = {}
-DrGBaseNode.__index = DrGBaseNode
-function DrGBaseNode:_New(node)
-  setmetatable(node, DrGBaseNode)
+local Node = {}
+Node.__index = Node
+function Node:_New(node)
+  setmetatable(node, Node)
   return node
 end
-function DrGBaseNode:GetID()
+function Node:GetID()
   return self._id
 end
-function DrGBaseNode:GetPos()
+function Node:GetPos()
   return self._pos
 end
-function DrGBaseNode:ToNavmesh()
+function Node:ToNavmesh()
   if CLIENT then return end
   return self:GetNearestNavArea():GetClosestPointOnArea(self:GetPos())
 end
-function DrGBaseNode:GetType()
+function Node:GetType()
   return self._type
 end
-function DrGBaseNode:GetLink(node)
+function Node:GetLink(node)
   return DrGBase.Nodegraph.GetLink(self, node)
 end
-function DrGBaseNode:Link(node, move)
+function Node:Link(node, move)
   return DrGBase.Nodegraph.Link(self, node, move)
 end
-function DrGBaseNode:Unlink(node)
+function Node:Unlink(node)
   return DrGBase.Nodegraph.Unlink(self, node)
 end
-function DrGBaseNode:LinkedTo(node)
+function Node:LinkedTo(node)
   if node == nil then
     local tab = {}
     for i, link in ipairs(self._links) do
@@ -57,19 +57,19 @@ function DrGBaseNode:LinkedTo(node)
     return false
   end
 end
-function DrGBaseNode:GetNearestNavArea()
+function Node:GetNearestNavArea()
   if CLIENT then return end
   return navmesh.GetNearestNavArea(self:GetPos())
 end
-function DrGBaseNode:Distance(pos)
+function Node:Distance(pos)
   if type(pos) ~= "Vector" then pos = pos:GetPos() end
   return self:GetPos():Distance(pos)
 end
-function DrGBaseNode:DistToSqr(pos)
+function Node:DistToSqr(pos)
   if type(pos) ~= "Vector" then pos = pos:GetPos() end
   return self:GetPos():DistToSqr(pos)
 end
-setmetatable(DrGBaseNode, {__call = DrGBaseNode._New})
+setmetatable(Node, {__call = Node._New})
 
 function DrGBase.Nodegraph.Clear()
   DrGBase.Nodegraph._Nodes = {}
@@ -135,9 +135,9 @@ function DrGBase.Nodegraph.RandomNode(pos, maxradius, minradius)
   end
 end
 
-local DrGBaseLink = {}
-DrGBaseLink.__index = DrGBaseLink
-function DrGBaseLink:_New(node1, node2, move)
+local Link = {}
+Link.__index = Link
+function Link:_New(node1, node2, move)
   if move == nil then
     move = {}
     for i = 1, NUM_HULLS do
@@ -149,24 +149,24 @@ function DrGBaseLink:_New(node1, node2, move)
     _node2 = node2:GetID(),
     _move = move
   }
-  setmetatable(link, DrGBaseLink)
+  setmetatable(link, Link)
   return link
 end
-function DrGBaseLink:GetNodes()
+function Link:GetNodes()
   return DrGBase.Nodegraph.GetNode(self._node1), DrGBase.Nodegraph.GetNode(self._node2)
 end
-function DrGBaseLink:GetMove()
+function Link:GetMove()
   return self._move
 end
-function DrGBaseLink:Remove()
+function Link:Remove()
   local node1, node2 = self:GetNodes()
   node1:Unlink(node2)
 end
-setmetatable(DrGBaseLink, {__call = DrGBaseLink._New})
+setmetatable(Link, {__call = Link._New})
 
 function DrGBase.Nodegraph.Link(node1, node2, move)
   if node1:LinkedTo(node2) then return end
-  local link = DrGBaseLink(node1, node2, move)
+  local link = Link(node1, node2, move)
   table.insert(node1._links, link)
   table.insert(node2._links, link)
   table.insert(DrGBase.Nodegraph._Links, link)
@@ -198,8 +198,8 @@ function DrGBase.Nodegraph.GetLink(node1, node2)
 end
 
 if SERVER then
-  util.AddNetworkString("DrGBaseNodegraphRequest")
-  util.AddNetworkString("DrGBaseNodegraphParsed")
+  util.AddNetworkString("NodegraphRequest")
+  util.AddNetworkString("NodegraphParsed")
 
   -- parse ain file (based on nodegraph editor addon, thx!)
   local SIZEOF_INT = 4
@@ -237,7 +237,7 @@ if SERVER then
     	local nodetype = f:ReadByte()
     	local nodeinfo = ReadUShort(f)
     	local zone = f:ReadShort()
-    	table.insert(DrGBase.Nodegraph._Nodes, DrGBaseNode({
+    	table.insert(DrGBase.Nodegraph._Nodes, Node({
         _id = i,
     		_pos = pos,
     		_yaw = yaw,
@@ -267,30 +267,30 @@ if SERVER then
   end
 
   function DrGBase.Nodegraph.SendNodegraph(ply)
-    net.Start("DrGBaseNodegraphParsed")
+    net.Start("NodegraphParsed")
     net.Send(ply)
   end
 
   function DrGBase.Nodegraph.BroadcastNodegraph()
-    net.Start("DrGBaseNodegraphParsed")
+    net.Start("NodegraphParsed")
     net.Broadcast()
   end
 
   -- parse nodegraph
   local parsed = false
-  hook.Add("Think", "DrGBaseNodegraphParse", function()
+  hook.Add("Think", "NodegraphParse", function()
     if parsed then return end
     parsed = true
     DrGBase.Nodegraph.ParseNodegraph()
   end)
 
   -- send nodes
-  DrGBase.Net.DefineCallback("DrGBaseNodegraphRequest", function()
+  DrGBase.Net.DefineCallback("NodegraphRequest", function()
     return {nodes = DrGBase.Nodegraph._Nodes, links = DrGBase.Nodegraph._Links}
   end)
 
   -- send parsed nodegraph to connecting players
-  hook.Add("PlayerInitialSpawn", "DrGBaseNodegraphPlayerInitialSpawn", function(ply)
+  hook.Add("PlayerInitialSpawn", "NodegraphPlayerInitialSpawn", function(ply)
     if not parsed then return end
     DrGBase.Nodegraph.SendNodegraph(ply)
   end)
@@ -307,7 +307,7 @@ else
 
   -- request nodegraph from server
   function DrGBase.Nodegraph.FetchNodegraph()
-    DrGBase.Net.UseCallback("DrGBaseNodegraphRequest", nil, function(data)
+    DrGBase.Net.UseCallback("NodegraphRequest", nil, function(data)
       local links = {}
       DrGBase.Nodegraph._Nodes = {}
       DrGBase.Nodegraph._Links = {}
@@ -316,7 +316,7 @@ else
           table.insert(links, link)
         end
         node._links = {}
-        table.insert(DrGBase.Nodegraph._Nodes, DrGBaseNode(node))
+        table.insert(DrGBase.Nodegraph._Nodes, Node(node))
       end
       for i, link in ipairs(links) do
         DrGBase.Nodegraph.GetNode(link._node1):Link(DrGBase.Nodegraph.GetNode(link._node2), link._move)
@@ -325,7 +325,7 @@ else
   end
 
   -- fetch nodes on parse
-  net.Receive("DrGBaseNodegraphParsed", function()
+  net.Receive("NodegraphParsed", function()
     DrGBase.Nodegraph.FetchNodegraph()
   end)
 
@@ -338,7 +338,7 @@ else
   end
 
   -- draw nodegraph
-  hook.Add("PostDrawOpaqueRenderables", "DrGBaseNodegraphDraw", function()
+  hook.Add("PostDrawOpaqueRenderables", "NodegraphDraw", function()
     if not DrGBase.Nodegraph.ConVars.Draw:GetBool() then return end
     local tr = LocalPlayer():GetEyeTrace()
     local dist = DrGBase.Nodegraph.ConVars.DrawDistance:GetFloat()

@@ -21,6 +21,7 @@ if SERVER then
 
   function ENT:QuickJump(pos)
     if not self:IsOnGround() then return end
+    pos = pos or self.loco:GetMaxJumpHeight()
     if isvector(pos) then
       self:FacePos(pos)
       self.loco:JumpAcrossGap(pos, util.TraceLine({
@@ -131,9 +132,9 @@ if SERVER then
         end
       end)
     end
-    if options.sequence ~= nil then
-      if options.gesture then self:PlayGesture(options.sequence, options.rate)
-      else self:PlaySequenceAndWait(options.sequence, options.rate) end
+    if options.animation ~= nil then
+      if options.gesture then self:PlayAnimation(options.animation, options.rate)
+      else self:PlayAnimationAndWait(options.animation, options.rate) end
     end
   end
 

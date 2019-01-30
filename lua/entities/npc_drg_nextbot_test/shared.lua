@@ -25,6 +25,11 @@ ENT.EyeBone = "ValveBiped.Bip01_Head1"
 ENT.EyeOffset = Vector(5, 0, 2.5)
 ENT.EyeAngle = Angle(75, 0, 0)
 
+-- Climbing --
+ENT.ClimbLadders = true
+ENT.StopClimbing = 115
+ENT.StopClimbAnimation = ACT_ZOMBIE_CLIMB_END
+
 -- Possession --
 ENT.PossessionEnabled = true
 ENT.PossessionViews = {
@@ -66,8 +71,7 @@ if SERVER then
 
   -- Misc --
   function ENT:CustomInitialize()
-    self:SetDefaultRelationship(D_FR)
-    self:SetPlayersRelationship(D_LI)
+    self:SetDefaultRelationship(D_HT)
   end
 
   -- AI --
@@ -78,27 +82,9 @@ if SERVER then
     self:PlaySequenceAndWait("taunt_dance_base")
   end
 
-  -- Movement --
-  function ENT:GroundSpeed(state)
-    if state == DRGBASE_STATE_AI_AVOID then return 200
-    else return 100 end
-  end
-
   -- Possession --
   function ENT:PossessionThink(ply, tr)
     self:LookAt(tr.HitPos)
-  end
-  function ENT:PossessionGroundSpeed(sprint)
-    if sprint then return 200
-    else return 100 end
-  end
-
-  -- Animations --
-  function ENT:SyncAnimation(speed, onground, flying, up, down)
-    if not onground then return "jump_knife"
-    elseif speed == 0 then return "idle_all_01"
-    elseif speed < 120 then return "walk_all"
-    else return "run_all_01" end
   end
 
   -- Hooks --
@@ -130,7 +116,6 @@ if SERVER then
     }
     self:PlaySequenceAndWait(deaths[math.random(#deaths)])
   end
-
   function ENT:OnDoorContact(door)
     return "open", 0, 2
   end

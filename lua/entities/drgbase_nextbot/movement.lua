@@ -11,6 +11,15 @@ end
 function ENT:SpeedSqr()
   return math.Round(self:GetVelocity():LengthSqr())
 end
+function ENT:SpeedCached(scale)
+  if CurTime() < self._DrGBaseLastSpeedCacheDelay then
+    return self._DrGBaseLastSpeedCache
+  else
+    self._DrGBaseLastSpeedCacheDelay = CurTime() + 0.1
+    self._DrGBaseLastSpeedCache = self:Speed(scale)
+    return self._DrGBaseLastSpeedCache
+  end
+end
 
 function ENT:IsFlying()
   return false
@@ -18,6 +27,10 @@ end
 
 function ENT:IsMoving()
   return self:SpeedSqr() ~= 0
+end
+
+function ENT:IsSprinting()
+  return self:SpeedCached(true) > self.WalkSpeed*self:GetScale()*1.1
 end
 
 if SERVER then
@@ -85,6 +98,7 @@ if SERVER then
   -- Movements --
 
   function ENT:MoveToPos(pos, options, callback)
+    if not navmesh.IsLoaded() then return "failed" end
     options = options or {}
     options.lookahead = options.lookahead or 300
     options.tolerance = options.tolerance or 20
@@ -99,11 +113,31 @@ if SERVER then
     else path:ResetAge() end
     if not IsValid(path) then return "failed" end
     while IsValid(path) do
+      local current = path:GetCurrentGoal()
       if self:IsDying() then return "dying" end
       if self:CanMove(self:GetPossessor()) then
-    	  path:Update(self)
+        local type = current.type
+        --if type > 0 then print(type) end
+        if type == 4 then
+          local ladder = current.ladder
+  				if IsValid(ladder) and
+          self:GetPos():DistToSqr(current.pos) <= math.pow(options.tolerance, 2) then
+  					self:ClimbLadder(current.ladder, function()
+              if options.draw then path:Draw() end
+            end)
+            self:InvalidatePath()
+          else path:Update(self) end
+        elseif type == 5 then
+          self.loco:FaceTowards(self:GetPos() + current.forward)
+          self.loco:Approach(self:GetPos() + current.forward, 1)
+  			else path:Update(self) end
       end
-    	if options.draw then path:Draw() end
+    	if options.draw then
+        local bound1, bound2 = self:GetCollisionBounds()
+        local center = self:GetPos() + (bound1 + bound2)/2
+        debugoverlay.Line(center, current.pos, 0.05, Color(215, 215, 65), true)
+        path:Draw()
+      end
     	if self.loco:IsStuck() then
     		self:HandleStuck()
     		return "stuck"
@@ -127,9 +161,11 @@ if SERVER then
   end
 
   function ENT:FollowEntity(ent, options, callback)
-    self:MoveToPos(ent:GetPos(), options, function(path)
+    if callback == nil then callback = function() end end
+    return self:MoveToPos(ent:GetPos(), options, function(path)
       if not IsValid(ent) then return "invalid" end
       local res = callback(path, options)
+      if not IsValid(ent) then return "invalid" end
       if isstring(res) then return res
       else return ent:GetPos() end
     end)
@@ -181,6 +217,39 @@ if SERVER then
     self.loco:Approach(self:GetPos() + self:GetRight(), 1)
   end
 
+  -- Climbing --
+
+  function ENT:IsClimbing()
+    return self._DrGBaseClimbing
+  end
+
+  function ENT:ClimbLadder(ladder)
+    if self:IsClimbing() then return end
+    if self:OnStartClimbing(ladder) ~= false then
+      self._DrGBaseClimbing = true
+      local length = ladder:GetLength()
+      self:PlayAnimationAndMove(self.StartClimbAnimation, self.StartClimbAnimRate, function()
+        self:WhileClimbing(length, ladder)
+      end)
+      while self:GetPos().z + self.StopClimbing < ladder:GetTop().z and not self:IsDying() do
+        self:WhileClimbing(ladder:GetTop().z - self:GetPos().z - self.StopClimbing, ladder)
+        self.loco:FaceTowards(ladder:GetPosAtHeight(self:GetPos().z))
+  		  self:SetPos(ladder:GetPosAtHeight(self:GetSpeed()/50 + self:GetPos().z))
+        coroutine.wait(0.025)
+      end
+      self:PlayAnimationAndMove(self.StopClimbAnimation, self.StopClimbAnimRate, function()
+        self:WhileClimbing(0, ladder)
+      end)
+      self:OnStopClimbing(ladder)
+      local pos = self:GetPos()
+      self:SetPos(navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos))
+    end
+    self._DrGBaseClimbing = false
+  end
+  function ENT:OnStartClimbing(ladder) end
+  function ENT:WhileClimbing(ladder) end
+  function ENT:OnStopClimbing(ladder) end
+
   -- Handlers --
 
   function ENT:EnableSpeedFetch(bool)
@@ -189,21 +258,33 @@ if SERVER then
     else self._DrGBaseSpeedFetch = false end
   end
 
+  function ENT:ShouldSprint(state)
+    return state == DRGBASE_STATE_AI_FIGHT or
+    state == DRGBASE_STATE_AI_AVOID
+  end
+
   function ENT:_HandleMovement()
     if not self:EnableSpeedFetch() then return end
-    local speed
+    local sprint
     if self:IsPossessed() then
-      local possessor = self:GetPossessor()
-      if self:IsFlying() then speed = self:PossessionFlightSpeed(possessor:KeyDown(IN_SPEED))
-      else speed = self:PossessionGroundSpeed(possessor:KeyDown(IN_SPEED)) end
-    elseif self:IsFlying() then speed = self:FlightSpeed(self:GetState())
-    else speed = self:GroundSpeed(self:GetState()) end
+      sprint = self:GetPossessor():KeyDown(IN_SPEED)
+    else sprint = self:ShouldSprint(self:GetState()) end
+    local speed
+    if self:IsFlying() then speed = self:FlightSpeed(sprint)
+    elseif self:IsClimbing() then speed = self:ClimbingSpeed(sprint)
+    else speed = self:GroundSpeed(sprint) end
     self:SetSpeed(speed)
   end
-  function ENT:GroundSpeed() end
-  function ENT:FlightSpeed() end
-  function ENT:PossessionGroundSpeed() end
-  function ENT:PossessionFlightSpeed() end
+  function ENT:GroundSpeed(sprint)
+    if sprint then return self.RunSpeed
+    else return self.WalkSpeed end
+  end
+  function ENT:FlightSpeed()
+    return 0
+  end
+  function ENT:ClimbingSpeed()
+    return self.ClimbSpeed
+  end
 
 else
 

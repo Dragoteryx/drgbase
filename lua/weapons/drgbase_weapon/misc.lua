@@ -6,7 +6,7 @@ function SWEP:ShootBullet(damage, num_bullets, aimcone)
 	bullet.Dir = self.Owner:GetAimVector()
 	bullet.Spread = Vector(aimcone, aimcone, 0)
 	bullet.Tracer	= 1
-	bullet.Force = damage
+	bullet.Force = damage/10
 	bullet.Damage	= damage
 	bullet.AmmoType = "Pistol"
 	self.Owner:FireBullets(bullet)

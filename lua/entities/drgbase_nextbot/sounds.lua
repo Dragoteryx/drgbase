@@ -1,5 +1,15 @@
 
+function ENT:EmitSlottedSound(slot, duration, soundName, soundLevel, pitchPercent, volume, channel)
+  local lastSlot = self._DrGBaseSlottedSounds[slot]
+  if lastSlot == nil or CurTime() > lastSlot then
+    self._DrGBaseSlottedSounds[slot] = CurTime() + duration
+    self:EmitSound(soundName, soundLevel, pitchPercent, volume, channel)
+  end
+end
+
 if SERVER then
+
+  -- Handlers --
 
   function ENT:_HandleAmbientSounds()
     if isstring(self.AmbientSounds) then self.AmbientSounds = {sound = self.AmbientSounds} end

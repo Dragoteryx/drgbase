@@ -22,6 +22,10 @@ if SERVER then
         self:InvalidatePath()
         self:StepAwayFromPos(scared:GetPos())
       end
+      if self.AttackScared and IsValid(scared) and self:InRange(scared, self.EnemyReach) and
+      self:LineOfSight(scared, 360, math.huge) then
+        self:EnemyInRange(scared, true)
+      end
     elseif self:HaveEnemy() then
       self:_SetState(DRGBASE_STATE_AI_FIGHT)
       self:SetDestination(nil)
@@ -33,7 +37,7 @@ if SERVER then
         end
         if IsValid(enemy) and self:InRange(enemy, self.EnemyReach) and
         self:LineOfSight(enemy, 360, math.huge) then
-          self:EnemyInRange(enemy)
+          self:EnemyInRange(enemy, false)
         end
       elseif not self:InRange(enemy, stop) or
       not self:LineOfSight(enemy, 360, math.huge) then
@@ -44,11 +48,15 @@ if SERVER then
             if self:IsPossessed() then return "possession" end
             if self:CoroutineCallbacks() then return "callbacks" end
             if self:InRange(enemy, stop) then return "keepdistance" end
+            if IsValid(enemy) and self:InRange(enemy, self.EnemyReach) and
+            self:LineOfSight(enemy, 360, math.huge) then
+              self:EnemyInRange(enemy, false)
+            end
           end)
         end
       elseif IsValid(enemy) and self:InRange(enemy, self.EnemyReach) and
       self:LineOfSight(enemy, 360, math.huge) then
-        self:EnemyInRange(enemy)
+        self:EnemyInRange(enemy, false)
       end
     elseif destination ~= nil then
       self:_SetState(DRGBASE_STATE_AI_WANDER)
@@ -158,9 +166,15 @@ if SERVER then
 
   function ENT:_HandleEnemy()
     if self:IsPossessed() then return end
+    local enemy = self:GetEnemy()
+    if IsValid(enemy) and self:InRange(enemy, self.EnemyReach) and
+    self:LineOfSight(enemy, 360, math.huge) then
+      self:EnemyInRangeThink(enemy)
+    end
     if CurTime() < self._DrGBaseHandleEnemy then return end
     self:SetEnemy(self:FindClosestEnemy(), 0.5)
   end
+  function ENT:EnemyInRangeThink() end
 
   -- Destination --
 
