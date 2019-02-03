@@ -1,13 +1,13 @@
 
-local DrGPossessionEnabled = CreateConVar("drgbase_possession", "1")
+local PossessionEnabled = CreateConVar("drgbase_possession", "1")
 
 properties.Add("drgbasepossess", {
 	MenuLabel = "Possess",
-	Order = 999,
+	Order = 1000,
 	MenuIcon = "drgbase/icon16.png",
 	Filter = function(self, ent, ply)
     return ent.IsDrGNextbot and
-		DrGPossessionEnabled:GetBool()
+		PossessionEnabled:GetBool()
 	end,
 	Action = function(self, ent)
     self:MsgStart()

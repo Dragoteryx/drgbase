@@ -15,23 +15,16 @@ function DrGBase.Error(msg)
   DrGBase.Print(msg, true)
 end
 
-DrGBase.IncludeFile("drgbase/enums.lua")
 DrGBase.IncludeFile("drgbase/colors.lua")
-DrGBase.IncludeFile("drgbase/net.lua")
-
-DrGBase.IncludeFile("drgbase/utils.lua")
+DrGBase.IncludeFile("drgbase/enums.lua")
 DrGBase.IncludeFile("drgbase/meta.lua")
-DrGBase.IncludeFile("drgbase/math.lua")
+DrGBase.IncludeFile("drgbase/modules.Lua")
 DrGBase.IncludeFile("drgbase/nextbots.lua")
-DrGBase.IncludeFile("drgbase/pathfinding.lua")
+DrGBase.IncludeFile("drgbase/possession_drive.lua")
 DrGBase.IncludeFile("drgbase/possession.lua")
-DrGBase.IncludeFile("drgbase/nodegraph.lua")
-DrGBase.IncludeFile("drgbase/navmesh.lua")
-DrGBase.IncludeFile("drgbase/commands.lua")
-DrGBase.IncludeFile("drgbase/weapons.lua")
-
 DrGBase.IncludeFile("drgbase/resources.lua")
 DrGBase.IncludeFile("drgbase/spawnmenu.lua")
+DrGBase.IncludeFile("drgbase/weapons.lua")
 
 if SERVER then
 

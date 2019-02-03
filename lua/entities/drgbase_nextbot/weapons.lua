@@ -28,8 +28,10 @@ function ENT:GetAimVector()
       collisiongroup = COLLISION_GROUP_IN_VEHICLE
     }).Normal
   else normal = self:GetForward() end
-  local accuracy = (1 - self.WeaponAccuracy)*10
+  local cap = 10
+  local accuracy = (1 - self.WeaponAccuracy)*cap
   if accuracy < 0 then accuracy = 0 end
+  if accuracy > cap then accuracy = cap end
   normal:Rotate(Angle(math.random(-accuracy, accuracy), math.random(-accuracy, accuracy), 0))
   return normal
 end
@@ -119,10 +121,6 @@ if SERVER then
   function ENT:Give(name)
     return self:GiveWeapon(name)
   end
-
-else
-
-
 
 end
 

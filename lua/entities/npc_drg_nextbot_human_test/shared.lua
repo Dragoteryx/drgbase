@@ -56,7 +56,7 @@ end
 if SERVER then
   AddCSLuaFile("shared.lua")
 end
-DrGBase.Nextbot.Load({
+DrGBase.Nextbots.Load({
   Name = ENT.Name,
   Class = ENT.Class,
   Category = ENT.Category,

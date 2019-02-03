@@ -1,12 +1,10 @@
 
-DrGBase.Net = DrGBase.Net or {}
-
 local callbacks = {}
-function DrGBase.Net.DefineCallback(name, callback)
+function net.DrG_DefineCallback(name, callback)
   callbacks[name] = callback
 end
 local reqID = 0
-function DrGBase.Net.UseCallback(name, data, callback, ply)
+function net.DrG_UseCallback(name, data, callback, ply)
   if SERVER and (not IsValid(ply) or not ply:IsPlayer()) then return end
   local currID = reqID
   reqID = reqID+1
@@ -40,13 +38,13 @@ net.Receive("DrGBaseNetCallbackRequest", function(len, ply)
 end)
 
 local vars = {}
-function DrGBase.Net.GetVar(name, ent)
+function net.DrG_GetVar(name, ent)
   if not IsValid(ent) then return end
   if vars[ent:EntIndex()] == nil then vars[ent:EntIndex()] = {} end
   return vars[ent:EntIndex()][name]
 end
 
-hook.Add("EntityRemove", "DrGBaseNetVarsRemove", function(ent)
+hook.Add("EntityRemoved", "DrGBaseNetVarsRemove", function(ent)
   vars[ent:EntIndex()] = {}
 end)
 
@@ -55,7 +53,7 @@ if SERVER then
   util.AddNetworkString("DrGBaseNetCallbackResponse")
   util.AddNetworkString("DrGBaseNetVar")
 
-  function DrGBase.Net.SetVar(name, value, ent)
+  function net.DrG_SetVar(name, value, ent)
     if not IsValid(ent) then return end
     local valid = true
     net.Start("DrGBaseNetVar")

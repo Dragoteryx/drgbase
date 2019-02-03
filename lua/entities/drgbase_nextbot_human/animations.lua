@@ -146,20 +146,20 @@ if SERVER then
     ["knife"] = true,
     ["duel"] = true
   }
-  function ENT:SyncAnimation(speed)
+  function ENT:UpdateAnimation()
     if self:IsClimbing() then return self.ClimbAnimation, self.ClimbAnimRate end
     local holdtype = self:HasWeapon() and self:GetActiveWeapon():GetHoldType() or "normal"
-    if not self._DrGBaseReadyToFire then
+    if not self:IsWeaponReady() then
       if passives[holdtype] then holdtype = "passive"
       elseif normals[holdtype] then holdtype = "normal" end
     end
     if not self:IsOnGround() then
       return self.JumpAnimations[holdtype], self.JumpAnimRate
     elseif self:IsCrouching() then
-      if speed > 0 then return self.CrouchWalkAnimations[holdtype]
+      if self:IsSpeedMore(0, true) then return self.CrouchWalkAnimations[holdtype]
       else return self.CrouchIdleAnimations[holdtype] end
-    elseif speed > self.WalkSpeed*1.1 then return self.RunAnimations[holdtype]
-    elseif speed > 0 then return self.WalkAnimations[holdtype]
+    elseif self:IsSpeedMore(self.WalkSpeed*1.1, true) then return self.RunAnimations[holdtype]
+    elseif self:IsSpeedMore(0, true) then return self.WalkAnimations[holdtype]
     else return self.IdleAnimations[holdtype] end
   end
 

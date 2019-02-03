@@ -51,10 +51,10 @@ if SERVER then
     if jumping == nil then jumping = function() end end
     self:Jump(pos, function()
       local velocity = self:GetVelocity()
-      if velocity.z < 0 and options.buoyancy ~= nil and options.speed ~= nil then
-        local forward = self:GetForward()
-        forward = forward*options.speed*self:GetScale()
-        forward.z = options.buoyancy*self:GetScale()
+      if velocity.z < 0 and options.pitch ~= nil and options.speed ~= nil then
+        local forward = self:GetForward()*options.speed*self:GetScale()
+        forward.z = 0
+        forward:Rotate(Angle(options.pitch, 0, 0))
         self:SetVelocity(forward)
       end
       jumping(options)
@@ -64,8 +64,8 @@ if SERVER then
   function ENT:Charge(speed, callback)
     if self._DrGBaseCharging then return end
     self._DrGBaseCharging = true
-    local speedfetch = self:EnableSpeedFetch()
-    self:EnableSpeedFetch(false)
+    local speedfetch = self:EnableUpdateSpeed()
+    self:EnableUpdateSpeed(false)
     if speed ~= nil then self:SetSpeed(speed) end
     if callback == nil then callback = function() end end
     local now = CurTime()
@@ -74,7 +74,7 @@ if SERVER then
       self:GoForward()
       coroutine.yield()
     end
-    self:EnableSpeedFetch(speedfetch)
+    self:EnableUpdateSpeed(speedfetch)
     self._DrGBaseCharging = false
     self._DrGBaseChargingEnt = nil
   end
@@ -134,6 +134,7 @@ if SERVER then
     end
     if options.animation ~= nil then
       if options.gesture then self:PlayAnimation(options.animation, options.rate)
+      elseif options.movement then self:PlayAnimationAndMove(options.animation, options.rate)
       else self:PlayAnimationAndWait(options.animation, options.rate) end
     end
   end

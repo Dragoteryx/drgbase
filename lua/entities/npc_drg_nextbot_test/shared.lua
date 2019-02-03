@@ -14,6 +14,12 @@ ENT.AnimationType = DRGBASE_ANIMTYPE_BODYMOVEXY
 -- Stats --
 ENT.FallDamage = true
 
+-- Movements --
+ENT.RunAnimation = ACT_HL2MP_RUN
+ENT.WalkAnimation = ACT_HL2MP_WALK
+ENT.IdleAnimation = ACT_HL2MP_IDLE
+ENT.JumpAnimation = ACT_HL2MP_JUMP_KNIFE
+
 -- Relationships --
 ENT.Factions = {}
 ENT.EnemyReach = 250
@@ -27,7 +33,9 @@ ENT.EyeAngle = Angle(75, 0, 0)
 
 -- Climbing --
 ENT.ClimbLadders = true
-ENT.StopClimbing = 115
+ENT.ClimbAnimation = ACT_ZOMBIE_CLIMB_UP
+ENT.StartClimbAnimation = ACT_ZOMBIE_CLIMB_START
+ENT.StopClimb = 112.5
 ENT.StopClimbAnimation = ACT_ZOMBIE_CLIMB_END
 
 -- Possession --
@@ -48,14 +56,14 @@ ENT.PossessionBinds = {
     bind = IN_ATTACK,
     coroutine = false,
     onkeydown = function(self)
-
+      self:PlayAnimation(ACT_GMOD_GESTURE_DISAGREE)
     end
   },
   {
     bind = IN_ATTACK2,
     coroutine = false,
     onkeydown = function(self)
-      self:PlayGesture("gesture_salute")
+      self:PlayAnimation(ACT_GMOD_TAUNT_SALUTE)
     end
   },
   {
@@ -63,6 +71,13 @@ ENT.PossessionBinds = {
     coroutine = true,
     onkeydown = function(self)
       self:QuickJump(100)
+    end
+  },
+  {
+    bind = IN_RELOAD,
+    coroutine = true,
+    onkeypressed = function(self)
+      self:PlayAnimationAndMove(self.StopClimbAnimation)
     end
   }
 }
@@ -75,11 +90,15 @@ if SERVER then
   end
 
   -- AI --
+  function ENT:EnemyInRange(enemy)
+    self.loco:FaceTowards(enemy:GetPos())
+    self:PlayAnimation(ACT_GMOD_GESTURE_DISAGREE)
+  end
   function ENT:FetchDestination()
     return self:RandomPos(1500)
   end
   function ENT:ReachedDestination(pos)
-    self:PlaySequenceAndWait("taunt_dance_base")
+    self:PlayAnimationAndWait("taunt_dance_base")
   end
 
   -- Possession --
@@ -89,7 +108,7 @@ if SERVER then
 
   -- Hooks --
   function ENT:OnSpawn()
-    self:PlaySequenceAndWait("zombie_slump_rise_01")
+
   end
   function ENT:OnTakeDamage(dmg, hitgroups, bone)
     local sounds = {
@@ -126,7 +145,7 @@ end
 if SERVER then
   AddCSLuaFile("shared.lua")
 end
-DrGBase.Nextbot.Load({
+DrGBase.Nextbots.Load({
   Name = ENT.Name,
   Class = ENT.Class,
   Category = ENT.Category,

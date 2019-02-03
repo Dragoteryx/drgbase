@@ -16,9 +16,9 @@ drive.Register("drive_drgbase_nextbot", {
     if not self.Entity:CanMove(self.Player) then return end
     if self.Entity:IsClimbing() then return end
     local origin, angles = self.Entity:PossessorView()
-    if self.Entity:IsFlying() then
-      self.Entity:SetAngles(Angle(angles.p, angles.y, 0))
-    else self.Entity:SetAngles(Angle(0, angles.y, 0)) end
+    local selfangles = self.Entity:GetAngles()
+    selfangles.y = angles.y
+    self.Entity:SetAngles(selfangles)
   end,
 	Move = function(self)
     if CLIENT then return end

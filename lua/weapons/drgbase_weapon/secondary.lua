@@ -38,7 +38,8 @@ function SWEP:SecondaryAttack()
     end
     return false
   end
-  if self:PreSecondaryAttack() == false then return false end
+  if IsFirstTimePredicted() and self:PreSecondaryAttack() == false then return false end
+  if IsFirstTimePredicted() then self:FireSecondary() end
 	self:EmitSound(self.Secondary.Sound)
   if SERVER then
     self:TakeSecondaryAmmo(self.Secondary.Cost)
@@ -49,7 +50,6 @@ function SWEP:SecondaryAttack()
     end
   end
   if IsFirstTimePredicted() then
-	   self:FireSecondary()  
     if self.Secondary.Delay >= 0 then
       local delay = CurTime() + self.Secondary.Delay
       self:SetNextSecondaryFire(delay)

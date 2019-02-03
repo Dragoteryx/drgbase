@@ -1,12 +1,20 @@
 
 function ENT:_Debug(text)
-  DrGBase.Nextbot.Debug(self, text)
+  if not GetConVar("developer"):GetBool() then return end
+  DrGBase.Print("Nextbot '"..self:GetClass().."' ("..self:EntIndex().."): "..text)
 end
 
 function ENT:Timer(delay, callback)
   timer.Simple(delay, function()
     if not IsValid(self) then return end
-    callback()
+    return callback()
+  end)
+end
+
+function ENT:LoopTimer(delay, callback)
+  timer.DrG_Loop(delay, function()
+    if not IsValid(self) then return false end
+    return callback()
   end)
 end
 
@@ -46,7 +54,7 @@ function ENT:CombineBall(value)
 end
 
 function ENT:AnglePos(pos)
-  return DrGBase.Math.VectorsAngle(self:GetPos() + self:GetForward(), pos, self:GetPos())
+  return math.DrG_VectorsAngle(self:GetPos() + self:GetForward(), pos, self:GetPos())
 end
 
 function ENT:AngleEntity(ent)
@@ -62,7 +70,7 @@ function ENT:InRange(ent, dist)
 end
 function ENT:FindInRange(dist)
   local entities = {}
-  for i, ent in ipairs(self:GetTargettableEntities()) do
+  for i, ent in ipairs(self:GetTargets()) do
     if not IsValid(ent) then continue end
     if ent:EntIndex() == self:EntIndex() then continue end
     if not self:InRange(ent, dist) then continue end
@@ -82,18 +90,9 @@ end
 if SERVER then
 
   function ENT:RandomPos(maxradius, minradius)
-    local pos = DrGBase.Utils.RandomPos(self:GetPos(), maxradius, minradius)
+    local pos = util.DrG_RandomPos(self:GetPos(), maxradius, minradius)
     if pos == nil then return self:GetPos()
     else return pos end
-  end
-
-  function ENT:Explode(options)
-    options = options or {}
-    if options.remove == nil then options.remove = true end
-    options.owner = self
-    local pos = self:GetPos()
-    if options.remove then self:Remove() end
-    DrGBase.Utils.Explosion(pos, options)
   end
 
   function ENT:Kill(attacker, inflictor)

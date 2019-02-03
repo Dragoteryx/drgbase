@@ -34,7 +34,8 @@ function SWEP:PrimaryAttack()
     end
     return false
   end
-  if self:PrePrimaryAttack() == false then return false end
+  if IsFirstTimePredicted() and self:PrePrimaryAttack() == false then return false end
+  if IsFirstTimePredicted() then self:FirePrimary() end
 	self:EmitSound(self.Primary.Sound)
   if SERVER then
     self:TakePrimaryAmmo(self.Primary.Cost)
@@ -45,7 +46,6 @@ function SWEP:PrimaryAttack()
     end
   end
   if IsFirstTimePredicted() then
-	   self:FirePrimary()  
     if self.Primary.Delay >= 0 then
       local delay = CurTime() + self.Primary.Delay
       self:SetNextPrimaryFire(delay)

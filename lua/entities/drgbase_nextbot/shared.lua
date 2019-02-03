@@ -10,6 +10,7 @@ DrGBase.IncludeFile("ai.lua")
 DrGBase.IncludeFile("animations.lua")
 DrGBase.IncludeFile("behaviours.lua")
 DrGBase.IncludeFile("detection.lua")
+--DrGBase.IncludeFile("flying.lua")
 DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("loco.lua")
 DrGBase.IncludeFile("meta.lua")
@@ -26,7 +27,7 @@ ENT.Models = {"models/player/kleiner.mdl"}
 ENT.Skins = {0}
 ENT.ModelScale = 1
 ENT.RagdollOnDeath = true
-ENT.AnimationType = DRGBASE_ANIMTYPE_SIMPLE
+ENT.AnimationType = DRGBASE_ANIMTYPE_DIRECTION
 ENT.AmbientSounds = {}
 ENT.HeadYaw = "head_yaw"
 ENT.HeadPitch = "head_pitch"
@@ -41,29 +42,27 @@ ENT.Killicon = {
 ENT.MaxHealth = 100
 ENT.HealthRegen = 0
 ENT.Radius = 10000
-ENT.Omniscient = false
-ENT.ForgetTime = 10
 ENT.FallDamage = false
 
 -- Movements --
 ENT.RunSpeed = 200
-ENT.RunAnimation = ACT_HL2MP_RUN
+ENT.RunAnimation = ACT_RUN
 ENT.RunAnimRate = 1
 ENT.WalkSpeed = 100
-ENT.WalkAnimation = ACT_HL2MP_WALK
+ENT.WalkAnimation = ACT_WALK
 ENT.WalkAnimRate = 1
-ENT.IdleAnimation = ACT_HL2MP_IDLE
+ENT.IdleAnimation = ACT_IDLE
 ENT.IdleAnimRate = 1
-ENT.JumpAnimation = ACT_HL2MP_JUMP_KNIFE
+ENT.JumpAnimation = ACT_JUMP
 ENT.JumpAnimRate = 1
 
 -- Climbing --
 ENT.ClimbLadders = false
 ENT.ClimbWalls = false
 ENT.ClimbSpeed = 100
-ENT.ClimbAnimation = ACT_ZOMBIE_CLIMB_UP
+ENT.ClimbAnimation = ACT_CLIMB_UP
 ENT.ClimbAnimRate = 1
-ENT.StopClimbing = 0
+ENT.StopClimb = 0
 ENT.StartClimbAnimation = ""
 ENT.StartClimbAnimRate = 1
 ENT.StopClimbAnimation = ""
@@ -88,8 +87,12 @@ ENT.WeaponAccuracy = 1
 ENT.WeaponAttachmentLH = "Anim_Attachment_LH"
 ENT.WeaponAttachmentRH = "Anim_Attachment_RH"
 ENT.DropWeaponOnDeath = false
+ENT.AcceptPlayerWeapons = false
 
 -- Detection --
+ENT.Omniscient = false
+ENT.PursueTime = 10
+ENT.SearchTime = 50
 ENT.SightFOV = 150
 ENT.SightRange = 6000
 ENT.EyeBone = ""
@@ -101,6 +104,7 @@ ENT.HearingRangeBullets = 5000
 -- Possession --
 ENT.PossessionEnabled = false
 ENT.PossessionRemote = true
+ENT.PossessionDataDelay = 0
 ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
 
@@ -130,11 +134,11 @@ if SERVER then
     self:SetPlaybackRate(1)
     self:AddFlags(FL_OBJECT + FL_CLIENT)
     self:CombineBall("dissolve")
+    --self:SetSolidMask(MASK_NPCSOLID_BRUSHONLY)
     self.VJ_AddEntityToSNPCAttackList = true -- so vj snpcs can damage us
     self._DrGBaseCoroutineCallbacks = {} -- call functions inside coroutine
     self._DrGBaseSpotted = {} -- list of spotted entities
-    self._DrGBaseHandleAnimDelay = 0 -- delay between animations handles
-    self._DrGBaseSyncAnimations = false -- sync animations with speed
+    self._DrGBaseSyncAnimations = true -- sync animations with speed
     self._DrGBaseCurrentAnimLastCycle = 0 -- current anim cycle
     self._DrGBaseCustomThinkDelay = 0 -- delay for custom think
     self._DrGBaseLOSCheckDelay = 0 -- los checks delay
@@ -163,9 +167,13 @@ if SERVER then
     self._DrGBaseHitGroups = {} -- list of hitgroups
     self._DrGBaseBlockRotation = false -- block rotation
     self._DrGBaseBlockInput = false -- block input
-    self._DrGBaseLastSpeedCacheDelay = 0 -- speed cache delay
     self._DrGBaseOnContactDelay = 0 -- to avoid lag
     self._DrGBaseSlottedSounds = {} -- slotted sounds
+    self._DrGBaseTargets = {} -- targettable entities
+    self._DrGBaseCustomTargetChecks = {} -- custom target checks
+    self._DrGBaseTargetsList = {} -- to quickly check targets
+    self._DrGBaseAnimationSeed = math.random(0, 255) -- to pick a random sequence
+    self._DrGBaseDisableBMXY = false -- disable bodymovexy
     self:DefineHitGroup(HITGROUP_HEAD, {
       "ValveBiped.Bip01_Neck1",
       "ValveBiped.Bip01_Head1",
@@ -249,15 +257,16 @@ if SERVER then
     self:SetDrGVar("DrGBaseMaxHealth", self.MaxHealth)
     self:SetDrGVar("DrGBaseScale", 1)
     self:SetDrGVar("DrGBasePossessionView", 1)
-    self:SetDrGVar("DrGBaseAnimationSeed", math.random(0, 255))
-    self:ResetRelationships()
+    self:SetDrGVar("DrGBaseClimbing", false)
+    self:ResetRelationships() -- sets the factions
     if self.UseWeapons and #self.Weapons > 0 then
       self:GiveWeapon(self.Weapons[math.random(#self.Weapons)])
     end
     self:_BaseInitialize()
     self:CustomInitialize()
+    self:RefreshTargets()
     self:CallOnRemove("DrGBaseCallOnRemove", function()
-      table.RemoveByValue(DrGBase.Nextbot._Spawned, self)
+      table.RemoveByValue(DrGBase.Nextbots._Spawned, self)
       if self:IsPossessed() then self:Dispossess() end
       if self._DrGBaseAmbientSound ~= nil then
         self:StopLoopingSound(self._DrGBaseAmbientSound)
@@ -265,7 +274,7 @@ if SERVER then
       end
       self:_Debug("remove.")
     end)
-    table.insert(DrGBase.Nextbot._Spawned, self)
+    table.insert(DrGBase.Nextbots._Spawned, self)
     self:_Debug("spawn.")
   end
   function ENT:_BaseInitialize() end
@@ -275,13 +284,15 @@ if SERVER then
 
   function ENT:Think()
     self:_HandleCustomHooks()
-    self:_HandleLineOfSight()
     self:_HandleMovement()
     self:_HandleAnimations()
-    self:_HandleEnemy()
     self:_HandlePossessionThink()
     self:_HandleAmbientSounds()
     self:_HandleHealthRegen()
+    if not GetConVar("ai_disabled"):GetBool() then
+      self:_HandleEnemy()
+      self:_HandleLineOfSight()
+    end
     self:_BaseThink(self:GetState())
     if CurTime() > self._DrGBaseCustomThinkDelay then
       local nextThink = self:CustomThink(self:GetState()) or 0
@@ -310,9 +321,7 @@ if SERVER then
     end
 
     -- on spawn
-    local spawned = self:OnSpawn()
-    if spawned ~= nil and not spawned then self:Remove() end
-    self:EnableSyncedAnimations(true)
+    self:OnSpawn()
     self._DrGBaseReady = true
 
     while true do

@@ -121,6 +121,7 @@ if SERVER then
   util.AddNetworkString("DrGBaseNextbotCanPossess")
   util.AddNetworkString("DrGBaseNextbotCantPossess")
   util.AddNetworkString("DrGBaseNextbotCyclePossessionViews")
+  util.AddNetworkString("DrGBasePossessionData")
 
   function ENT:Possess(ply, _client)
     if not self.PossessionEnabled then return DRGBASE_POSSESS_DISABLED end
@@ -136,6 +137,7 @@ if SERVER then
     if hookres ~= nil and not hookres then return DRGBASE_POSSESS_NOT_ALLOWED end
     drive.PlayerStartDriving(ply, self, "drive_drgbase_nextbot")
     if not ply:IsDrivingEntity(self) then return DRGBASE_POSSESS_ERROR end
+    --self:SetSolidMask(MASK_NPCSOLID)
     self:SetEnemy(nil)
     self:SetDestination(nil)
     ply._DrGBasePossessing = self
@@ -159,6 +161,7 @@ if SERVER then
     if hookres ~= nil and not hookres then return DRGBASE_DISPOSSESS_NOT_ALLOWED end
     drive.PlayerStopDriving(possessor)
     if possessor:IsDrivingEntity(self) then return DRGBASE_DISPOSSESS_ERROR end
+    --self:SetSolidMask(MASK_NPCSOLID_BRUSHONLY)
     possessor._DrGBasePossessing = nil
     self._DrGBasePossessor = nil
     net.Start("DrGBaseNextbotDispossess")
@@ -182,6 +185,19 @@ if SERVER then
     if not ply:DrG_IsPossessing() then return end
     ply:DrG_Possessing():CyclePossessionViews()
   end)
+
+  function ENT:PossessionSendData(name, data)
+    if not self:IsPossessed() then return end
+    net.Start("DrGBasePossessionData")
+    local compressed = util.Compress(util.TableToJSON({
+      ply = self:GetPossessor():EntIndex(),
+      ent = self:EntIndex(),
+      name = name, data = data
+    }))
+    net.WriteData(compressed, #compressed)
+    net.Send(self:GetPossessor())
+    self:_Debug("sent data: '"..name.."'.")
+  end
 
   -- Handlers --
 
@@ -315,6 +331,17 @@ else
     local possessing = LocalPlayer():DrG_Possessing()
     if not IsValid(possessing) then return end
     possessing:PossessionRender(possessing:CurrentPossessionView())
+  end)
+
+  function ENT:PossessionReceiveData() end
+  net.Receive("DrGBasePossessionData", function(len)
+    local ply = LocalPlayer()
+    if not ply:DrG_IsPossessing() then return end
+    local ent = ply:DrG_Possessing()
+    local tab = util.JSONToTable(util.Decompress(net.ReadData(len/8)))
+    if tab.ply ~= ply:EntIndex() or tab.ent ~= ent:EntIndex() then return end
+    ent:_Debug("received data: '"..tab.name.."'.")
+    ent:PossessionReceiveData(tab.name, tab.data)
   end)
 
 end

@@ -5,32 +5,33 @@ end
 
 function ENT:Speed(scale)
   local speed = self:GetVelocity():Length()
-  if scale then return math.Round(speed/self:GetScale())
+  if scale then return math.Round(speed*self:GetScale())
   else return math.Round(speed) end
 end
-function ENT:SpeedSqr()
-  return math.Round(self:GetVelocity():LengthSqr())
+function ENT:SpeedSqr(scale)
+  if not scale then return math.Round(self:GetVelocity():LengthSqr())
+  else return math.Round((self:GetVelocity()/self:GetScale()):LengthSqr()) end
 end
-function ENT:SpeedCached(scale)
-  if CurTime() < self._DrGBaseLastSpeedCacheDelay then
-    return self._DrGBaseLastSpeedCache
-  else
-    self._DrGBaseLastSpeedCacheDelay = CurTime() + 0.1
-    self._DrGBaseLastSpeedCache = self:Speed(scale)
-    return self._DrGBaseLastSpeedCache
-  end
+function ENT:IsSpeedMore(speed, scale)
+  return math.pow(speed, 2) < self:SpeedSqr(scale)
 end
-
-function ENT:IsFlying()
-  return false
+function ENT:IsSpeedLess(speed, scale)
+  return math.pow(speed, 2) > self:SpeedSqr(scale)
+end
+function ENT:IsSpeedEqual(speed, scale)
+  return math.pow(speed, 2) == self:SpeedSqr(scale)
 end
 
 function ENT:IsMoving()
   return self:SpeedSqr() ~= 0
 end
 
-function ENT:IsSprinting()
-  return self:SpeedCached(true) > self.WalkSpeed*self:GetScale()*1.1
+function ENT:IsRunning()
+  return self:IsSpeedMore(self.WalkSpeed*1.1, true)
+end
+
+function ENT:IsClimbing()
+  return self:GetDrGVar("DrGBaseClimbing")
 end
 
 if SERVER then
@@ -40,25 +41,25 @@ if SERVER then
   function ENT:IsMovingForward()
     if not self:IsMoving() then return false end
     if self:IsPossessed() then return self:PossessorForward() end
-    return math.Round(DrGBase.Math.VectorsAngle(self:GetForward(), self.loco:GetGroundMotionVector())) < 90
+    return math.Round(math.DrG_VectorsAngle(self:GetForward(), self.loco:GetGroundMotionVector())) < 90
   end
 
   function ENT:IsMovingBackward()
     if not self:IsMoving() then return false end
     if self:IsPossessed() then return self:PossessorBackward() end
-    return math.Round(DrGBase.Math.VectorsAngle(self:GetForward(), self.loco:GetGroundMotionVector())) > 90
+    return math.Round(math.DrG_VectorsAngle(self:GetForward(), self.loco:GetGroundMotionVector())) > 90
   end
 
   function ENT:IsMovingLeft()
     if not self:IsMoving() then return false end
     if self:IsPossessed() then return self:PossessorLeft() end
-    return math.Round(DrGBase.Math.VectorsAngle(self:GetRight(), self.loco:GetGroundMotionVector())) > 90
+    return math.Round(math.DrG_VectorsAngle(self:GetRight(), self.loco:GetGroundMotionVector())) > 90
   end
 
   function ENT:IsMovingRight()
     if not self:IsMoving() then return false end
     if self:IsPossessed() then return self:PossessorRight() end
-    return math.Round(DrGBase.Math.VectorsAngle(self:GetRight(), self.loco:GetGroundMotionVector())) < 90
+    return math.Round(math.DrG_VectorsAngle(self:GetRight(), self.loco:GetGroundMotionVector())) < 90
   end
 
   function ENT:IsMovingUp()
@@ -88,11 +89,13 @@ if SERVER then
   function ENT:GetPath()
     return self._DrGBasePath
   end
-
   function ENT:InvalidatePath()
-    if IsValid(self._DrGBasePath) then
-      self._DrGBasePath:Invalidate()
-    end
+    if not IsValid(self:GetPath()) then return end
+    self._DrGBasePath:Invalidate()
+  end
+  function ENT:DrawPath()
+    if not IsValid(self:GetPath()) then return end
+    self:GetPath():Draw()
   end
 
   -- Movements --
@@ -121,10 +124,8 @@ if SERVER then
         if type == 4 then
           local ladder = current.ladder
   				if IsValid(ladder) and
-          self:GetPos():DistToSqr(current.pos) <= math.pow(options.tolerance, 2) then
-  					self:ClimbLadder(current.ladder, function()
-              if options.draw then path:Draw() end
-            end)
+          self:GetPos():DistToSqr(ladder:GetPosAtHeight(self:GetPos().z)) <= math.pow(options.tolerance, 2) then
+  					self:ClimbLadder(current.ladder)
             self:InvalidatePath()
           else path:Update(self) end
         elseif type == 5 then
@@ -219,32 +220,27 @@ if SERVER then
 
   -- Climbing --
 
-  function ENT:IsClimbing()
-    return self._DrGBaseClimbing
-  end
-
   function ENT:ClimbLadder(ladder)
     if self:IsClimbing() then return end
-    if self:OnStartClimbing(ladder) ~= false then
-      self._DrGBaseClimbing = true
-      local length = ladder:GetLength()
-      self:PlayAnimationAndMove(self.StartClimbAnimation, self.StartClimbAnimRate, function()
-        self:WhileClimbing(length, ladder)
-      end)
-      while self:GetPos().z + self.StopClimbing < ladder:GetTop().z and not self:IsDying() do
-        self:WhileClimbing(ladder:GetTop().z - self:GetPos().z - self.StopClimbing, ladder)
-        self.loco:FaceTowards(ladder:GetPosAtHeight(self:GetPos().z))
-  		  self:SetPos(ladder:GetPosAtHeight(self:GetSpeed()/50 + self:GetPos().z))
-        coroutine.wait(0.025)
-      end
-      self:PlayAnimationAndMove(self.StopClimbAnimation, self.StopClimbAnimRate, function()
-        self:WhileClimbing(0, ladder)
-      end)
-      self:OnStopClimbing(ladder)
-      local pos = self:GetPos()
-      self:SetPos(navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos))
+    if self:OnStartClimbing(ladder) == false then return end
+    self:SetDrGVar("DrGBaseClimbing", true)
+    self:PlayAnimationAndMove(self.StartClimbAnimation, self.StartClimbAnimRate, function()
+      return self:WhileClimbing(ladder, "start", self:GetCycle())
+    end)
+    local length = ladder:GetLength()
+    while self:GetPos().z + self.StopClimb < ladder:GetTop().z and not self:IsDying() do
+      if self:WhileClimbing(ladder, "climb", ladder:GetTop().z - self:GetPos().z - self.StopClimb) then break end
+      self.loco:FaceTowards(ladder:GetPosAtHeight(self:GetPos().z))
+		  self:SetPos(ladder:GetPosAtHeight(self:GetSpeed()/50 + self:GetPos().z))
+      coroutine.wait(0.025)
     end
-    self._DrGBaseClimbing = false
+    self:PlayAnimationAndMove(self.StopClimbAnimation, self.StopClimbAnimRate, function()
+      return self:WhileClimbing(ladder, "stop", self:GetCycle())
+    end)
+    self:OnStopClimbing(ladder)
+    local pos = self:GetPos()
+    self:SetPos(navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos))
+    self:SetDrGVar("DrGBaseClimbing", false)
   end
   function ENT:OnStartClimbing(ladder) end
   function ENT:WhileClimbing(ladder) end
@@ -252,38 +248,29 @@ if SERVER then
 
   -- Handlers --
 
-  function ENT:EnableSpeedFetch(bool)
+  function ENT:EnableUpdateSpeed(bool)
     if bool == nil then return self._DrGBaseSpeedFetch
     elseif bool then self._DrGBaseSpeedFetch = true
     else self._DrGBaseSpeedFetch = false end
   end
 
-  function ENT:ShouldSprint(state)
+  function ENT:ShouldRun(state)
     return state == DRGBASE_STATE_AI_FIGHT or
     state == DRGBASE_STATE_AI_AVOID
   end
 
   function ENT:_HandleMovement()
-    if not self:EnableSpeedFetch() then return end
-    local sprint
-    if self:IsPossessed() then
-      sprint = self:GetPossessor():KeyDown(IN_SPEED)
-    else sprint = self:ShouldSprint(self:GetState()) end
-    local speed
-    if self:IsFlying() then speed = self:FlightSpeed(sprint)
-    elseif self:IsClimbing() then speed = self:ClimbingSpeed(sprint)
-    else speed = self:GroundSpeed(sprint) end
-    self:SetSpeed(speed)
+    if not self:EnableUpdateSpeed() then return end
+    local run
+    if self:IsPossessed() then run = self:GetPossessor():KeyDown(IN_SPEED)
+    else run = self:ShouldRun(self:GetState()) end
+    self:SetSpeed(self:UpdateSpeed(run))
   end
-  function ENT:GroundSpeed(sprint)
-    if sprint then return self.RunSpeed
+
+  function ENT:UpdateSpeed(run)
+    if self:IsClimbing() then return self.ClimbSpeed
+    elseif run then return self.RunSpeed
     else return self.WalkSpeed end
-  end
-  function ENT:FlightSpeed()
-    return 0
-  end
-  function ENT:ClimbingSpeed()
-    return self.ClimbSpeed
   end
 
 else

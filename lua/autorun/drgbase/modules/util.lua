@@ -1,11 +1,11 @@
 DrGBase.Utils = DrGBase.Utils or {}
 
-function DrGBase.Utils.RunTraces(starts, ends, data, callback)
+function util.DrG_RunTraces(starts, ends, data, callback)
   for i, start in ipairs(starts) do
     for h, endpos in ipairs(ends) do
       data.start = start
       data.endpos = endpos
-      local tr = util.TraceLine(data)
+      local tr = data.hull and util.TraceHull(data) or util.TraceLine(data)
       local res = callback(tr, data)
       if res ~= nil then return {
         data = data,
@@ -25,58 +25,7 @@ function DrGBase.Utils.RunTraces(starts, ends, data, callback)
   }
 end
 
-local coroutines = {}
-hook.Add("Think", "DrGBaseCoroutines", function()
-  for i, co in ipairs(coroutines) do
-    local status = coroutine.status(co)
-    if status == "suspended" then
-			coroutine.resume(co)
-		elseif status == "dead" then
-			table.RemoveByValue(coroutines, co)
-		end
-  end
-end)
-
-function DrGBase.Utils.Coroutine(callback)
-  local co = coroutine.create(callback)
-  table.insert(coroutines, co)
-end
-
-function DrGBase.Utils.ConvertDamage(dmg)
-  local data = {}
-  data.ammoType = dmg:GetAmmoType()
-  data.attacker = dmg:GetAttacker()
-  data.baseDamage = dmg:GetBaseDamage()
-  data.damage = dmg:GetDamage()
-  data.damageBonus = dmg:GetDamageBonus()
-  data.damageCustom = dmg:GetDamageCustom()
-  data.damageForce = dmg:GetDamageForce()
-  data.damagePosition = dmg:GetDamagePosition()
-  data.damageType = dmg:GetDamageType()
-  data.inflictor = dmg:GetInflictor()
-  data.maxDamage = dmg:GetMaxDamage()
-  data.reportedPosition = dmg:GetReportedPosition()
-  return data
-end
-
-function DrGBase.Utils.RecreateDamage(data)
-  local dmg = DamageInfo()
-  dmg:SetAmmoType(data.ammoType)
-  if IsValid(data.attacker) then dmg:SetAttacker(data.attacker) end
-  -- data.baseDamage is not used
-  dmg:SetDamage(data.damage)
-  dmg:SetDamageBonus(data.damageBonus)
-  dmg:SetDamageCustom(data.damageCustom)
-  dmg:SetDamageForce(data.damageForce)
-  dmg:SetDamagePosition(data.damagePosition)
-  dmg:SetDamageType(data.damageType)
-  if IsValid(data.inflictor) then dmg:SetInflictor(data.inflictor) end
-  dmg:SetMaxDamage(data.maxDamage)
-  dmg:SetReportedPosition(data.reportedPosition)
-  return dmg
-end
-
-function DrGBase.Utils.RandomPos(pos, maxradius, minradius, nodegraph)
+function util.DrG_RandomPos(pos, maxradius, minradius, nodegraph)
   minradius = minradius or 0
   if nodegraph or CLIENT then
     local node = DrGBase.Nodegraph.RandomNode(pos, maxradius, minradius)
@@ -95,13 +44,49 @@ function DrGBase.Utils.RandomPos(pos, maxradius, minradius, nodegraph)
   end
 end
 
-function DrGBase.Utils.BitFlag(num, flag)
+function util.DrG_BitFlag(num, flag)
   return bit.band(num, flag) ~= 0
+end
+
+function util.DrG_SaveDmg(dmg)
+  local data = {}
+  data.ammoType = dmg:GetAmmoType()
+  data.attacker = dmg:GetAttacker()
+  data.baseDamage = dmg:GetBaseDamage()
+  data.damage = dmg:GetDamage()
+  data.damageBonus = dmg:GetDamageBonus()
+  data.damageCustom = dmg:GetDamageCustom()
+  data.damageForce = dmg:GetDamageForce()
+  data.damagePosition = dmg:GetDamagePosition()
+  data.damageType = dmg:GetDamageType()
+  data.inflictor = dmg:GetInflictor()
+  data.maxDamage = dmg:GetMaxDamage()
+  data.reportedPosition = dmg:GetReportedPosition()
+  return data
+end
+function util.DrG_LoadDmg(data)
+  local dmg = DamageInfo()
+  dmg:SetAmmoType(data.ammoType)
+  if IsValid(data.attacker) then
+    dmg:SetAttacker(data.attacker)
+  end
+  dmg:SetDamage(data.damage)
+  dmg:SetDamageBonus(data.damageBonus)
+  dmg:SetDamageCustom(data.damageCustom)
+  dmg:SetDamageForce(data.damageForce)
+  dmg:SetDamagePosition(data.damagePosition)
+  dmg:SetDamageType(data.damageType)
+  if IsValid(data.inflictor) then
+    dmg:SetInflictor(data.inflictor)
+  end
+  dmg:SetMaxDamage(data.maxDamage)
+  dmg:SetReportedPosition(data.reportedPosition)
+  return dmg
 end
 
 if SERVER then
 
-  function DrGBase.Utils.Explosion(pos, options)
+  function util.DrG_Explosion(pos, options)
     if options == nil then options = {} end
     if type(options) == "number" then options = {magnitude = options} end
     options.damage = options.damage or 0
@@ -116,6 +101,6 @@ if SERVER then
 
 else
 
-  
+
 
 end

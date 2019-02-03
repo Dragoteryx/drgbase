@@ -1,12 +1,11 @@
-DrGBase.Nodegraph = DrGBase.Nodegraph or {}
+nodegraph = nodegraph or {}
+
+local Draw = CreateConVar("drgbase_nodegraph_draw", "0")
 
 local NUM_HULLS = 10
 
-DrGBase.Nodegraph.ConVars = DrGBase.Nodegraph.ConVars or {}
-DrGBase.Nodegraph.ConVars.Draw = CreateConVar("drgbase_nodegraph_draw", "0")
-
-DrGBase.Nodegraph._Nodes = {}
-DrGBase.Nodegraph._Links = {}
+local nodes = {}
+local links = {}
 
 local Node = {}
 Node.__index = Node
@@ -28,13 +27,13 @@ function Node:GetType()
   return self._type
 end
 function Node:GetLink(node)
-  return DrGBase.Nodegraph.GetLink(self, node)
+  return nodegraph.DrG_GetLink(self, node)
 end
 function Node:Link(node, move)
-  return DrGBase.Nodegraph.Link(self, node, move)
+  return nodegraph.DrG_Link(self, node, move)
 end
 function Node:Unlink(node)
-  return DrGBase.Nodegraph.Unlink(self, node)
+  return nodegraph.DrG_Unlink(self, node)
 end
 function Node:LinkedTo(node)
   if node == nil then
@@ -71,47 +70,47 @@ function Node:DistToSqr(pos)
 end
 setmetatable(Node, {__call = Node._New})
 
-function DrGBase.Nodegraph.Clear()
-  DrGBase.Nodegraph._Nodes = {}
-  DrGBase.Nodegraph._Links = {}
-  if SERVER then DrGBase.Nodegraph.BroadcastNodegraph() end
+function nodegraph.DrG_Clear()
+  nodes = {}
+  links = {}
+  if SERVER then nodegraph.DrG_BroadcastNodegraph() end
 end
-function DrGBase.Nodegraph.GetNode(id)
-  return DrGBase.Nodegraph._Nodes[id]
+function nodegraph.DrG_GetNode(id)
+  return nodes[id]
 end
-function DrGBase.Nodegraph.GetNodes(callback)
+function nodegraph.DrG_GetNodes(callback)
   if callback == nil then callback = function() return true end end
   local tab = {}
-  for i, node in ipairs(DrGBase.Nodegraph._Nodes) do
+  for i, node in ipairs(nodes) do
     if callback(node) then table.insert(tab, node) end
   end
   return tab
 end
-function DrGBase.Nodegraph.GetNodesByType(type)
-  return DrGBase.Nodegraph.GetNodes(function(node)
+function nodegraph.DrG_GetNodesByType(type)
+  return nodegraph.DrG_GetNodes(function(node)
     return node:GetType() == type
   end)
 end
-function DrGBase.Nodegraph.GetNodesNearPos(pos, radius, type)
+function nodegraph.DrG_GetNodesNearPos(pos, radius, type)
   radius = math.pow(radius, 2)
-  return DrGBase.Nodegraph.GetNodes(function(node)
+  return nodegraph.DrG_GetNodes(function(node)
     if type ~= nil and node:GetType() ~= type then return false end
     return node:DistToSqr(pos) <= radius
   end)
 end
-function DrGBase.Nodegraph.GetNodesWithinNavArea(area, type)
+function nodegraph.DrG_GetNodesWithinNavArea(area, type)
   if CLIENT then return {} end
   if type(area) == "Vector" then area = navmesh.GetNearestNavArea(area) end
-  return DrGBase.Nodegraph.GetNodes(function(node)
+  return nodegraph.DrG_GetNodes(function(node)
     if type ~= nil and node:GetType() ~= type then return false end
     return node:GetNearestNavArea():GetID() == area:GetID()
   end)
 end
-function DrGBase.Nodegraph.GetClosestNode(pos, type)
+function nodegraph.DrG_GetClosestNode(pos, type)
   local closest = nil
   local distsqr = math.huge
-  local nodes = DrGBase.Nodegraph._Nodes
-  if type ~= nil then nodes = DrGBase.Nodegraph.GetNodesByType(type) end
+  local nodes = nodes
+  if type ~= nil then nodes = nodegraph.DrG_GetNodesByType(type) end
   for i, node in ipairs(nodes) do
     local distsqr2 = pos:DistToSqr(node:GetPos())
     if distsqr2 < distsqr then
@@ -121,11 +120,11 @@ function DrGBase.Nodegraph.GetClosestNode(pos, type)
   end
   if closest ~= nil then return closest, pos:Distance(closest:GetPos()) end
 end
-function DrGBase.Nodegraph.RandomNode(pos, maxradius, minradius)
+function nodegraph.DrG_RandomNode(pos, maxradius, minradius)
   minradius = minradius or 0
   minradius = math.pow(minradius, 2)
   maxradius = math.pow(maxradius, 2)
-  local nodes = DrGBase.Nodegraph.GetNodes()
+  local nodes = nodegraph.DrG_GetNodes()
   table.sort(nodes, function() return math.random(2) == 2 end)
   for i, node in ipairs(nodes) do
     local distsqr = pos:DistToSqr(node:GetPos())
@@ -153,7 +152,7 @@ function Link:_New(node1, node2, move)
   return link
 end
 function Link:GetNodes()
-  return DrGBase.Nodegraph.GetNode(self._node1), DrGBase.Nodegraph.GetNode(self._node2)
+  return nodegraph.DrG_GetNode(self._node1), nodegraph.DrG_GetNode(self._node2)
 end
 function Link:GetMove()
   return self._move
@@ -164,31 +163,31 @@ function Link:Remove()
 end
 setmetatable(Link, {__call = Link._New})
 
-function DrGBase.Nodegraph.Link(node1, node2, move)
+function nodegraph.DrG_Link(node1, node2, move)
   if node1:LinkedTo(node2) then return end
   local link = Link(node1, node2, move)
   table.insert(node1._links, link)
   table.insert(node2._links, link)
-  table.insert(DrGBase.Nodegraph._Links, link)
+  table.insert(links, link)
   return link
 end
-function DrGBase.Nodegraph.Unlink(node1, node2)
+function nodegraph.DrG_Unlink(node1, node2)
   if not node1:LinkedTo(node2) then return false end
   local link = node1:GetLink(node2)
   table.RemoveByValue(node1._links, link)
   table.RemoveByValue(node2._links, link)
-  table.RemoveByValue(DrGBase.Nodegraph._Links, link)
+  table.RemoveByValue(links, link)
   return true
 end
-function DrGBase.Nodegraph.GetLinks()
+function nodegraph.DrG_GetLinks()
   local tab = {}
-  for i, link in ipairs(DrGBase.Nodegraph._Links) do
+  for i, link in ipairs(links) do
     table.insert(tab, link)
   end
   return tab
 end
-function DrGBase.Nodegraph.GetLink(node1, node2)
-  for i, link in ipairs(DrGBase.Nodegraph._Links) do
+function nodegraph.DrG_GetLink(node1, node2)
+  for i, link in ipairs(links) do
     local lnode1, lnode2 = link:GetNodes()
     if (node1:GetID() == lnode1:GetID() and node2:GetID() == lnode2:GetID()) or
     (node1:GetID() == lnode2:GetID() and node2:GetID() == lnode1:GetID()) then
@@ -217,11 +216,11 @@ if SERVER then
   end
   local function ReadInt(f) return toInt(f:Read(SIZEOF_INT)) end
   local function ReadUShort(f) return toUShort(f:Read(SIZEOF_SHORT)) end
-  function DrGBase.Nodegraph.ParseNodegraph()
+  function nodegraph.DrG_ParseNodegraph()
     f = file.Open("maps/graphs/"..game.GetMap()..".ain", "rb", "GAME")
     if not f then return end
-    DrGBase.Nodegraph._Nodes = {}
-    DrGBase.Nodegraph._Links = {}
+    nodes = {}
+    links = {}
     local ainet_ver = ReadInt(f)
     if ainet_ver ~= AINET_VERSION_NUMBER then return end
     local map_ver = ReadInt(f)
@@ -237,7 +236,7 @@ if SERVER then
     	local nodetype = f:ReadByte()
     	local nodeinfo = ReadUShort(f)
     	local zone = f:ReadShort()
-    	table.insert(DrGBase.Nodegraph._Nodes, Node({
+    	table.insert(nodes, Node({
         _id = i,
     		_pos = pos,
     		_yaw = yaw,
@@ -252,8 +251,8 @@ if SERVER then
 		for i = 1, numLinks do
 			local srcID = f:ReadShort()
 			local destID = f:ReadShort()
-			local nodesrc = DrGBase.Nodegraph._Nodes[srcID+1]
-			local nodedest = DrGBase.Nodegraph._Nodes[destID+1]
+			local nodesrc = nodes[srcID+1]
+			local nodedest = nodes[destID+1]
       local move = {}
 			for i = 1, NUM_HULLS do
 				move[i] = f:ReadByte()
@@ -263,15 +262,15 @@ if SERVER then
 			end
 		end
     f:Close()
-    DrGBase.Nodegraph.BroadcastNodegraph()
+    nodegraph.DrG_BroadcastNodegraph()
   end
 
-  function DrGBase.Nodegraph.SendNodegraph(ply)
+  function nodegraph.DrG_SendNodegraph(ply)
     net.Start("NodegraphParsed")
     net.Send(ply)
   end
 
-  function DrGBase.Nodegraph.BroadcastNodegraph()
+  function nodegraph.DrG_BroadcastNodegraph()
     net.Start("NodegraphParsed")
     net.Broadcast()
   end
@@ -281,88 +280,88 @@ if SERVER then
   hook.Add("Think", "NodegraphParse", function()
     if parsed then return end
     parsed = true
-    DrGBase.Nodegraph.ParseNodegraph()
+    nodegraph.DrG_ParseNodegraph()
   end)
 
   -- send nodes
   DrGBase.Net.DefineCallback("NodegraphRequest", function()
-    return {nodes = DrGBase.Nodegraph._Nodes, links = DrGBase.Nodegraph._Links}
+    return {nodes = nodes, links = links}
   end)
 
   -- send parsed nodegraph to connecting players
   hook.Add("PlayerInitialSpawn", "NodegraphPlayerInitialSpawn", function(ply)
     if not parsed then return end
-    DrGBase.Nodegraph.SendNodegraph(ply)
+    nodegraph.DrG_SendNodegraph(ply)
   end)
 
 else
 
-  DrGBase.Nodegraph.ConVars.DrawGround = CreateClientConVar("drgbase_nodegraph_draw_ground", "1")
-  DrGBase.Nodegraph.ConVars.DrawAir = CreateClientConVar("drgbase_nodegraph_draw_air", "0")
-  DrGBase.Nodegraph.ConVars.DrawClimb = CreateClientConVar("drgbase_nodegraph_draw_climb", "1")
-  DrGBase.Nodegraph.ConVars.DrawWater = CreateClientConVar("drgbase_nodegraph_draw_water", "0")
-  DrGBase.Nodegraph.ConVars.DrawDistance = CreateClientConVar("drgbase_nodegraph_draw_distance", "1500")
-  DrGBase.Nodegraph.ConVars.Transparent = CreateClientConVar("drgbase_nodegraph_draw_transparent", "0")
-  DrGBase.Nodegraph.ConVars.HitWorld = CreateClientConVar("drgbase_nodegraph_draw_hitworld", "1")
+  local DrawGround = CreateClientConVar("drgbase_nodegraph_draw_ground", "1")
+  local DrawAir = CreateClientConVar("drgbase_nodegraph_draw_air", "0")
+  local DrawClimb = CreateClientConVar("drgbase_nodegraph_draw_climb", "1")
+  local DrawWater = CreateClientConVar("drgbase_nodegraph_draw_water", "0")
+  local DrawDistance = CreateClientConVar("drgbase_nodegraph_draw_distance", "1500")
+  local Transparent = CreateClientConVar("drgbase_nodegraph_draw_transparent", "0")
+  local HitWorld = CreateClientConVar("drgbase_nodegraph_draw_hitworld", "1")
 
   -- request nodegraph from server
-  function DrGBase.Nodegraph.FetchNodegraph()
+  function nodegraph.DrG_FetchNodegraph()
     DrGBase.Net.UseCallback("NodegraphRequest", nil, function(data)
       local links = {}
-      DrGBase.Nodegraph._Nodes = {}
-      DrGBase.Nodegraph._Links = {}
+      nodes = {}
+      links = {}
       for i, node in ipairs(data.nodes) do
         for h, link in ipairs(node._links) do
           table.insert(links, link)
         end
         node._links = {}
-        table.insert(DrGBase.Nodegraph._Nodes, Node(node))
+        table.insert(nodes, Node(node))
       end
       for i, link in ipairs(links) do
-        DrGBase.Nodegraph.GetNode(link._node1):Link(DrGBase.Nodegraph.GetNode(link._node2), link._move)
+        nodegraph.DrG_GetNode(link._node1):Link(nodegraph.DrG_GetNode(link._node2), link._move)
       end
     end)
   end
 
   -- fetch nodes on parse
   net.Receive("NodegraphParsed", function()
-    DrGBase.Nodegraph.FetchNodegraph()
+    nodegraph.DrG_FetchNodegraph()
   end)
 
   local function ShouldDrawNode(node)
-    if node:GetType() == NODE_TYPE_GROUND and DrGBase.Nodegraph.ConVars.DrawGround:GetBool() then return true end
-    if node:GetType() == NODE_TYPE_AIR and DrGBase.Nodegraph.ConVars.DrawAir:GetBool() then return true end
-    if node:GetType() == NODE_TYPE_CLIMB and DrGBase.Nodegraph.ConVars.DrawClimb:GetBool() then return true end
-    if node:GetType() == NODE_TYPE_WATER and DrGBase.Nodegraph.ConVars.DrawWater:GetBool() then return true end
+    if node:GetType() == NODE_TYPE_GROUND and DrawGround:GetBool() then return true end
+    if node:GetType() == NODE_TYPE_AIR and DrawAir:GetBool() then return true end
+    if node:GetType() == NODE_TYPE_CLIMB and DrawClimb:GetBool() then return true end
+    if node:GetType() == NODE_TYPE_WATER and DrawWater:GetBool() then return true end
     return false
   end
 
   -- draw nodegraph
   hook.Add("PostDrawOpaqueRenderables", "NodegraphDraw", function()
-    if not DrGBase.Nodegraph.ConVars.Draw:GetBool() then return end
+    if not Draw:GetBool() then return end
     local tr = LocalPlayer():GetEyeTrace()
-    local dist = DrGBase.Nodegraph.ConVars.DrawDistance:GetFloat()
-    local closest = DrGBase.Nodegraph.GetClosestNode(tr.HitPos)
-    for i, node in ipairs(DrGBase.Nodegraph._Nodes) do
+    local dist = DrawDistance:GetFloat()
+    local closest = nodegraph.DrG_GetClosestNode(tr.HitPos)
+    for i, node in ipairs(nodes) do
       if ShouldDrawNode(node) and node:DistToSqr(tr.HitPos) < math.pow(dist, 2) then
         local color = DrGBase.Colors.White
         if node:GetType() == NODE_TYPE_AIR then color = DrGBase.Colors.Cyan
         elseif node:GetType() == NODE_TYPE_CLIMB then color = DrGBase.Colors.Purple
         elseif node:GetType() == NODE_TYPE_WATER then color = DrGBase.Colors.Blue end
-        render.DrawWireframeBox(node:GetPos(), Angle(0, 0, 0), Vector(15, 15, 8), Vector(-15, -15, 0), color, not DrGBase.Nodegraph.ConVars.Transparent:GetBool())
+        render.DrawWireframeBox(node:GetPos(), Angle(0, 0, 0), Vector(15, 15, 8), Vector(-15, -15, 0), color, not Transparent:GetBool())
         if node:GetID() == closest:GetID() then
-          render.DrawWireframeSphere(node:GetPos(), 2, 4, 4, color, not DrGBase.Nodegraph.ConVars.Transparent:GetBool())
+          render.DrawWireframeSphere(node:GetPos(), 2, 4, 4, color, not Transparent:GetBool())
         end
         for h, node2 in ipairs(node:LinkedTo()) do
           if ShouldDrawNode(node2) and node2:DistToSqr(tr.HitPos) < math.pow(dist, 2) then
             local linecolor = DrGBase.Colors.Green
-            if DrGBase.Nodegraph.ConVars.HitWorld:GetBool() and util.TraceLine({
+            if HitWorld:GetBool() and util.TraceLine({
               start = node:GetPos()+Vector(0, 0, 1),
               endpos = node2:GetPos()+Vector(0, 0, 1),
               collisiongroup = COLLISION_GROUP_IN_VEHICLE
             }).HitWorld then linecolor = DrGBase.Colors.Red end
             if node:GetType() == NODE_TYPE_CLIMB and node2:GetType() == NODE_TYPE_CLIMB then linecolor = DrGBase.Colors.Purple end
-            render.DrawLine(node:GetPos(), node2:GetPos(), linecolor, not DrGBase.Nodegraph.ConVars.Transparent:GetBool())
+            render.DrawLine(node:GetPos(), node2:GetPos(), linecolor, not Transparent:GetBool())
           end
         end
       end

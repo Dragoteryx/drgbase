@@ -1,33 +1,63 @@
 
-local targettablesDelay = 0
-local targettables = {}
-local exceptions = {
-  ["replicator_melon"] = true,
-  ["replicator_queen"] = true,
-  ["replicator_queen_hive"] = true,
-  ["replicator_worker"] = true
-}
-hook.Add("Think", "DrGBaseRefreshTargettableEntitiesList", function()
-  if CurTime() < targettablesDelay then return end
-  targettablesDelay = CurTime() + 1
-  local newTargettables = {}
-  for i, ent in ipairs(ents.GetAll()) do
-    if not IsValid(ent) then continue end
-    if ent:GetClass() == "npc_bullseye" then continue end
-    if ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot" or
-    ent:IsFlagSet(FL_OBJECT) or string.StartWith(ent:GetClass(), "npc_") or
-    exceptions[ent:GetClass()] then
-      table.insert(newTargettables, ent)
+if SERVER then
+
+  -- Targettables --
+
+  local ignore = {
+    ["npc_bullseye"] = true,
+    ["weapon_striderbuster"] = true,
+    ["npc_grenade_frag"] = true
+  }
+  local exceptions = {
+    ["replicator_melon"] = true,
+    ["replicator_queen"] = true,
+    ["replicator_queen_hive"] = true,
+    ["replicator_worker"] = true
+  }
+  function ENT:GetTargets()
+    return self._DrGBaseTargets
+  end
+  function ENT:RefreshTargets()
+    self._DrGBaseTargets = {}
+    self._DrGBaseTargetsList = {}
+    for i, ent in ipairs(ents.GetAll()) do
+      if self:TargetCheck(ent) then self:_AddTarget(ent) end
+    end
+    self:NPCRelationship()
+    return self._DrGBaseTargets
+  end
+  function ENT:IsTarget(ent)
+    return self._DrGBaseTargetsList[ent:GetCreationID()] or false
+  end
+  function ENT:_AddTarget(ent)
+    table.insert(self._DrGBaseTargets, ent)
+    self._DrGBaseTargetsList[ent:GetCreationID()] = true
+  end
+  function ENT:TargetCheck(ent)
+    if not IsValid(ent) then return false end
+    if ent:EntIndex() == self:EntIndex() then return false end
+    if not ignore[ent:GetClass()] and (
+      ent:IsPlayer() or
+      ent:IsNPC() or
+      ent.Type == "nextbot" or
+      ent:IsFlagSet(FL_OBJECT) or
+      string.StartWith(ent:GetClass(), "npc_") or
+      exceptions[ent:GetClass()]
+    ) then return true end
+    for name, callback in pairs(self._DrGBaseCustomTargetChecks) do
+      if callback(ent) then return true end
     end
   end
-  table.CopyFromTo(newTargettables, targettables)
-end)
+  function ENT:DefineCustomTargetCheck(name, callback)
+    self._DrGBaseCustomTargetChecks[name] = callback
+    self:RefreshTargets()
+  end
+  function ENT:RemoveCustomTargetCheck(name)
+    self._DrGBaseCustomTargetChecks[name] = nil
+    self:RefreshTargets()
+  end
 
-function ENT:GetTargettableEntities()
-  return targettables
-end
-
-if SERVER then
+  -- Relationships --
 
   local defaultFactions = {
     ["npc_crow"] = DRGBASE_FACTION_ANIMALS,
@@ -123,11 +153,11 @@ if SERVER then
     if ent:Health() <= 0 then return D_NU end
     local individual = self:GetEntityRelationship(ent)
     if individual then return individual end
-    local relationships = {}
     local class = self:GetClassRelationship(ent:GetClass())
-    if class then table.insert(relationships, class) end
+    if class then return class end
     local model = self:GetModelRelationship(ent:GetModel())
-    if model then table.insert(relationships, model) end
+    if model then return model end
+    local relationships = {}
     for faction, relationship in pairs(self._DrGBaseFactionRelationships) do
       if relationship == nil then continue end
       if ent:IsPlayer() then
@@ -274,7 +304,7 @@ if SERVER then
   function ENT:NPCRelationship(ent, relationship)
     if ent == nil or isnumber(ent) then
       relationship = ent
-      for i, ent in ipairs(self:GetTargettableEntities()) do
+      for i, ent in ipairs(self:GetTargets()) do
         self:NPCRelationship(ent, relationship)
       end
     elseif not IsValid(ent) then return
@@ -302,13 +332,76 @@ if SERVER then
   end
 
   hook.Add("OnEntityCreated", "DrGBaseNextbotNPCRelationships", function(ent)
-    if not ent:IsNPC() then return end
     timer.Simple(0, function()
-      for i, nextbot in ipairs(DrGBase.Nextbot.GetAll()) do
-        nextbot:NPCRelationship(ent)
+      for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
+        if nextbot:TargetCheck(ent) then nextbot:_AddTarget(ent) end
+        if ent:IsNPC() then nextbot:NPCRelationship(ent) end
       end
     end)
   end)
+
+  -- Helpers --
+
+  function ENT:FindEntities(range, relationship, spotted)
+    range = range or self.Radius
+    if range < 0 then return {} end
+    if range > self.Radius then range = self.Radius end
+    local entities = {}
+    for i, ent in ipairs(self:GetTargets()) do
+      if not IsValid(ent) then continue end
+      if self:EntIndex() == ent:EntIndex() then continue end
+      if spotted and not self:HasSpottedEntity(ent) then continue end
+      if self:GetRangeSquaredTo(ent) > math.pow(range, 2) then continue end
+      if relationship and self:GetRelationship(ent) ~= relationship then continue end
+      table.insert(entities, ent)
+    end
+    return entities
+  end
+
+  function ENT:GetAllies(spotted)
+    return self:FindEntities(self.Radius, D_LI, spotted)
+  end
+  function ENT:GetEnemies(spotted)
+    return self:FindEntities(self.Radius, D_HT, spotted)
+  end
+  function ENT:GetScaredOf(spotted)
+    return self:FindEntities(self.Radius, D_FR, spotted)
+  end
+  function ENT:GetNeutrals(spotted)
+    return self:FindEntities(self.Radius, D_NU, spotted)
+  end
+
+  function ENT:FindClosestEntity(range, relationship, spotted)
+    local entities = self:FindEntities(range, relationship, spotted)
+    table.sort(entities, function(ent1, ent2)
+      return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
+    end)
+    if #entities > 0 then return entities[1]
+    else return nil end
+  end
+
+  function ENT:FindClosestAlly(range, spotted)
+    return self:FindClosestEntity(range, D_LI, spotted)
+  end
+  function ENT:FindClosestEnemy(range, spotted)
+    return self:FindClosestEntity(range, D_HT, spotted)
+  end
+  function ENT:FindClosestScaredOf(range, spotted)
+    return self:FindClosestEntity(range, D_FR, spotted)
+  end
+
+  function ENT:IsAlly(ent)
+    return self:GetRelationship(ent) == D_LI
+  end
+  function ENT:IsEnemy(ent)
+    return self:GetRelationship(ent) == D_HT
+  end
+  function ENT:IsScaredOf(ent)
+    return self:GetRelationship(ent) == D_FR
+  end
+  function ENT:IsNeutral(ent)
+    return self:GetRelationship(ent) == D_NU
+  end
 
   -- Aliases --
 
@@ -336,7 +429,7 @@ if SERVER then
 
   -- Callbacks
 
-  DrGBase.Net.DefineCallback("DrGBaseNextbotEntityRelationship", function(data)
+  net.DrG_DefineCallback("DrGBaseNextbotEntityRelationship", function(data)
     local nextbot = Entity(data.nextbot)
     local ent = Entity(data.ent)
     if not IsValid(nextbot) then return D_ER end
@@ -346,7 +439,7 @@ if SERVER then
 else
 
   function ENT:GetRelationship(ent, callback)
-    DrGBase.Net.UseCallback("DrGBaseNextbotEntityRelationship", {
+    net.DrG_UseCallback("DrGBaseNextbotEntityRelationship", {
       nextbot = self:EntIndex(), ent = ent:EntIndex()
     }, function(res)
       if not IsValid(self) then return end

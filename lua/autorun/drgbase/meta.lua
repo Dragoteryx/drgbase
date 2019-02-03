@@ -4,21 +4,31 @@ local plyMETA = FindMetaTable("Player")
 local npcMETA = FindMetaTable("NPC")
 
 function entMETA:GetDrGVar(name)
-  return DrGBase.Net.GetVar(name, self)
+  return net.DrG_GetVar(name, self)
 end
 
 function plyMETA:DrG_IsPossessing()
   return IsValid(self:DrG_Possessing())
 end
 function plyMETA:DrG_Possessing()
-  return DrGBase.Nextbot.Possessing(self)
+  return DrGBase.Nextbots.Possessing(self)
 end
 
 if SERVER then
+  util.AddNetworkString("DrGBaseCreationID")
 
   function entMETA:SetDrGVar(name, value)
-    return DrGBase.Net.SetVar(name, value, self)
+    return net.DrG_SetVar(name, value, self)
   end
+
+  function entMETA:DrG_Explode(options)
+    options = options or {}
+    if options.remove == nil then options.remove = true end
+    options.owner = self
+    if options.remove then self:Remove() end
+    util.DrG_Explosion(self:GetPos(), options)
+  end
+
   function entMETA:DrG_IsSanic()
     return self.OnReloaded ~= nil and
     self.GetNearestTarget ~= nil and
@@ -56,18 +66,25 @@ if SERVER then
     self._DrGBaseFactions = self._DrGBaseFactions or {}
   end
 
-  -- Callbacks --
+  -- Hooks --
 
-  DrGBase.Net.DefineCallback("DrGBaseFetchCreationID", function(data)
-    local ent = Entity(data.ent)
-    if not IsValid(ent) then return -1
-    else return ent:GetCreationID() end
+  hook.Add("OnEntityCreated", "DrGBaseCreationID", function(ent)
+    net.Start("DrGBaseCreationID")
+    net.WriteEntity(ent)
+    net.WriteInt(ent:GetCreationID(), 32)
+    net.Broadcast()
   end)
 
 else
 
-  function entMETA:DrG_FetchCreationID(callback)
-    DrGBase.Net.UseCallback("DrGBaseFetchCreationID", callback)
+  net.Receive("DrGBaseCreationID", function()
+    local ent = net.ReadEntity()
+    if not IsValid(ent) then return end
+    ent._DrGBaseCreationID = net.ReadInt(32)
+  end)
+
+  function entMETA:DrG_GetCreationID()
+    return self._DrGBaseCreationID
   end
 
 end

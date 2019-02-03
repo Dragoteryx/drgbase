@@ -92,72 +92,10 @@ if SERVER then
   function ENT:MovingToDestination() end
   function ENT:ReachedDestination() end
 
-  -- Helpers --
-
-  function ENT:FindEntities(range, relationship)
-    range = range or self.Radius
-    if range < 0 then return {} end
-    if range > self.Radius then range = self.Radius end
-    local entities = {}
-    for i, ent in ipairs(self:GetTargettableEntities()) do
-      if not IsValid(ent) then continue end
-      if self:EntIndex() == ent:EntIndex() then continue end
-      if not self:HasSpottedEntity(ent) then continue end
-      if self:GetRangeSquaredTo(ent) > math.pow(range, 2) then continue end
-      if relationship and self:GetRelationship(ent) ~= relationship then continue end
-      table.insert(entities, ent)
-    end
-    table.sort(entities, function(ent1, ent2)
-      return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
-    end)
-    return entities
-  end
-
-  function ENT:FindClosestEntity(range, relationship)
-    local entities = self:FindEntities(range, relationship)
-    if #entities > 0 then return entities[1]
-    else return nil end
-  end
-
-  function ENT:FindClosestAlly(range)
-    return self:FindClosestEntity(range, D_LI)
-  end
-  function ENT:FindClosestEnemy(range)
-    return self:FindClosestEntity(range, D_HT)
-  end
-  function ENT:FindClosestScaredOf(range)
-    return self:FindClosestEntity(range, D_FR)
-  end
-
-  function ENT:IsAlly(ent)
-    return self:GetRelationship(ent) == D_LI
-  end
-  function ENT:IsEnemy(ent)
-    return self:GetRelationship(ent) == D_HT
-  end
-  function ENT:IsScaredOf(ent)
-    return self:GetRelationship(ent) == D_FR
-  end
-  function ENT:IsNeutral(ent)
-    return self:GetRelationship(ent) == D_NU
-  end
-
-  function ENT:GetAllies()
-    return self:FindEntities(self.Radius, D_LI)
-  end
-  function ENT:GetEnemies()
-    return self:FindEntities(self.Radius, D_HT)
-  end
-  function ENT:GetScaredOf()
-    return self:FindEntities(self.Radius, D_FR)
-  end
-  function ENT:GetNeutrals()
-    return self:FindEntities(self.Radius, D_NU)
-  end
-
   -- Enemy --
 
   function ENT:SetEnemy(ent, delay)
+    if self:IsPossessed() then return end
     if delay ~= nil and delay >= 0 then
       self._DrGBaseHandleEnemy = CurTime() + delay
     end
@@ -172,7 +110,7 @@ if SERVER then
       self:EnemyInRangeThink(enemy)
     end
     if CurTime() < self._DrGBaseHandleEnemy then return end
-    self:SetEnemy(self:FindClosestEnemy(), 0.5)
+    self:SetEnemy(self:FindClosestEnemy(self.Radius, true), 0.5)
   end
   function ENT:EnemyInRangeThink() end
 

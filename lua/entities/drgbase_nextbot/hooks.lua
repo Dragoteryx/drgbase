@@ -6,7 +6,7 @@ if SERVER then
     if CurTime() < self._DrGBaseOnContactDelay then return end
     self._DrGBaseOnContactDelay = CurTime() + 0.2
     self:_Debug("contact with '"..ent:GetClass().."' ("..ent:EntIndex()..").")
-    if IsValid(ent) then self:SpotEntity(ent) end
+    if IsValid(ent) and self:IsTarget(ent) then self:SpotEntity(ent) end
     if ent:GetClass() == "prop_combine_ball" then
       local reaction = self:CombineBall()
       if reaction == "dissolve" then
@@ -21,7 +21,8 @@ if SERVER then
       elseif reaction == "explode" then
         ent:Fire("explode", 0)
       end
-    elseif ent:GetClass() == "replicator_melon" and GetConVar("repmelon_target_npc"):GetInt() == 1 then
+    elseif ent:GetClass() == "replicator_melon" and
+    GetConVar("repmelon_target_npc"):GetInt() == 1 then
       ent:Replicate(self)
       self:Remove()
     else
@@ -92,9 +93,9 @@ if SERVER then
       dmg:ScaleDamage(res)
     end
     if res ~= true then
-      local data = DrGBase.Utils.ConvertDamage(dmg)
+      local data = util.DrG_SaveDmg(dmg)
       ent:CallInCoroutine(function(delay)
-        dmg = DrGBase.Utils.RecreateDamage(data)
+        dmg = util.DrG_LoadDmg(data)
         ent:AfterTakeDamage(dmg, hitgroups, bone, delay)
       end)
       ent:_Debug("take damage => "..dmg:GetDamage()..".")
@@ -119,9 +120,9 @@ if SERVER then
     local hitgroups, bone = self:FetchHitGroups(dmg)
     if self:OnDeath(dmg, hitgroups, bone) then
       self._DrGBaseCoroutineCallbacks = {}
-      local data = DrGBase.Utils.ConvertDamage(dmg)
+      local data = util.DrG_SaveDmg(dmg)
       self:CallInCoroutine(function(delay)
-        dmg = DrGBase.Utils.RecreateDamage(data)
+        dmg = util.DrG_LoadDmg(data)
         self:SetDrGVar("DrGBaseDying", false)
         self:SetDrGVar("DrGBaseDead", true)
         self:DoOnDeath(dmg, hitgroups, bone, delay)
@@ -155,6 +156,11 @@ if SERVER then
   end
 
   -- Handlers --
+  local function CalcFallDamage(zvelocity, waterlevel)
+    if waterlevel == 3 then return end
+    if zvelocity > 700 then return zvelocity/20/(waterlevel+1) end
+  end
+
   function ENT:_HandleCustomHooks()
     -- OnExtinguish
     if not self:IsOnFire() and self._DrGBaseOnFire then
@@ -167,14 +173,16 @@ if SERVER then
       self:_Debug("touch ground.")
       self:_Debug("downwards velocity: "..self._DrGBaseDownwardsVelocity..".")
       self:InvalidatePath()
-      if self._DrGBaseDownwardsVelocity > 0 and not self:IsFlying() and self.FallDamage then
-        local val = self:OnFallDamage(self._DrGBaseDownwardsVelocity/self:GetScale(), self:WaterLevel()) or 0
+      if self._DrGBaseDownwardsVelocity > 0 and not self:IsClimbing() and self.FallDamage then
+        local val = CalcFallDamage(self._DrGBaseDownwardsVelocity/self:GetScale(), self:WaterLevel()) or 0
         if val > 0 then
           local dmg = DamageInfo()
           dmg:SetDamage(val)
           dmg:SetDamageType(DMG_FALL)
           dmg:SetAttacker(self)
-          self:TakeDamageInfo(dmg)
+          if not self:OnFallDamage(dmg) then
+            self:TakeDamageInfo(dmg)
+          end
         end
       end
     elseif not self:IsOnGround() and self._DrGBaseOnGround then
@@ -195,10 +203,7 @@ if SERVER then
     self._DrGBaseHealth = self:Health()
   end
   function ENT:OnExtinguish() end
-  function ENT:OnFallDamage(zvelocity, waterlevel)
-    if waterlevel == 3 then return end
-    if zvelocity > 700 then return zvelocity/20/(waterlevel+1) end
-  end
+  function ENT:OnFallDamage() end
   function ENT:OnHealthChange() end
 
 else

@@ -1,11 +1,6 @@
-DrGBase.Nextbot = DrGBase.Nextbot or {}
+DrGBase.Nextbots = DrGBase.Nextbots or {}
 
-function DrGBase.Nextbot.Debug(nextbot, text)
-  if not GetConVar("developer"):GetBool() then return end
-  DrGBase.Print("Nextbot '"..nextbot:GetClass().."' ("..nextbot:EntIndex().."): "..text)
-end
-
-function DrGBase.Nextbot.Load(nextbot)
+function DrGBase.Nextbots.Load(nextbot)
   if nextbot.Name == nil or nextbot.Class == nil or nextbot.Category == nil then
     DrGBase.Error("Couldn't load nextbot: name, class or category nil.")
   else
@@ -22,29 +17,29 @@ function DrGBase.Nextbot.Load(nextbot)
     DrGBase.Print("Nextbot '"..nextbot.Class.."': loaded.")
   end
 end
-function DrGBase.Nextbot.GetLoaded()
+function DrGBase.Nextbots.GetLoaded()
   return list.Get("DrGBaseNextbot")
 end
-function DrGBase.Nextbot.IsLoaded(nextbot)
+function DrGBase.Nextbots.IsLoaded(nextbot)
   if not isstring(nextbot) then nextbot = nextbot:GetClass() end
   return list.Get("DrGBaseNextbot")[nextbot] ~= nil
 end
 
-function DrGBase.Nextbot.Possessing(ply)
+function DrGBase.Nextbots.Possessing(ply)
   if CLIENT then ply = ply or LocalPlayer() end
   return ply._DrGBasePossessing
 end
 
 if SERVER then
 
-  DrGBase.Nextbot._Spawned = DrGBase.Nextbot._Spawned or {}
-  function DrGBase.Nextbot.GetAll()
-    return DrGBase.Nextbot._Spawned
+  DrGBase.Nextbots._Spawned = DrGBase.Nextbots._Spawned or {}
+  function DrGBase.Nextbots.GetAll()
+    return DrGBase.Nextbots._Spawned
   end
 
 else
 
-  function DrGBase.Nextbot.GetAll()
+  function DrGBase.Nextbots.GetAll()
     local nextbots = {}
     for i, ent in ipairs(ents.GetAll()) do
       if not ent.IsDrGNextbot then continue end

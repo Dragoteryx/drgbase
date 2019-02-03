@@ -47,11 +47,12 @@ if SERVER then
 
   function ENT:WeaponPrimary()
     if not self:HasWeapon() then return false end
-    if CurTime() < self:GetWeapon():GetNextPrimaryFire() then return false end
+    local wep = self:GetWeapon()
+    if CurTime() < wep:GetNextPrimaryFire() then return false end
     if self._DrGBaseReloading then return false end
-    if self:GetWeapon():CanPrimaryAttack() then
-      self:PlayAnimation(self.ShootAnimations[self:GetWeapon():GetHoldType()])
-      self:GetWeapon():PrimaryAttack()
+    if wep:CanPrimaryAttack() then
+      self:PlayAnimation(self.ShootAnimations[wep:GetHoldType()])
+      wep:PrimaryAttack()
       return true
     else
       self:WeaponReload()
@@ -61,11 +62,13 @@ if SERVER then
 
   function ENT:WeaponSecondary()
     if not self:HasWeapon() then return false end
-    if CurTime() < self:GetWeapon():GetNextSecondaryFire() then return false end
+    local wep = self:GetWeapon()
+    if wep.IsDrGWeapon and not wep.Secondary.Enabled then return false end
+    if CurTime() < wep:GetNextSecondaryFire() then return false end
     if self._DrGBaseReloading then return false end
-    if self:GetWeapon():CanSecondaryAttack() then
-      self:PlayAnimation(self.ShootAnimations[self:GetWeapon():GetHoldType()])
-      self:GetWeapon():SecondaryAttack()
+    if wep:CanSecondaryAttack() then
+      self:PlayAnimation(self.ShootAnimations[wep:GetHoldType()])
+      wep:SecondaryAttack()
       return true
     else
       self:WeaponReload()
@@ -75,16 +78,15 @@ if SERVER then
 
   function ENT:WeaponReload()
     if not self:HasWeapon() then return end
+    local wep = self:GetWeapon()
     if self._DrGBaseReloading then return end
     self._DrGBaseReloading = true
-    self:Timer(self:PlayAnimation(self.ReloadAnimations[self:GetWeapon():GetHoldType()]) or 0, function()
+    self:Timer(self:PlayAnimation(self.ReloadAnimations[wep:GetHoldType()]) or 0, function()
       self._DrGBaseReloading = false
       if not self:HasWeapon() then return end
-      self:GetWeapon():SetClip1(self:GetWeapon():GetMaxClip1())
-      self:GetWeapon():SetClip2(self:GetWeapon():GetMaxClip2())
+      wep:SetClip1(wep:GetMaxClip1())
+      wep:SetClip2(wep:GetMaxClip2())
     end)
   end
-
-else
 
 end

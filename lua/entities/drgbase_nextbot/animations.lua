@@ -12,12 +12,18 @@ function ENT:PrintAnimations()
   end
 end
 
+function ENT:SelectRandomSequence(anim)
+  return self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
+end
+
 if SERVER then
 
   function ENT:BodyUpdate()
-    if self.AnimationType == DRGBASE_ANIMTYPE_SIMPLE or self:IsClimbing() then
+    if self.AnimationType == DRGBASE_ANIMTYPE_FORWARD then
+      self:SetPoseParameter("move_x", 1)
+      self:SetPoseParameter("move_y", 0)
       self:FrameAdvance()
-    elseif self.AnimationType == DRGBASE_ANIMTYPE_COMPLEX then
+    elseif self.AnimationType == DRGBASE_ANIMTYPE_DIRECTION then
       if self:IsPossessed() then
         local moveX = math.Round(self:GetPoseParameter("move_x"), 1)
         local moveY = math.Round(self:GetPoseParameter("move_y"), 1)
@@ -44,18 +50,21 @@ if SERVER then
         self:SetPoseParameter("move_y", 0)
       end
       self:FrameAdvance()
-    elseif self.AnimationType == DRGBASE_ANIMTYPE_BODYMOVEXY then
+    elseif not self:IsClimbing() and self:IsOnGround() and not self._DrGBaseDisableBMXY and
+    self.AnimationType == DRGBASE_ANIMTYPE_BODYMOVEXY then
       self:BodyMoveXY()
-    end
+    else self:FrameAdvance() end
   end
 
   function ENT:PlaySequenceAndWait(seq, speed, callback)
+    if seq == nil then return end
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if seq == -1 then return end
     speed = speed or 1
     if callback == nil then callback = function() end end
-    local synced = self:EnableSyncedAnimations()
-    self:EnableSyncedAnimations(false)
+    self._DrGBaseDisableBMXY = true
+    local synced = self:EnableUpdateAnimation()
+    self:EnableUpdateAnimation(false)
     local len = self:SetSequence(seq)
     self:ResetSequenceInfo()
     self:SetCycle(0)
@@ -65,53 +74,65 @@ if SERVER then
       if callback() then break end
       coroutine.yield()
     end
-    self:EnableSyncedAnimations(synced)
+    self._DrGBaseDisableBMXY = false
+    self:EnableUpdateAnimation(synced)
     return len/speed
   end
   function ENT:PlayAnimationAndWait(anim, speed, callback)
     if isnumber(anim) then
-      anim = self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
+      anim = self:SelectRandomSequence(anim)
     end
     return self:PlaySequenceAndWait(anim, speed, callback)
   end
 
   function ENT:PlaySequenceAndMove(seq, speed, callback)
+    if seq == nil then return end
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if seq == -1 then return end
-    local cycle = 0
     if callback == nil then callback = function() end end
+    local blockrotation = self:PossessionBlockRotation()
+    self:PossessionBlockRotation(true)
+    local cycle = 0
+    local startpos = self:GetPos()
+    local startangles = self:GetAngles()
     local res = self:PlaySequenceAndWait(seq, speed, function()
-      local success, vec, angles = self:GetSequenceMovement(seq, cycle, self:GetCycle())
-      cycle = self:GetCycle()
+      local success, vec, angles = self:GetSequenceMovement(seq, 0, self:GetCycle())
       if success then
-        self:SetVelocity(Vector(0, 0, 10))
-        self:SetPos(self:GetPos() + vec)
-        self:SetAngles(self:GetAngles() + angles)
+        vec:Rotate(startangles + angles)
+        self:SetPos(startpos + vec)
       end
       return callback()
     end)
+    self:SetVelocity(Vector(0, 0, 0))
+    self:PossessionBlockRotation(blockrotation)
     return res
   end
   function ENT:PlayAnimationAndMove(anim, speed, callback)
     if isnumber(anim) then
-      anim = self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
+      anim = self:SelectRandomSequence(anim)
     end
     return self:PlaySequenceAndMove(anim, speed, callback)
   end
 
-  function ENT:PlayGesture(seq)
+  function ENT:PlaySequence(seq, rate, callback)
+    if seq == nil then return end
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if seq == -1 then return false end
+    if callback == nil then callback = function() end end
+    rate = rate or 1
     if self._DrGBaseCurrentGestures[seq] ~= nil and CurTime() <= self._DrGBaseCurrentGestures[seq] then return end
-    self._DrGBaseCurrentGestures[seq] = CurTime() + self:SequenceDuration(seq)
-    self:AddGestureSequence(seq)
-    return self:SequenceDuration(seq)
+    local duration = self:SequenceDuration(seq)/rate
+    self._DrGBaseCurrentGestures[seq] = CurTime() + duration
+    local layerID = self:AddGestureSequence(seq)
+    self:SetLayerPlaybackRate(layerID, rate)
+    self:Timer(duration, callback)
+    return duration
   end
-  function ENT:PlayAnimation(anim)
+  function ENT:PlayAnimation(anim, rate, callback)
     if isnumber(anim) then
-      anim = self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
+      anim = self:SelectRandomSequence(anim)
     end
-    return self:PlayGesture(anim)
+    return self:PlaySequence(anim, rate, callback)
   end
 
   function ENT:AddSequenceCallback(seq, cycles, callback)
@@ -194,7 +215,7 @@ if SERVER then
 
   -- Handlers --
 
-  function ENT:EnableSyncedAnimations(bool)
+  function ENT:EnableUpdateAnimation(bool)
     if bool == nil then return self._DrGBaseSyncAnimations
     elseif bool then self._DrGBaseSyncAnimations = true
     else self._DrGBaseSyncAnimations = false end
@@ -203,18 +224,18 @@ if SERVER then
   function ENT:_HandleAnimations()
     if self:IsOnGround() then
       local angles = self:GetAngles()
-      angles.p = 0
       angles.r = 0
+      angles.p = 0
       self:SetAngles(angles)
     end
     local seq, rate
-    if self:EnableSyncedAnimations() then
-      seq, rate = self:SyncAnimation(self:SpeedCached(true))
+    if self:EnableUpdateAnimation() then
+      seq, rate = self:UpdateAnimation()
     else
       seq = self:GetSequence()
       rate = self:GetPlaybackRate()
     end
-    if isnumber(seq) then seq = self:SelectWeightedSequenceSeeded(seq, self:GetDrGVar("DrGBaseAnimationSeed")) end
+    if isnumber(seq) then seq = self:SelectWeightedSequenceSeeded(seq, self._DrGBaseAnimationSeed) end
     if isstring(seq) then seq = self:LookupSequence(seq) end
     local callbacks = self._DrGBaseSequenceCallbacks[seq]
     if callbacks ~= nil then
@@ -225,18 +246,20 @@ if SERVER then
       end
     end
     self._DrGBaseLastAnimCycle = self:GetCycle()
-    self:SetPlaybackRate(rate or 1)
+    if self:EnableUpdateAnimation() then
+      self:SetPlaybackRate(rate or 1)
+    end
     if seq ~= nil and seq ~= -1 and (seq ~= self:GetSequence() or self:GetCycle() == 1) then
       self:ResetSequence(seq)
-      self:SetDrGVar("DrGBaseAnimationSeed", math.random(0, 255))
+      self._DrGBaseAnimationSeed = math.random(0, 255)
     end
   end
 
-  function ENT:SyncAnimation(speed)
+  function ENT:UpdateAnimation()
     if self:IsClimbing() then return self.ClimbAnimation, self.ClimbAnimRate
     elseif not self:IsOnGround() then return self.JumpAnimation, self.JumpAnimRate
-    elseif speed > self.WalkSpeed*1.1 then return self.RunAnimation, self.RunAnimRate
-    elseif speed > 0 then return self.WalkAnimation, self.WalkAnimRate
+    elseif self:IsSpeedMore(self.WalkSpeed*1.1, true) then return self.RunAnimation, self.RunAnimRate
+    elseif self:IsSpeedMore(0, true) then return self.WalkAnimation, self.WalkAnimRate
     else return self.IdleAnimation, self.IdleAnimRate end
   end
 
