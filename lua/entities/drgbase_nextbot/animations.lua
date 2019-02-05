@@ -185,12 +185,7 @@ if SERVER then
       self:SetHeadPitch(0)
     else
       if isentity(pos) then pos = pos:WorldSpaceCenter() end
-      local tr = util.TraceLine({
-        start = self:EyePos(),
-        endpos = pos,
-        filter = {self, self:GetActiveWeapon()}
-      })
-      local angle = tr.Normal:Angle()
+      local angle = math.DrG_AngleVectors(self:EyePos(), pos)
       self:SetHeadYaw(math.AngleDifference(angle.y, self:GetAngles().y))
       self:SetHeadPitch(math.AngleDifference(angle.p, self:GetAngles().p))
     end
@@ -202,12 +197,7 @@ if SERVER then
       self:SetAimPitch(0)
     else
       if isentity(pos) then pos = pos:WorldSpaceCenter() end
-      local tr = util.TraceLine({
-        start = self:EyePos(),
-        endpos = pos,
-        filter = {self, self:GetActiveWeapon()}
-      })
-      local angle = tr.Normal:Angle()
+      local angle = math.DrG_AngleVectors(self:EyePos(), pos)
       self:SetAimYaw(math.AngleDifference(angle.y, self:GetAngles().y))
       self:SetAimPitch(math.AngleDifference(angle.p, self:GetAngles().p))
     end

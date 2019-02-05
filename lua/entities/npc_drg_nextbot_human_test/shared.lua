@@ -14,6 +14,13 @@ ENT.Models = {
 ENT.Weapons = {"weapon_ar2"}
 ENT.WeaponAccuracy = 0.75
 
+-- Grenades --
+ENT.GrenadeThrowDelay = 0
+ENT.GrenadeClass = "prop_physics"
+ENT.GrenadeCallback = function(grenade, init)
+  if init then grenade:SetModel("models/props_junk/watermelon01.mdl") end
+end
+
 if SERVER then
 
   -- Misc --

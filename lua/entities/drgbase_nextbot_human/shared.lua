@@ -27,6 +27,15 @@ ENT.UseWeapons = true
 ENT.DropWeaponOnDeath = true
 ENT.AcceptPlayerWeapons = true
 
+-- Grenades --
+ENT.GrenadeThrowChance = 0.0075
+ENT.MaxGrenadeThrow = 800
+ENT.GrenadeThrowDelay = 5
+ENT.GrenadeClass = "npc_grenade_frag"
+ENT.GrenadeCallback = function(grenade, init)
+  if not init then grenade:Fire("SetTimer", 3) end
+end
+
 -- Detection --
 ENT.EyeBone = "ValveBiped.Bip01_Head1"
 ENT.EyeOffset = Vector(5, 0, 2.5)
@@ -73,9 +82,8 @@ ENT.PossessionBinds = {
     bind = IN_ATTACK2,
     coroutine = false,
     onkeydown = function(self)
-      if not self:HasWeapon() then return end
       if not self:IsWeaponReady() then return end
-      self:WeaponSecondary()
+      self:ThrowGrenade()
     end
   },
   {
@@ -97,7 +105,7 @@ if SERVER then
 
   -- Misc --
   function ENT:_BaseInitialize()
-    self._DrGBaseReadyToFire = false
+    self._DrGBaseGrenadeThrowDelay = 0
     self:SetDrGVar("DrGBaseCrouching", false)
     self:SetDrGVar("DrGBaseWeaponReady", false)
   end
@@ -105,9 +113,10 @@ if SERVER then
     if not self:IsPossessed() then
       if self:IsMoving() then self:ToggleCrouching(false) end
       if self:HaveEnemy() then
+        local enemy = self:GetEnemy()
         self:ToggleWeaponReady(true)
-        if self:CanSeeEntity(self:GetEnemy()) then
-          self:AimAt(self:GetEnemy():WorldSpaceCenter())
+        if self:CanSeeEntity(enemy) then
+          self:AimAt(enemy:WorldSpaceCenter())
         else self:AimAt() end
       else
         self:ToggleWeaponReady(false)
@@ -126,17 +135,23 @@ if SERVER then
   end
   function ENT:EnemyInRange(enemy)
     if math.random(50) == 1 then self:ToggleCrouching(true) end
-    if not self:HasWeapon() then return end
-    if not self:IsWeaponReady() then return end
-    self.loco:FaceTowards(enemy:GetPos())
-    if not self:CanSeeEntity(enemy) then return end
-    local tr = util.TraceLine({
-      start = self:GetShootPos(),
-      endpos = self:GetShootPos() + self:GetAimVector()*999999999,
-      filter = {self, self:GetWeapon()}
-    })
-    if IsValid(tr.Entity) and self:IsAlly(tr.Entity) then return end
-    self:WeaponPrimary()
+    if not self._DrGBaseThrowingGrenade and self.GrenadeThrowChance > 0 and
+    self.GrenadeThrowChance <= 1 and math.random(1/self.GrenadeThrowChance) == 1 then
+      self:FaceEntity(enemy)
+      self:ThrowGrenade(enemy:GetPos())
+    else
+      if not self:HasWeapon() then return end
+      if not self:IsWeaponReady() then return end
+      self.loco:FaceTowards(enemy:GetPos())
+      if not self:CanSeeEntity(enemy) then return end
+      local tr = util.TraceLine({
+        start = self:GetShootPos(),
+        endpos = self:GetShootPos() + self:GetAimVector()*999999999,
+        filter = {self, self:GetWeapon()}
+      })
+      if IsValid(tr.Entity) and self:IsAlly(tr.Entity) then return end
+      self:WeaponPrimary()
+    end
   end
 
   -- Hooks

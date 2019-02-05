@@ -47,6 +47,7 @@ if SERVER then
 
   function ENT:WeaponPrimary()
     if not self:HasWeapon() then return false end
+    if self:HideWeapon() then return false end
     local wep = self:GetWeapon()
     if CurTime() < wep:GetNextPrimaryFire() then return false end
     if self._DrGBaseReloading then return false end
@@ -62,6 +63,7 @@ if SERVER then
 
   function ENT:WeaponSecondary()
     if not self:HasWeapon() then return false end
+    if self:HideWeapon() then return false end
     local wep = self:GetWeapon()
     if wep.IsDrGWeapon and not wep.Secondary.Enabled then return false end
     if CurTime() < wep:GetNextSecondaryFire() then return false end
@@ -78,6 +80,7 @@ if SERVER then
 
   function ENT:WeaponReload()
     if not self:HasWeapon() then return end
+    if self:HideWeapon() then return end
     local wep = self:GetWeapon()
     if self._DrGBaseReloading then return end
     self._DrGBaseReloading = true

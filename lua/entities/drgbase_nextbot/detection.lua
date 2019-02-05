@@ -21,7 +21,7 @@ function ENT:LineOfSight(ent, fov, range)
     filter = self
   }, function(tr)
     if IsValid(tr.Entity) and tr.Entity:EntIndex() == ent:EntIndex() then
-      local angle = math.DrG_VectorsAngle(eyepos + self:EyeAngles():Forward(), tr.HitPos, eyepos)
+      local angle = math.DrG_DegreeAngle(eyepos + self:EyeAngles():Forward(), tr.HitPos, eyepos)
       return angle <= fov/2
     end
   end).res or false
@@ -41,7 +41,7 @@ function ENT:IsSeenBy(ent)
       ent:DrG_IsPossessing() then return false end
       fov = ent:GetFOV()
     end
-    if math.DrG_VectorsAngle(ent:EyePos() + ent:EyeAngles():Forward(), self:WorldSpaceCenter(), ent:EyePos()) > fov then
+    if math.DrG_DegreeAngle(ent:EyePos() + ent:EyeAngles():Forward(), self:WorldSpaceCenter(), ent:EyePos()) > fov then
       return false
     end
     local ends = {
@@ -157,12 +157,11 @@ if SERVER then
     if sound.Entity:IsPlayer() and not sound.Entity:Alive() then return end
     for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
       if ent:EntIndex() == sound.Entity:EntIndex() then continue end
-      if not ent:IsTarget(sound.Entity) then continue end
       if ent.HearingRange == nil then continue end
       if ent.HearingRange <= 0 then continue end
       if ent:GetRangeSquaredTo(sound.Entity) <= math.pow(ent.HearingRange, 2) then
         local heard = ent:OnHearEntity(sound.Entity, sound)
-        if heard ~= false then ent:SpotEntity(sound.Entity) end
+        if heard ~= false and ent:IsTarget(sound.Entity) then ent:SpotEntity(sound.Entity) end
       end
     end
   end)
@@ -173,12 +172,11 @@ if SERVER then
     if ent2:IsPlayer() and not ent2:Alive() then return end
     for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
       if ent:EntIndex() == ent2:EntIndex() then continue end
-      if not ent:IsTarget(ent2) then continue end
       if ent.HearingRangeBullets == nil then continue end
       if ent.HearingRangeBullets <= 0 then continue end
       if ent:GetRangeSquaredTo(ent2) <= math.pow(ent.HearingRangeBullets, 2) then
         local heard = ent:OnHearGunshot(ent2, bullet)
-        if heard ~= false then ent:SpotEntity(ent2) end
+        if heard ~= false and ent:IsTarget(ent2) then ent:SpotEntity(ent2) end
       end
     end
   end)

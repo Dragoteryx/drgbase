@@ -41,25 +41,25 @@ if SERVER then
   function ENT:IsMovingForward()
     if not self:IsMoving() then return false end
     if self:IsPossessed() then return self:PossessorForward() end
-    return math.Round(math.DrG_VectorsAngle(self:GetForward(), self.loco:GetGroundMotionVector())) < 90
+    return math.Round(math.DrG_DegreeAngle(self:GetForward(), self.loco:GetGroundMotionVector())) < 90
   end
 
   function ENT:IsMovingBackward()
     if not self:IsMoving() then return false end
     if self:IsPossessed() then return self:PossessorBackward() end
-    return math.Round(math.DrG_VectorsAngle(self:GetForward(), self.loco:GetGroundMotionVector())) > 90
+    return math.Round(math.DrG_DegreeAngle(self:GetForward(), self.loco:GetGroundMotionVector())) > 90
   end
 
   function ENT:IsMovingLeft()
     if not self:IsMoving() then return false end
     if self:IsPossessed() then return self:PossessorLeft() end
-    return math.Round(math.DrG_VectorsAngle(self:GetRight(), self.loco:GetGroundMotionVector())) > 90
+    return math.Round(math.DrG_DegreeAngle(self:GetRight(), self.loco:GetGroundMotionVector())) > 90
   end
 
   function ENT:IsMovingRight()
     if not self:IsMoving() then return false end
     if self:IsPossessed() then return self:PossessorRight() end
-    return math.Round(math.DrG_VectorsAngle(self:GetRight(), self.loco:GetGroundMotionVector())) < 90
+    return math.Round(math.DrG_DegreeAngle(self:GetRight(), self.loco:GetGroundMotionVector())) < 90
   end
 
   function ENT:IsMovingUp()
@@ -174,24 +174,13 @@ if SERVER then
 
   function ENT:StepAwayFromPos(pos)
     if not self:CanMove(self:GetPossessor()) then return end
-    local tr = util.TraceLine({
-      start = self:GetPos() + Vector(0, 0, 10),
-      endpos = pos + Vector(0, 0, 10),
-      collisiongroup = COLLISION_GROUP_IN_VEHICLE
-    })
     self.loco:FaceTowards(pos)
     self:GoBackward()
   end
 
   function ENT:FacePos(pos)
-    local angle = util.TraceLine({
-      start = self:GetPos() + Vector(0, 0, 1),
-      endpos = pos + Vector(0, 0, 1),
-      collisiongroup = COLLISION_GROUP_IN_VEHICLE
-    }).Normal:Angle()
-    angle.p = 0
-    angle.r = 0
-    self:SetAngles(angle)
+    local angle = math.DrG_AngleVectors(self:GetPos(), pos)
+    self:SetAngles(Angle(0, angle.y, 0))
   end
 
   function ENT:FaceEntity(ent)

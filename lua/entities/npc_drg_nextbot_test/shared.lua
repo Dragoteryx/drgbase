@@ -6,8 +6,7 @@ ENT.Name = "DrGBase Test Nextbot"
 ENT.Class = "npc_drg_nextbot_test"
 ENT.Category = "DrGBase"
 ENT.Models = {
-  "models/player/police.mdl",
-  "models/player/police_fem.mdl"
+  "models/player/gman_high.mdl"
 }
 ENT.AnimationType = DRGBASE_ANIMTYPE_BODYMOVEXY
 
@@ -17,7 +16,7 @@ ENT.FallDamage = true
 -- Movements --
 ENT.RunAnimation = ACT_HL2MP_RUN
 ENT.WalkAnimation = ACT_HL2MP_WALK
-ENT.IdleAnimation = ACT_HL2MP_IDLE
+ENT.IdleAnimation = "menu_gman"
 ENT.JumpAnimation = ACT_HL2MP_JUMP_KNIFE
 
 -- Relationships --
@@ -34,7 +33,6 @@ ENT.EyeAngle = Angle(75, 0, 0)
 -- Climbing --
 ENT.ClimbLadders = true
 ENT.ClimbAnimation = ACT_ZOMBIE_CLIMB_UP
-ENT.StartClimbAnimation = ACT_ZOMBIE_CLIMB_START
 ENT.StopClimb = 112.5
 ENT.StopClimbAnimation = ACT_ZOMBIE_CLIMB_END
 
@@ -42,7 +40,7 @@ ENT.StopClimbAnimation = ACT_ZOMBIE_CLIMB_END
 ENT.PossessionEnabled = true
 ENT.PossessionViews = {
   {
-    offset = Vector(0, 0, 20),
+    offset = Vector(0, 30, 20),
     distance = 100
   },
   {
@@ -56,14 +54,14 @@ ENT.PossessionBinds = {
     bind = IN_ATTACK,
     coroutine = false,
     onkeydown = function(self)
-      self:PlayAnimation(ACT_GMOD_GESTURE_DISAGREE)
+      -- some stuff should go there I guess
     end
   },
   {
     bind = IN_ATTACK2,
     coroutine = false,
     onkeydown = function(self)
-      self:PlayAnimation(ACT_GMOD_TAUNT_SALUTE)
+      self:PlayAnimation(ACT_GMOD_GESTURE_DISAGREE)
     end
   },
   {
@@ -72,13 +70,6 @@ ENT.PossessionBinds = {
     onkeydown = function(self)
       self:QuickJump(100)
     end
-  },
-  {
-    bind = IN_RELOAD,
-    coroutine = true,
-    onkeypressed = function(self)
-      self:PlayAnimationAndMove(self.StopClimbAnimation)
-    end
   }
 }
 
@@ -86,7 +77,8 @@ if SERVER then
 
   -- Misc --
   function ENT:CustomInitialize()
-    self:SetDefaultRelationship(D_HT)
+    self:SetDefaultRelationship(D_NU)
+    self:SetPlayersRelationship(D_HT)
   end
 
   -- AI --
@@ -98,7 +90,7 @@ if SERVER then
     return self:RandomPos(1500)
   end
   function ENT:ReachedDestination(pos)
-    self:PlayAnimationAndWait("taunt_dance_base")
+    self:Idle(math.random(3, 7))
   end
 
   -- Possession --
@@ -107,26 +99,10 @@ if SERVER then
   end
 
   -- Hooks --
-  function ENT:OnSpawn()
-
-  end
-  function ENT:OnTakeDamage(dmg, hitgroups, bone)
-    local sounds = {
-      "npc/metropolice/pain1.wav",
-      "npc/metropolice/pain2.wav",
-      "npc/metropolice/pain3.wav",
-      "npc/metropolice/pain4.wav"
-    }
-    self:EmitSound(sounds[math.random(#sounds)])
+  function ENT:OnTakeDamage(dmg)
+    if IsValid(dmg:GetAttacker()) then return self:HasSpottedEntity(dmg:GetAttacker()) end
   end
   function ENT:OnDeath(dmg)
-    local sounds = {
-      "npc/metropolice/die1.wav",
-      "npc/metropolice/die2.wav",
-      "npc/metropolice/die3.wav",
-      "npc/metropolice/die4.wav"
-    }
-    self:EmitSound(sounds[math.random(#sounds)])
     return dmg:GetDamageForce():Length() < 10000
   end
   function ENT:DoOnDeath(dmg)

@@ -86,6 +86,7 @@ if SERVER then
 
   hook.Add("EntityTakeDamage", "DrGBaseNextbotDamage", function(ent, dmg)
     if not ent.IsDrGNextbot then return end
+    if IsValid(dmg:GetAttacker()) then ent:SpotEntity(dmg:GetAttacker()) end
     if dmg:GetDamage() <= 0 then return true end
     local hitgroups, bone = ent:FetchHitGroups(dmg)
     local res = ent:OnTakeDamage(dmg, hitgroups, bone)

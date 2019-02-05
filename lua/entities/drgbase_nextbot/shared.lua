@@ -104,7 +104,6 @@ ENT.HearingRangeBullets = 5000
 -- Possession --
 ENT.PossessionEnabled = false
 ENT.PossessionRemote = true
-ENT.PossessionDataDelay = 0
 ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
 
@@ -122,6 +121,7 @@ if SERVER then
   end)
 
   function ENT:Initialize()
+    self:_Debug("spawn.")
     self:SetModel(self.Models[math.random(#self.Models)])
     self:SetModelScale(self.ModelScale)
     self:SetSkin(self.Skins[math.random(#self.Skins)])
@@ -275,7 +275,6 @@ if SERVER then
       self:_Debug("remove.")
     end)
     table.insert(DrGBase.Nextbots._Spawned, self)
-    self:_Debug("spawn.")
   end
   function ENT:_BaseInitialize() end
   function ENT:CustomInitialize() end

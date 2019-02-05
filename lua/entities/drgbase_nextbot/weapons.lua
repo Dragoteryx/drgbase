@@ -11,7 +11,12 @@ end
 
 function ENT:GetShootPos()
   if not self:HasWeapon() then return self:GetPos()
-  else return self:GetWeapon():GetPos() end
+  else
+    local wep = self:GetWeapon()
+    local attach = wep:LookupAttachment("muzzle")
+    if attach <= 0 then return wep:GetPos()
+    else return wep:GetAttachment(attach).Pos end
+  end
 end
 function ENT:GetAimVector()
   local normal

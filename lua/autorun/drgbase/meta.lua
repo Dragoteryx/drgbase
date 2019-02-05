@@ -2,6 +2,7 @@
 local entMETA = FindMetaTable("Entity")
 local plyMETA = FindMetaTable("Player")
 local npcMETA = FindMetaTable("NPC")
+local physMETA = FindMetaTable("PhysObj")
 
 function entMETA:GetDrGVar(name)
   return net.DrG_GetVar(name, self)
@@ -12,6 +13,15 @@ function plyMETA:DrG_IsPossessing()
 end
 function plyMETA:DrG_Possessing()
   return DrGBase.Nextbots.Possessing(self)
+end
+
+function physMETA:DrG_ParabolicTrajectory(pos, options)
+  local vec, data = math.DrG_ParabolicTrajectory(self:GetPos(), pos, options)
+  if not vec:IsZero() then
+    if not options.drag then self:EnableDrag(false) end
+    self:SetVelocity(vec)
+  end
+  return vec, data
 end
 
 if SERVER then

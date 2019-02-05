@@ -54,7 +54,7 @@ function ENT:CombineBall(value)
 end
 
 function ENT:AnglePos(pos)
-  return math.DrG_VectorsAngle(self:GetPos() + self:GetForward(), pos, self:GetPos())
+  return math.DrG_DegreeAngle(self:GetPos() + self:GetForward(), pos, self:GetPos())
 end
 
 function ENT:AngleEntity(ent)
