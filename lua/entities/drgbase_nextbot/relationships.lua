@@ -24,7 +24,7 @@ if SERVER then
       if self:TargetCheck(ent) then self:_AddTarget(ent) end
     end
     self:NPCRelationship()
-    return self._DrGBaseTargets
+    return self:GetTargets()
   end
   function ENT:IsTarget(ent)
     return self._DrGBaseTargetsList[ent:GetCreationID()] or false
@@ -145,19 +145,28 @@ if SERVER then
     [D_ER] = 0
   }
 
+  local defaultVal = 1
+
   function ENT:GetRelationship(ent)
     if not IsValid(ent) then return D_ER end
     if self:EntIndex() == ent:EntIndex() then return D_ER end
     if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool() or IsValid(ent:DrG_Possessing())) then return D_NU end
     if ent.IsDrGNextbot and ent:IsDead() then return D_NU end
     if ent:Health() <= 0 then return D_NU end
-    local individual = self:GetEntityRelationship(ent)
-    if individual then return individual end
-    local class = self:GetClassRelationship(ent:GetClass())
-    if class then return class end
-    local model = self:GetModelRelationship(ent:GetModel())
-    if model then return model end
+    local highest = {disposition = self:GetDefaultRelationship(), val = defaultVal}
     local relationships = {}
+    local individual, indval = self:GetEntityRelationship(ent)
+    local class, classval = self:GetClassRelationship(ent:GetClass())
+    local model, modelval = self:GetModelRelationship(ent:GetModel())
+    table.insert(relationships, {
+      disposition = individual, val = indval
+    })
+    table.insert(relationships, {
+      disposition = class, val = classval
+    })
+    table.insert(relationships, {
+      disposition = model, val = modelval
+    })
     for faction, relationship in pairs(self._DrGBaseFactionRelationships) do
       if relationship == nil then continue end
       if ent:IsPlayer() then
@@ -190,65 +199,113 @@ if SERVER then
       end
     end
     for name, callback in pairs(self._DrGBaseCustomRelationships) do
-      local res = callback(ent, self)
-      if res then table.insert(relationships, res) end
+      local disp, val = callback(ent, self)
+      if disp then
+        table.insert(relationships, {
+          disposition = disp, val = math.Round(val) or defaultVal
+        })
+      end
     end
-    if #relationships == 1 then
-      return relationships[1]
-    elseif #relationships > 1 then
-      table.sort(relationships, function(rel1, rel2)
-        return relPrios[rel1] > relPrios[rel2]
-      end)
-      return relationships[1]
-    else return self:GetDefaultRelationship() end
+    for i, relationship in ipairs(relationships) do
+      if relationship.val > highest.val then highest = relationship
+      elseif relationship.val == highest.val and
+      relPrios[relationship.disposition] > relPrios[highest.disposition] then highest = relationship end
+    end
+    return highest.disposition, highest.val
   end
 
+  -- Default
   function ENT:GetDefaultRelationship()
-    return self._DrGBaseDefaultRelationship
+    return self._DrGBaseDefaultRelationship, defaultVal
   end
   function ENT:SetDefaultRelationship(relationship)
     self._DrGBaseDefaultRelationship = relationship
     self:NPCRelationship()
   end
 
+  -- Individual
   function ENT:GetEntityRelationship(ent)
-    if not IsValid(ent) then return D_ER end
-    return self._DrGBaseEntityRelationships[ent:GetCreationID()]
+    if not IsValid(ent) then return D_ER, defaultVal end
+    local rel = self._DrGBaseEntityRelationships[ent:GetCreationID()]
+    if rel == nil then return D_ER, defaultVal end
+    return rel.disposition, math.Round(rel.val)
   end
-  function ENT:SetEntityRelationship(ent, relationship)
-    self._DrGBaseEntityRelationships[ent:GetCreationID()] = relationship
+  function ENT:SetEntityRelationship(ent, relationship, val)
+    self._DrGBaseEntityRelationships[ent:GetCreationID()] = {
+      disposition = relationship, val = val or defaultVal
+    }
     if ent:IsNPC() then self:NPCRelationship(ent) end
   end
+  function ENT:AddEntityRelationship(ent, relationship, val)
+    local disp, curr = self:GetEntityRelationship(ent)
+    val = val or curr + 1
+    if curr >= val then return end
+    self:SetEntityRelationship(ent, relationship, val)
+  end
 
+  -- Class
   function ENT:GetClassRelationship(class)
-    if class == nil then return D_ER end
-    return self._DrGBaseClassRelationships[string.lower(class)]
+    if class == nil then return D_ER, defaultVal end
+    local rel = self._DrGBaseClassRelationships[string.lower(class)]
+    if rel == nil then return D_ER, defaultVal end
+    return rel.disposition, math.Round(rel.val)
   end
-  function ENT:SetClassRelationship(class, relationship)
-    self._DrGBaseClassRelationships[string.lower(class)] = relationship
+  function ENT:SetClassRelationship(class, relationship, val)
+    self._DrGBaseClassRelationships[string.lower(class)] = {
+      disposition = relationship, val = val or defaultVal
+    }
     self:NPCRelationship()
   end
+  function ENT:AddClassRelationship(class, relationship, val)
+    local disp, curr = self:GetClassRelationship(class)
+    val = val or curr + 1
+    if curr >= val then return end
+    self:SetClassRelationship(class, relationship, val)
+  end
 
+  -- Model
   function ENT:GetModelRelationship(model)
-    if model == nil then return D_ER end
-    return self._DrGBaseModelRelationships[string.lower(model)]
+    if model == nil then return D_ER, defaultVal end
+    local rel = self._DrGBaseModelRelationships[string.lower(model)]
+    if rel == nil then return D_ER, defaultVal end
+    return rel.disposition, math.Round(rel.val)
   end
-  function ENT:SetModelRelationship(model, relationship)
-    self._DrGBaseModelRelationships[string.lower(model)] = relationship
+  function ENT:SetModelRelationship(model, relationship, val)
+    self._DrGBaseModelRelationships[string.lower(model)] = {
+      disposition = relationship, val = val or defaultVal
+    }
     self:NPCRelationship()
+  end
+  function ENT:AddModelRelationship(model, relationship, val)
+    local disp, curr = self:GetModelRelationship(model)
+    val = val or curr + 1
+    if curr >= val then return end
+    self:SetModelRelationship(model, relationship, val)
   end
 
+  -- Factions
   function ENT:GetFactionRelationship(faction)
-    if faction == nil then return D_ER end
-    return self._DrGBaseFactionRelationships[string.upper(faction)]
+    if faction == nil then return D_ER, defaultVal end
+    local rel = self._DrGBaseFactionRelationships[string.upper(faction)]
+    if rel == nil then return D_ER, defaultVal end
+    return rel.disposition, math.Round(rel.val)
   end
-  function ENT:SetFactionRelationship(faction, relationship)
-    self._DrGBaseFactionRelationships[string.upper(faction)] = relationship
+  function ENT:SetFactionRelationship(faction, relationship, val)
+    self._DrGBaseFactionRelationships[string.upper(faction)] = {
+      disposition = relationship, val = val or defaultVal
+    }
     self:NPCRelationship()
+  end
+  function ENT:AddFactionRelationship(faction, relationship, val)
+    local disp, curr = self:GetFactionRelationship(faction)
+    val = val or curr + 1
+    if curr >= val then return end
+    self:SetFactionRelationship(faction, relationship, val)
   end
 
   function ENT:RemoveCustomRelationshipCheck(name)
     self._DrGBaseCustomRelationships[name] = nil
+    self:NPCRelationship()
   end
   function ENT:DefineCustomRelationshipCheck(name, callback)
     self._DrGBaseCustomRelationships[name] = callback
@@ -351,7 +408,7 @@ if SERVER then
       if not IsValid(ent) then continue end
       if self:EntIndex() == ent:EntIndex() then continue end
       if spotted and not self:HasSpottedEntity(ent) then continue end
-      if self:GetRangeSquaredTo(ent) > math.pow(range, 2) then continue end
+      if self:GetRangeSquaredTo(ent) > range^2 then continue end
       if relationship and self:GetRelationship(ent) ~= relationship then continue end
       table.insert(entities, ent)
     end
@@ -409,10 +466,6 @@ if SERVER then
     return self:GetRelationship(ent)
   end
 
-  function ENT:AddEntityRelationship(ent, relationship)
-    self:SetEntityRelationship(ent, relationship)
-  end
-
   function ENT:AddRelationship(str)
     local split = string.Explode("[%s]+", str, true)
     if #split ~= 3 then return end
@@ -424,7 +477,10 @@ if SERVER then
     elseif relationship == "D_LI" then relationship = D_LI
     elseif relationship == "D_NU" then relationship = D_NU
     else return end
-    self:SetClassRelationship(class, relationship)
+    local val = math.Round(tonumber(split[3]))
+    local disp, curr = self:GetClassRelationship(class)
+    if curr >= val then return end
+    self:AddClassRelationship(class, relationship, val)
   end
 
   -- Callbacks
@@ -439,13 +495,15 @@ if SERVER then
 else
 
   function ENT:GetRelationship(ent, callback)
-    net.DrG_UseCallback("DrGBaseNextbotEntityRelationship", {
-      nextbot = self:EntIndex(), ent = ent:EntIndex()
-    }, function(res)
-      if not IsValid(self) then return end
-      if not IsValid(ent) then callback(D_ER)
-      else callback(res) end
-    end)
+    if IsValid(ent) then
+      net.DrG_UseCallback("DrGBaseNextbotEntityRelationship", {
+        nextbot = self:EntIndex(), ent = ent:EntIndex()
+      }, function(res)
+        if not IsValid(self) then return end
+        if not IsValid(ent) then callback(D_ER)
+        else callback(res) end
+      end)
+    else callback(D_ER) end
   end
 
 end

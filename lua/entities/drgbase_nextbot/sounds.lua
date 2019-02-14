@@ -7,6 +7,20 @@ function ENT:EmitSlottedSound(slot, duration, soundName, soundLevel, pitchPercen
   end
 end
 
+function ENT:EmitFootstep(soundLevel, pitchPercent, volume, channel)
+  local matType = util.TraceLine({
+    start = self:GetPos(), endpos = self:GetPos() + self:GetUp()*-999, filter = self
+  }).MatType
+  local sounds = self.Footsteps[matType]
+  if sounds == nil or #sounds == 0 then
+    matType = MAT_DEFAULT
+    sounds = self.Footsteps[matType]
+  end
+  if sounds == nil or #sounds == 0 then return false end
+  self:EmitSound(sounds[math.random(#sounds)], soundLevel, pitchPercent, volume, channel)
+  return true
+end
+
 if SERVER then
 
   -- Handlers --

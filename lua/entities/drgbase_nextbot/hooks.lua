@@ -26,7 +26,7 @@ if SERVER then
       ent:Replicate(self)
       self:Remove()
     else
-      if self._DrGBaseCharging then
+      if self:IsCharging() then
         self._DrGBaseChargingEnt = ent
       end
       if ent:IsPlayer() then self:OnPlayerContact(ent)
@@ -174,7 +174,7 @@ if SERVER then
       self:_Debug("touch ground.")
       self:_Debug("downwards velocity: "..self._DrGBaseDownwardsVelocity..".")
       self:InvalidatePath()
-      if self._DrGBaseDownwardsVelocity > 0 and not self:IsClimbing() and self.FallDamage then
+      if self._DrGBaseDownwardsVelocity > 0 and not self:IsFlying() and not self:IsClimbing() and self.FallDamage then
         local val = CalcFallDamage(self._DrGBaseDownwardsVelocity/self:GetScale(), self:WaterLevel()) or 0
         if val > 0 then
           local dmg = DamageInfo()

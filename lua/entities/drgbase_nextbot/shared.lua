@@ -10,7 +10,7 @@ DrGBase.IncludeFile("ai.lua")
 DrGBase.IncludeFile("animations.lua")
 DrGBase.IncludeFile("behaviours.lua")
 DrGBase.IncludeFile("detection.lua")
---DrGBase.IncludeFile("flying.lua")
+DrGBase.IncludeFile("flying.lua")
 DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("loco.lua")
 DrGBase.IncludeFile("meta.lua")
@@ -36,6 +36,137 @@ ENT.AimPitch = "aim_pitch"
 ENT.Killicon = {
   icon = "HUD/killicons/default",
   color = Color(255, 80, 0, 255)
+}
+ENT.Footsteps = {
+  [MAT_ANTLION] = {
+    "physics/flesh/flesh_impact_hard1.wav",
+    "physics/flesh/flesh_impact_hard2.wav",
+    "physics/flesh/flesh_impact_hard3.wav",
+    "physics/flesh/flesh_impact_hard4.wav",
+    "physics/flesh/flesh_impact_hard5.wav",
+    "physics/flesh/flesh_impact_hard6.wav"
+  },
+  [MAT_BLOODYFLESH] = {
+    "physics/flesh/flesh_squishy_impact_hard1.wav",
+    "physics/flesh/flesh_squishy_impact_hard2.wav",
+    "physics/flesh/flesh_squishy_impact_hard3.wav",
+    "physics/flesh/flesh_squishy_impact_hard4.wav"
+  },
+  [MAT_CONCRETE] = {
+    "player/footsteps/concrete1.wav",
+    "player/footsteps/concrete2.wav",
+    "player/footsteps/concrete3.wav",
+    "player/footsteps/concrete4.wav"
+  },
+  [MAT_DIRT] = {
+    "player/footsteps/dirt1.wav",
+    "player/footsteps/dirt2.wav",
+    "player/footsteps/dirt3.wav",
+    "player/footsteps/dirt4.wav"
+  },
+  [MAT_EGGSHELL] = {},
+  [MAT_FLESH] = {
+    "physics/flesh/flesh_impact_hard1.wav",
+    "physics/flesh/flesh_impact_hard2.wav",
+    "physics/flesh/flesh_impact_hard3.wav",
+    "physics/flesh/flesh_impact_hard4.wav",
+    "physics/flesh/flesh_impact_hard5.wav",
+    "physics/flesh/flesh_impact_hard6.wav"
+  },
+  [MAT_GRATE] = {
+    "player/footsteps/chainlink1.wav",
+    "player/footsteps/chainlink2.wav",
+    "player/footsteps/chainlink3.wav",
+    "player/footsteps/chainlink4.wav"
+  },
+  [MAT_ALIENFLESH] = {
+    "physics/flesh/flesh_impact_hard1.wav",
+    "physics/flesh/flesh_impact_hard2.wav",
+    "physics/flesh/flesh_impact_hard3.wav",
+    "physics/flesh/flesh_impact_hard4.wav",
+    "physics/flesh/flesh_impact_hard5.wav",
+    "physics/flesh/flesh_impact_hard6.wav"
+  },
+  [MAT_CLIP] = {},
+  [MAT_SNOW] = {
+    "player/footsteps/grass1.wav",
+    "player/footsteps/grass2.wav",
+    "player/footsteps/grass3.wav",
+    "player/footsteps/grass4.wav"
+  },
+  [MAT_PLASTIC] = {
+    "physics/plastic/plastic_box_impact_soft1.wav",
+    "physics/plastic/plastic_box_impact_soft2.wav",
+    "physics/plastic/plastic_box_impact_soft3.wav",
+    "physics/plastic/plastic_box_impact_soft4.wav"
+  },
+  [MAT_METAL] = {
+    "player/footsteps/metal1.wav",
+    "player/footsteps/metal2.wav",
+    "player/footsteps/metal3.wav",
+    "player/footsteps/metal4.wav"
+  },
+  [MAT_SAND] = {
+    "player/footsteps/sand1.wav",
+    "player/footsteps/sand2.wav",
+    "player/footsteps/sand3.wav",
+    "player/footsteps/sand4.wav"
+  },
+  [MAT_FOLIAGE] = {
+    "player/footsteps/grass1.wav",
+    "player/footsteps/grass2.wav",
+    "player/footsteps/grass3.wav",
+    "player/footsteps/grass4.wav"
+  },
+  [MAT_COMPUTER] = {
+    "player/footsteps/metal1.wav",
+    "player/footsteps/metal2.wav",
+    "player/footsteps/metal3.wav",
+    "player/footsteps/metal4.wav"
+  },
+  [MAT_SLOSH] = {
+    "player/footsteps/slosh1.wav",
+    "player/footsteps/slosh2.wav",
+    "player/footsteps/slosh3.wav",
+    "player/footsteps/slosh4.wav"
+  },
+  [MAT_TILE] = {
+    "player/footsteps/tile1.wav",
+    "player/footsteps/tile2.wav",
+    "player/footsteps/tile3.wav",
+    "player/footsteps/tile4.wav"
+  },
+  [MAT_GRASS] = {
+    "player/footsteps/grass1.wav",
+    "player/footsteps/grass2.wav",
+    "player/footsteps/grass3.wav",
+    "player/footsteps/grass4.wav"
+  },
+  [MAT_VENT] = {
+    "player/footsteps/duct1.wav",
+    "player/footsteps/duct2.wav",
+    "player/footsteps/duct3.wav",
+    "player/footsteps/duct4.wav"
+  },
+  [MAT_WOOD] = {
+    "player/footsteps/wood1.wav",
+    "player/footsteps/wood2.wav",
+    "player/footsteps/wood3.wav",
+    "player/footsteps/wood4.wav"
+  },
+  [MAT_DEFAULT] = {
+    "player/footsteps/concrete1.wav",
+    "player/footsteps/concrete2.wav",
+    "player/footsteps/concrete3.wav",
+    "player/footsteps/concrete4.wav"
+  },
+  [MAT_GLASS] = {
+    "physics/glass/glass_sheet_step1.wav",
+    "physics/glass/glass_sheet_step2.wav",
+    "physics/glass/glass_sheet_step3.wav",
+    "physics/glass/glass_sheet_step4.wav"
+  },
+  [MAT_WARPSHIELD] = {}
 }
 
 -- Stats --
@@ -67,6 +198,27 @@ ENT.StartClimbAnimation = ""
 ENT.StartClimbAnimRate = 1
 ENT.StopClimbAnimation = ""
 ENT.StopClimbAnimRate = 1
+
+-- Flight --
+ENT.Flight = false
+ENT.FlightSpeed = 300
+ENT.FlightAnimation = ACT_JUMP
+ENT.FlightAnimRate = 1
+ENT.FlightUpAnimation = ""
+ENT.FlightUpPitchThreshold = math.huge
+ENT.FlightUpAnimRate = 1
+ENT.FlightDownAnimation = ""
+ENT.FlightDownPitchThreshold = -math.huge
+ENT.FlightDownAnimRate = 1
+ENT.FlightHoverAnimation = ""
+ENT.FlightHoverAnimRate = 1
+ENT.FlightMaxPitch = 45
+ENT.FlightMinPitch = -45
+ENT.FlightMatchPitch = false
+ENT.FlightStrafe = false
+ENT.FlightBackward = false
+ENT.FlightUp = false
+ENT.FlightDown = false
 
 -- Relationships --
 ENT.Factions = {}
@@ -103,9 +255,20 @@ ENT.HearingRangeBullets = 5000
 
 -- Possession --
 ENT.PossessionEnabled = false
+ENT.PossessionPrompt = true
 ENT.PossessionRemote = true
 ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
+
+--[[
+function ENT:HandleAnimEvent(event, eventTime, cycle, type, options)
+  print(event, eventTime, cycle, type, options)
+end
+
+function ENT:FireAnimationEvent(pos, ang, event, name)
+  print(pos, ang, event, name)
+end
+]]
 
 if SERVER then
   AddCSLuaFile("shared.lua")
@@ -163,7 +326,6 @@ if SERVER then
     self._DrGBaseSpeedFetch = true -- fetch speed ?
     self._DrGBaseLastAnimCycle = 0 -- for animation callbacks
     self._DrGBasePossessionThinkDelay = 0 -- possession think delay
-    self._DrGBaseAttacking = false -- whether or not the nextbot is currently attacking
     self._DrGBaseHitGroups = {} -- list of hitgroups
     self._DrGBaseBlockRotation = false -- block rotation
     self._DrGBaseBlockInput = false -- block input
@@ -174,6 +336,7 @@ if SERVER then
     self._DrGBaseTargetsList = {} -- to quickly check targets
     self._DrGBaseAnimationSeed = math.random(0, 255) -- to pick a random sequence
     self._DrGBaseDisableBMXY = false -- disable bodymovexy
+    self._DrGBasePitch = 0 -- flying pitch, 0 by default
     self:DefineHitGroup(HITGROUP_HEAD, {
       "ValveBiped.Bip01_Neck1",
       "ValveBiped.Bip01_Head1",
@@ -258,6 +421,7 @@ if SERVER then
     self:SetDrGVar("DrGBaseScale", 1)
     self:SetDrGVar("DrGBasePossessionView", 1)
     self:SetDrGVar("DrGBaseClimbing", false)
+    self:SetDrGVar("DrGBaseFlying", false)
     self:ResetRelationships() -- sets the factions
     if self.UseWeapons and #self.Weapons > 0 then
       self:GiveWeapon(self.Weapons[math.random(#self.Weapons)])
@@ -284,6 +448,7 @@ if SERVER then
   function ENT:Think()
     self:_HandleCustomHooks()
     self:_HandleMovement()
+    self:_HandleFlight()
     self:_HandleAnimations()
     self:_HandlePossessionThink()
     self:_HandleAmbientSounds()
@@ -414,6 +579,8 @@ else
     self._DrGBaseCustomThinkDelay = 0
     self._DrGBasePossessionThinkDelay = 0
     self._DrGBaseLastState = DRGBASE_STATE_NONE
+    self._DrGBaseSequenceCallbacks = {}
+    self._DrGBaseLastAnimCycle = 0
     self:_BaseInitialize()
     self:CustomInitialize()
   end
@@ -431,6 +598,16 @@ else
       self:OnStateChange(self._DrGBaseLastState, self:GetState())
     end
     self._DrGBaseLastState = self:GetState()
+    -- sequenc callbacks
+    local callbacks = self._DrGBaseSequenceCallbacks[self:GetSequence()]
+    if callbacks ~= nil then
+      for i, todo in ipairs(callbacks) do
+        if self._DrGBaseLastAnimCycle < todo.cycle and self:GetCycle() >= todo.cycle then
+          todo.callback(todo.cycle, self:GetCycle())
+        end
+      end
+    end
+    self._DrGBaseLastAnimCycle = self:GetCycle()
     -- custom base think
     self:_BaseThink(self:GetState())
     -- custom
@@ -481,7 +658,6 @@ else
         if self.EnemyStop ~= nil then
           render.DrawWireframeSphere(self:GetPos(), self.EnemyStop*self:GetScale(), 25, 25, DrGBase.Colors.Orange, true)
         end
-
       end
     end
     return self:CustomDraw()

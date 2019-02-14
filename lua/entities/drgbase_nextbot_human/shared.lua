@@ -3,6 +3,7 @@ ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
 
 -- Misc --
 ENT.AnimationType = DRGBASE_ANIMTYPE_BODYMOVEXY
+ENT.FootstepSounds = true
 
 -- Stats --
 ENT.FallDamage = true
@@ -159,6 +160,24 @@ if SERVER then
     if IsValid(ladder) then
       if state == "climb" or data < 0.5 then
         self:EmitSlottedSound("DrGBaseLadderClimbing", 0.3, "player/footsteps/ladder"..math.random(4)..".wav")
+      end
+    end
+  end
+
+else
+
+  function ENT:_BaseInitialize()
+    local walks = {
+      self.RunAnimations,
+      self.WalkAnimations,
+      self.CrouchWalkAnimations
+    }
+    for i, walk in ipairs(walks) do
+      for holdtype, act in pairs(walk) do
+        self:AddSequenceCallback(self:SelectRandomSequence(act), {0.3, 0.8}, function()
+          if not self.FootstepSounds then return end
+          self:EmitFootstep()
+        end)
       end
     end
   end

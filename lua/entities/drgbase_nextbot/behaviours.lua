@@ -3,6 +3,9 @@ if SERVER then
 
   -- Movement --
 
+  function ENT:IsIdling()
+    return self._DrGBaseIdling or false
+  end
   function ENT:Idle(duration, callback)
     if duration == nil then return end
     if duration <= 0 then return end
@@ -10,13 +13,16 @@ if SERVER then
     local delay = CurTime() + duration
     local targetdelay = 0
     local now = CurTime()
+    self._DrGBaseIdling = true
     while CurTime() < delay do
-      if callback(CurTime() - now) then return end
-      if IsValid(self:GetEnemy()) then return end
-      if self:CoroutineCallbacks() then return end
-      if self:IsPossessed() then return end
+      if callback(CurTime() - now) then break end
+      if IsValid(self:GetEnemy()) then break end
+      if self:CoroutineCallbacks() then break end
+      if self:IsPossessed() then break end
+      if self:IsFlying() then self:FlightHover() end
       coroutine.yield()
     end
+    self._DrGBaseIdling = false
   end
 
   function ENT:QuickJump(pos)
@@ -52,17 +58,20 @@ if SERVER then
     self:Jump(pos, function()
       local velocity = self:GetVelocity()
       if velocity.z < 0 and options.pitch ~= nil and options.speed ~= nil then
-        local forward = self:GetForward()*options.speed*self:GetScale()
-        forward.z = 0
-        forward:Rotate(Angle(options.pitch, 0, 0))
-        self:SetVelocity(forward)
+        local forward = self:GetForward():GetNormalized()
+        forward.z = -math.tan(math.rad(options.pitch))
+        self:SetVelocity(forward*options.speed*self:GetScale())
       end
       jumping(options)
     end)
   end
 
+  function ENT:IsCharging()
+    return self._DrGBaseCharging or false
+  end
   function ENT:Charge(speed, callback)
-    if self._DrGBaseCharging then return end
+    if self:IsFlying() then return end
+    if self:IsCharging() then return end
     self._DrGBaseCharging = true
     local speedfetch = self:EnableUpdateSpeed()
     self:EnableUpdateSpeed(false)
@@ -82,7 +91,7 @@ if SERVER then
   -- Attacks --
 
   function ENT:IsAttacking()
-    return self._DrGBaseAttacking
+    return self._DrGBaseAttacking or false
   end
   function ENT:Attack(attacks, options, onattack)
     if self:IsAttacking() then return end

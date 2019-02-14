@@ -115,6 +115,20 @@ if SERVER then
     return "open", 0, 2
   end
 
+else
+
+  function ENT:_BaseInitialize()
+    local walks = {
+      self.RunAnimation,
+      self.WalkAnimation
+    }
+    for i, walk in ipairs(walks) do
+      self:AddSequenceCallback(self:SelectRandomSequence(walk), {0.3, 0.8}, function()
+        self:EmitFootstep()
+      end)
+    end
+  end
+
 end
 
 -- DO NOT TOUCH --

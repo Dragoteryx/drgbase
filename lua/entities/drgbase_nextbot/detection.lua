@@ -4,7 +4,7 @@ function ENT:LineOfSight(ent, fov, range)
   if self:EntIndex() == ent:EntIndex() then return false end
   if range == nil then range = self.SightRange*self:GetScale() end
   if range <= 0 then return false end
-  if self:EyePos():DistToSqr(ent:GetPos()) > math.pow(range, 2) then return false end
+  if self:EyePos():DistToSqr(ent:GetPos()) > range^2 then return false end
   if fov == nil then fov = self.SightFOV end
   if fov > 360 then fov = 360 end
   if fov <= 0 then return false end
@@ -117,7 +117,7 @@ if SERVER then
   function ENT:ForgetEntity(ent)
     if not IsValid(ent) then return end
     self:_Debug("spotted entity '"..ent:GetClass().."' ("..ent:EntIndex()..").")
-    self._DrGBaseSpotted[ent:GetCreationID()] = self._DrGBaseSpotted[ent:GetCreationID()] or {
+    self._DrGBaseSpotted[ent:GetCreationID()] = {
       time = -999999, pos = nil
     }
   end
@@ -146,7 +146,8 @@ if SERVER then
     if CurTime() < self._DrGBaseLOSCheckDelay then return end
     self._DrGBaseLOSCheckDelay = CurTime() + 1
     for i, ent in ipairs(self:GetTargets()) do
-      if ent:IsPlayer() and not ent:Alive() then continue end
+      if ent:IsPlayer() and
+      (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then continue end
       if self:CanSeeEntity(ent) then self:SpotEntity(ent) end
     end
   end
@@ -154,12 +155,13 @@ if SERVER then
 
   hook.Add("EntityEmitSound", "DrGBaseEntityEmitSoundHearing", function(sound)
     if not IsValid(sound.Entity) then return end
-    if sound.Entity:IsPlayer() and not sound.Entity:Alive() then return end
+    if sound.Entity:IsPlayer() and
+    (not sound.Entity:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then return end
     for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
       if ent:EntIndex() == sound.Entity:EntIndex() then continue end
       if ent.HearingRange == nil then continue end
       if ent.HearingRange <= 0 then continue end
-      if ent:GetRangeSquaredTo(sound.Entity) <= math.pow(ent.HearingRange, 2) then
+      if ent:GetRangeSquaredTo(sound.Entity) <= ent.HearingRange^2 then
         local heard = ent:OnHearEntity(sound.Entity, sound)
         if heard ~= false and ent:IsTarget(sound.Entity) then ent:SpotEntity(sound.Entity) end
       end
@@ -169,18 +171,33 @@ if SERVER then
 
   hook.Add("EntityFireBullets", "DrGBaseEntityFireBullets", function(ent2, bullet)
     if not IsValid(ent2) then return end
-    if ent2:IsPlayer() and not ent2:Alive() then return end
+    if ent2:IsPlayer() and
+    (not ent2:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then return end
     for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
       if ent:EntIndex() == ent2:EntIndex() then continue end
       if ent.HearingRangeBullets == nil then continue end
       if ent.HearingRangeBullets <= 0 then continue end
-      if ent:GetRangeSquaredTo(ent2) <= math.pow(ent.HearingRangeBullets, 2) then
+      if ent:GetRangeSquaredTo(ent2) <= ent.HearingRangeBullets^2 then
         local heard = ent:OnHearGunshot(ent2, bullet)
         if heard ~= false and ent:IsTarget(ent2) then ent:SpotEntity(ent2) end
       end
     end
   end)
   function ENT:OnHearGunshot() end
+
+  -- Hooks --
+
+  local ignoreplayers = false
+  hook.Add("Think", "DrGBaseNextbotIgnorePlayers", function()
+    if not ignoreplayers and GetConVar("ai_ignoreplayers"):GetBool() then
+      for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
+        for h, ply in ipairs(player.GetAll()) do
+          ent:ForgetEntity(ply)
+        end
+      end
+    end
+    ignoreplayers = GetConVar("ai_ignoreplayers"):GetBool()
+  end)
 
 else
 

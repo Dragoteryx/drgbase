@@ -46,6 +46,9 @@ end
 function ENT:Alive()
   return not self:IsDead()
 end
+function ENT:IsAlive()
+  return self:Alive()
+end
 
 function ENT:CombineBall(value)
   if CLIENT then return self:GetDrGVar("DrGBaseCombineBall")
@@ -171,11 +174,11 @@ if SERVER then
 else
 
   function ENT:GetRangeTo(pos)
-    if type(pos) ~= "Vector" then pos = pos:GetPos() end
+    if not isvector(pos) then pos = pos:GetPos() end
     return self:GetPos():Distance(pos)
   end
   function ENT:GetRangeSquaredTo(pos)
-    if type(pos) ~= "Vector" then pos = pos:GetPos() end
+    if not isvector(pos) then pos = pos:GetPos() end
     return self:GetPos():DistToSqr(pos)
   end
 

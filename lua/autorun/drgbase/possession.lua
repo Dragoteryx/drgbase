@@ -7,6 +7,8 @@ properties.Add("drgbasepossess", {
 	MenuIcon = "drgbase/icon16.png",
 	Filter = function(self, ent, ply)
     return ent.IsDrGNextbot and
+		ent.PossessionEnabled and
+		ent.PossessionPrompt and
 		PossessionEnabled:GetBool()
 	end,
 	Action = function(self, ent)
@@ -56,11 +58,11 @@ end)
 if SERVER then
 
 	hook.Add("PlayerUse", "DrGBaseNextbotPossessionDisableUse", function(ply, ent)
-	  if IsValid(ply:DrG_Possessing()) then return false end
+	  if ply:DrG_IsPossessing() then return false end
 	end)
 
 	hook.Add("EntityTakeDamage", "DrGBaseNextbotProtectPossessingPlayer", function(ent, dmg)
-		if ent:IsPlayer() and IsValid(ent:DrG_Possessing()) then return true end
+		if ent:IsPlayer() and ent:DrG_IsPossessing() then return true end
 	end)
 
 end

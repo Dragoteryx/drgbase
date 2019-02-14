@@ -13,13 +13,13 @@ function ENT:SpeedSqr(scale)
   else return math.Round((self:GetVelocity()/self:GetScale()):LengthSqr()) end
 end
 function ENT:IsSpeedMore(speed, scale)
-  return math.pow(speed, 2) < self:SpeedSqr(scale)
+  return speed^2 < self:SpeedSqr(scale)
 end
 function ENT:IsSpeedLess(speed, scale)
-  return math.pow(speed, 2) > self:SpeedSqr(scale)
+  return speed^2 > self:SpeedSqr(scale)
 end
 function ENT:IsSpeedEqual(speed, scale)
-  return math.pow(speed, 2) == self:SpeedSqr(scale)
+  return speed^2 == self:SpeedSqr(scale)
 end
 
 function ENT:IsMoving()
@@ -101,67 +101,75 @@ if SERVER then
   -- Movements --
 
   function ENT:MoveToPos(pos, options, callback)
-    if not navmesh.IsLoaded() then return "failed" end
-    options = options or {}
-    options.lookahead = options.lookahead or 300
-    options.tolerance = options.tolerance or 20
-    if callback == nil then callback = function() end end
-    self._DrGBasePath = self._DrGBasePath or Path("Follow")
-    local path = self._DrGBasePath
-    path:SetMinLookAheadDistance(options.lookahead)
-    path:SetGoalTolerance(options.tolerance)
-    if not IsValid(path) or pos:DistToSqr(path:LastSegment().pos) > math.pow(options.tolerance, 2) then
-      self:_Debug("generating path.")
-      path:DrG_Compute(self, pos, options.generator)
-    else path:ResetAge() end
-    if not IsValid(path) then return "failed" end
-    while IsValid(path) do
-      local current = path:GetCurrentGoal()
-      if self:IsDying() then return "dying" end
-      if self:CanMove(self:GetPossessor()) then
-        local type = current.type
-        --if type > 0 then print(type) end
-        if type == 4 then
-          local ladder = current.ladder
-  				if IsValid(ladder) and
-          self:GetPos():DistToSqr(ladder:GetPosAtHeight(self:GetPos().z)) <= math.pow(options.tolerance, 2) then
-  					self:ClimbLadder(current.ladder)
-            self:InvalidatePath()
-          else path:Update(self) end
-        elseif type == 5 then
-          self.loco:FaceTowards(self:GetPos() + current.forward)
-          self.loco:Approach(self:GetPos() + current.forward, 1)
-  			else path:Update(self) end
+    if self:IsFlying() then
+      local vector, data = math.DrG_ParabolicTrajectory(self:GetPos(), pos, {
+        magnitude = self:GetRangeTo(pos), recursive = true
+      })
+      self:FlyForwardTo(self:GetPos() + vector)
+    else
+      if not navmesh.IsLoaded() then return "failed" end
+      options = options or {}
+      options.lookahead = options.lookahead or 300
+      options.tolerance = options.tolerance or 20
+      if callback == nil then callback = function() end end
+      self._DrGBasePath = self._DrGBasePath or Path("Follow")
+      local path = self._DrGBasePath
+      path:SetMinLookAheadDistance(options.lookahead)
+      path:SetGoalTolerance(options.tolerance)
+      if not IsValid(path) or pos:DistToSqr(path:LastSegment().pos) > options.tolerance^2 then
+        self:_Debug("generating path.")
+        path:DrG_Compute(self, pos, options.generator)
+      else path:ResetAge() end
+      if not IsValid(path) then return "failed" end
+      while IsValid(path) do
+        local current = path:GetCurrentGoal()
+        if self:IsDying() then return "dying" end
+        if self:CanMove(self:GetPossessor()) then
+          local type = current.type
+          --if type > 0 then print(type) end
+          if type == 4 then
+            local ladder = current.ladder
+    				if IsValid(ladder) and
+            self:GetPos():DistToSqr(ladder:GetPosAtHeight(self:GetPos().z)) <= options.tolerance^2 then
+    					self:ClimbLadder(current.ladder)
+              self:InvalidatePath()
+            else path:Update(self) end
+          elseif type == 5 then
+            self.loco:FaceTowards(self:GetPos() + current.forward)
+            self.loco:Approach(self:GetPos() + current.forward, 1)
+    			else path:Update(self) end
+        end
+      	if options.draw then
+          local bound1, bound2 = self:GetCollisionBounds()
+          local center = self:GetPos() + (bound1 + bound2)/2
+          debugoverlay.Line(center, current.pos, 0.05, Color(215, 215, 65), true)
+          path:Draw()
+        end
+      	if self.loco:IsStuck() then
+      		self:HandleStuck()
+      		return "stuck"
+      	end
+      	if options.maxage and path:GetAge() > options.maxage then
+          return "timeout"
+      	end
+        local res = callback(path, options)
+        if isstring(res) then return res
+        elseif isvector(res) then pos = res end
+        if options.repath and path:GetAge() > options.repath then
+          if not IsValid(path) or pos:DistToSqr(path:LastSegment().pos) > options.tolerance^2 then
+            self:_Debug("generating path.")
+            path:DrG_Compute(self, pos, options.generator)
+          else path:ResetAge() end
+        end
+      	coroutine.yield()
       end
-    	if options.draw then
-        local bound1, bound2 = self:GetCollisionBounds()
-        local center = self:GetPos() + (bound1 + bound2)/2
-        debugoverlay.Line(center, current.pos, 0.05, Color(215, 215, 65), true)
-        path:Draw()
-      end
-    	if self.loco:IsStuck() then
-    		self:HandleStuck()
-    		return "stuck"
-    	end
-    	if options.maxage and path:GetAge() > options.maxage then
-        return "timeout"
-    	end
-      local res = callback(path, options)
-      if isstring(res) then return res
-      elseif isvector(res) then pos = res end
-      if options.repath and path:GetAge() > options.repath then
-        if not IsValid(path) or pos:DistToSqr(path:LastSegment().pos) > math.pow(options.tolerance, 2) then
-          self:_Debug("generating path.")
-          path:DrG_Compute(self, pos, options.generator)
-        else path:ResetAge() end
-      end
-    	coroutine.yield()
+      if self:GetPos():DistToSqr(pos) <= options.tolerance^2 then return "ok"
+      else return "moved" end
     end
-    if self:GetPos():DistToSqr(pos) <= math.pow(options.tolerance, 2) then return "ok"
-    else return "moved" end
   end
 
   function ENT:FollowEntity(ent, options, callback)
+    if self:IsFlying() then return end
     if callback == nil then callback = function() end end
     return self:MoveToPos(ent:GetPos(), options, function(path)
       if not IsValid(ent) then return "invalid" end
@@ -172,7 +180,17 @@ if SERVER then
     end)
   end
 
+  function ENT:MoveTowards(pos, face)
+    if not self:CanMove(self:GetPossessor()) then return end
+    if self:IsFlying() then self:FlyTowards(pos, face)
+    else
+      self.loco:Approach(pos, 1)
+      if face then self.loco:FaceTowards(pos) end
+    end
+  end
+
   function ENT:StepAwayFromPos(pos)
+    if self:IsFlying() then return end
     if not self:CanMove(self:GetPossessor()) then return end
     self.loco:FaceTowards(pos)
     self:GoBackward()
@@ -187,29 +205,38 @@ if SERVER then
     self:FacePos(ent:GetPos())
   end
 
+  function ENT:FaceTowards(pos)
+    self.loco:FaceTowards(pos)
+  end
+
+  function ENT:FaceTowardsEntity(ent)
+    self:FaceTowards(ent:GetPos())
+  end
+
   function ENT:GoForward()
     if not self:CanMove(self:GetPossessor()) then return end
-    self.loco:Approach(self:GetPos() + self:GetForward(), 1)
+    self:MoveTowards(self:GetPos() + self:GetForward())
   end
 
   function ENT:GoBackward()
     if not self:CanMove(self:GetPossessor()) then return end
-    self.loco:Approach(self:GetPos() + self:GetForward()*-1, 1)
+    self:MoveTowards(self:GetPos() - self:GetForward())
   end
 
   function ENT:StrafeLeft()
     if not self:CanMove(self:GetPossessor()) then return end
-    self.loco:Approach(self:GetPos() + self:GetRight()*-1, 1)
+    self:MoveTowards(self:GetPos() - self:GetRight())
   end
 
   function ENT:StrafeRight()
     if not self:CanMove(self:GetPossessor()) then return end
-    self.loco:Approach(self:GetPos() + self:GetRight(), 1)
+    self:MoveTowards(self:GetPos() + self:GetRight())
   end
 
   -- Climbing --
 
   function ENT:ClimbLadder(ladder)
+    if self:IsFlying() then return end
     if self:IsClimbing() then return end
     if self:OnStartClimbing(ladder) == false then return end
     self:SetDrGVar("DrGBaseClimbing", true)
@@ -248,16 +275,20 @@ if SERVER then
     state == DRGBASE_STATE_AI_AVOID
   end
 
-  function ENT:_HandleMovement()
-    if not self:EnableUpdateSpeed() then return end
+  function ENT:WantsToRun()
     local run
     if self:IsPossessed() then run = self:GetPossessor():KeyDown(IN_SPEED)
     else run = self:ShouldRun(self:GetState()) end
-    self:SetSpeed(self:UpdateSpeed(run))
+    return run
+  end
+
+  function ENT:_HandleMovement()
+    if self:EnableUpdateSpeed() then self:SetSpeed(self:UpdateSpeed(self:WantsToRun())) end
   end
 
   function ENT:UpdateSpeed(run)
-    if self:IsClimbing() then return self.ClimbSpeed
+    if self:IsFlying() then return self.FlightSpeed
+    elseif self:IsClimbing() then return self.ClimbSpeed
     elseif run then return self.RunSpeed
     else return self.WalkSpeed end
   end

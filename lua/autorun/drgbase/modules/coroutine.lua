@@ -1,17 +1,22 @@
 
 local coroutines = {}
 hook.Add("Think", "DrGBaseCoroutines", function()
-  for i, co in ipairs(coroutines) do
+  for name, co in pairs(coroutines) do
+    if co == nil then continue end
     local status = coroutine.status(co)
     if status == "suspended" then
 			coroutine.resume(co)
 		elseif status == "dead" then
-			table.RemoveByValue(coroutines, co)
+			coroutine.DrG_Remove(name)
 		end
   end
 end)
 
-function coroutine.DrG_Create(callback)
+function coroutine.DrG_Create(name, callback)
   local co = coroutine.create(callback)
-  table.insert(coroutines, co)
+  coroutines[name] = co
+  return co
+end
+function coroutine.DrG_Remove(name)
+  coroutines[name] = nil
 end

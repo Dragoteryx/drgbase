@@ -13,9 +13,7 @@ function ENT:PossessorTrace(options)
   options = options or {}
   options.filter = options.filter or {}
   table.insert(options.filter, self)
-  if IsValid(self:GetActiveWeapon()) then
-    table.insert(options.filter, self:GetActiveWeapon())
-  end
+  table.insert(options.filter, self:GetWeapon())
   options.start = origin
   options.endpos = origin + angles:Forward()*999999999
   return util.TraceLine(options)
@@ -25,6 +23,7 @@ function ENT:PossessorView(view)
   if not self:IsPossessed() then return end
   view = view or self:CurrentPossessionView()
   local eyes = self:GetPossessor():EyeAngles()
+  local roll = self:GetAngles().r
   local angles = Angle(-eyes.p, eyes.y + 180, 0)
   if view.invertpitch then
     angles.p = -angles.p
@@ -58,7 +57,8 @@ function ENT:PossessorView(view)
     collisiongroup = COLLISION_GROUP_IN_VEHICLE
   })
   if tr2.HitWorld then endpos = tr2.HitPos + tr2.Normal*-10 end
-  return endpos, (tr2.Normal*-1):Angle()
+  local viewangle = (tr2.Normal*-1):Angle()
+  return endpos, viewangle
 end
 
 function ENT:CurrentPossessionView()
@@ -69,8 +69,12 @@ end
 function ENT:PossessorForward()
   if SERVER and self:IsPossessed() or
   CLIENT and self:IsPossessedByLocalPlayer() then
-    return self:GetPossessor():KeyDown(IN_FORWARD) and
-    not self:GetPossessor():KeyDown(IN_BACK)
+    if self:IsFlying() and not self.FlightBackward then
+      return self:GetPossessor():KeyDown(IN_FORWARD)
+    else
+      return self:GetPossessor():KeyDown(IN_FORWARD) and
+      not self:GetPossessor():KeyDown(IN_BACK)
+    end
   else return false end
 end
 
@@ -213,6 +217,56 @@ if SERVER then
     else self._DrGBaseBlockRotation = false end
   end
 
+  function ENT:_HandlePossessionThink()
+    if not self:IsPossessed() then return end
+    self:_HandlePossessionBinds(false)
+  end
+
+  function ENT:_HandlePossessionCoroutine()
+    if not self:IsPossessed() then return end
+    local possessor = self:GetPossessor()
+    self:_SetState(DRGBASE_STATE_POSSESSED)
+    if not self:PossessionBlockInput() then
+      self:PossessionControls()
+      self:_HandlePossessionBinds(true)
+    end
+  end
+  function ENT:PossessionControls()
+    if self:IsFlying() then
+      local moving = false
+      local origin, angles = self:PossessorView()
+      local direction = angles:Forward()
+      if self:PossessorForward() then
+        moving = true
+        self:FlyTowards(self:GetPos() + direction)
+      elseif self.FlightBackward and self:PossessorBackward() then
+        moving = true
+        self:FlyTowards(self:GetPos() - direction)
+      end
+      if self.FlightStrafe then
+        if self:PossessorLeft() then
+          moving = true
+          self:StrafeLeft()
+        elseif self:PossessorRight() then
+          moving = true
+          self:StrafeRight()
+        end
+      end
+      if not moving then self:FlightHover() end
+    else
+      if self:PossessorForward() then
+        self:GoForward()
+      elseif self:PossessorBackward() then
+        self:GoBackward()
+      end
+      if self:PossessorLeft() then
+        self:StrafeLeft()
+      elseif self:PossessorRight() then
+        self:StrafeRight()
+      end
+    end
+  end
+
   function ENT:_HandlePossessionBinds(coroutine)
     if self:IsPossessed() then
       local possessor = self:GetPossessor()
@@ -236,31 +290,6 @@ if SERVER then
       end
     end
   end
-
-  function ENT:_HandlePossessionThink()
-    if not self:IsPossessed() then return end
-    self:_HandlePossessionBinds(false)
-  end
-
-  function ENT:_HandlePossessionCoroutine()
-    if not self:IsPossessed() then return end
-    local possessor = self:GetPossessor()
-    self:_SetState(DRGBASE_STATE_POSSESSED)
-    if not self:PossessionBlockInput() then
-      if self:PossessorForward() then
-        self:GoForward()
-      elseif self:PossessorBackward() then
-        self:GoBackward()
-      end
-      if self:PossessorLeft() then
-        self:StrafeLeft()
-      elseif self:PossessorRight() then
-        self:StrafeRight()
-      end
-      self:_HandlePossessionBinds(true)
-    end
-  end
-  function ENT:PossessionCustomControls() end
 
   -- Hooks (move spawned ents when possessing) --
 

@@ -28,6 +28,9 @@ if SERVER then
     self:SetDefaultRelationship(D_HT)
     self:SetFactionRelationship(DRGBASE_FACTION_REBELS, D_LI)
     self:SetModelRelationship(self:GetModel(), D_LI)
+    self:DefineCustomTargetCheck("Melons", function(ent)
+      return ent:GetModel() == "models/props_junk/watermelon01.mdl"
+    end)
   end
   function ENT:Use(ply, ent)
     if IsValid(ply:GetActiveWeapon()) then

@@ -16,6 +16,24 @@ function ENT:SelectRandomSequence(anim)
   return self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
 end
 
+function ENT:AddSequenceCallback(seq, cycles, callback)
+  if isstring(seq) then seq = self:LookupSequence(seq) end
+  if seq == -1 then return end
+  self._DrGBaseSequenceCallbacks[seq] = self._DrGBaseSequenceCallbacks[seq] or {}
+  if not istable(cycles) then cycles = {cycles} end
+  for i, cycle in ipairs(cycles) do
+    table.insert(self._DrGBaseSequenceCallbacks[seq], {
+      cycle = cycle,
+      callback = callback
+    })
+  end
+end
+
+function ENT:RemoveSequenceCallbacks(seq)
+  if isstring(seq) then seq = self:LookupSequence(seq) end
+  self._DrGBaseSequenceCallbacks[seq] = {}
+end
+
 if SERVER then
 
   function ENT:BodyUpdate()
@@ -72,6 +90,7 @@ if SERVER then
     local delay = CurTime() + len/speed
     while CurTime() < delay and not self:IsDying() do
       if callback() then break end
+      if self:IsFlying() then self:FlightHover() end
       coroutine.yield()
     end
     self._DrGBaseDisableBMXY = false
@@ -85,33 +104,42 @@ if SERVER then
     return self:PlaySequenceAndWait(anim, speed, callback)
   end
 
-  function ENT:PlaySequenceAndMove(seq, speed, callback)
+  function ENT:PlaySequenceAndMove(seq, speed, callback, collide)
     if seq == nil then return end
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if seq == -1 then return end
     if callback == nil then callback = function() end end
-    local blockrotation = self:PossessionBlockRotation()
-    self:PossessionBlockRotation(true)
     local cycle = 0
     local startpos = self:GetPos()
-    local startangles = self:GetAngles()
+    local safepos = self:GetPos()
     local res = self:PlaySequenceAndWait(seq, speed, function()
       local success, vec, angles = self:GetSequenceMovement(seq, 0, self:GetCycle())
       if success then
-        vec:Rotate(startangles + angles)
-        self:SetPos(startpos + vec)
+        vec:Rotate(self:GetAngles() + angles)
+        if collide then
+          local bound1, bound2 = self:GetCollisionBounds()
+          local maxs = bound1.z > bound2.z and bound1 or bound2
+          local mins = bound1.z <= bound2.z and bound1 or bound2
+          local tr = util.TraceHull({
+            start = self:GetPos(),
+            endpos = startpos + vec,
+            maxs = maxs, mins = mins,
+            filter = {self, self:GetWeapon()}
+          })
+          if not tr.HitWorld and not IsValid(tr.Entity) then safepos = startpos + vec end
+          self:SetPos(safepos)
+        else self:SetPos(startpos + vec) end
       end
       return callback()
     end)
     self:SetVelocity(Vector(0, 0, 0))
-    self:PossessionBlockRotation(blockrotation)
     return res
   end
-  function ENT:PlayAnimationAndMove(anim, speed, callback)
+  function ENT:PlayAnimationAndMove(anim, speed, callback, collide)
     if isnumber(anim) then
       anim = self:SelectRandomSequence(anim)
     end
-    return self:PlaySequenceAndMove(anim, speed, callback)
+    return self:PlaySequenceAndMove(anim, speed, callback, collide)
   end
 
   function ENT:PlaySequence(seq, rate, callback)
@@ -133,24 +161,6 @@ if SERVER then
       anim = self:SelectRandomSequence(anim)
     end
     return self:PlaySequence(anim, rate, callback)
-  end
-
-  function ENT:AddSequenceCallback(seq, cycles, callback)
-    if isstring(seq) then seq = self:LookupSequence(seq) end
-    if seq == -1 then return end
-    self._DrGBaseSequenceCallbacks[seq] = self._DrGBaseSequenceCallbacks[seq] or {}
-    if not istable(cycles) then cycles = {cycles} end
-    for i, cycle in ipairs(cycles) do
-      table.insert(self._DrGBaseSequenceCallbacks[seq], {
-        cycle = cycle,
-        callback = callback
-      })
-    end
-  end
-
-  function ENT:RemoveSequenceCallbacks(seq)
-    if isstring(seq) then seq = self:LookupSequence(seq) end
-    self._DrGBaseSequenceCallbacks[seq] = {}
   end
 
   function ENT:GetHeadYaw()
@@ -212,12 +222,14 @@ if SERVER then
   end
 
   function ENT:_HandleAnimations()
-    if self:IsOnGround() then
-      local angles = self:GetAngles()
-      angles.r = 0
-      angles.p = 0
-      self:SetAngles(angles)
-    end
+    local angles = self:GetAngles()
+    angles.r = 0
+    if self:IsFlying() and self.FlightMatchPitch then
+      local velocity = self:GetVelocity()
+      if velocity.z == DRGBASE_FLIGHT_HOVER then angles.p = 0
+      else angles.p = velocity:Angle().p end
+    else angles.p = 0 end
+    self:SetAngles(angles)
     local seq, rate
     if self:EnableUpdateAnimation() then
       seq, rate = self:UpdateAnimation()
@@ -246,7 +258,15 @@ if SERVER then
   end
 
   function ENT:UpdateAnimation()
-    if self:IsClimbing() then return self.ClimbAnimation, self.ClimbAnimRate
+    if self:IsFlying() then
+      if self:GetVelocity().z == DRGBASE_FLIGHT_HOVER then return self.FlightHoverAnimation, self.FlightHoverAnimRate
+      else
+        local pitch = -math.NormalizeAngle(self:GetVelocity():Angle().p)
+        if pitch >= self.FlightUpPitchThreshold then return self.FlightUpAnimation, self.FlightUpAnimRate
+        elseif pitch <= self.FlightDownPitchThreshold then return self.FlightDownAnimation, self.FlightDownAnimRate
+        else return self.FlightAnimation, self.FlightAnimRate end
+      end
+    elseif self:IsClimbing() then return self.ClimbAnimation, self.ClimbAnimRate
     elseif not self:IsOnGround() then return self.JumpAnimation, self.JumpAnimRate
     elseif self:IsSpeedMore(self.WalkSpeed*1.1, true) then return self.RunAnimation, self.RunAnimRate
     elseif self:IsSpeedMore(0, true) then return self.WalkAnimation, self.WalkAnimRate
