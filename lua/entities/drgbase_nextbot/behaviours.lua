@@ -58,8 +58,9 @@ if SERVER then
     self:Jump(pos, function()
       local velocity = self:GetVelocity()
       if velocity.z < 0 and options.pitch ~= nil and options.speed ~= nil then
-        local forward = self:GetForward():GetNormalized()
+        local forward = self:GetForward()
         forward.z = -math.tan(math.rad(options.pitch))
+        forward:Normalize()
         self:SetVelocity(forward*options.speed*self:GetScale())
       end
       jumping(options)

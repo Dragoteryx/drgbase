@@ -28,6 +28,9 @@ function ENT:PossessorView(view)
   if view.invertpitch then
     angles.p = -angles.p
   end
+  if view.invertyaw then
+    angles.y = -angles.y
+  end
   local bound1, bound2 = self:GetCollisionBounds()
   local center = self:GetPos() + (bound1 + bound2)/2
   if view.eyepos then
@@ -125,7 +128,6 @@ if SERVER then
   util.AddNetworkString("DrGBaseNextbotCanPossess")
   util.AddNetworkString("DrGBaseNextbotCantPossess")
   util.AddNetworkString("DrGBaseNextbotCyclePossessionViews")
-  util.AddNetworkString("DrGBasePossessionData")
 
   function ENT:Possess(ply, _client)
     if not self.PossessionEnabled then return DRGBASE_POSSESS_DISABLED end
@@ -189,19 +191,6 @@ if SERVER then
     if not ply:DrG_IsPossessing() then return end
     ply:DrG_Possessing():CyclePossessionViews()
   end)
-
-  function ENT:PossessionSendData(name, data)
-    if not self:IsPossessed() then return end
-    net.Start("DrGBasePossessionData")
-    local compressed = util.Compress(util.TableToJSON({
-      ply = self:GetPossessor():EntIndex(),
-      ent = self:EntIndex(),
-      name = name, data = data
-    }))
-    net.WriteData(compressed, #compressed)
-    net.Send(self:GetPossessor())
-    self:_Debug("sent data: '"..name.."'.")
-  end
 
   -- Handlers --
 
@@ -360,17 +349,6 @@ else
     local possessing = LocalPlayer():DrG_Possessing()
     if not IsValid(possessing) then return end
     possessing:PossessionRender(possessing:CurrentPossessionView())
-  end)
-
-  function ENT:PossessionReceiveData() end
-  net.Receive("DrGBasePossessionData", function(len)
-    local ply = LocalPlayer()
-    if not ply:DrG_IsPossessing() then return end
-    local ent = ply:DrG_Possessing()
-    local tab = util.JSONToTable(util.Decompress(net.ReadData(len/8)))
-    if tab.ply ~= ply:EntIndex() or tab.ent ~= ent:EntIndex() then return end
-    ent:_Debug("received data: '"..tab.name.."'.")
-    ent:PossessionReceiveData(tab.name, tab.data)
   end)
 
 end

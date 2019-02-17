@@ -91,6 +91,7 @@ function ENT:PrintBones()
 end
 
 if SERVER then
+  util.AddNetworkString("DrGBaseData")
 
   function ENT:RandomPos(maxradius, minradius)
     local pos = util.DrG_RandomPos(self:GetPos(), maxradius, minradius)
@@ -110,7 +111,7 @@ if SERVER then
     if not ent.IsDrGNextbot then return end
     ent:InvalidatePath()
     ent:Timer(0, function()
-      ent.loco:SetVelocity(Vector(0, 0, 0))
+      ent:SetVelocity(Vector(0, 0, 0))
     end)
   end)
 
@@ -160,6 +161,17 @@ if SERVER then
     return hitgroups, closestbone
   end
 
+  function ENT:SendData(name, data)
+    net.Start("DrGBaseData")
+    local compressed = util.Compress(util.TableToJSON({
+      ent = self:EntIndex(),
+      name = name, data = data
+    }))
+    net.WriteData(compressed, #compressed)
+    net.Broadcast()
+    self:_Debug("sent data: '"..name.."'.")
+  end
+
   -- Handlers --
 
   function ENT:_HandleHealthRegen()
@@ -181,5 +193,14 @@ else
     if not isvector(pos) then pos = pos:GetPos() end
     return self:GetPos():DistToSqr(pos)
   end
+
+  function ENT:ReceiveData() end
+  net.Receive("DrGBaseData", function(len)
+    local tab = util.JSONToTable(util.Decompress(net.ReadData(len/8)))
+    local ent = Entity(tab.ent)
+    if not IsValid(ent) then return end
+    ent:_Debug("received data: '"..tab.name.."'.")
+    ent:ReceiveData(tab.name, tab.data)
+  end)
 
 end

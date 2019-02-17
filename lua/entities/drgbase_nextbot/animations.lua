@@ -28,7 +28,6 @@ function ENT:AddSequenceCallback(seq, cycles, callback)
     })
   end
 end
-
 function ENT:RemoveSequenceCallbacks(seq)
   if isstring(seq) then seq = self:LookupSequence(seq) end
   self._DrGBaseSequenceCallbacks[seq] = {}
@@ -268,7 +267,7 @@ if SERVER then
       end
     elseif self:IsClimbing() then return self.ClimbAnimation, self.ClimbAnimRate
     elseif not self:IsOnGround() then return self.JumpAnimation, self.JumpAnimRate
-    elseif self:IsSpeedMore(self.WalkSpeed*1.1, true) then return self.RunAnimation, self.RunAnimRate
+    elseif self:IsRunning() then return self.RunAnimation, self.RunAnimRate
     elseif self:IsSpeedMore(0, true) then return self.WalkAnimation, self.WalkAnimRate
     else return self.IdleAnimation, self.IdleAnimRate end
   end

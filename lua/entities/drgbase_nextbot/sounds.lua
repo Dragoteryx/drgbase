@@ -39,8 +39,4 @@ if SERVER then
     end
   end
 
-else
-
-
-
 end

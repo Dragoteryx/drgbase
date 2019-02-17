@@ -140,9 +140,7 @@ if SERVER then
     self.GrenadeThrowChance <= 1 and math.random(1/self.GrenadeThrowChance) == 1 then
       self:FaceEntity(enemy)
       self:ThrowGrenade(enemy:GetPos())
-    else
-      if not self:HasWeapon() then return end
-      if not self:IsWeaponReady() then return end
+    elseif self:CanWeaponPrimary() then
       self.loco:FaceTowards(enemy:GetPos())
       if not self:CanSeeEntity(enemy) then return end
       local tr = util.TraceLine({
@@ -151,7 +149,7 @@ if SERVER then
         filter = {self, self:GetWeapon()}
       })
       if IsValid(tr.Entity) and self:IsAlly(tr.Entity) then return end
-      self:WeaponPrimary()
+      if not self:WeaponPrimary() then self:WeaponReload() end
     end
   end
 
@@ -174,7 +172,7 @@ else
     }
     for i, walk in ipairs(walks) do
       for holdtype, act in pairs(walk) do
-        self:AddSequenceCallback(self:SelectRandomSequence(act), {0.3, 0.8}, function()
+        self:AddSequenceCallback(self:SelectRandomSequence(act), {0.28, 0.78}, function()
           if not self.FootstepSounds then return end
           self:EmitFootstep()
         end)

@@ -168,7 +168,6 @@ if SERVER then
       disposition = model, val = modelval
     })
     for faction, relationship in pairs(self._DrGBaseFactionRelationships) do
-      if relationship == nil then continue end
       if ent:IsPlayer() then
         if ent:DrG_IsInFaction(faction) then
           table.insert(relationships, relationship)
@@ -495,15 +494,21 @@ if SERVER then
 else
 
   function ENT:GetRelationship(ent, callback)
-    if IsValid(ent) then
-      net.DrG_UseCallback("DrGBaseNextbotEntityRelationship", {
-        nextbot = self:EntIndex(), ent = ent:EntIndex()
-      }, function(res)
-        if not IsValid(self) then return end
-        if not IsValid(ent) then callback(D_ER)
-        else callback(res) end
+    if callback == nil then
+      return drg_promise.New(function(resolve)
+        self:GetRelationship(ent, resolve)
       end)
-    else callback(D_ER) end
+    else
+      if IsValid(ent) then
+        net.DrG_UseCallback("DrGBaseNextbotEntityRelationship", {
+          nextbot = self:EntIndex(), ent = ent:EntIndex()
+        }, function(res)
+          if not IsValid(self) then return end
+          if not IsValid(ent) then callback(D_ER)
+          else callback(res) end
+        end)
+      else callback(D_ER) end
+    end
   end
 
 end

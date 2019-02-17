@@ -45,37 +45,40 @@ ENT.ReloadAnimations = {
 
 if SERVER then
 
-  function ENT:WeaponPrimary()
-    if not self:HasWeapon() then return false end
-    if self:HideWeapon() then return false end
+  function ENT:CanWeaponPrimary()
+    if self._DrGBaseReloading then return false end
+    if not self:IsWeaponReady() then return false end
     local wep = self:GetWeapon()
     if CurTime() < wep:GetNextPrimaryFire() then return false end
-    if self._DrGBaseReloading then return false end
-    if wep:CanPrimaryAttack() then
-      self:PlayAnimation(self.ShootAnimations[wep:GetHoldType()])
-      wep:PrimaryAttack()
-      return true
-    else
-      self:WeaponReload()
-      return false
-    end
+    if not wep:CanPrimaryAttack() then return false end
+    return true
   end
 
-  function ENT:WeaponSecondary()
-    if not self:HasWeapon() then return false end
-    if self:HideWeapon() then return false end
+  function ENT:WeaponPrimary()
+    if self:CanWeaponPrimary() then
+      local wep = self:GetWeapon()
+      self:PlayAnimation(self.ShootAnimations[wep:GetHoldType()])
+      wep:PrimaryAttack()
+      return wep:CanPrimaryAttack()
+    else return false end
+  end
+
+  function ENT:CanWeaponSecondary()
+    if self._DrGBaseReloading then return false end
+    if not self:IsWeaponReady() then return false end
     local wep = self:GetWeapon()
     if wep.IsDrGWeapon and not wep.Secondary.Enabled then return false end
     if CurTime() < wep:GetNextSecondaryFire() then return false end
-    if self._DrGBaseReloading then return false end
-    if wep:CanSecondaryAttack() then
+    if not wep:CanSecondaryAttack() then return false end
+    return true
+  end
+
+  function ENT:WeaponSecondary()
+    if self:CanWeaponSecondary() then
       self:PlayAnimation(self.ShootAnimations[wep:GetHoldType()])
       wep:SecondaryAttack()
-      return true
-    else
-      self:WeaponReload()
-      return false
-    end
+      return wep:CanSecondaryAttack()
+    else return false end
   end
 
   function ENT:WeaponReload()

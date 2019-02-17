@@ -173,9 +173,9 @@ if SERVER then
     if callback == nil then callback = function() end end
     return self:MoveToPos(ent:GetPos(), options, function(path)
       if not IsValid(ent) then return "invalid" end
-      local res = callback(path, options)
-      if not IsValid(ent) then return "invalid" end
+      local res = callback(path, options)    
       if isstring(res) then return res
+      elseif not IsValid(ent) then return "invalid"
       else return ent:GetPos() end
     end)
   end

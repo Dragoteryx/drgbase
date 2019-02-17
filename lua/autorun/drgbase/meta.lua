@@ -14,6 +14,20 @@ end
 function plyMETA:DrG_Possessing()
   return DrGBase.Nextbots.Possessing(self)
 end
+function plyMETA:DrG_SteamAvatar(callback, onerror)
+  if callback == nil then
+    return drg_promise.New(function(resolve, reject)
+      self:DrG_SteamAvatar(resolve, reject)
+    end)
+  else
+    http.Fetch("https://steamcommunity.com/profiles/"..self:SteamID64().."?xml=1", function(body)
+      -- fetch the avatar from the xml file
+      callback(avatar)
+    end, function(err)
+      if isfunction(onerror) then onerror(err) end
+    end)
+  end
+end
 
 function physMETA:DrG_ParabolicTrajectory(pos, options)
   local vec, data = math.DrG_ParabolicTrajectory(self:GetPos(), pos, options)

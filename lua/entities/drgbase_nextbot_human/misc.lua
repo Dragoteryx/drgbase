@@ -1,6 +1,6 @@
 
 function ENT:IsWeaponReady()
-  return self:HasWeapon() and self:GetDrGVar("DrGBaseWeaponReady")
+  return self:HasWeapon() and not self:HideWeapon() and self:GetDrGVar("DrGBaseWeaponReady")
 end
 
 function ENT:HideWeapon(bool)
