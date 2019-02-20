@@ -118,7 +118,7 @@ if SERVER then
       if attack.delay < 0 then attack.delay = 0 end
       attack.damage = attack.damage or 0
       attack.type = attack.type or DMG_GENERIC
-      attack.force = attack.force or self:GetForward()*attack.damage
+      attack.force = attack.force or Vector(attack.damage)
       attack.range = attack.range or self.EnemyReach
       attack.angle = attack.angle or 90
       self:Timer(attack.delay, function()
@@ -138,7 +138,17 @@ if SERVER then
             dmg:SetAttacker(self)
             dmg:SetDamage(damage)
             dmg:SetDamageType(attack.type)
-            dmg:SetDamageForce(attack.force)
+            dmg:SetReportedPosition(self:WorldSpaceCenter())
+            if attack.viewpunch and target:IsPlayer() then
+              target:ViewPunch(attack.viewpunch)
+            end
+            local force = self:GetForward()*attack.force.x +
+            self:GetRight()*attack.force.y +
+            self:GetUp()*attack.force.z
+            dmg:SetDamageForce(force)
+            target:SetVelocity(target:GetVelocity() + force)
+            local phys = target:GetPhysicsObject()
+            if IsValid(phys) then phys:AddVelocity(force) end
             target:TakeDamageInfo(dmg)
             if self:IsTarget(target) then table.insert(hit, target)
             else table.insert(collateral, target) end

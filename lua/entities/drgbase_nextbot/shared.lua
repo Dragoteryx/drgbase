@@ -433,9 +433,7 @@ if SERVER then
       table.RemoveByValue(DrGBase.Nextbots._Spawned, self)
       if self:IsPossessed() then self:Dispossess() end
       if self._DrGBaseAmbientSound ~= nil then
-        if isstring(self._DrGBaseAmbientSound) then
-          self:StopSound(self._DrGBaseAmbientSound)
-        else self:StopLoopingSound(self._DrGBaseAmbientSound) end
+        self:StopSound(self._DrGBaseAmbientSound)
         self._DrGBaseAmbientSound = nil
       end
       self:_Debug("remove.")
@@ -588,6 +586,10 @@ else
     self._DrGBaseLastAnimCycle = 0
     self:_BaseInitialize()
     self:CustomInitialize()
+    --[[self:CallOnRemove("DrGBaseCallOnRemove", function()
+      local music, slot = self:IsPlayingMusic()
+      if music then self:StopMusic(slot) end
+    end)]]
   end
   function ENT:_BaseInitialize() end
   function ENT:CustomInitialize() end

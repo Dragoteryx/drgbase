@@ -29,11 +29,15 @@ if SERVER then
       if self:IsCharging() then
         self._DrGBaseChargingEnt = ent
       end
+      if not ent:IsWorld() and IsValid(ent:GetPhysicsObject()) then
+        self:OnPhysContact(ent, ent:GetPhysicsObject())
+      end
       if ent:IsPlayer() then self:OnPlayerContact(ent)
       elseif ent:IsNPC() then self:OnNPCContact(ent)
       elseif ent.Type == "nextbot" then self:OnNextbotContact(ent)
-      elseif ent:GetClass() == "prop_physics" then
-        self:OnPropContact(ent)
+      elseif ent:IsWeapon() then self:OnWeaponContact(ent)
+      elseif ent:GetClass() == "prop_physics" then self:OnPropContact(ent)
+      elseif ent:IsRagdoll() then self:OnRagdollContact(ent)
       elseif ent:GetClass() == "prop_dynamic" or
       ent:GetClass() == "func_door" or
       ent:GetClass() == "prop_door_rotating" then
@@ -74,11 +78,13 @@ if SERVER then
       self:OnContactAny(ent)
     end
   end
+  function ENT:OnPhysContact() end
   function ENT:OnPlayerContact() end
   function ENT:OnNPCContact() end
   function ENT:OnNextbotContact() end
   function ENT:OnWeaponContact() end
   function ENT:OnPropContact() end
+  function ENT:OnRagdollContact() end
   function ENT:OnDoorContact() end
   function ENT:OnWorldContact() end
   function ENT:OnOtherContact() end
