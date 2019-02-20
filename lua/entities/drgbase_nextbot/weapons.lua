@@ -2,9 +2,24 @@
 function ENT:HasWeapon()
   return IsValid(self:GetWeapon())
 end
+function ENT:HaveWeapon()
+  return self:HasWeapon()
+end
 
 function ENT:GetWeapon()
   return self:GetDrGVar("DrGBaseWeapon")
+end
+
+function ENT:HideWeapon(bool)
+  if not self:HasWeapon() then return false end
+  local wep = self:GetWeapon()
+  if bool == nil then return wep:GetNoDraw()
+  elseif bool then wep:SetNoDraw(true)
+  else wep:SetNoDraw(false) end
+end
+
+function ENT:IsWeaponReady()
+  return self:HasWeapon() and not self:HideWeapon() and self:GetDrGVar("DrGBaseWeaponReady")
 end
 
 -- Used for shooting --
@@ -65,11 +80,14 @@ if SERVER then
   }
 
   function ENT:PickupWeapon(wep)
-    if wepReplace[wep:GetClass()] ~= nil then
-      self:GiveWeapon(wep:GetClass())
+    local class = wep:GetClass()
+    if wepReplace[class] then
       wep:Remove()
+      return self:GiveWeapon(class)
     elseif self:OnPickupWeapon(wep) ~= false then
-      wep:SetPos(self:GetAttachment(self:LookupAttachment(self.WeaponAttachmentRH)).Pos)
+      local attach = self:GetAttachment(self:LookupAttachment(self.WeaponAttachmentRH))
+      if attach == nil then return end
+      wep:SetPos(attach.Pos)
       wep:SetMoveType(MOVETYPE_NONE)
       wep:SetOwner(self)
     	wep:SetParent(self, self.WeaponAttachmentRH)
@@ -78,26 +96,27 @@ if SERVER then
       wep:SetClip1(wep:GetMaxClip1())
       wep:SetClip2(wep:GetMaxClip2())
       self:SetDrGVar("DrGBaseWeapon", wep)
+      return wep
     end
   end
   function ENT:OnPickupWeapon() end
 
-  function ENT:GiveWeapon(name)
+  function ENT:GiveWeapon(class)
     if not self.UseWeapons then return end
-    if IsValid(self:GetActiveWeapon()) then return end
-    local wep = ents.Create(wepReplace[name] or name)
+    if self:HasWeapon() then return end
+    local wep = ents.Create(wepReplace[class] or class)
     if not IsValid(wep) then return end
-    if wepReplace[name] ~= nil then
-      wep._DrGBaseWeaponDropReplace = name
+    if wepReplace[class] then
+      wep._DrGBaseWeaponDropReplace = class
     end
     wep:Spawn()
-    self:PickupWeapon(wep)
-    return wep
+    if self:PickupWeapon(wep) then return wep
+    else wep:Remove() end
   end
 
   function ENT:DropWeapon()
     if not self:HasWeapon() then return end
-    if self:IsDead() or self:OnDropWeapon(self:GetWeapon()) ~= false then
+    if self:OnDropWeapon(self:GetWeapon()) ~= false or self:IsDead() then
       local class = self:GetWeapon()._DrGBaseWeaponDropReplace or self:GetWeapon():GetClass()
       local pos = self:GetWeapon():GetPos()
       self:RemoveWeapon()
@@ -105,6 +124,7 @@ if SERVER then
       if not IsValid(wep) then return end
       wep:SetPos(pos)
       wep:Spawn()
+      return wep
     end
   end
   function ENT:OnDropWeapon() end
@@ -113,6 +133,65 @@ if SERVER then
     if not self:HasWeapon() then return end
     self:GetWeapon():Remove()
     self:SetDrGVar("DrGBaseWeapon", nil)
+  end
+
+  function ENT:ToggleWeaponReady(bool)
+    if bool == nil then self:ToggleWeaponReady(not self:IsWeaponReady())
+    elseif bool then self:SetDrGVar("DrGBaseWeaponReady", true)
+    else self:SetDrGVar("DrGBaseWeaponReady", false) end
+  end
+
+  -- Use weapons --
+
+  function ENT:CanWeaponPrimary()
+    if self._DrGBaseReloading then return false end
+    if not self:IsWeaponReady() then return false end
+    local wep = self:GetWeapon()
+    if CurTime() < wep:GetNextPrimaryFire() then return false end
+    if not wep:CanPrimaryAttack() then return false end
+    return true
+  end
+
+  function ENT:WeaponPrimary(anim)
+    if self:CanWeaponPrimary() then
+      local wep = self:GetWeapon()
+      self:PlayAnimation(anim)
+      wep:PrimaryAttack()
+      return wep:CanPrimaryAttack()
+    else return false end
+  end
+
+  function ENT:CanWeaponSecondary()
+    if self._DrGBaseReloading then return false end
+    if not self:IsWeaponReady() then return false end
+    local wep = self:GetWeapon()
+    if wep.IsDrGWeapon and not wep.Secondary.Enabled then return false end
+    if CurTime() < wep:GetNextSecondaryFire() then return false end
+    if not wep:CanSecondaryAttack() then return false end
+    return true
+  end
+
+  function ENT:WeaponSecondary(anim)
+    if self:CanWeaponSecondary() then
+      self:PlayAnimation(anim)
+      wep:SecondaryAttack()
+      return wep:CanSecondaryAttack()
+    else return false end
+  end
+
+  function ENT:WeaponReload(anim)
+    if self._DrGBaseReloading then return end
+    if not self:HasWeapon() then return end
+    if self:HideWeapon() then return end
+    local wep = self:GetWeapon()
+    self._DrGBaseReloading = true
+    self:Timer(self:PlayAnimation(anim) or 0, function()
+      self._DrGBaseReloading = false
+      if not self:HasWeapon() then return end
+      wep = self:GetWeapon()
+      wep:SetClip1(wep:GetMaxClip1())
+      wep:SetClip2(wep:GetMaxClip2())
+    end)
   end
 
   -- Hooks --

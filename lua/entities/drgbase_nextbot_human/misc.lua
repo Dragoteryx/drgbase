@@ -1,23 +1,5 @@
 
-function ENT:IsWeaponReady()
-  return self:HasWeapon() and not self:HideWeapon() and self:GetDrGVar("DrGBaseWeaponReady")
-end
-
-function ENT:HideWeapon(bool)
-  if not self:HasWeapon() then return end
-  local wep = self:GetWeapon()
-  if bool == nil then return wep:GetNoDraw()
-  elseif bool then wep:SetNoDraw(true)
-  else wep:SetNoDraw(false) end
-end
-
 if SERVER then
-
-  function ENT:ToggleWeaponReady(bool)
-    if bool == nil then self:ToggleWeaponReady(not self:IsWeaponReady())
-    elseif bool then self:SetDrGVar("DrGBaseWeaponReady", true)
-    else self:SetDrGVar("DrGBaseWeaponReady", false) end
-  end
 
   function ENT:ThrowGrenade(pos, class, callback)
     if CurTime() < self._DrGBaseGrenadeThrowDelay then return end
@@ -50,9 +32,5 @@ if SERVER then
       phys:DrG_ParabolicTrajectory(pos, {maxmagnitude = self.MaxGrenadeThrow*self:GetScale()})
     end)
   end
-
-else
-
-
 
 end

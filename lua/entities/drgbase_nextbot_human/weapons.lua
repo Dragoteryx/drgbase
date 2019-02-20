@@ -45,54 +45,14 @@ ENT.ReloadAnimations = {
 
 if SERVER then
 
-  function ENT:CanWeaponPrimary()
-    if self._DrGBaseReloading then return false end
-    if not self:IsWeaponReady() then return false end
-    local wep = self:GetWeapon()
-    if CurTime() < wep:GetNextPrimaryFire() then return false end
-    if not wep:CanPrimaryAttack() then return false end
-    return true
-  end
-
-  function ENT:WeaponPrimary()
-    if self:CanWeaponPrimary() then
-      local wep = self:GetWeapon()
-      self:PlayAnimation(self.ShootAnimations[wep:GetHoldType()])
-      wep:PrimaryAttack()
-      return wep:CanPrimaryAttack()
-    else return false end
-  end
-
-  function ENT:CanWeaponSecondary()
-    if self._DrGBaseReloading then return false end
-    if not self:IsWeaponReady() then return false end
-    local wep = self:GetWeapon()
-    if wep.IsDrGWeapon and not wep.Secondary.Enabled then return false end
-    if CurTime() < wep:GetNextSecondaryFire() then return false end
-    if not wep:CanSecondaryAttack() then return false end
-    return true
-  end
-
-  function ENT:WeaponSecondary()
-    if self:CanWeaponSecondary() then
-      self:PlayAnimation(self.ShootAnimations[wep:GetHoldType()])
-      wep:SecondaryAttack()
-      return wep:CanSecondaryAttack()
-    else return false end
-  end
-
-  function ENT:WeaponReload()
+  function ENT:GetShootAnimation()
     if not self:HasWeapon() then return end
-    if self:HideWeapon() then return end
-    local wep = self:GetWeapon()
-    if self._DrGBaseReloading then return end
-    self._DrGBaseReloading = true
-    self:Timer(self:PlayAnimation(self.ReloadAnimations[wep:GetHoldType()]) or 0, function()
-      self._DrGBaseReloading = false
-      if not self:HasWeapon() then return end
-      wep:SetClip1(wep:GetMaxClip1())
-      wep:SetClip2(wep:GetMaxClip2())
-    end)
+    return self.ShootAnimations[self:GetWeapon():GetHoldType()]
+  end
+
+  function ENT:GetReloadAnimation()
+    if not self:HasWeapon() then return end
+    return self.ReloadAnimations[self:GetWeapon():GetHoldType()]
   end
 
 end

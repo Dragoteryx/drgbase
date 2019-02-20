@@ -23,13 +23,6 @@ end
 local old_EyeAngles = entMETA.EyeAngles
 function entMETA:EyeAngles()
   if self.IsDrGNextbot then
-    if isstring(self.EyeBone) then
-      local boneid = self:LookupBone(self.EyeBone)
-      if boneid ~= nil then
-        local pos, angle = self:GetBonePosition(boneid)
-        return angle + self.EyeAngle
-      end
-    end
     return self:GetAngles() + self.EyeAngle
   else return old_EyeAngles(self) end
 end

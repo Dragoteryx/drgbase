@@ -5,6 +5,9 @@ end
 function ENT:HaveEnemy()
   return IsValid(self:GetEnemy())
 end
+function ENT:HasEnemy()
+  return self:HaveEnemy()
+end
 
 function ENT:GetDestination()
   return self:GetDrGVar("DrGBaseDestination")

@@ -1,6 +1,5 @@
 
 function math.DrG_ParabolicTrajectory(start, endpos, options)
-  data = data or 1
   options = options or {}
   if options.recursive == nil then
     options.recursive = (options.pitch == nil and options.magnitude == nil)

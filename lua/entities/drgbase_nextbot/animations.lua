@@ -35,44 +35,6 @@ end
 
 if SERVER then
 
-  function ENT:BodyUpdate()
-    if self.AnimationType == DRGBASE_ANIMTYPE_FORWARD then
-      self:SetPoseParameter("move_x", 1)
-      self:SetPoseParameter("move_y", 0)
-      self:FrameAdvance()
-    elseif self.AnimationType == DRGBASE_ANIMTYPE_DIRECTION then
-      if self:IsPossessed() then
-        local moveX = math.Round(self:GetPoseParameter("move_x"), 1)
-        local moveY = math.Round(self:GetPoseParameter("move_y"), 1)
-        if self:IsMovingForward() then
-          self:SetPoseParameter("move_x", moveX+0.1)
-        elseif self:IsMovingBackward() then
-          self:SetPoseParameter("move_x", moveX-0.1)
-        elseif moveX > 0 then
-          self:SetPoseParameter("move_x", moveX-0.1)
-        elseif moveX < 0 then
-          self:SetPoseParameter("move_x", moveX+0.1)
-        end
-        if self:IsMovingRight() then
-          self:SetPoseParameter("move_y", moveY+0.1)
-        elseif self:IsMovingLeft() then
-          self:SetPoseParameter("move_y", moveY-0.1)
-        elseif moveY > 0 then
-          self:SetPoseParameter("move_y", moveY-0.1)
-        elseif moveY < 0 then
-          self:SetPoseParameter("move_y", moveY+0.1)
-        end
-      else
-        self:SetPoseParameter("move_x", 1)
-        self:SetPoseParameter("move_y", 0)
-      end
-      self:FrameAdvance()
-    elseif not self:IsClimbing() and self:IsOnGround() and not self._DrGBaseDisableBMXY and
-    self.AnimationType == DRGBASE_ANIMTYPE_BODYMOVEXY then
-      self:BodyMoveXY()
-    else self:FrameAdvance() end
-  end
-
   function ENT:PlaySequenceAndWait(seq, speed, callback)
     if seq == nil then return end
     if isstring(seq) then seq = self:LookupSequence(seq) end
@@ -248,13 +210,38 @@ if SERVER then
     end
     self._DrGBaseLastAnimCycle = self:GetCycle()
     if self:EnableUpdateAnimation() then
-      self:SetPlaybackRate(rate or 1)
+      if self.AnimMatchSpeed and self:IsOnGround() and not self:IsClimbing() then
+        local velocity = self.loco:GetGroundMotionVector()
+        if velocity:IsZero() then self:SetPlaybackRate(rate or 1)
+        else
+          local speed = self:Speed()
+          local sequence = self:GetSequenceGroundSpeed(seq)
+          if sequence == 0 then self:SetPlaybackRate(rate or 1)
+          else self:SetPlaybackRate(speed/sequence) end
+        end
+      else self:SetPlaybackRate(rate or 1) end
     end
     if seq ~= nil and seq ~= -1 and (seq ~= self:GetSequence() or self:GetCycle() == 1) then
       self:ResetSequence(seq)
       self._DrGBaseAnimationSeed = math.random(0, 255)
     end
+    if self.AnimMatchDirection then
+      local currseq = self:GetSequenceName(self:GetSequence())
+      local velocity = self.loco:GetGroundMotionVector()
+      local moveX = (-(math.DrG_DegreeAngle(velocity, self:GetForward())-90))/45
+      if moveX > 1 then moveX = 1
+      elseif moveX < -1 then moveX = -1 end
+      if self:ShouldReverseMoveX(currseq) then moveX = -moveX end
+      if moveX == moveX then self:SetPoseParameter("move_x", moveX) end
+      local moveY = (-(math.DrG_DegreeAngle(velocity, self:GetRight())-90))/45
+      if moveY > 1 then moveY = 1
+      elseif moveY < -1 then moveY = -1 end
+      if self:ShouldReverseMoveY(currseq) then moveY = -moveY end
+      if moveY == moveY then self:SetPoseParameter("move_y", moveY) end
+    end
   end
+  function ENT:ShouldReverseMoveX() end
+  function ENT:ShouldReverseMoveY() end
 
   function ENT:UpdateAnimation()
     if self:IsFlying() then

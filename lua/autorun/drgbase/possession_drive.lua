@@ -12,9 +12,8 @@ drive.Register("drive_drgbase_nextbot", {
     if CLIENT then return end
     if not self.Entity.IsDrGNextbot then return end
     self.Player:SetObserverMode(OBS_MODE_CHASE)
-    if self.Entity:PossessionBlockRotation() then return end
+    if self.Entity:PossessionBlockYaw() then return end
     if not self.Entity:CanMove(self.Player) then return end
-    if self.Entity:IsClimbing() then return end
     local origin, angles = self.Entity:PossessorView()
     local selfangles = self.Entity:GetAngles()
     selfangles.y = angles.y

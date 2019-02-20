@@ -89,6 +89,20 @@ function ENT:PrintBones()
     print(i.." => "..bonename)
   end
 end
+function ENT:PrintAttachments()
+  for i, attach in ipairs(self:GetAttachments()) do
+    print(attach.id.." => "..attach.name)
+  end
+end
+
+function ENT:RandomBodygroup(id)
+  self:SetBodygroup(id, math.random(0, self:GetBodygroupCount(id)-1))
+end
+function ENT:RandomBodygroups()
+  for i, bodygroup in ipairs(self:GetBodyGroups()) do
+    self:RandomBodygroup(bodygroup.id)
+  end
+end
 
 if SERVER then
   util.AddNetworkString("DrGBaseData")

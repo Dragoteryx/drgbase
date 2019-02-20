@@ -2,7 +2,6 @@ if not DrGBase then return end -- return if DrGBase isn't installed
 ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
 
 -- Misc --
-ENT.AnimationType = DRGBASE_ANIMTYPE_BODYMOVEXY
 ENT.FootstepSounds = true
 
 -- Stats --
@@ -17,7 +16,7 @@ ENT.ClimbAnimation = ACT_ZOMBIE_CLIMB_UP
 ENT.StopClimb = 112.5
 ENT.StopClimbAnimation = ACT_ZOMBIE_CLIMB_END
 
--- Relationships --
+-- AI --
 ENT.EnemyReach = 1500
 ENT.EnemyStop = 750
 ENT.EnemyAvoid = 375
@@ -40,7 +39,6 @@ end
 -- Detection --
 ENT.EyeBone = "ValveBiped.Bip01_Head1"
 ENT.EyeOffset = Vector(5, 0, 2.5)
-ENT.EyeAngle = Angle(75, 0, 0)
 
 -- Possession --
 ENT.PossessionEnabled = true
@@ -65,9 +63,11 @@ ENT.PossessionBinds = {
   },
   {
     bind = IN_JUMP,
-    coroutine = true,
+    coroutine = false,
     onkeydown = function(self)
-      self:QuickJump(100)
+      if not self:IsOnGround() then return end
+      self:EmitFootstep()
+      self:QuickJump(50)
     end
   },
   {
@@ -76,7 +76,8 @@ ENT.PossessionBinds = {
     onkeydown = function(self)
       if not self:HasWeapon() then return end
       if not self:IsWeaponReady() then return end
-      self:WeaponPrimary()
+      if not self:CanWeaponPrimary() then return end
+      if not self:WeaponPrimary(self:GetShootAnimation()) then self:WeaponReload(self:GetReloadAnimation()) end
     end
   },
   {
@@ -108,7 +109,6 @@ if SERVER then
   function ENT:_BaseInitialize()
     self._DrGBaseGrenadeThrowDelay = 0
     self:SetDrGVar("DrGBaseCrouching", false)
-    self:SetDrGVar("DrGBaseWeaponReady", false)
   end
   function ENT:_BaseThink()
     if not self:IsPossessed() then
@@ -141,15 +141,15 @@ if SERVER then
       self:FaceEntity(enemy)
       self:ThrowGrenade(enemy:GetPos())
     elseif self:CanWeaponPrimary() then
-      self.loco:FaceTowards(enemy:GetPos())
-      if not self:CanSeeEntity(enemy) then return end
+      self:FaceTowardsEntity(enemy)
       local tr = util.TraceLine({
         start = self:GetShootPos(),
         endpos = self:GetShootPos() + self:GetAimVector()*999999999,
         filter = {self, self:GetWeapon()}
       })
-      if IsValid(tr.Entity) and self:IsAlly(tr.Entity) then return end
-      if not self:WeaponPrimary() then self:WeaponReload() end
+      if IsValid(tr.Entity) and tr.Entity:EntIndex() ~= enemy:EntIndex() and self:IsAlly(tr.Entity) then return end
+      if not self:CanSeeEntity(enemy) then return end
+      if not self:WeaponPrimary(self:GetShootAnimation()) then self:WeaponReload(self:GetReloadAnimation()) end
     end
   end
 

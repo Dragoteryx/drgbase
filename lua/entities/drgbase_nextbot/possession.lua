@@ -41,21 +41,22 @@ function ENT:PossessorView(view)
       center = self:GetBonePosition(boneid)
     end
   end
-  local offset = center +
-  self:GetForward()*view.offset.x*self:GetModelScale() +
-  self:GetRight()*view.offset.y*self:GetModelScale() +
-  self:GetUp()*view.offset.z*self:GetModelScale()
+  local offset = view.offset or Vector(0, 0, 0)
+  local origin = center +
+  self:GetForward()*offset.x*self:GetModelScale() +
+  self:GetRight()*offset.y*self:GetModelScale() +
+  self:GetUp()*offset.z*self:GetModelScale()
   local tr1 = util.TraceLine({
     start = center,
-    endpos = offset,
+    endpos = origin,
     collisiongroup = COLLISION_GROUP_IN_VEHICLE
   })
-  if tr1.HitWorld then offset = tr1.HitPos + tr1.Normal*-10 end
-  local distance = view.distance
+  if tr1.HitWorld then origin = tr1.HitPos + tr1.Normal*-10 end
+  local distance = view.distance or 1
   if distance < 1 then distance = 1 end
-  local endpos = offset + angles:Forward()*distance*self:GetModelScale()
+  local endpos = origin + angles:Forward()*distance*self:GetModelScale()
   local tr2 = util.TraceLine({
-    start = offset,
+    start = origin,
     endpos = endpos,
     collisiongroup = COLLISION_GROUP_IN_VEHICLE
   })
@@ -200,10 +201,10 @@ if SERVER then
     else self._DrGBaseBlockInput = false end
   end
 
-  function ENT:PossessionBlockRotation(bool)
-    if bool == nil then return self._DrGBaseBlockRotation
-    elseif bool then self._DrGBaseBlockRotation = true
-    else self._DrGBaseBlockRotation = false end
+  function ENT:PossessionBlockYaw(bool)
+    if bool == nil then return self._DrGBaseBlockYaw
+    elseif bool then self._DrGBaseBlockYaw = true
+    else self._DrGBaseBlockYaw = false end
   end
 
   function ENT:_HandlePossessionThink()

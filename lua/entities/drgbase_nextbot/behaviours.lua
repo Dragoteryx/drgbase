@@ -76,17 +76,21 @@ if SERVER then
     self._DrGBaseCharging = true
     local speedfetch = self:EnableUpdateSpeed()
     self:EnableUpdateSpeed(false)
+    local blockyaw = self:PossessionBlockYaw()
+    self:PossessionBlockYaw(true)
     if speed ~= nil then self:SetSpeed(speed) end
     if callback == nil then callback = function() end end
     local now = CurTime()
     while true and not self:IsDying() do
       if callback(CurTime() - now, self._DrGBaseChargingEnt) then break end
+      self._DrGBaseChargingEnt = nil
       self:GoForward()
       coroutine.yield()
     end
     self:EnableUpdateSpeed(speedfetch)
-    self._DrGBaseCharging = false
+    self:PossessionBlockYaw(blockyaw)
     self._DrGBaseChargingEnt = nil
+    self._DrGBaseCharging = false
   end
 
   -- Attacks --
@@ -117,25 +121,29 @@ if SERVER then
       attack.force = attack.force or self:GetForward()*attack.damage
       attack.range = attack.range or self.EnemyReach
       attack.angle = attack.angle or 90
-      if attack.lineofsight == nil then attack.lineofsight = true end
       self:Timer(attack.delay, function()
         if not attack._cooldown then
           local hit = {}
+          local collateral = {}
           for i, target in ipairs(ents.FindInSphere(self:GetPos(), attack.range*self:GetScale())) do
             if target:EntIndex() == self:EntIndex() then continue end
             if self:IsPossessed() and self:GetPossessor():EntIndex() == target:EntIndex() then continue end
             if self:IsAlly(target) and (not attack.friendlyfire or self:IsPossessed()) then continue end
             if self:AngleEntity(target) > attack.angle/2 then continue end
-            if attack.lineofsight and not self:CanSeeEntity(target) then continue end
+            if not self:Visible(target) then continue end
+            local damage
+            if attack.healthpercentage ~= nil then damage = target:Health()*attack.healthpercentage end
+            if damage == nil or damage < attack.damage then damage = attack.damage end
             local dmg = DamageInfo()
             dmg:SetAttacker(self)
-            dmg:SetDamage(attack.damage)
+            dmg:SetDamage(damage)
             dmg:SetDamageType(attack.type)
             dmg:SetDamageForce(attack.force)
             target:TakeDamageInfo(dmg)
-            table.insert(hit, target)
+            if self:IsTarget(target) then table.insert(hit, target)
+            else table.insert(collateral, target) end
           end
-          onattack(hit, i, attack)
+          onattack(hit, i, attack, collateral)
         end
         if i == #attacks then
           self._DrGBaseAttacking = false
@@ -143,9 +151,14 @@ if SERVER then
       end)
     end
     if options.animation ~= nil then
-      if options.gesture then self:PlayAnimation(options.animation, options.rate)
-      elseif options.movement then self:PlayAnimationAndMove(options.animation, options.rate)
-      else self:PlayAnimationAndWait(options.animation, options.rate) end
+      local animation = options.animation
+      if istable(animation) then
+        if #animation == 0 then return end
+        animation = animation[math.random(#animation)]
+      end
+      if options.gesture then self:PlayAnimation(animation, options.rate)
+      elseif options.movement then self:PlayAnimationAndMove(animation, options.rate)
+      else self:PlayAnimationAndWait(animation, options.rate) end
     end
   end
 
@@ -168,7 +181,7 @@ if SERVER then
   end
 
   function ENT:CallRandomAttack()
-    if #self._DrGBaseDefinedAttacks == 0 then return end
+    if table.Count(self._DrGBaseDefinedAttacks) == 0 then return end
     local attack, name = table.Random(self._DrGBaseDefinedAttacks)
     self:CallAttack(name)
   end

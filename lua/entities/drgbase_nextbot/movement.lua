@@ -27,7 +27,7 @@ function ENT:IsMoving()
 end
 
 function ENT:IsRunning()
-  return self:IsSpeedMore(self.WalkSpeed*1.1, true)
+  return self:IsSpeedMore(self.WalkSpeed*1.5, true)
 end
 
 function ENT:IsClimbing()
@@ -173,7 +173,7 @@ if SERVER then
     if callback == nil then callback = function() end end
     return self:MoveToPos(ent:GetPos(), options, function(path)
       if not IsValid(ent) then return "invalid" end
-      local res = callback(path, options)    
+      local res = callback(path, options)
       if isstring(res) then return res
       elseif not IsValid(ent) then return "invalid"
       else return ent:GetPos() end
@@ -240,6 +240,8 @@ if SERVER then
     if self:IsClimbing() then return end
     if self:OnStartClimbing(ladder) == false then return end
     self:SetDrGVar("DrGBaseClimbing", true)
+    local blockyaw = self:PossessionBlockYaw()
+    self:PossessionBlockYaw(true)
     self:PlayAnimationAndMove(self.StartClimbAnimation, self.StartClimbAnimRate, function()
       return self:WhileClimbing(ladder, "start", self:GetCycle())
     end)
@@ -257,6 +259,7 @@ if SERVER then
     local pos = self:GetPos()
     self:SetPos(navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos))
     self:SetDrGVar("DrGBaseClimbing", false)
+    self:PossessionBlockYaw(blockyaw)
   end
   function ENT:OnStartClimbing(ladder) end
   function ENT:WhileClimbing(ladder) end

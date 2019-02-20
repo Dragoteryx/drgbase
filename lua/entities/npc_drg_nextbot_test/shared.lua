@@ -8,7 +8,6 @@ ENT.Category = "DrGBase"
 ENT.Models = {
   "models/player/gman_high.mdl"
 }
-ENT.AnimationType = DRGBASE_ANIMTYPE_BODYMOVEXY
 
 -- Stats --
 ENT.FallDamage = true
@@ -19,7 +18,7 @@ ENT.WalkAnimation = ACT_HL2MP_WALK
 ENT.IdleAnimation = "menu_gman"
 ENT.JumpAnimation = ACT_HL2MP_JUMP_KNIFE
 
--- Relationships --
+-- AI --
 ENT.Factions = {}
 ENT.EnemyReach = 250
 ENT.EnemyStop = 125

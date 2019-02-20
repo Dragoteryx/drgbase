@@ -27,8 +27,8 @@ ENT.Models = {"models/player/kleiner.mdl"}
 ENT.Skins = {0}
 ENT.ModelScale = 1
 ENT.RagdollOnDeath = true
-ENT.AnimationType = DRGBASE_ANIMTYPE_DIRECTION
-ENT.AmbientSounds = {}
+ENT.AnimMatchSpeed = true
+ENT.AnimMatchDirection = true
 ENT.HeadYaw = "head_yaw"
 ENT.HeadPitch = "head_pitch"
 ENT.AimYaw = "aim_yaw"
@@ -37,6 +37,7 @@ ENT.Killicon = {
   icon = "HUD/killicons/default",
   color = Color(255, 80, 0, 255)
 }
+ENT.AmbientSounds = {}
 ENT.Footsteps = {
   [MAT_ANTLION] = {
     "physics/flesh/flesh_impact_hard1.wav",
@@ -220,7 +221,7 @@ ENT.FlightBackward = false
 ENT.FlightUp = false
 ENT.FlightDown = false
 
--- Relationships --
+-- AI --
 ENT.Factions = {}
 ENT.AlliedWithSelfFactions = true
 ENT.CommunicateWithAllies = false
@@ -327,7 +328,7 @@ if SERVER then
     self._DrGBaseLastAnimCycle = 0 -- for animation callbacks
     self._DrGBasePossessionThinkDelay = 0 -- possession think delay
     self._DrGBaseHitGroups = {} -- list of hitgroups
-    self._DrGBaseBlockRotation = false -- block rotation
+    self._DrGBaseBlockYaw = false -- block rotation
     self._DrGBaseBlockInput = false -- block input
     self._DrGBaseOnContactDelay = 0 -- to avoid lag
     self._DrGBaseSlottedSounds = {} -- slotted sounds
@@ -337,6 +338,7 @@ if SERVER then
     self._DrGBaseAnimationSeed = math.random(0, 255) -- to pick a random sequence
     self._DrGBaseDisableBMXY = false -- disable bodymovexy
     self._DrGBasePitch = 0 -- flying pitch, 0 by default
+    self._DrGBaseThinkDelay = 0 -- limit think calls
     self:DefineHitGroup(HITGROUP_HEAD, {
       "ValveBiped.Bip01_Neck1",
       "ValveBiped.Bip01_Head1",
@@ -422,22 +424,25 @@ if SERVER then
     self:SetDrGVar("DrGBasePossessionView", 1)
     self:SetDrGVar("DrGBaseClimbing", false)
     self:SetDrGVar("DrGBaseFlying", false)
+    self:SetDrGVar("DrGBaseWeaponReady", false)
     self:ResetRelationships() -- sets the factions
     if self.UseWeapons and #self.Weapons > 0 then
       self:GiveWeapon(self.Weapons[math.random(#self.Weapons)])
     end
-    self:_BaseInitialize()
-    self:CustomInitialize()
-    self:RefreshTargets()
     self:CallOnRemove("DrGBaseCallOnRemove", function()
       table.RemoveByValue(DrGBase.Nextbots._Spawned, self)
       if self:IsPossessed() then self:Dispossess() end
       if self._DrGBaseAmbientSound ~= nil then
-        self:StopLoopingSound(self._DrGBaseAmbientSound)
+        if isstring(self._DrGBaseAmbientSound) then
+          self:StopSound(self._DrGBaseAmbientSound)
+        else self:StopLoopingSound(self._DrGBaseAmbientSound) end
         self._DrGBaseAmbientSound = nil
       end
       self:_Debug("remove.")
     end)
+    self:_BaseInitialize()
+    self:CustomInitialize()
+    self:RefreshTargets()
     table.insert(DrGBase.Nextbots._Spawned, self)
   end
   function ENT:_BaseInitialize() end
@@ -447,9 +452,9 @@ if SERVER then
 
   function ENT:Think()
     self:_HandleCustomHooks()
+    self:_HandleAnimations()
     self:_HandleMovement()
     self:_HandleFlight()
-    self:_HandleAnimations()
     self:_HandlePossessionThink()
     self:_HandleAmbientSounds()
     self:_HandleHealthRegen()
