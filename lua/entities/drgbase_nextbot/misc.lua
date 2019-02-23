@@ -1,9 +1,4 @@
 
-function ENT:_Debug(text)
-  if not GetConVar("developer"):GetBool() then return end
-  DrGBase.Print("Nextbot '"..self:GetClass().."' ("..self:EntIndex().."): "..text)
-end
-
 function ENT:Timer(delay, callback)
   timer.Simple(delay, function()
     if not IsValid(self) then return end
@@ -104,21 +99,65 @@ function ENT:RandomBodygroups()
   end
 end
 
+function ENT:CollisionHulls(distance, forwardOnly)
+  distance = distance or 5
+  if distance < 0 then distance = 0 end
+  local bound1, bound2 = self:GetCollisionBounds()
+  if bound1.z < bound2.z then
+    local temp = bound1
+    bound1 = bound2
+    bound2 = temp
+  end
+  bound2.z = self.loco:GetStepHeight()
+  local center = self:GetPos() + (bound1 + bound2)/2
+  center.z = self:GetPos().z
+  local data = {
+    start = center,
+    filter = {self, self:GetWeapon(), self:GetEnemy()},
+    collisiongroup = self:GetCollisionGroup(),
+    mask = self:GetSolidMask(),
+    maxs = bound1, mins = bound2
+  }
+  data.endpos = center + self:GetForward()*distance + self:GetRight()*-distance
+  local trNW = util.TraceHull(data)
+  data.endpos = center + self:GetForward()*distance + self:GetRight()*distance
+  local trNE = util.TraceHull(data)
+  if forwardOnly then
+    return {
+      NorthWest = trNW,
+      NorthEast = trNE
+    }
+  else
+    data.endpos = center + self:GetForward()*-distance + self:GetRight()*distance
+    local trSE = util.TraceHull(data)
+    data.endpos = center + self:GetForward()*-distance + self:GetRight()*-distance
+    local trSW = util.TraceHull(data)
+    return {
+      NorthWest = trNW,
+      NorthEast = trNE,
+      SouthEast = trSE,
+      SouthWest = trSW
+    }
+  end
+end
+
 if SERVER then
   util.AddNetworkString("DrGBaseData")
 
   function ENT:RandomPos(maxradius, minradius)
-    local pos = util.DrG_RandomPos(self:GetPos(), maxradius, minradius)
-    if pos == nil then return self:GetPos()
-    else return pos end
+    return util.DrG_RandomPos(self:GetPos(), maxradius, minradius)
   end
 
   function ENT:Kill(attacker, inflictor)
     local dmg = DamageInfo()
     dmg:SetDamage(self:Health())
-    if attacker ~= nil then dmg:SetAttacker(attacker) end
-    if inflictor ~= nil then dmg:SetInflictor(inflictor) end
+    dmg:SetAttacker(attacker or self)
+    dmg:SetInflictor(inflictor or self)
     self:TakeDamageInfo(dmg)
+  end
+  function ENT:KillSilent(attacker, inflictor)
+    self._DrGBaseKillSilent = true
+    self:Kill(attacker, inflictor)
   end
 
   hook.Add("PhysgunDrop", "DrGBaseNextbotPhysgunDrop", function(ply, ent)
@@ -139,18 +178,23 @@ if SERVER then
   end
 
   function ENT:DefineHitGroup(name, bones)
+    if self._DrGBaseHitGroups[name] ~= nil then self:RemoveHitGroup(name) end
     if not istable(bones) then bones = {bones} end
     self._DrGBaseHitGroups[name] = {}
     for i, bone in ipairs(bones) do
       if isstring(bone) then bone = self:LookupBone(bone) end
       if not isnumber(bone) then continue end
       self._DrGBaseHitGroups[name][bone] = true
+      self._DrGBaseNbHitGroups = self._DrGBaseNbHitGroups + 1
     end
   end
   function ENT:RemoveHitGroup(name)
+    if self._DrGBaseHitGroups[name] == nil then return end
     self._DrGBaseHitGroups[name] = nil
+    self._DrGBaseNbHitGroups = self._DrGBaseNbHitGroups - 1
   end
   function ENT:FetchHitGroups(dmg)
+    if self._DrGBaseNbHitGroups == 0 then return {}, "" end
     local pos = dmg:GetDamagePosition()
     local closestbone = nil
     local dist = math.huge
@@ -186,15 +230,36 @@ if SERVER then
     self:_Debug("sent data: '"..name.."'.")
   end
 
+  function ENT:TraceHull(data)
+    local bound1, bound2 = self:GetCollisionBounds()
+    if bound1.z < bound2.z then
+      local temp = bound1
+      bound1 = bound2
+      bound2 = temp
+    end
+    data = data or {}
+    data.maxs = bound1
+    data.mins = bound2
+    return util.TraceHull(data)
+  end
+
   -- Handlers --
 
   function ENT:_HandleHealthRegen()
     if CurTime() < self._DrGBaseHealthRegenDelay then return end
-    self._DrGBaseHealthRegenDelay = CurTime() + (1/self.HealthRegen)
-    local health = self:Health() + 1
-    if health < 0 then health = 0 end
-    if health > self:GetMaxHealth() then health = self:GetMaxHealth() end
-    self:SetHealth(health)
+    self._DrGBaseHealthRegenDelay = CurTime() + 1
+    if self.HealthRegen > 0 then
+      local health = self:Health() + self.HealthRegen
+      if health > self:GetMaxHealth() then health = self:GetMaxHealth() end
+      self:SetHealth(health)
+    elseif self.HealthRegen < 0 then
+      local dmg = DamageInfo()
+      dmg:SetDamage(self.HealthRegen)
+      dmg:SetAttacker(self)
+      dmg:SetInflictor(self)
+      dmg:SetDamageType(DMG_DIRECT)
+      self:TakeDamageInfo(dmg)
+    end
   end
 
 else

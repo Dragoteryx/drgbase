@@ -13,7 +13,6 @@ ENT.CrouchSpeed = 50
 -- Climbing --
 ENT.ClimbLadders = true
 ENT.ClimbAnimation = ACT_ZOMBIE_CLIMB_UP
-ENT.StopClimb = 112.5
 ENT.StopClimbAnimation = ACT_ZOMBIE_CLIMB_END
 
 -- AI --
@@ -154,6 +153,9 @@ if SERVER then
   end
 
   -- Hooks
+  function ENT:OnStartClimbing()
+    return 112.5
+  end
   function ENT:WhileClimbing(ladder, state, data)
     if IsValid(ladder) then
       if state == "climb" or data < 0.5 then

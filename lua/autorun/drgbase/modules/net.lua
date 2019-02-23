@@ -5,6 +5,7 @@ function net.DrG_DefineCallback(name, callback)
 end
 local reqID = 0
 function net.DrG_UseCallback(name, data, callback, ply)
+  if not isstring(name) then return end
   if SERVER and (not IsValid(ply) or not ply:IsPlayer()) then return end
   local currID = reqID
   reqID = reqID+1
@@ -15,7 +16,7 @@ function net.DrG_UseCallback(name, data, callback, ply)
   end)
   net.Start("DrGBaseNetCallbackRequest")
   local compressed = util.Compress(util.TableToJSON({
-    reqID = reqID,
+    reqID = currID,
     name = name,
     data = data
   }))

@@ -20,17 +20,20 @@ function pathMETA:DrG_Compute(nextbot, pos, generator)
   		local deltaZ = fromArea:ComputeAdjacentConnectionHeightChange(area)
       if deltaZ < -nextbot.loco:GetDeathDropHeight() then
   			return -1
-      elseif not IsValid(ladder) and deltaZ >= nextbot.loco:GetStepHeight() then
-  			if deltaZ >= nextbot.loco:GetMaxJumpHeight() then
-  				return -1
+      elseif deltaZ >= nextbot.loco:GetStepHeight() then
+        if not IsValid(ladder) and deltaZ >= nextbot.loco:GetMaxJumpHeight() then
+          if nextbot.ClimbWalls then
+            if deltaZ > nextbot.ClimbWallsMaxHeight or deltaZ < nextbot.ClimbWallsMinHeight then
+              return -1
+            end
+  				else return -1 end
   			end
-  			local jumpPenalty = 5
-  			cost = cost + jumpPenalty * dist
+  			cost = cost + dist
   		end
   		return cost
   	end end
     nextbot._DrGBaseLastComputeInfraction = nextbot._DrGBaseLastComputeInfraction or 0
-  	if CurTime() < nextbot._DrGBaseLastComputeInfraction + 2 then return false end
+  	if CurTime() < nextbot._DrGBaseLastComputeInfraction + 7 then return false end
   	local now = CurTime()
   	local compute = self:Compute(nextbot, pos, generator)
   	if CurTime() - now > 0.005 then

@@ -46,7 +46,7 @@ function ENT:PlayMusic(music, fade)
       self:StopMusic()
     end)
     return true, sound
-  else
+  elseif current.ent:EntIndex() ~= self:EntIndex() then
     if not istable(music) then music = {music} end
     self._DrGBaseWantToPlayMusic = music
     self._DrGBaseWantToPlayMusicCheck = {}
@@ -57,6 +57,8 @@ function ENT:PlayMusic(music, fade)
   end
 end
 function ENT:StopMusic()
+  self._DrGBaseWantToPlayMusic = nil
+  self._DrGBaseWantToPlayMusicCheck = nil
   if current == nil or current.stopping then return end
   if current.ent:EntIndex() ~= self:EntIndex() then return end
   for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
@@ -81,6 +83,9 @@ function ENT:StopMusic()
     end
   end
 end
+hook.Add("Think", "DrGBasePlayMusic", function()
+  if current ~= nil and not current.stopping and not current.sound:IsPlaying() then current.sound:Play() end
+end)
 
 if SERVER then
 

@@ -1,32 +1,4 @@
 
-function ENT:LineOfSight(ent, fov, range)
-  if not IsValid(ent) then return false end
-  if self:EntIndex() == ent:EntIndex() then return false end
-  if range == nil then range = self.SightRange*self:GetScale() end
-  if range <= 0 then return false end
-  if self:EyePos():DistToSqr(ent:GetPos()) > range^2 then return false end
-  if fov == nil then fov = self.SightFOV end
-  if fov > 360 then fov = 360 end
-  if fov <= 0 then return false end
-  local eyepos = self:EyePos()
-  local entpos = ent:GetPos()
-  local endpos = {ent:WorldSpaceCenter()}
-  local min, max = ent:GetModelBounds()
-  if min ~= nil and max ~= nil then
-    for i = math.Round(min.z/30), math.Round(max.z/30) do
-      table.insert(endpos, entpos + Vector(0, 0, i*30))
-    end
-  end
-  return util.DrG_RunTraces({eyepos}, endpos, {
-    filter = self
-  }, function(tr)
-    if IsValid(tr.Entity) and tr.Entity:EntIndex() == ent:EntIndex() then
-      local angle = math.DrG_DegreeAngle(eyepos + self:EyeAngles():Forward(), tr.HitPos, eyepos)
-      return angle <= fov/2
-    end
-  end).res or false
-end
-
 function ENT:IsBlind()
   return self.SightFOV <= 0 or self.SightRange <= 0
 end
@@ -79,6 +51,9 @@ function ENT:GetEyeTraceNoCursor()
   return self:GetEyeTrace()
 end
 
+local HearSounds = CreateConVar("drgbase_hear_sounds", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local HearBullets = CreateConVar("drgbase_hear_bullets", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+
 if SERVER then
 
   function ENT:HasSpottedEntity(ent)
@@ -86,8 +61,9 @@ if SERVER then
     if self.Omniscient then return true end
     if self.CommunicateWithAllies and self:IsAlly(ent) then return true end
     self._DrGBaseSpotted[ent:GetCreationID()] = self._DrGBaseSpotted[ent:GetCreationID()] or {
-      time = -999999, pos = nil
+      time = -1, pos = nil
     }
+    if self._DrGBaseSpotted[ent:GetCreationID()].time < 0 then return false end
     return CurTime() < self._DrGBaseSpotted[ent:GetCreationID()].time + self.PursueTime
   end
 
@@ -95,6 +71,7 @@ if SERVER then
   function ENT:SpotEntity(ent)
     if not IsValid(ent) then return end
     if self:EntIndex() == ent:EntIndex() then return end
+    if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then return end
     if not self:HasSpottedEntity(ent) then
       self:_Debug("spotted entity '"..ent:GetClass().."' ("..ent:EntIndex()..").")
       if not onspotentity then
@@ -118,7 +95,7 @@ if SERVER then
     if not IsValid(ent) then return end
     self:_Debug("spotted entity '"..ent:GetClass().."' ("..ent:EntIndex()..").")
     self._DrGBaseSpotted[ent:GetCreationID()] = {
-      time = -999999, pos = nil
+      time = -1, pos = nil
     }
   end
 
@@ -131,13 +108,41 @@ if SERVER then
   -- Helpers --
 
   function ENT:CanSeeEntity(ent)
+    if not IsValid(ent) then return false end
+    if self:EntIndex() == ent:EntIndex() then return false end
     if self:IsBlind() then return false end
-    if self:LineOfSight(ent) then
+    local range = self.SightRange*self:GetScale()
+    if range <= 0 then return false end
+    if self:EyePos():DistToSqr(ent:GetPos()) > range^2 then return false end
+    local fov = self.SightFOV
+    if fov > 360 then fov = 360 end
+    if fov <= 0 then return false end
+    local eyepos = self:EyePos()
+    local center = ent:WorldSpaceCenter()
+    local angle = math.DrG_DegreeAngle(eyepos + self:EyeAngles():Forward(), center, eyepos)
+    if angle > fov/2 then return false end
+    local los = false
+    if ent:IsPlayer() then
+      local tr = util.TraceLine({
+        start = eyepos,
+        endpos = ent:EyePos(),
+        mask = MASK_BLOCKLOS
+      })
+      los = IsValid(tr.Entity) and tr.Entity:EntIndex() == ent:EntIndex() 
+    end
+    if self:Visible(ent) or los then
       local res = self:OnSeeEntity(ent)
       if res ~= false then return true end
     end
     return false
   end
+
+  net.DrG_DefineCallback("DrGBaseNextbotCanSeeEntity", function(data)
+    local nextbot = Entity(data.nextbot)
+    local ent = Entity(data.ent)
+    if not IsValid(nextbot) then return false end
+    return nextbot:CanSeeEntity(ent)
+  end)
 
   -- Handlers --
 
@@ -146,14 +151,14 @@ if SERVER then
     if CurTime() < self._DrGBaseLOSCheckDelay then return end
     self._DrGBaseLOSCheckDelay = CurTime() + 1
     for i, ent in ipairs(self:GetTargets()) do
-      if ent:IsPlayer() and
-      (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then continue end
+      if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then continue end
       if self:CanSeeEntity(ent) then self:SpotEntity(ent) end
     end
   end
   function ENT:OnSeeEntity() end
 
   hook.Add("EntityEmitSound", "DrGBaseEntityEmitSoundHearing", function(sound)
+    if not HearSounds:GetBool() then return end
     if not IsValid(sound.Entity) then return end
     if sound.Entity:IsPlayer() and
     (not sound.Entity:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then return end
@@ -170,6 +175,7 @@ if SERVER then
   function ENT:OnHearEntity() end
 
   hook.Add("EntityFireBullets", "DrGBaseEntityFireBullets", function(ent2, bullet)
+    if not HearBullets:GetBool() then return end
     if not IsValid(ent2) then return end
     if ent2:IsPlayer() and
     (not ent2:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then return end
@@ -201,6 +207,16 @@ if SERVER then
 
 else
 
-
+  function ENT:CanSeeEntity(ent, callback)
+    if IsValid(ent) then
+      net.DrG_UseCallback("DrGBaseNextbotCanSeeEntity", {
+        nextbot = self:EntIndex(), ent = ent:EntIndex()
+      }, function(res)
+        if not IsValid(self) then return end
+        if not IsValid(ent) then callback(false)
+        else callback(res) end
+      end)
+    else callback(false) end
+  end
 
 end

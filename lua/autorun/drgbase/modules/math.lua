@@ -15,8 +15,7 @@ function math.DrG_ParabolicTrajectory(start, endpos, options)
     local v = magnitude
     local res = math.sqrt(v^4 - g*(g*x*x + 2*y*v*v))
     if res ~= res then
-      if options.recursive and
-      not (options.maxmagnitude ~= nil and magnitude > options.maxmagnitude) then
+      if options.recursive then
         options.gravity = g
         options._length = x
         options.magnitude = magnitude*1.05
@@ -35,8 +34,7 @@ function math.DrG_ParabolicTrajectory(start, endpos, options)
     if pitch < 0 then pitch = 0 end
     pitch = math.rad(pitch)
     if y >= math.tan(pitch)*x then
-      if options.recursive and math.deg(pitch) < 90 and
-      not (options.maxpitch ~= nil and math.deg(pitch) > options.maxpitch) then
+      if options.recursive and math.deg(pitch) < 90 then
         options.gravity = g
         options._length = x
         options.pitch = math.deg(pitch)+1
@@ -48,6 +46,13 @@ function math.DrG_ParabolicTrajectory(start, endpos, options)
   if options.maxpitch ~= nil and math.deg(pitch) > options.maxpitch then magnitude = math.rad(options.maxpitch) end
   vec.z = math.tan(pitch)*x
   return vec:GetNormalized()*magnitude, {pitch = math.deg(pitch), magnitude = magnitude}
+end
+function math.DrG_DirectTrajectory(start, endpos, options)
+  options = options or {}
+  options.pitch = nil
+  options.magnitude = options.magnitude or 1
+  options.recursive = true
+  return math.DrG_ParabolicTrajectory(start, endpos, options)
 end
 
 function math.DrG_ManhattanDistance(pos1, pos2)

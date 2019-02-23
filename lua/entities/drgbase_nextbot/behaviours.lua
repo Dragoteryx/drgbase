@@ -195,9 +195,5 @@ if SERVER then
     local attack, name = table.Random(self._DrGBaseDefinedAttacks)
     self:CallAttack(name)
   end
-
-else
-
-
-
+  
 end

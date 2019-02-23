@@ -114,7 +114,9 @@ if SERVER then
   local function NextbotDeath(self, dmg)
     if self:IsPossessed() and not self.PossessionRemote then
       self:GetPossessor():TakeDamageInfo(dmg)
-    else hook.Run("OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor()) end
+    elseif not self._DrGBaseKillSilent then
+      hook.Run("OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor())
+    end
     if self.DropWeaponOnDeath then
       self:DropWeapon()
     end
@@ -152,14 +154,6 @@ if SERVER then
   function ENT:OnUnStuck()
     if self:IsPossessed() then return end
     self:_Debug("unstuck.")
-  end
-
-  function ENT:HandleStuck()
-    if self:IsPossessed() then return end
-    local pos = self:RandomPos(100)
-    if pos ~= nil then self:SetPos(pos) end
-    self:SetDestination(nil)
-    self.loco:ClearStuck()
   end
 
   -- Handlers --

@@ -208,7 +208,6 @@ if SERVER then
         end
       end
     end
-    self._DrGBaseLastAnimCycle = self:GetCycle()
     if self:EnableUpdateAnimation() then
       if self.AnimMatchSpeed and self:IsOnGround() and not self:IsClimbing() then
         local velocity = self.loco:GetGroundMotionVector()
@@ -220,10 +219,6 @@ if SERVER then
           else self:SetPlaybackRate(speed/sequence) end
         end
       else self:SetPlaybackRate(rate or 1) end
-    end
-    if seq ~= nil and seq ~= -1 and (seq ~= self:GetSequence() or self:GetCycle() == 1) then
-      self:ResetSequence(seq)
-      self._DrGBaseAnimationSeed = math.random(0, 255)
     end
     if self.AnimMatchDirection then
       local currseq = self:GetSequenceName(self:GetSequence())
@@ -239,6 +234,11 @@ if SERVER then
       if self:ShouldReverseMoveY(currseq) then moveY = -moveY end
       if moveY == moveY then self:SetPoseParameter("move_y", moveY) end
     end
+    if seq ~= nil and seq ~= -1 and (seq ~= self:GetSequence() or self:GetCycle() == 1) then
+      self:ResetSequence(seq)
+      self._DrGBaseAnimationSeed = math.random(0, 255)
+    end
+    self._DrGBaseLastAnimCycle = self:GetCycle()
   end
   function ENT:ShouldReverseMoveX() end
   function ENT:ShouldReverseMoveY() end

@@ -2,8 +2,10 @@ ENT.Type = "nextbot"
 ENT.Base = "base_nextbot"
 ENT.IsDrGNextbot = true
 
-function ENT:GetState()
-  return self:GetDrGVar("DrGBaseState")
+function ENT:_Debug(text, convar)
+  if not GetConVar("developer"):GetBool() then return end
+  if isstring(convar) and not GetConVar(convar):GetBool() then return end
+  DrGBase.Print("Nextbot '"..self:GetClass().."' ("..self:EntIndex().."): "..text)
 end
 
 DrGBase.IncludeFile("ai.lua")
@@ -191,10 +193,11 @@ ENT.JumpAnimRate = 1
 -- Climbing --
 ENT.ClimbLadders = false
 ENT.ClimbWalls = false
+ENT.ClimbWallsMaxHeight = math.huge
+ENT.ClimbWallsMinHeight = 0
 ENT.ClimbSpeed = 100
 ENT.ClimbAnimation = ACT_CLIMB_UP
 ENT.ClimbAnimRate = 1
-ENT.StopClimb = 0
 ENT.StartClimbAnimation = ""
 ENT.StartClimbAnimRate = 1
 ENT.StopClimbAnimation = ""
@@ -271,6 +274,10 @@ function ENT:FireAnimationEvent(pos, ang, event, name)
 end
 ]]
 
+function ENT:GetState()
+  return self:GetDrGVar("DrGBaseState")
+end
+
 if SERVER then
   AddCSLuaFile("shared.lua")
   util.AddNetworkString("DrGBaseNextbotNoNavmesh")
@@ -294,7 +301,6 @@ if SERVER then
     self:SetMaxHealth(self.MaxHealth)
     self:SetHealth(self.MaxHealth)
     self:SetUseType(SIMPLE_USE)
-    self.loco:SetDeathDropHeight(self.loco:GetStepHeight())
     self:SetPlaybackRate(1)
     self:AddFlags(FL_OBJECT + FL_CLIENT)
     self:CombineBall("dissolve")
@@ -336,10 +342,13 @@ if SERVER then
     self._DrGBaseCustomTargetChecks = {} -- custom target checks
     self._DrGBaseTargetsList = {} -- to quickly check targets
     self._DrGBaseAnimationSeed = math.random(0, 255) -- to pick a random sequence
-    self._DrGBaseDisableBMXY = false -- disable bodymovexy
     self._DrGBasePitch = 0 -- flying pitch, 0 by default
     self._DrGBaseThinkDelay = 0 -- limit think calls
-    self:DefineHitGroup(HITGROUP_HEAD, {
+    self._DrGBaseDynamicAvoidance = true -- dynamic avoidance
+    self._DrGBaseHandleScaredOf = 0 -- delay between scared of checks
+    self._DrGBaseThinkDelay = 0 -- think optimisation
+    self._DrGBaseNbHitGroups = 0 -- number of defined hitgroups
+    --[[self:DefineHitGroup(HITGROUP_HEAD, {
       "ValveBiped.Bip01_Neck1",
       "ValveBiped.Bip01_Head1",
       "ValveBiped.forward"
@@ -411,7 +420,7 @@ if SERVER then
     })
     self:DefineHitGroup(HITGROUP_GEAR, {
       "ValveBiped.Bip01_Pelvis"
-    })
+    })]]
     self:SetDrGVar("DrGBaseState", DRGBASE_STATE_NONE)
     self:SetDrGVar("DrGBaseSpeed", 0)
     self:SetDrGVar("DrGBaseDying", false)
@@ -449,18 +458,25 @@ if SERVER then
   -- Think --
 
   function ENT:Think()
-    self:_HandleCustomHooks()
-    self:_HandleAnimations()
-    self:_HandleMovement()
-    self:_HandleFlight()
-    self:_HandlePossessionThink()
-    self:_HandleAmbientSounds()
-    self:_HandleHealthRegen()
-    if not GetConVar("ai_disabled"):GetBool() then
-      self:_HandleEnemy()
-      self:_HandleLineOfSight()
+    if CurTime() > self._DrGBaseThinkDelay then
+      self._DrGBaseThinkDelay = CurTime() + 0.025
+      self:_HandleCustomHooks()
+      self:_HandleAnimations()
+      self:_HandleMovement()
+      self:_HandleFlight()
+      self:_HandlePossessionThink()
+      self:_HandleAmbientSounds()
+      self:_HandleHealthRegen()
+      if not GetConVar("ai_disabled"):GetBool() then
+        self:_HandleEnemy()
+        self:_HandleScaredOf()
+        self:_HandleLineOfSight()
+      end
+      self:_BaseThink(self:GetState())
     end
-    self:_BaseThink(self:GetState())
+    if not self._DrGBaseMovingToPos and self:IsMoving() then
+      self:_DynamicAvoidance(false)
+    end
     if CurTime() > self._DrGBaseCustomThinkDelay then
       local nextThink = self:CustomThink(self:GetState()) or 0
       self._DrGBaseCustomThinkDelay = CurTime() + nextThink
@@ -485,6 +501,7 @@ if SERVER then
       net.Start("DrGBaseNextbotNoNavmesh")
       net.WriteEntity(self)
       net.Broadcast()
+      self:EnableDynamicAvoidance(true)
     end
 
     -- on spawn
@@ -500,7 +517,7 @@ if SERVER then
       end
 
       if self:IsPossessed() then self:_HandlePossessionCoroutine() -- possession
-      elseif navmesh.IsLoaded() and not GetConVar("ai_disabled"):GetBool() then -- ai behaviour
+      elseif not GetConVar("ai_disabled"):GetBool() then -- ai behaviour
 
         if not self:EnableCustomBehaviour() then -- check if using custom behaviour
           self:_DefaultBehaviour()
@@ -570,15 +587,17 @@ if SERVER then
 
 else
 
-  local DebugInfo = CreateClientConVar("drgbase_debug_info", "0")
+  local DebugMisc = CreateClientConVar("drgbase_debug_misc", "0")
   local DebugLOS = CreateClientConVar("drgbase_debug_los", "0")
   local DebugRange = CreateClientConVar("drgbase_debug_range", "0")
+  local DebugAvoid = CreateClientConVar("drgbase_debug_avoid", "0")
 
   -- Client Init --
 
   function ENT:Initialize()
     if self._DrGBaseInitialized then return end
     self._DrGBaseInitialized = true
+    self:SetIK(true)
     self._DrGBaseCustomThinkDelay = 0
     self._DrGBasePossessionThinkDelay = 0
     self._DrGBaseLastState = DRGBASE_STATE_NONE
@@ -586,10 +605,6 @@ else
     self._DrGBaseLastAnimCycle = 0
     self:_BaseInitialize()
     self:CustomInitialize()
-    --[[self:CallOnRemove("DrGBaseCallOnRemove", function()
-      local music, slot = self:IsPlayingMusic()
-      if music then self:StopMusic(slot) end
-    end)]]
   end
   function ENT:_BaseInitialize() end
   function ENT:CustomInitialize() end
@@ -597,15 +612,13 @@ else
   -- Client Think --
 
   function ENT:Think()
-    if not self._DrGBaseInitialized then
-      self:Initialize()
-    end
+    self:Initialize()
     -- write here
     if self._DrGBaseLastState ~= self:GetState() then
       self:OnStateChange(self._DrGBaseLastState, self:GetState())
     end
     self._DrGBaseLastState = self:GetState()
-    -- sequenc callbacks
+    -- sequence callbacks
     local callbacks = self._DrGBaseSequenceCallbacks[self:GetSequence()]
     if callbacks ~= nil then
       for i, todo in ipairs(callbacks) do
@@ -615,6 +628,18 @@ else
       end
     end
     self._DrGBaseLastAnimCycle = self:GetCycle()
+    -- line of sight debug
+    if GetConVar("developer"):GetBool() and DebugLOS:GetBool() then
+      self:CanSeeEntity(LocalPlayer(), function(los)
+        --print("los:")
+        --print(los)
+        self._DrGBaseCanSeeLocalPlayer = los
+      end)
+    end
+    --[[self:GetRelationship(LocalPlayer(), function(res)
+      print("rel:")
+      print(res)
+    end)]]
     -- custom base think
     self:_BaseThink(self:GetState())
     -- custom
@@ -640,7 +665,7 @@ else
       local bound1, bound2 = self:GetCollisionBounds()
       local center = self:GetPos() + (bound1 + bound2)/2
       local eyepos = self:EyePos()
-      if DebugInfo:GetBool() then
+      if DebugMisc:GetBool() then
         render.DrawWireframeBox(self:GetPos(), Angle(0, 0, 0), bound1, bound2, DrGBase.Colors.White, false)
         render.DrawLine(center, center + self:GetVelocity(), DrGBase.Colors.Orange, false)
         render.DrawWireframeSphere(center, 2*self:GetScale(), 4, 4, DrGBase.Colors.Orange, false)
@@ -648,9 +673,9 @@ else
           render.DrawLine(center, self:GetEnemy():WorldSpaceCenter(), DrGBase.Colors.Red, false)
         end
       end
-      if DebugLOS:GetBool() then
+      if DebugLOS:GetBool() and self._DrGBaseCanSeeLocalPlayer ~= nil then
         local los = DrGBase.Colors.Red
-        if self:LineOfSight(LocalPlayer()) then los = DrGBase.Colors.Green end
+        if self._DrGBaseCanSeeLocalPlayer then los = DrGBase.Colors.Green end
         render.DrawWireframeSphere(eyepos, 2*self:GetScale(), 4, 4, los, false)
         render.DrawLine(eyepos, eyepos+self:EyeAngles():Forward()*30*self:GetScale(), los, false)
         if LocalPlayer():Alive() then

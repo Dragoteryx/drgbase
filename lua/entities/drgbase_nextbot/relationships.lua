@@ -383,7 +383,26 @@ if SERVER then
             table.insert(ent.VJ_AddCertainEntityAsFriendly, self)
           end
         else table.RemoveByValue(ent.VJ_AddCertainEntityAsFriendly, self) end
+        self:_NotifyVJ(ent)
       end
+    end
+  end
+
+  function ENT:_NotifyVJ(ent)
+    if ent:Health() > 1 then
+      local bleeds = ent.Bleeds
+      ent.Bleeds = false
+      local health = ent:Health()
+      local dmg = DamageInfo()
+      dmg:SetDamage(1)
+      dmg:SetAttacker(self)
+      if self:HasWeapon() then
+        dmg:SetInflictor(self:GetWeapon())
+      end
+      dmg:SetDamageType(DMG_DIRECT)
+      ent:TakeDamageInfo(dmg)
+      ent:SetHealth(health)
+      ent.Bleeds = bleeds
     end
   end
 
@@ -494,21 +513,15 @@ if SERVER then
 else
 
   function ENT:GetRelationship(ent, callback)
-    if callback == nil then
-      return drg_promise.New(function(resolve)
-        self:GetRelationship(ent, resolve)
+    if IsValid(ent) then
+      net.DrG_UseCallback("DrGBaseNextbotEntityRelationship", {
+        nextbot = self:EntIndex(), ent = ent:EntIndex()
+      }, function(res)
+        if not IsValid(self) then return end
+        if not IsValid(ent) then callback(D_ER)
+        else callback(res) end
       end)
-    else
-      if IsValid(ent) then
-        net.DrG_UseCallback("DrGBaseNextbotEntityRelationship", {
-          nextbot = self:EntIndex(), ent = ent:EntIndex()
-        }, function(res)
-          if not IsValid(self) then return end
-          if not IsValid(ent) then callback(D_ER)
-          else callback(res) end
-        end)
-      else callback(D_ER) end
-    end
+    else callback(D_ER) end
   end
 
 end

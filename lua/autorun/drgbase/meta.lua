@@ -30,7 +30,17 @@ function plyMETA:DrG_SteamAvatar(callback, onerror)
 end
 
 function physMETA:DrG_ParabolicTrajectory(pos, options)
+  options = options or {}
   local vec, data = math.DrG_ParabolicTrajectory(self:GetPos(), pos, options)
+  if not vec:IsZero() then
+    if not options.drag then self:EnableDrag(false) end
+    self:SetVelocity(vec)
+  end
+  return vec, data
+end
+function physMETA:DrG_DirectTrajectory(pos, options)
+  options = options or {}
+  local vec, data = math.DrG_DirectTrajectory(self:GetPos(), pos, options)
   if not vec:IsZero() then
     if not options.drag then self:EnableDrag(false) end
     self:SetVelocity(vec)
