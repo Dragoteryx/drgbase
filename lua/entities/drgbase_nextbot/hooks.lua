@@ -196,10 +196,6 @@ if SERVER then
     if self:Health() ~= self._DrGBaseHealth then
       self:_Debug("health change from "..self._DrGBaseHealth.." to "..self:Health()..".")
       self:OnHealthChange(self._DrGBaseHealth, self:Health())
-      self:SetDrGVar("DrGBaseHealth", self:Health())
-    end
-    if self:GetMaxHealth() ~= self._DrGBaseMaxHealth then
-      self:SetDrGVar("DrGBaseMaxHealth", self:GetMaxHealth())
     end
     self._DrGBaseHealth = self:Health()
   end

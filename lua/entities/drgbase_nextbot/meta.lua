@@ -43,20 +43,4 @@ if SERVER then
     else return old_SetVelocity(self, velocity) end
   end
 
-else
-
-  local old_Health = entMETA.Health
-  function entMETA:Health()
-    if self.IsDrGNextbot then
-      return self:GetDrGVar("DrGBaseHealth")
-    else return old_Health(self) end
-  end
-
-  local old_GetMaxHealth = entMETA.GetMaxHealth
-  function entMETA:GetMaxHealth()
-    if self.IsDrGNextbot then
-      return self:GetDrGVar("DrGBaseMaxHealth")
-    else return old_GetMaxHealth(self) end
-  end
-
 end
