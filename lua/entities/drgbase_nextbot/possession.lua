@@ -7,16 +7,9 @@ function ENT:GetPossessor()
   return self._DrGBasePossessor
 end
 
-function ENT:PossessorTrace(options)
+function ENT:CurrentPossessionView()
   if not self:IsPossessed() then return end
-  local origin, angles = self:PossessorView()
-  options = options or {}
-  options.filter = options.filter or {}
-  table.insert(options.filter, self)
-  table.insert(options.filter, self:GetWeapon())
-  options.start = origin
-  options.endpos = origin + angles:Forward()*999999999
-  return util.TraceLine(options)
+  return self.PossessionViews[self:GetDrGVar("DrGBasePossessionView")], self:GetDrGVar("DrGBasePossessionView")
 end
 
 function ENT:PossessorView(view)
@@ -65,9 +58,22 @@ function ENT:PossessorView(view)
   return endpos, viewangle
 end
 
-function ENT:CurrentPossessionView()
+function ENT:PossessorNormal()
   if not self:IsPossessed() then return end
-  return self.PossessionViews[self:GetDrGVar("DrGBasePossessionView")], self:GetDrGVar("DrGBasePossessionView")
+  local origin, angles = self:PossessorView()
+  return angles:Forward()
+end
+
+function ENT:PossessorTrace(options)
+  if not self:IsPossessed() then return end
+  local origin, angles = self:PossessorView()
+  options = options or {}
+  options.filter = options.filter or {}
+  table.insert(options.filter, self)
+  table.insert(options.filter, self:GetWeapon())
+  options.start = origin
+  options.endpos = origin + angles:Forward()*999999999
+  return util.TraceLine(options)
 end
 
 function ENT:PossessorForward()

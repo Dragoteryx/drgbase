@@ -99,46 +99,17 @@ function ENT:RandomBodygroups()
   end
 end
 
-function ENT:CollisionHulls(distance, forwardOnly)
-  distance = distance or 5
-  if distance < 0 then distance = 0 end
+function ENT:TraceHull(data)
   local bound1, bound2 = self:GetCollisionBounds()
   if bound1.z < bound2.z then
     local temp = bound1
     bound1 = bound2
     bound2 = temp
   end
-  bound2.z = self.loco:GetStepHeight()
-  local center = self:GetPos() + (bound1 + bound2)/2
-  center.z = self:GetPos().z
-  local data = {
-    start = center,
-    filter = {self, self:GetWeapon(), self:GetEnemy()},
-    collisiongroup = self:GetCollisionGroup(),
-    mask = self:GetSolidMask(),
-    maxs = bound1, mins = bound2
-  }
-  data.endpos = center + self:GetForward()*distance + self:GetRight()*-distance
-  local trNW = util.TraceHull(data)
-  data.endpos = center + self:GetForward()*distance + self:GetRight()*distance
-  local trNE = util.TraceHull(data)
-  if forwardOnly then
-    return {
-      NorthWest = trNW,
-      NorthEast = trNE
-    }
-  else
-    data.endpos = center + self:GetForward()*-distance + self:GetRight()*distance
-    local trSE = util.TraceHull(data)
-    data.endpos = center + self:GetForward()*-distance + self:GetRight()*-distance
-    local trSW = util.TraceHull(data)
-    return {
-      NorthWest = trNW,
-      NorthEast = trNE,
-      SouthEast = trSE,
-      SouthWest = trSW
-    }
-  end
+  data = data or {}
+  data.maxs = bound1
+  data.mins = bound2
+  return util.TraceHull(data)
 end
 
 if SERVER then
@@ -230,24 +201,16 @@ if SERVER then
     self:_Debug("sent data: '"..name.."'.")
   end
 
-  function ENT:TraceHull(data)
-    local bound1, bound2 = self:GetCollisionBounds()
-    if bound1.z < bound2.z then
-      local temp = bound1
-      bound1 = bound2
-      bound2 = temp
-    end
-    data = data or {}
-    data.maxs = bound1
-    data.mins = bound2
-    return util.TraceHull(data)
-  end
-
-  function ENT:CreateProjectile(model, offset, angles, binds)
-    local proj = ents.Create("drgbase_projectile")
+  function ENT:CreateProjectile(model, offset, angles, binds, class)
+    local proj = ents.Create(class or "drgbase_projectile")
     if istable(model) then model = model[math.random(#model)] end
-    pos = pos or Vector(0, 0, 0)
-    proj:SetModel(model)
+    offset = offset or Vector(0, 0, 0)
+    angles = angles or Angle(0, 0, 0)
+    if isstring(model) then proj:SetModel(model)
+    else
+      proj:SetModel("models/props_junk/PopCan01a.mdl")
+      proj:SetNoDraw(true)
+    end
     proj:SetPos(self:GetPos() + self:GetForward()*offset.x + self:GetRight()*offset.y + self:GetUp()*offset.z)
     proj:SetAngles(self:GetAngles() + angles)
     if isfunction(binds.Init) then binds.Init(proj) end
@@ -257,10 +220,52 @@ if SERVER then
     if isfunction(binds.Use) then proj.ProjUse = binds.Use end
     if isfunction(binds.Damage) then proj.ProjDamage = binds.Damage end
     if isfunction(binds.Remove) then proj.ProjRemove = binds.Remove end
-    proj._DrGBaseNextbot = self
+    proj:SetOwner(self)
     proj:Spawn()
     proj:Activate()
     return proj
+  end
+
+  function ENT:CollisionHulls(distance, forwardOnly)
+    distance = distance or 5
+    if distance < 0 then distance = 0 end
+    local bound1, bound2 = self:GetCollisionBounds()
+    if bound1.z < bound2.z then
+      local temp = bound1
+      bound1 = bound2
+      bound2 = temp
+    end
+    bound2.z = self.loco:GetStepHeight()
+    local center = self:GetPos() + (bound1 + bound2)/2
+    center.z = self:GetPos().z
+    local data = {
+      start = center,
+      filter = {self, self:GetWeapon(), self:GetEnemy()},
+      collisiongroup = self:GetCollisionGroup(),
+      mask = self:GetSolidMask(),
+      maxs = bound1, mins = bound2
+    }
+    data.endpos = center + self:GetForward()*distance + self:GetRight()*-distance
+    local trNW = util.TraceHull(data)
+    data.endpos = center + self:GetForward()*distance + self:GetRight()*distance
+    local trNE = util.TraceHull(data)
+    if forwardOnly then
+      return {
+        NorthWest = trNW,
+        NorthEast = trNE
+      }
+    else
+      data.endpos = center + self:GetForward()*-distance + self:GetRight()*distance
+      local trSE = util.TraceHull(data)
+      data.endpos = center + self:GetForward()*-distance + self:GetRight()*-distance
+      local trSW = util.TraceHull(data)
+      return {
+        NorthWest = trNW,
+        NorthEast = trNE,
+        SouthEast = trSE,
+        SouthWest = trSW
+      }
+    end
   end
 
   -- Handlers --

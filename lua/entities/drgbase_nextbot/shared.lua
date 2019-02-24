@@ -478,7 +478,7 @@ if SERVER then
       end
       self:_BaseThink(self:GetState())
     end
-    if not self._DrGBaseMovingToPos and self:IsMoving() then
+    if not self._DrGBaseMovingToPos and self:IsMoving() and not self:IsCharging() then
       self:_DynamicAvoidance(false)
     end
     if CurTime() > self._DrGBaseCustomThinkDelay then

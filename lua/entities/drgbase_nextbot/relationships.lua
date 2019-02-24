@@ -201,7 +201,7 @@ if SERVER then
       local disp, val = callback(ent, self)
       if disp then
         table.insert(relationships, {
-          disposition = disp, val = math.Round(val) or defaultVal
+          disposition = disp, val = math.Round(val or defaultVal)
         })
       end
     end
@@ -227,11 +227,11 @@ if SERVER then
     if not IsValid(ent) then return D_ER, defaultVal end
     local rel = self._DrGBaseEntityRelationships[ent:GetCreationID()]
     if rel == nil then return D_ER, defaultVal end
-    return rel.disposition, math.Round(rel.val)
+    return rel.disposition, rel.val
   end
   function ENT:SetEntityRelationship(ent, relationship, val)
     self._DrGBaseEntityRelationships[ent:GetCreationID()] = {
-      disposition = relationship, val = val or defaultVal
+      disposition = relationship, val = math.Round(val or defaultVal)
     }
     if ent:IsNPC() then self:NPCRelationship(ent) end
   end
@@ -247,11 +247,11 @@ if SERVER then
     if class == nil then return D_ER, defaultVal end
     local rel = self._DrGBaseClassRelationships[string.lower(class)]
     if rel == nil then return D_ER, defaultVal end
-    return rel.disposition, math.Round(rel.val)
+    return rel.disposition, rel.val
   end
   function ENT:SetClassRelationship(class, relationship, val)
     self._DrGBaseClassRelationships[string.lower(class)] = {
-      disposition = relationship, val = val or defaultVal
+      disposition = relationship, val = math.Round(val or defaultVal)
     }
     self:NPCRelationship()
   end
@@ -267,11 +267,11 @@ if SERVER then
     if model == nil then return D_ER, defaultVal end
     local rel = self._DrGBaseModelRelationships[string.lower(model)]
     if rel == nil then return D_ER, defaultVal end
-    return rel.disposition, math.Round(rel.val)
+    return rel.disposition, rel.val
   end
   function ENT:SetModelRelationship(model, relationship, val)
     self._DrGBaseModelRelationships[string.lower(model)] = {
-      disposition = relationship, val = val or defaultVal
+      disposition = relationship, val = math.Round(val or defaultVal)
     }
     self:NPCRelationship()
   end
@@ -287,11 +287,11 @@ if SERVER then
     if faction == nil then return D_ER, defaultVal end
     local rel = self._DrGBaseFactionRelationships[string.upper(faction)]
     if rel == nil then return D_ER, defaultVal end
-    return rel.disposition, math.Round(rel.val)
+    return rel.disposition, rel.val
   end
   function ENT:SetFactionRelationship(faction, relationship, val)
     self._DrGBaseFactionRelationships[string.upper(faction)] = {
-      disposition = relationship, val = val or defaultVal
+      disposition = relationship, val = math.Round(val or defaultVal)
     }
     self:NPCRelationship()
   end
@@ -463,6 +463,9 @@ if SERVER then
   end
   function ENT:FindClosestScaredOf(range, spotted)
     return self:FindClosestEntity(range, D_FR, spotted)
+  end
+  function ENT:FindClosestNeutral(range, spotted)
+    return self:FindClosestEntity(range, D_NU, spotted)
   end
 
   function ENT:IsAlly(ent)

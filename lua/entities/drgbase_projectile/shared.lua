@@ -2,10 +2,14 @@ ENT.Type = "anim"
 ENT.Base = "base_entity"
 ENT.IsDrGProjectile = true
 
-ENT.PrintName = "DrGBase Base Projectile"
+ENT.PrintName = "Projectile"
 ENT.Category = "DrGBase"
 
 DrGBase.IncludeFile("meta.lua")
+
+function ENT:ScreenShake(amplitude, frequency, duration, radius)
+  return util.ScreenShake(self:GetPos(), amplitude, frequency, duration, radius)
+end
 
 if SERVER then
   AddCSLuaFile("shared.lua")
@@ -18,7 +22,6 @@ if SERVER then
     local phys = self:GetPhysicsObject()
     if IsValid(phys) then
       phys:Wake()
-      phys:EnableDrag(false)
     end
   end
   function ENT:Think()
@@ -34,13 +37,18 @@ if SERVER then
     self:ProjContact(data.HitEntity)
   end
   function ENT:Touch(ent)
-    if not self:ProjFilter(ent) then return end
-    if ent:IsWeapon() then
-      if IsValid(ent:GetOwner()) then self:ProjContact(ent:GetOwner())
-      else self:ProjContact(ent) end
-    else self:ProjContact(ent) end
+    if ent:IsWeapon() and IsValid(ent:GetOwner()) then
+      local owner = ent:GetOwner()
+      if not self:ProjFilter(owner) then return end
+      self:ProjContact(owner)
+    elseif self:ProjFilter(ent) then self:ProjContact(ent) end
   end
-  function ENT:ProjFilter() return true end
+  function ENT:ProjFilter(ent)
+    if ent:IsWorld() then return true end
+    if not IsValid(ent) then return false end
+    if not IsValid(self._DrGBaseNextbotOwner) then return true end
+    return self._DrGBaseNextbotOwner:EntIndex() ~= ent:EntIndex() and not self._DrGBaseNextbotOwner:IsAlly(ent)
+  end
   function ENT:ProjContact() end
 
   -- Misc --
@@ -77,8 +85,8 @@ if SERVER then
     dmg:SetDamage(value)
     dmg:SetDamageForce(self:GetVelocity())
     dmg:SetDamageType(type or DMG_DIRECT)
-    if IsValid(self._DrGBaseNextbot) then
-      dmg:SetAttacker(self._DrGBaseNextbot)
+    if IsValid(self:GetOwner()) then
+      dmg:SetAttacker(self:GetOwner())
     else dmg:SetAttacker(game.GetWorld()) end
     dmg:SetInflictor(self)
     ent:TakeDamageInfo(dmg)
