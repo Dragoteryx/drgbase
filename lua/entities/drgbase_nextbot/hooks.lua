@@ -177,11 +177,12 @@ if SERVER then
       if self._DrGBaseDownwardsVelocity > 0 and not self:IsFlying() and not self:IsClimbing() and self.FallDamage then
         local val = CalcFallDamage(self._DrGBaseDownwardsVelocity/self:GetScale(), self:WaterLevel()) or 0
         if val > 0 then
+          self:_Debug("fall damage => "..val..".")
           local dmg = DamageInfo()
           dmg:SetDamage(val)
           dmg:SetDamageType(DMG_FALL)
           dmg:SetAttacker(self)
-          if not self:OnFallDamage(dmg) then
+          if not self:OnFallDamage(dmg, self._DrGBaseDownwardsVelocity/self:GetScale()) then
             self:TakeDamageInfo(dmg)
           end
         end

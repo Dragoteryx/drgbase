@@ -4,12 +4,17 @@ function DrGBase.Nextbots.Load(nextbot)
   if nextbot.Name == nil or nextbot.Class == nil or nextbot.Category == nil then
     DrGBase.Error("Couldn't load nextbot: name, class or category nil.")
   else
-    nextbot.Killicon = nextbot.Killicon or {
-      icon = "HUD/killicons/default",
-      color = Color(255, 80, 0, 255)
-    }
+    if nextbot.Models ~= nil then
+      for i, model in ipairs(nextbot.Models) do
+        util.PrecacheModel(model)
+      end
+    end
     if CLIENT then
       language.Add(nextbot.Class, nextbot.Name)
+      nextbot.Killicon = nextbot.Killicon or {
+        icon = "HUD/killicons/default",
+        color = Color(255, 80, 0, 255)
+      }
       killicon.Add(nextbot.Class, nextbot.Killicon.icon, nextbot.Killicon.color)
     else resource.AddFile("materials/entities/"..nextbot.Class..".png") end
     list.Set("NPC", nextbot.Class, nextbot)
@@ -38,6 +43,20 @@ if SERVER then
   end
 
 else
+
+  concommand.DrG_Add("!", "drgbase_nextbots_count", function()
+    local nextbots = {}
+    for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
+      local class = ent:GetClass()
+      if nextbots[class] == nil then nextbots[class] = 1
+      else nextbots[class] = nextbots[class] + 1 end
+    end
+    local str = "Nextbots count:"
+    for class, count in pairs(nextbots) do
+      str = str.."\n"..class..": "..count
+    end
+    DrGBase.Print(str)
+  end)
 
   function DrGBase.Nextbots.GetAll()
     local nextbots = {}

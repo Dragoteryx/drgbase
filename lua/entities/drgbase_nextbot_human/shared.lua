@@ -112,10 +112,10 @@ if SERVER then
   function ENT:_BaseThink()
     if not self:IsPossessed() then
       if self:IsMoving() then self:ToggleCrouching(false) end
-      if self:HaveEnemy() then
+      if self:GetEnemy() ~= nil then
         local enemy = self:GetEnemy()
         self:ToggleWeaponReady(true)
-        if self:CanSeeEntity(enemy) then
+        if IsValid(enemy) and self:CanSeeEntity(enemy) then
           self:AimAt(enemy:WorldSpaceCenter())
         else self:AimAt() end
       else

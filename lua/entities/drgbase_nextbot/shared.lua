@@ -28,6 +28,7 @@ DrGBase.IncludeFile("weapons.lua")
 ENT.Models = {"models/player/kleiner.mdl"}
 ENT.Skins = {0}
 ENT.ModelScale = 1
+ENT.CollisionBounds = Vector(15, 15, 72)
 ENT.RagdollOnDeath = true
 ENT.AnimMatchSpeed = true
 ENT.AnimMatchDirection = true
@@ -297,7 +298,10 @@ if SERVER then
     self:SetModelScale(self.ModelScale)
     self:SetSkin(self.Skins[math.random(#self.Skins)])
     self:SetCollisionGroup(COLLISION_GROUP_NPC)
-    self:SetCollisionBounds(Vector(-10, -10, 0), Vector(10, 10, 70))
+    self:SetCollisionBounds(
+      Vector(self.CollisionBounds.x, self.CollisionBounds.y, self.CollisionBounds.z),
+      Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0)
+    )
     self:SetMaxHealth(self.MaxHealth)
     self:SetHealth(self.MaxHealth)
     self:SetUseType(SIMPLE_USE)

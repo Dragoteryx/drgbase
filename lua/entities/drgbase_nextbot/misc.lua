@@ -243,6 +243,26 @@ if SERVER then
     return util.TraceHull(data)
   end
 
+  function ENT:CreateProjectile(model, offset, angles, binds)
+    local proj = ents.Create("drgbase_projectile")
+    if istable(model) then model = model[math.random(#model)] end
+    pos = pos or Vector(0, 0, 0)
+    proj:SetModel(model)
+    proj:SetPos(self:GetPos() + self:GetForward()*offset.x + self:GetRight()*offset.y + self:GetUp()*offset.z)
+    proj:SetAngles(self:GetAngles() + angles)
+    if isfunction(binds.Init) then binds.Init(proj) end
+    if isfunction(binds.Think) then proj.ProjThink = binds.Think end
+    if isfunction(binds.Filter) then proj.ProjFilter = binds.Filter end
+    if isfunction(binds.Contact) then proj.ProjContact = binds.Contact end
+    if isfunction(binds.Use) then proj.ProjUse = binds.Use end
+    if isfunction(binds.Damage) then proj.ProjDamage = binds.Damage end
+    if isfunction(binds.Remove) then proj.ProjRemove = binds.Remove end
+    proj._DrGBaseNextbot = self
+    proj:Spawn()
+    proj:Activate()
+    return proj
+  end
+
   -- Handlers --
 
   function ENT:_HandleHealthRegen()

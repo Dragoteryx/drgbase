@@ -132,7 +132,7 @@ if SERVER then
         self._DrGBaseMovingToPos = true
         if isstring(res) then return res
         elseif isvector(res) then pos = res end
-        if self:CanMove(self:GetPossessor()) then
+        if self:CanMove() then
           if not self:_DynamicAvoidance(true) then
             self:FaceTowards(pos)
             self:MoveTowards(pos)
@@ -155,7 +155,7 @@ if SERVER then
       while IsValid(path) do
         local current = path:GetCurrentGoal()
         if self:IsDying() then return "dying" end
-        if self:CanMove(self:GetPossessor()) then
+        if self:CanMove() then
           if not self:_DynamicAvoidance(true) then
             if not self:OnMove(path, current, type) then
               local type = current.type
@@ -221,7 +221,7 @@ if SERVER then
   end
 
   function ENT:MoveTowards(pos, face)
-    if not self:CanMove(self:GetPossessor()) then return end
+    if not self:CanMove() then return end
     if self:IsFlying() then self:FlyTowards(pos, face)
     else
       self.loco:Approach(pos, 1)
@@ -231,7 +231,7 @@ if SERVER then
 
   function ENT:StepAwayFromPos(pos)
     if self:IsFlying() then return end
-    if not self:CanMove(self:GetPossessor()) then return end
+    if not self:CanMove() then return end
     self.loco:FaceTowards(pos)
     self:GoBackward()
   end
@@ -254,22 +254,22 @@ if SERVER then
   end
 
   function ENT:GoForward()
-    if not self:CanMove(self:GetPossessor()) then return end
+    if not self:CanMove() then return end
     self:MoveTowards(self:GetPos() + self:GetForward())
   end
 
   function ENT:GoBackward()
-    if not self:CanMove(self:GetPossessor()) then return end
+    if not self:CanMove() then return end
     self:MoveTowards(self:GetPos() - self:GetForward())
   end
 
   function ENT:StrafeLeft()
-    if not self:CanMove(self:GetPossessor()) then return end
+    if not self:CanMove() then return end
     self:MoveTowards(self:GetPos() - self:GetRight())
   end
 
   function ENT:StrafeRight()
-    if not self:CanMove(self:GetPossessor()) then return end
+    if not self:CanMove() then return end
     self:MoveTowards(self:GetPos() + self:GetRight())
   end
 
@@ -387,7 +387,7 @@ if SERVER then
   function ENT:_DynamicAvoidance(forwardOnly)
     if not self:EnableDynamicAvoidance() then return end
     if self:IsPossessed() then return end
-    if not self:CanMove(self:GetPossessor()) then return end
+    if not self:CanMove() then return end
     local hulls = self:CollisionHulls(nil, forwardOnly)
     if GetConVar("developer"):GetBool() and DebugAvoidance:GetBool() then
       local bound1, bound2 = self:GetCollisionBounds()

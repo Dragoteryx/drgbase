@@ -8,6 +8,36 @@ function entMETA:GetDrGVar(name)
   return net.DrG_GetVar(name, self)
 end
 
+function entMETA:DrG_FadeOut(duration, callback)
+  self:SetRenderMode(RENDERMODE_TRANSCOLOR)
+  local alpha = self:GetColor().a
+  coroutine.DrG_Create(function()
+    while IsValid(self) and self:GetColor().a > 0 do
+      local color = self:GetColor()
+      color.a = color.a - 1
+      self:SetColor(color)
+      print(self:GetColor().a)
+      coroutine.wait(duration/alpha)
+    end
+    if IsValid(self) and isfunction(callback) then callback() end
+  end)
+end
+function entMETA:DrG_FadeIn(duration, callback)
+  self:SetRenderMode(RENDERMODE_TRANSCOLOR)
+  local alpha = self:GetColor().a
+  local missing = 255 - alpha
+  coroutine.DrG_Create(function()
+    while IsValid(self) and self:GetColor().a < 255 do
+      local color = self:GetColor()
+      color.a = color.a + 1
+      self:SetColor(color)
+      print(self:GetColor().a)
+      coroutine.wait(duration/missing)
+    end
+    if IsValid(self) and isfunction(callback) then callback() end
+  end)
+end
+
 function plyMETA:DrG_IsPossessing()
   return IsValid(self:DrG_Possessing())
 end
@@ -74,6 +104,12 @@ if SERVER then
     self.LastPathingInfraction ~= nil and
     self.RecomputeTargetPath ~= nil and
     self.UnstickFromCeiling ~= nil
+  end
+
+  function entMETA:DrG_FadeThenRemove(duration)
+    self:DrG_FadeOut(duration, function()
+      self:Remove()
+    end)
   end
 
   function plyMETA:DrG_JoinFaction(faction)

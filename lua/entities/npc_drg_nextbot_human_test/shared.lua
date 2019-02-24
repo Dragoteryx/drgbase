@@ -70,5 +70,6 @@ DrGBase.Nextbots.Load({
   Name = ENT.Name,
   Class = ENT.Class,
   Category = ENT.Category,
-  Killicon = ENT.Killicon
+  Killicon = ENT.Killicon,
+  Models = ENT.Models
 })

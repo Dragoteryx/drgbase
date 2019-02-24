@@ -5,6 +5,7 @@ end
 
 function ENT:IsSeenBy(ent)
   if ent.IsDrGNextbot then
+    if ent:EntIndex() == self:EntIndex() then return false end
     return ent:CanSeeEntity(self)
   else
     local fov = 75
@@ -13,14 +14,10 @@ function ENT:IsSeenBy(ent)
       ent:DrG_IsPossessing() then return false end
       fov = ent:GetFOV()
     end
-    if math.DrG_DegreeAngle(ent:EyePos() + ent:EyeAngles():Forward(), self:WorldSpaceCenter(), ent:EyePos()) > fov then
+    local eyepos = ent:EyePos()
+    if math.DrG_DegreeAngle(eyepos + ent:EyeAngles():Forward(), self:WorldSpaceCenter(), eyepos) > fov then
       return false
     end
-    local ends = {
-      self:GetPos() + Vector(0, 0, 10),
-      self:WorldSpaceCenter(),
-      self:GetPos() + self:HeightVector() - Vector(0, 0, 10)
-    }
     return ent:Visible(self)
   end
 end
@@ -125,10 +122,9 @@ if SERVER then
     if ent:IsPlayer() then
       local tr = util.TraceLine({
         start = eyepos,
-        endpos = ent:EyePos(),
-        mask = MASK_BLOCKLOS
+        endpos = ent:EyePos()
       })
-      los = IsValid(tr.Entity) and tr.Entity:EntIndex() == ent:EntIndex() 
+      los = IsValid(tr.Entity) and tr.Entity:EntIndex() == ent:EntIndex()
     end
     if self:Visible(ent) or los then
       local res = self:OnSeeEntity(ent)
