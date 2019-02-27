@@ -5,7 +5,6 @@ end
 
 function ENT:IsSeenBy(ent)
   if ent.IsDrGNextbot then
-    if ent:EntIndex() == self:EntIndex() then return false end
     return ent:CanSeeEntity(self)
   else
     local fov = 75
@@ -70,6 +69,7 @@ if SERVER then
     if self:EntIndex() == ent:EntIndex() then return end
     if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then return end
     if not self:HasSpottedEntity(ent) then
+      if ent.IsVJBaseSNPC then self:_NotifyVJ(ent) end
       self:_Debug("spotted entity '"..ent:GetClass().."' ("..ent:EntIndex()..").")
       if not onspotentity then
         onspotentity = true
@@ -148,7 +148,9 @@ if SERVER then
     self._DrGBaseLOSCheckDelay = CurTime() + 1
     for i, ent in ipairs(self:GetTargets()) do
       if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then continue end
-      if self:CanSeeEntity(ent) then self:SpotEntity(ent) end
+      if self:CanSeeEntity(ent) then
+        self:SpotEntity(ent)
+      end
     end
   end
   function ENT:OnSeeEntity() end

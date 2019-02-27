@@ -20,6 +20,7 @@ DrGBase.IncludeFile("misc.lua")
 DrGBase.IncludeFile("movement.lua")
 DrGBase.IncludeFile("path.lua")
 DrGBase.IncludeFile("possession.lua")
+DrGBase.IncludeFile("projectiles.lua")
 DrGBase.IncludeFile("relationships.lua")
 DrGBase.IncludeFile("sounds.lua")
 DrGBase.IncludeFile("weapons.lua")
@@ -30,6 +31,7 @@ ENT.Skins = {0}
 ENT.ModelScale = 1
 ENT.CollisionBounds = Vector(15, 15, 72)
 ENT.RagdollOnDeath = true
+ENT.RagdollCallback = function() end
 ENT.AnimMatchSpeed = true
 ENT.AnimMatchDirection = true
 ENT.HeadYaw = "head_yaw"
@@ -199,10 +201,6 @@ ENT.ClimbWallsMinHeight = 0
 ENT.ClimbSpeed = 100
 ENT.ClimbAnimation = ACT_CLIMB_UP
 ENT.ClimbAnimRate = 1
-ENT.StartClimbAnimation = ""
-ENT.StartClimbAnimRate = 1
-ENT.StopClimbAnimation = ""
-ENT.StopClimbAnimRate = 1
 
 -- Flight --
 ENT.Flight = false
@@ -352,79 +350,8 @@ if SERVER then
     self._DrGBaseHandleScaredOf = 0 -- delay between scared of checks
     self._DrGBaseThinkDelay = 0 -- think optimisation
     self._DrGBaseNbHitGroups = 0 -- number of defined hitgroups
-    --[[self:DefineHitGroup(HITGROUP_HEAD, {
-      "ValveBiped.Bip01_Neck1",
-      "ValveBiped.Bip01_Head1",
-      "ValveBiped.forward"
-    })
-    self:DefineHitGroup(HITGROUP_CHEST, {
-      "ValveBiped.Bip01_L_Clavicle",
-      "ValveBiped.Bip01_R_Clavicle",
-      "ValveBiped.Bip01_Spine2",
-      "ValveBiped.Bip01_Spine4"
-    })
-    self:DefineHitGroup(HITGROUP_STOMACH, {
-      "ValveBiped.Bip01_Spine",
-      "ValveBiped.Bip01_Spine1",
-      "ValveBiped.Bip01_Pelvis"
-    })
-    self:DefineHitGroup(HITGROUP_LEFTARM, {
-      "ValveBiped.Bip01_L_UpperArm",
-      "ValveBiped.Bip01_L_Forearm",
-      "ValveBiped.Bip01_L_Hand",
-      "ValveBiped.Anim_Attachment_LH",
-      "ValveBiped.Bip01_L_Finger4",
-      "ValveBiped.Bip01_L_Finger41",
-      "ValveBiped.Bip01_L_Finger42",
-      "ValveBiped.Bip01_L_Finger3",
-      "ValveBiped.Bip01_L_Finger31",
-      "ValveBiped.Bip01_L_Finger32",
-      "ValveBiped.Bip01_L_Finger2",
-      "ValveBiped.Bip01_L_Finger21",
-      "ValveBiped.Bip01_L_Finger22",
-      "ValveBiped.Bip01_L_Finger1",
-      "ValveBiped.Bip01_L_Finger11",
-      "ValveBiped.Bip01_L_Finger12",
-      "ValveBiped.Bip01_L_Finger0",
-      "ValveBiped.Bip01_L_Finger01",
-      "ValveBiped.Bip01_L_Finger02"
-    })
-    self:DefineHitGroup(HITGROUP_RIGHTARM, {
-      "ValveBiped.Bip01_R_UpperArm",
-      "ValveBiped.Bip01_R_Forearm",
-      "ValveBiped.Bip01_R_Hand",
-      "ValveBiped.Anim_Attachment_RH",
-      "ValveBiped.Bip01_R_Finger4",
-      "ValveBiped.Bip01_R_Finger41",
-      "ValveBiped.Bip01_R_Finger42",
-      "ValveBiped.Bip01_R_Finger3",
-      "ValveBiped.Bip01_R_Finger31",
-      "ValveBiped.Bip01_R_Finger32",
-      "ValveBiped.Bip01_R_Finger2",
-      "ValveBiped.Bip01_R_Finger21",
-      "ValveBiped.Bip01_R_Finger22",
-      "ValveBiped.Bip01_R_Finger1",
-      "ValveBiped.Bip01_R_Finger11",
-      "ValveBiped.Bip01_R_Finger12",
-      "ValveBiped.Bip01_R_Finger0",
-      "ValveBiped.Bip01_R_Finger01",
-      "ValveBiped.Bip01_R_Finger02"
-    })
-    self:DefineHitGroup(HITGROUP_LEFTLEG, {
-      "ValveBiped.Bip01_L_Thigh",
-      "ValveBiped.Bip01_L_Calf",
-      "ValveBiped.Bip01_L_Foot",
-      "ValveBiped.Bip01_L_Toe0"
-    })
-    self:DefineHitGroup(HITGROUP_RIGHTLEG, {
-      "ValveBiped.Bip01_R_Thigh",
-      "ValveBiped.Bip01_R_Calf",
-      "ValveBiped.Bip01_R_Foot",
-      "ValveBiped.Bip01_R_Toe0"
-    })
-    self:DefineHitGroup(HITGROUP_GEAR, {
-      "ValveBiped.Bip01_Pelvis"
-    })]]
+    self._DrGBaseDefinedProjectiles = {} -- defined projectiles
+    self._DrGBaseThrownProjectiles = {} -- thrown projectiles
     self:SetDrGVar("DrGBaseState", DRGBASE_STATE_NONE)
     self:SetDrGVar("DrGBaseSpeed", 0)
     self:SetDrGVar("DrGBaseDying", false)
@@ -478,7 +405,7 @@ if SERVER then
       end
       self:_BaseThink(self:GetState())
     end
-    if not self._DrGBaseMovingToPos and self:IsMoving() and not self:IsCharging() then
+    if not self._DrGBaseMovingToPos and self:IsMoving() and not self:IsCharging() and self:IsOnGround() then
       self:_DynamicAvoidance(false)
     end
     if CurTime() > self._DrGBaseCustomThinkDelay then

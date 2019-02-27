@@ -21,7 +21,7 @@ function DrGBase.Weapons.IsLoaded(weapon)
   return list.Get("DrGBaseWeapons")[weapon] ~= nil
 end
 
-local PlayersCanGiveWeapons = CreateConVar("drgbase_give_weapons", "1")
+local PlayersCanGiveWeapons = CreateConVar("drgbase_give_weapons", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 properties.Add("drgbasegiveweapons", {
 	MenuLabel = "Give Current Weapon",

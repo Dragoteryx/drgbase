@@ -13,7 +13,6 @@ ENT.CrouchSpeed = 50
 -- Climbing --
 ENT.ClimbLadders = true
 ENT.ClimbAnimation = ACT_ZOMBIE_CLIMB_UP
-ENT.StopClimbAnimation = ACT_ZOMBIE_CLIMB_END
 
 -- AI --
 ENT.EnemyReach = 1500
@@ -108,6 +107,79 @@ if SERVER then
   function ENT:_BaseInitialize()
     self._DrGBaseGrenadeThrowDelay = 0
     self:SetDrGVar("DrGBaseCrouching", false)
+    self:DefineHitGroup(HITGROUP_HEAD, {
+      "ValveBiped.Bip01_Neck1",
+      "ValveBiped.Bip01_Head1",
+      "ValveBiped.forward"
+    })
+    self:DefineHitGroup(HITGROUP_CHEST, {
+      "ValveBiped.Bip01_L_Clavicle",
+      "ValveBiped.Bip01_R_Clavicle",
+      "ValveBiped.Bip01_Spine2",
+      "ValveBiped.Bip01_Spine4"
+    })
+    self:DefineHitGroup(HITGROUP_STOMACH, {
+      "ValveBiped.Bip01_Spine",
+      "ValveBiped.Bip01_Spine1",
+      "ValveBiped.Bip01_Pelvis"
+    })
+    self:DefineHitGroup(HITGROUP_LEFTARM, {
+      "ValveBiped.Bip01_L_UpperArm",
+      "ValveBiped.Bip01_L_Forearm",
+      "ValveBiped.Bip01_L_Hand",
+      "ValveBiped.Anim_Attachment_LH",
+      "ValveBiped.Bip01_L_Finger4",
+      "ValveBiped.Bip01_L_Finger41",
+      "ValveBiped.Bip01_L_Finger42",
+      "ValveBiped.Bip01_L_Finger3",
+      "ValveBiped.Bip01_L_Finger31",
+      "ValveBiped.Bip01_L_Finger32",
+      "ValveBiped.Bip01_L_Finger2",
+      "ValveBiped.Bip01_L_Finger21",
+      "ValveBiped.Bip01_L_Finger22",
+      "ValveBiped.Bip01_L_Finger1",
+      "ValveBiped.Bip01_L_Finger11",
+      "ValveBiped.Bip01_L_Finger12",
+      "ValveBiped.Bip01_L_Finger0",
+      "ValveBiped.Bip01_L_Finger01",
+      "ValveBiped.Bip01_L_Finger02"
+    })
+    self:DefineHitGroup(HITGROUP_RIGHTARM, {
+      "ValveBiped.Bip01_R_UpperArm",
+      "ValveBiped.Bip01_R_Forearm",
+      "ValveBiped.Bip01_R_Hand",
+      "ValveBiped.Anim_Attachment_RH",
+      "ValveBiped.Bip01_R_Finger4",
+      "ValveBiped.Bip01_R_Finger41",
+      "ValveBiped.Bip01_R_Finger42",
+      "ValveBiped.Bip01_R_Finger3",
+      "ValveBiped.Bip01_R_Finger31",
+      "ValveBiped.Bip01_R_Finger32",
+      "ValveBiped.Bip01_R_Finger2",
+      "ValveBiped.Bip01_R_Finger21",
+      "ValveBiped.Bip01_R_Finger22",
+      "ValveBiped.Bip01_R_Finger1",
+      "ValveBiped.Bip01_R_Finger11",
+      "ValveBiped.Bip01_R_Finger12",
+      "ValveBiped.Bip01_R_Finger0",
+      "ValveBiped.Bip01_R_Finger01",
+      "ValveBiped.Bip01_R_Finger02"
+    })
+    self:DefineHitGroup(HITGROUP_LEFTLEG, {
+      "ValveBiped.Bip01_L_Thigh",
+      "ValveBiped.Bip01_L_Calf",
+      "ValveBiped.Bip01_L_Foot",
+      "ValveBiped.Bip01_L_Toe0"
+    })
+    self:DefineHitGroup(HITGROUP_RIGHTLEG, {
+      "ValveBiped.Bip01_R_Thigh",
+      "ValveBiped.Bip01_R_Calf",
+      "ValveBiped.Bip01_R_Foot",
+      "ValveBiped.Bip01_R_Toe0"
+    })
+    self:DefineHitGroup(HITGROUP_GEAR, {
+      "ValveBiped.Bip01_Pelvis"
+    })
   end
   function ENT:_BaseThink()
     if not self:IsPossessed() then
@@ -157,11 +229,14 @@ if SERVER then
     return 112.5
   end
   function ENT:WhileClimbing(ladder, state, data)
-    if IsValid(ladder) then
-      if state == "climb" or data < 0.5 then
-        self:EmitSlottedSound("DrGBaseLadderClimbing", 0.3, "player/footsteps/ladder"..math.random(4)..".wav")
-      end
-    end
+    if not IsValid(ladder) then return end
+    self:EmitSlottedSound("DrGBaseLadderClimbing", 0.3, "player/footsteps/ladder"..math.random(4)..".wav")
+  end
+  function ENT:OnStopClimbing()
+    self:PlayAnimationAndMoveAbsolute(ACT_ZOMBIE_CLIMB_END, self.ClimbAnimRate, function(cycle)
+      if cycle > 0.5 then return end
+      self:EmitSlottedSound("DrGBaseLadderClimbing", 0.3, "player/footsteps/ladder"..math.random(4)..".wav")
+    end)
   end
 
 else

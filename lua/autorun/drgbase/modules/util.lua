@@ -84,19 +84,60 @@ function util.DrG_LoadDmg(data)
   return dmg
 end
 
+function util.DrG_BallisticTrace(start, velocity, data)
+  data = data or {}
+  local info = math.DrG_BallisticTrajectoryInfoVectors(start, velocity)
+  local tr = {HitPos = false}
+  local t = 0
+  while true do
+    data.start = info.Predict(t)
+    data.endpos = info.Predict(t + 0.01)
+    tr = util.TraceLine(data)
+    if tr.Hit then return tr
+    else t = t + 0.01 end
+  end
+end
+
 if SERVER then
 
   function util.DrG_Explosion(pos, options)
-    if options == nil then options = {} end
-    if type(options) == "number" then options = {magnitude = options} end
+    if isnumber(options) then options = {damage = options}
+    elseif options == nil then options = {} end
     options.damage = options.damage or 0
     local explosion = ents.Create("env_explosion")
-  	if options.owner ~= nil then explosion:SetOwner(options.owner) end
     explosion:SetPos(pos)
   	explosion:Spawn()
     explosion:SetKeyValue("iMagnitude", options.damage)
+    if options.owner ~= nil then explosion:SetOwner(options.owner) end
   	if options.radius ~= nil then explosion:SetKeyValue("iRadiusOverride", options.radius) end
   	explosion:Fire("Explode", 0, 0)
+  end
+
+  function util.DrG_CreateProjectile(model, pos, angles, binds, class)
+    local proj = ents.Create(class or "drgbase_projectile")
+    if istable(model) and #model > 0 then model = model[math.random(#model)] end
+    pos = pos or Vector(0, 0, 0)
+    angles = angles or Angle(0, 0, 0)
+    proj:SetPos(pos)
+    proj:SetAngles(angles)
+    if isfunction(binds.Init) then binds.Init(proj) end
+    if isfunction(binds.Think) then proj.CustomThink = binds.Think end
+    if isfunction(binds.Filter) then proj.CustomFilter = binds.Filter end
+    if isfunction(binds.Contact) then proj.CustomContact = binds.Contact end
+    if isfunction(binds.Use) then proj.CustomUse = binds.Use end
+    if isfunction(binds.Damage) then proj.CustomDamage = binds.Damage end
+    if isfunction(binds.Remove) then proj.CustomRemove = binds.Remove end
+    proj:Spawn()
+    if isstring(model) then proj:SetModel(model) end
+    proj:PhysicsInit(SOLID_VPHYSICS)
+    proj:SetMoveType(MOVETYPE_VPHYSICS)
+    proj:SetSolid(SOLID_VPHYSICS)
+    proj:SetUseType(SIMPLE_USE)
+    local phys = proj:GetPhysicsObject()
+    if IsValid(phys) then
+      phys:Wake()
+    end
+    return proj
   end
 
 else

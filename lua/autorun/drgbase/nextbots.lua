@@ -30,10 +30,7 @@ function DrGBase.Nextbots.IsLoaded(nextbot)
   return list.Get("DrGBaseNextbot")[nextbot] ~= nil
 end
 
-function DrGBase.Nextbots.Possessing(ply)
-  if CLIENT then ply = ply or LocalPlayer() end
-  return ply._DrGBasePossessing
-end
+local DebugCommands = CreateConVar("drgbase_debug_commands", "0")
 
 if SERVER then
 
@@ -44,7 +41,19 @@ if SERVER then
 
 else
 
+  function DrGBase.Nextbots.GetAll()
+    local nextbots = {}
+    for i, ent in ipairs(ents.GetAll()) do
+      if not ent.IsDrGNextbot then continue end
+      table.insert(nextbots, ent)
+    end
+    return nextbots
+  end
+
+  -- Commands --
+
   concommand.DrG_Add("!", "drgbase_nextbots_count", function()
+    if not GetConVar("developer"):GetBool() or not DebugCommands:GetBool() then return end
     local nextbots = {}
     for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
       local class = ent:GetClass()
@@ -56,15 +65,6 @@ else
       str = str.."\n"..class..": "..count
     end
     DrGBase.Print(str)
-  end)
-
-  function DrGBase.Nextbots.GetAll()
-    local nextbots = {}
-    for i, ent in ipairs(ents.GetAll()) do
-      if not ent.IsDrGNextbot then continue end
-      table.insert(nextbots, ent)
-    end
-    return nextbots
-  end
+  end)  
 
 end

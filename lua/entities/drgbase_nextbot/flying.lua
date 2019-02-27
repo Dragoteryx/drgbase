@@ -25,7 +25,7 @@ if SERVER then
     if not self:IsFlying() then return end
     if not self:CanMove(self:GetPossessor()) then self:FlightHover()
     else
-      local angles = math.DrG_AngleVectors(self:GetPos(), pos)
+      local angles = (pos - self:GetPos()):Angle()
       local pitch = -math.NormalizeAngle(angles.p)
       if pitch > self.FlightMaxPitch then pitch = self.FlightMaxPitch end
       if pitch < self.FlightMinPitch then pitch = self.FlightMinPitch end
@@ -39,7 +39,7 @@ if SERVER then
     if not self:IsFlying() then return end
     if not self:CanMove(self:GetPossessor()) then self:FlightHover()
     else
-      local angles = math.DrG_AngleVectors(self:GetPos(), pos)
+      local angles = (pos - self:GetPos()):Angle()
       local pitch = -math.NormalizeAngle(angles.p)
       if pitch > self.FlightMaxPitch then pitch = self.FlightMaxPitch end
       if pitch < self.FlightMinPitch then pitch = self.FlightMinPitch end

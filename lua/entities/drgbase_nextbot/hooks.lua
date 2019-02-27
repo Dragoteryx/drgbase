@@ -1,4 +1,6 @@
 
+local RagdollRemove = CreateConVar("drgbase_ragdoll_remove", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+
 if SERVER then
   util.AddNetworkString("DrGBaseNextbotOnHealthChange")
 
@@ -111,6 +113,16 @@ if SERVER then
   function ENT:OnTakeDamage() end
   function ENT:AfterTakeDamage() end
 
+  local function FetchRagdoll(model)
+    for i, ragdoll in ipairs(ents.FindByClass("prop_ragdoll")) do
+      if ragdoll:GetModel() ~= model then continue end
+      if ragdoll:GetCreationTime() ~= CurTime() then continue end
+      if ragdoll._DrGBaseRagdollClaimed then continue end
+      ragdoll._DrGBaseRagdollClaimed = true
+      return ragdoll
+    end
+  end
+
   local function NextbotDeath(self, dmg)
     if self:IsPossessed() and not self.PossessionRemote then
       self:GetPossessor():TakeDamageInfo(dmg)
@@ -120,8 +132,22 @@ if SERVER then
     if self.DropWeaponOnDeath then
       self:DropWeapon()
     end
-    if self.RagdollOnDeath then
+    local delay = RagdollRemove:GetFloat()
+    if self.RagdollOnDeath and delay ~= 0 then
+      local model = self:GetModel()
+      local scale = self:GetModelScale()
+      local callback = self.RagdollCallback
       self:BecomeRagdoll(dmg)
+      local ragdoll = FetchRagdoll(model)
+      if IsValid(ragdoll) then
+        ragdoll:SetModelScale(scale)
+        if not callback(ragdoll, delay) and delay > 0 then
+          timer.Simple(delay, function()
+            if not IsValid(ragdoll) then return end
+            ragdoll:Remove()
+          end)
+        end
+      end
     else self:Remove() end
   end
 

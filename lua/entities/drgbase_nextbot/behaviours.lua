@@ -30,11 +30,7 @@ if SERVER then
     pos = pos or self.loco:GetMaxJumpHeight()
     if isvector(pos) then
       self:FacePos(pos)
-      self.loco:JumpAcrossGap(pos, util.TraceLine({
-        start = self:GetPos() + Vector(0, 0, 1),
-        endpos = pos + Vector(0, 0, 1),
-        collisiongroup = COLLISION_GROUP_IN_VEHICLE
-      }).Normal)
+      self.loco:JumpAcrossGap(pos, self:GetForward())
     elseif isnumber(pos) then
       local jumpheight = self.loco:GetMaxJumpHeight()
       self.loco:SetJumpHeight(pos*self:GetScale())
@@ -146,9 +142,18 @@ if SERVER then
             self:GetRight()*attack.force.y +
             self:GetUp()*attack.force.z
             dmg:SetDamageForce(force)
-            target:SetVelocity(target:GetVelocity() + force)
-            local phys = target:GetPhysicsObject()
-            if IsValid(phys) then phys:AddVelocity(force) end
+            if target.Type == "nextbot" and not target.IsDrGNextbot then
+              local jumpheight = target.loco:GetJumpHeight()
+              target.loco:SetJumpHeight(1)
+              target.loco:Jump()
+              target.loco:SetJumpHeight(jumpheight)
+              target.loco:SetVelocity(target.loco:GetVelocity() + force)
+            else
+              if target.IsDrGNextbot then target:QuickJump(1) end
+              target:SetVelocity(target:GetVelocity() + force)
+              local phys = target:GetPhysicsObject()
+              if IsValid(phys) then phys:AddVelocity(force) end
+            end
             target:TakeDamageInfo(dmg)
             if self:IsTarget(target) then table.insert(hit, target)
             else table.insert(collateral, target) end
@@ -166,9 +171,9 @@ if SERVER then
         if #animation == 0 then return end
         animation = animation[math.random(#animation)]
       end
-      if options.gesture then self:PlayAnimation(animation, options.rate)
-      elseif options.movement then self:PlayAnimationAndMove(animation, options.rate)
-      else self:PlayAnimationAndWait(animation, options.rate) end
+      if options.gesture then self:PlayAnimation(animation, options.rate, options.callback)
+      elseif options.movement then self:PlayAnimationAndMove(animation, options.rate, options.callback)
+      else self:PlayAnimationAndWait(animation, options.rate, options.callback) end
     end
   end
 
@@ -187,13 +192,13 @@ if SERVER then
   function ENT:CallAttack(name)
     local attack = self._DrGBaseDefinedAttacks[name]
     if attack == nil then return end
-    self:Attack(attack.attacks, attack.options, attack.onattack)
+    return self:Attack(attack.attacks, attack.options, attack.onattack)
   end
 
   function ENT:CallRandomAttack()
     if table.Count(self._DrGBaseDefinedAttacks) == 0 then return end
     local attack, name = table.Random(self._DrGBaseDefinedAttacks)
-    self:CallAttack(name)
+    return self:CallAttack(name)
   end
-  
+
 end

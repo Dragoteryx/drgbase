@@ -99,19 +99,6 @@ function ENT:RandomBodygroups()
   end
 end
 
-function ENT:TraceHull(data)
-  local bound1, bound2 = self:GetCollisionBounds()
-  if bound1.z < bound2.z then
-    local temp = bound1
-    bound1 = bound2
-    bound2 = temp
-  end
-  data = data or {}
-  data.maxs = bound1
-  data.mins = bound2
-  return util.TraceHull(data)
-end
-
 if SERVER then
   util.AddNetworkString("DrGBaseData")
 
@@ -201,29 +188,23 @@ if SERVER then
     self:_Debug("sent data: '"..name.."'.")
   end
 
-  function ENT:CreateProjectile(model, offset, angles, binds, class)
-    local proj = ents.Create(class or "drgbase_projectile")
-    if istable(model) then model = model[math.random(#model)] end
-    offset = offset or Vector(0, 0, 0)
-    angles = angles or Angle(0, 0, 0)
-    if isstring(model) then proj:SetModel(model)
-    else
-      proj:SetModel("models/props_junk/PopCan01a.mdl")
-      proj:SetNoDraw(true)
+  function ENT:TraceHull(data, steps)
+    local bound1, bound2 = self:GetCollisionBounds()
+    if bound1.z < bound2.z then
+      local temp = bound1
+      bound1 = bound2
+      bound2 = temp
     end
-    proj:SetPos(self:GetPos() + self:GetForward()*offset.x + self:GetRight()*offset.y + self:GetUp()*offset.z)
-    proj:SetAngles(self:GetAngles() + angles)
-    if isfunction(binds.Init) then binds.Init(proj) end
-    if isfunction(binds.Think) then proj.ProjThink = binds.Think end
-    if isfunction(binds.Filter) then proj.ProjFilter = binds.Filter end
-    if isfunction(binds.Contact) then proj.ProjContact = binds.Contact end
-    if isfunction(binds.Use) then proj.ProjUse = binds.Use end
-    if isfunction(binds.Damage) then proj.ProjDamage = binds.Damage end
-    if isfunction(binds.Remove) then proj.ProjRemove = binds.Remove end
-    proj:SetOwner(self)
-    proj:Spawn()
-    proj:Activate()
-    return proj
+    if steps then bound2.z = self.loco:GetStepHeight() end
+    data = data or {}
+    if data.start == nil then
+      local center = self:GetPos() + (bound1 + bound2)/2
+      center.z = self:GetPos().z
+      data.start = center
+    end
+    data.maxs = bound1
+    data.mins = bound2
+    return util.TraceHull(data)
   end
 
   function ENT:CollisionHulls(distance, forwardOnly)

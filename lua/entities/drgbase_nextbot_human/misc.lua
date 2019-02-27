@@ -29,7 +29,10 @@ if SERVER then
       callback(grenade, false)
       local phys = grenade:GetPhysicsObject()
       if self:IsPossessed() and pos == nil then pos = self:PossessorTrace().HitPos end
-      phys:DrG_ParabolicTrajectory(pos, {maxmagnitude = self.MaxGrenadeThrow*self:GetScale()})
+      phys:DrG_BallisticTrajectory(pos, {
+        pitch = 45,
+        maxmagnitude = self.MaxGrenadeThrow*self:GetScale()
+      })
     end)
   end
 

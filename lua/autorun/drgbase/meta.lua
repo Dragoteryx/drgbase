@@ -42,7 +42,7 @@ function plyMETA:DrG_IsPossessing()
   return IsValid(self:DrG_Possessing())
 end
 function plyMETA:DrG_Possessing()
-  return DrGBase.Nextbots.Possessing(self)
+  return self._DrGBasePossessing
 end
 function plyMETA:DrG_SteamAvatar(callback, onerror)
   if callback == nil then
@@ -59,18 +59,9 @@ function plyMETA:DrG_SteamAvatar(callback, onerror)
   end
 end
 
-function physMETA:DrG_ParabolicTrajectory(pos, options)
+function physMETA:DrG_BallisticTrajectory(pos, options)
   options = options or {}
-  local vec, data = math.DrG_ParabolicTrajectory(self:GetPos(), pos, options)
-  if not vec:IsZero() then
-    if not options.drag then self:EnableDrag(false) end
-    self:SetVelocity(vec)
-  end
-  return vec, data
-end
-function physMETA:DrG_DirectTrajectory(pos, options)
-  options = options or {}
-  local vec, data = math.DrG_DirectTrajectory(self:GetPos(), pos, options)
+  local vec, data = math.DrG_BallisticTrajectory(self:GetPos(), pos, options)
   if not vec:IsZero() then
     if not options.drag then self:EnableDrag(false) end
     self:SetVelocity(vec)

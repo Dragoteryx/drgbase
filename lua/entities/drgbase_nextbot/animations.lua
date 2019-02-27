@@ -50,8 +50,7 @@ if SERVER then
     self:SetPlaybackRate(speed)
     local delay = CurTime() + len/speed
     while CurTime() < delay and not self:IsDying() do
-      if callback() then break end
-      if self:IsFlying() then self:FlightHover() end
+      if callback(self:GetCycle()) then break end
       coroutine.yield()
     end
     self._DrGBaseDisableBMXY = false
@@ -65,42 +64,64 @@ if SERVER then
     return self:PlaySequenceAndWait(anim, speed, callback)
   end
 
-  function ENT:PlaySequenceAndMove(seq, speed, callback, collide)
+  function ENT:PlaySequenceAndMove(seq, speed, callback)
     if seq == nil then return end
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if seq == -1 then return end
     if callback == nil then callback = function() end end
-    local cycle = 0
-    local startpos = self:GetPos()
-    local safepos = self:GetPos()
-    local res = self:PlaySequenceAndWait(seq, speed, function()
-      local success, vec, angles = self:GetSequenceMovement(seq, 0, self:GetCycle())
+    local previousCycle = 0
+    return self:PlaySequenceAndWait(seq, speed, function(cycle)
+      local success, vec, angles = self:GetSequenceMovement(seq, previousCycle, cycle)
       if success then
         vec:Rotate(self:GetAngles() + angles)
-        if collide then
-          local bound1, bound2 = self:GetCollisionBounds()
-          local maxs = bound1.z > bound2.z and bound1 or bound2
-          local mins = bound1.z <= bound2.z and bound1 or bound2
-          local tr = util.TraceHull({
-            start = self:GetPos(),
-            endpos = startpos + vec,
-            maxs = maxs, mins = mins,
-            filter = {self, self:GetWeapon()}
-          })
-          if not tr.HitWorld and not IsValid(tr.Entity) then safepos = startpos + vec end
-          self:SetPos(safepos)
-        else self:SetPos(startpos + vec) end
+        local data = {
+          endpos = self:GetPos() + vec,
+          filter = {self, self:GetWeapon()}
+        }
+        local tr1 = self:TraceHull(data)
+        if tr1.Hit then
+          local tr2 = self:TraceHull(data, true)
+          if not tr2.Hit then
+            data.start = tr2.HitPos
+            data.endpos = tr2.HitPos + Vector(0, 0, -self.loco:GetStepHeight()-1)
+            local tr3 = self:TraceHull(data)
+            self:SetPos(self:GetPos() + vec + Vector(0, 0, tr3.HitPos.z - self:GetPos().z))
+          end
+        else self:SetPos(self:GetPos() + vec) end
       end
-      return callback()
+      previousCycle = cycle
+      return callback(cycle)
+    end)
+  end
+  function ENT:PlayAnimationAndMove(anim, speed, callback)
+    if isnumber(anim) then
+      anim = self:SelectRandomSequence(anim)
+    end
+    return self:PlaySequenceAndMove(anim, speed, callback, absolute)
+  end
+
+  function ENT:PlaySequenceAndMoveAbsolute(anim, speed, callback)
+    if seq == nil then return end
+    if isstring(seq) then seq = self:LookupSequence(seq) end
+    if seq == -1 then return end
+    if callback == nil then callback = function() end end
+    local startpos = self:GetPos()
+    local res = self:PlaySequenceAndWait(seq, speed, function(cycle)
+      local success, vec, angles = self:GetSequenceMovement(seq, 0, cycle)
+      if success then
+        vec:Rotate(self:GetAngles() + angles)
+        self:SetPos(startpos + vec)
+      end
+      return callback(cycle)
     end)
     self:SetVelocity(Vector(0, 0, 0))
     return res
   end
-  function ENT:PlayAnimationAndMove(anim, speed, callback, collide)
+  function ENT:PlayAnimationAndMoveAbsolute(anim, speed, callback)
     if isnumber(anim) then
       anim = self:SelectRandomSequence(anim)
     end
-    return self:PlaySequenceAndMove(anim, speed, callback, collide)
+    return self:PlaySequenceAndMoveAbsolute(anim, speed, callback)
   end
 
   function ENT:PlaySequence(seq, rate, callback)
@@ -114,7 +135,16 @@ if SERVER then
     self._DrGBaseCurrentGestures[seq] = CurTime() + duration
     local layerID = self:AddGestureSequence(seq)
     self:SetLayerPlaybackRate(layerID, rate)
-    self:Timer(duration, callback)
+    coroutine.DrG_Create(function()
+      local first = true
+      while IsValid(self) do
+        local cycle = self:GetLayerCycle(layerID)
+        if not first and cycle == 0 then break end
+        callback(cycle, layerID)
+        first = false
+        coroutine.yield()
+      end
+    end)
     return duration
   end
   function ENT:PlayAnimation(anim, rate, callback)
@@ -156,7 +186,7 @@ if SERVER then
       self:SetHeadPitch(0)
     else
       if isentity(pos) then pos = pos:WorldSpaceCenter() end
-      local angle = math.DrG_AngleVectors(self:EyePos(), pos)
+      local angle = (pos - self:EyePos()):Angle()
       self:SetHeadYaw(math.AngleDifference(angle.y, self:GetAngles().y))
       self:SetHeadPitch(math.AngleDifference(angle.p, self:GetAngles().p))
     end
@@ -168,7 +198,7 @@ if SERVER then
       self:SetAimPitch(0)
     else
       if isentity(pos) then pos = pos:WorldSpaceCenter() end
-      local angle = math.DrG_AngleVectors(self:EyePos(), pos)
+      local angle = (pos - self:EyePos()):Angle()
       self:SetAimYaw(math.AngleDifference(angle.y, self:GetAngles().y))
       self:SetAimPitch(math.AngleDifference(angle.p, self:GetAngles().p))
     end

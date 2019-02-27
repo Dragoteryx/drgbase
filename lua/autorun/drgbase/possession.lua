@@ -1,5 +1,5 @@
 
-local PossessionEnabled = CreateConVar("drgbase_possession", "1")
+local PossessionEnabled = CreateConVar("drgbase_possession", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 properties.Add("drgbasepossess", {
 	MenuLabel = "Possess",
