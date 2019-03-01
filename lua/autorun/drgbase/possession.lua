@@ -19,13 +19,13 @@ properties.Add("drgbasepossess", {
 	Receive = function(self, len, ply)
 		local ent = net.ReadEntity()
     local possess = ent:Possess(ply, true)
-    if possess == DRGBASE_POSSESS_OK then
+    if possess == "ok" then
 			net.Start("DrGBaseNextbotCanPossess")
 			net.WriteEntity(ent)
 		else
 			net.Start("DrGBaseNextbotCantPossess")
 			net.WriteEntity(ent)
-      net.WriteInt(possess, 32)
+      net.WriteString(possess)
     end
 		net.Send(ply)
 	end
@@ -41,15 +41,15 @@ end)
 net.Receive("DrGBaseNextbotCantPossess", function()
 	local ent = net.ReadEntity()
 	if not IsValid(ent) then return end
-	local enum = net.ReadInt(32)
+	local enum = net.ReadString()
 	local reason = enum
-	if enum == DRGBASE_POSSESS_NOT_ALLOWED then reason = "you are not allowed to possess this nextbot."
-	elseif enum == DRGBASE_POSSESS_NOT_EMPTY then reason = "another player is already possessing this nextbot."
-	elseif enum == DRGBASE_POSSESS_ERROR then reason = "unknown error."
-	elseif enum == DRGBASE_POSSESS_NOT_ALIVE then reason = "you are dead."
-	elseif enum == DRGBASE_POSSESS_ALREADY then reason = "you are already possessing a nextbot."
-	elseif enum == DRGBASE_POSSESS_DISABLED then reason = "possession is not available for this nextbot."
-	elseif enum == DRGBASE_POSSESS_NOVIEWS then reason = "no defined camera views."
+	if enum == "not allowed" then reason = "you are not allowed to possess this nextbot."
+	elseif enum == "already possessed" then reason = "another player is already possessing this nextbot."
+	elseif enum == "error" then reason = "unknown error."
+	elseif enum == "not alive" then reason = "you are dead."
+	elseif enum == "already possessing" then reason = "you are already possessing a nextbot."
+	elseif enum == "disabled" then reason = "possession is not available for this nextbot."
+	elseif enum == "no views" then reason = "no defined camera views."
 	end
 	notification.AddLegacy("You can't possess this nextbot ("..ent.Name.."): "..reason, NOTIFY_ERROR, 4)
 	surface.PlaySound("buttons/button10.wav")

@@ -59,14 +59,25 @@ function plyMETA:DrG_SteamAvatar(callback, onerror)
   end
 end
 
+local DebugTrajectory = CreateConVar("drgbase_debug_trajectory", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 function physMETA:DrG_BallisticTrajectory(pos, options)
   options = options or {}
-  local vec, data = math.DrG_BallisticTrajectory(self:GetPos(), pos, options)
+  if options.draw == nil then options.draw = GetConVar("developer"):GetBool() and DebugTrajectory:GetBool() end
+  local vec, info = math.DrG_BallisticTrajectory(self:GetPos(), pos, options)
   if not vec:IsZero() then
     if not options.drag then self:EnableDrag(false) end
+    if options.draw then
+      debugoverlay.DrG_BallisticTrajectory(self:GetPos(), vec, 5, nil, false, {
+        from = -info.duration, to = info.duration*2, colors = function(t)
+          if t < 0 then return DrGBase.Colors.Green
+          elseif t > info.duration then return DrGBase.Colors.Red
+          else return DrGBase.Colors.White end
+        end
+      })
+    end
     self:SetVelocity(vec)
   end
-  return vec, data
+  return vec, info
 end
 
 if SERVER then

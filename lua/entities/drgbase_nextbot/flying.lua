@@ -1,9 +1,13 @@
 
+-- Getters --
+
 function ENT:IsFlying()
   return self:GetDrGVar("DrGBaseFlying")
 end
 
 if SERVER then
+
+  -- Setters --
 
   function ENT:ToggleFlight(bool)
     if not self.Flight then return end
@@ -20,6 +24,8 @@ if SERVER then
   end
   function ENT:OnStartFlying() end
   function ENT:OnStopFlying() end
+
+  -- Movement --
 
   function ENT:FlyTowards(pos, face)
     if not self:IsFlying() then return end

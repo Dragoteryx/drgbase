@@ -1,20 +1,19 @@
 
+-- Print --
+
 function ENT:PrintPoseParameters()
   for i = 0, self:GetNumPoseParameters() - 1 do
   	local min, max = self:GetPoseParameterRange(i)
   	print(self:GetPoseParameterName(i).." "..min.." / "..max)
   end
 end
-
 function ENT:PrintAnimations()
   for i, seq in pairs(self:GetSequenceList()) do
     print(i.." - "..seq.." / "..self:GetSequenceActivityName(i))
   end
 end
 
-function ENT:SelectRandomSequence(anim)
-  return self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
-end
+-- Callbacks --
 
 function ENT:AddSequenceCallback(seq, cycles, callback)
   if isstring(seq) then seq = self:LookupSequence(seq) end
@@ -33,44 +32,54 @@ function ENT:RemoveSequenceCallbacks(seq)
   self._DrGBaseSequenceCallbacks[seq] = {}
 end
 
+-- Helpers --
+
+function ENT:SelectRandomSequence(anim)
+  return self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
+end
+
 if SERVER then
 
-  function ENT:PlaySequenceAndWait(seq, speed, callback)
+  -- Debug --
+
+  function ENT:HandleAnimEvent(event, time, cycle, type, options)
+
+  end
+
+  -- Play animations --
+
+  function ENT:PlaySequenceAndWait(seq, rate, callback)
     if seq == nil then return end
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if seq == -1 then return end
-    speed = speed or 1
     if callback == nil then callback = function() end end
-    self._DrGBaseDisableBMXY = true
+    rate = rate or 1
     local synced = self:EnableUpdateAnimation()
     self:EnableUpdateAnimation(false)
     local len = self:SetSequence(seq)
     self:ResetSequenceInfo()
     self:SetCycle(0)
-    self:SetPlaybackRate(speed)
-    local delay = CurTime() + len/speed
+    self:SetPlaybackRate(rate)
+    local delay = CurTime() + len/rate
     while CurTime() < delay and not self:IsDying() do
       if callback(self:GetCycle()) then break end
       coroutine.yield()
     end
-    self._DrGBaseDisableBMXY = false
     self:EnableUpdateAnimation(synced)
-    return len/speed
+    return len/rate
   end
-  function ENT:PlayAnimationAndWait(anim, speed, callback)
-    if isnumber(anim) then
-      anim = self:SelectRandomSequence(anim)
-    end
-    return self:PlaySequenceAndWait(anim, speed, callback)
+  function ENT:PlayAnimationAndWait(anim, rate, callback)
+    if isnumber(anim) then anim = self:SelectRandomSequence(anim) end
+    return self:PlaySequenceAndWait(anim, rate, callback)
   end
 
-  function ENT:PlaySequenceAndMove(seq, speed, callback)
+  function ENT:PlaySequenceAndMove(seq, rate, callback)
     if seq == nil then return end
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if seq == -1 then return end
     if callback == nil then callback = function() end end
     local previousCycle = 0
-    return self:PlaySequenceAndWait(seq, speed, function(cycle)
+    return self:PlaySequenceAndWait(seq, rate, function(cycle)
       local success, vec, angles = self:GetSequenceMovement(seq, previousCycle, cycle)
       if success then
         vec:Rotate(self:GetAngles() + angles)
@@ -93,20 +102,18 @@ if SERVER then
       return callback(cycle)
     end)
   end
-  function ENT:PlayAnimationAndMove(anim, speed, callback)
-    if isnumber(anim) then
-      anim = self:SelectRandomSequence(anim)
-    end
-    return self:PlaySequenceAndMove(anim, speed, callback, absolute)
+  function ENT:PlayAnimationAndMove(anim, rate, callback)
+    if isnumber(anim) then anim = self:SelectRandomSequence(anim) end
+    return self:PlaySequenceAndMove(anim, rate, callback, absolute)
   end
 
-  function ENT:PlaySequenceAndMoveAbsolute(anim, speed, callback)
+  function ENT:PlaySequenceAndMoveAbsolute(anim, rate, callback)
     if seq == nil then return end
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if seq == -1 then return end
     if callback == nil then callback = function() end end
     local startpos = self:GetPos()
-    local res = self:PlaySequenceAndWait(seq, speed, function(cycle)
+    local res = self:PlaySequenceAndWait(seq, rate, function(cycle)
       local success, vec, angles = self:GetSequenceMovement(seq, 0, cycle)
       if success then
         vec:Rotate(self:GetAngles() + angles)
@@ -117,11 +124,9 @@ if SERVER then
     self:SetVelocity(Vector(0, 0, 0))
     return res
   end
-  function ENT:PlayAnimationAndMoveAbsolute(anim, speed, callback)
-    if isnumber(anim) then
-      anim = self:SelectRandomSequence(anim)
-    end
-    return self:PlaySequenceAndMoveAbsolute(anim, speed, callback)
+  function ENT:PlayAnimationAndMoveAbsolute(anim, rate, callback)
+    if isnumber(anim) then anim = self:SelectRandomSequence(anim) end
+    return self:PlaySequenceAndMoveAbsolute(anim, rate, callback)
   end
 
   function ENT:PlaySequence(seq, rate, callback)
@@ -148,11 +153,11 @@ if SERVER then
     return duration
   end
   function ENT:PlayAnimation(anim, rate, callback)
-    if isnumber(anim) then
-      anim = self:SelectRandomSequence(anim)
-    end
+    if isnumber(anim) then anim = self:SelectRandomSequence(anim) end
     return self:PlaySequence(anim, rate, callback)
   end
+
+  -- Look/aim --
 
   function ENT:GetHeadYaw()
     return self:GetPoseParameter(self.HeadYaw)
@@ -165,6 +170,17 @@ if SERVER then
   end
   function ENT:SetHeadPitch(pitch)
     self:SetPoseParameter(self.HeadPitch, pitch)
+  end
+  function ENT:LookAt(pos)
+    if not isvector(pos) and not isentity(pos) then
+      self:SetHeadYaw(0)
+      self:SetHeadPitch(0)
+    else
+      if isentity(pos) then pos = pos:WorldSpaceCenter() end
+      local angle = (pos - self:EyePos()):Angle()
+      self:SetHeadYaw(math.AngleDifference(angle.y, self:GetAngles().y))
+      self:SetHeadPitch(math.AngleDifference(angle.p, self:GetAngles().p))
+    end
   end
 
   function ENT:GetAimYaw()
@@ -179,19 +195,6 @@ if SERVER then
   function ENT:SetAimPitch(pitch)
     self:SetPoseParameter(self.AimPitch, pitch)
   end
-
-  function ENT:LookAt(pos)
-    if not isvector(pos) and not isentity(pos) then
-      self:SetHeadYaw(0)
-      self:SetHeadPitch(0)
-    else
-      if isentity(pos) then pos = pos:WorldSpaceCenter() end
-      local angle = (pos - self:EyePos()):Angle()
-      self:SetHeadYaw(math.AngleDifference(angle.y, self:GetAngles().y))
-      self:SetHeadPitch(math.AngleDifference(angle.p, self:GetAngles().p))
-    end
-  end
-
   function ENT:AimAt(pos)
     if not isvector(pos) and not isentity(pos) then
       self:SetAimYaw(0)
@@ -212,67 +215,6 @@ if SERVER then
     else self._DrGBaseSyncAnimations = false end
   end
 
-  function ENT:_HandleAnimations()
-    local angles = self:GetAngles()
-    angles.r = 0
-    if self:IsFlying() and self.FlightMatchPitch then
-      local velocity = self:GetVelocity()
-      if velocity.z == DRGBASE_FLIGHT_HOVER then angles.p = 0
-      else angles.p = velocity:Angle().p end
-    else angles.p = 0 end
-    self:SetAngles(angles)
-    local seq, rate
-    if self:EnableUpdateAnimation() then
-      seq, rate = self:UpdateAnimation()
-    else
-      seq = self:GetSequence()
-      rate = self:GetPlaybackRate()
-    end
-    if isnumber(seq) then seq = self:SelectWeightedSequenceSeeded(seq, self._DrGBaseAnimationSeed) end
-    if isstring(seq) then seq = self:LookupSequence(seq) end
-    local callbacks = self._DrGBaseSequenceCallbacks[seq]
-    if callbacks ~= nil then
-      for i, todo in ipairs(callbacks) do
-        if self._DrGBaseLastAnimCycle < todo.cycle and self:GetCycle() >= todo.cycle then
-          todo.callback(todo.cycle, self:GetCycle())
-        end
-      end
-    end
-    if self:EnableUpdateAnimation() then
-      if self.AnimMatchSpeed and self:IsOnGround() and not self:IsClimbing() then
-        local velocity = self.loco:GetGroundMotionVector()
-        if velocity:IsZero() then self:SetPlaybackRate(rate or 1)
-        else
-          local speed = self:Speed()
-          local sequence = self:GetSequenceGroundSpeed(seq)
-          if sequence == 0 then self:SetPlaybackRate(rate or 1)
-          else self:SetPlaybackRate(speed/sequence) end
-        end
-      else self:SetPlaybackRate(rate or 1) end
-    end
-    if self.AnimMatchDirection then
-      local currseq = self:GetSequenceName(self:GetSequence())
-      local velocity = self.loco:GetGroundMotionVector()
-      local moveX = (-(math.DrG_DegreeAngle(velocity, self:GetForward())-90))/45
-      if moveX > 1 then moveX = 1
-      elseif moveX < -1 then moveX = -1 end
-      if self:ShouldReverseMoveX(currseq) then moveX = -moveX end
-      if moveX == moveX then self:SetPoseParameter("move_x", moveX) end
-      local moveY = (-(math.DrG_DegreeAngle(velocity, self:GetRight())-90))/45
-      if moveY > 1 then moveY = 1
-      elseif moveY < -1 then moveY = -1 end
-      if self:ShouldReverseMoveY(currseq) then moveY = -moveY end
-      if moveY == moveY then self:SetPoseParameter("move_y", moveY) end
-    end
-    if seq ~= nil and seq ~= -1 and (seq ~= self:GetSequence() or self:GetCycle() == 1) then
-      self:ResetSequence(seq)
-      self._DrGBaseAnimationSeed = math.random(0, 255)
-    end
-    self._DrGBaseLastAnimCycle = self:GetCycle()
-  end
-  function ENT:ShouldReverseMoveX() end
-  function ENT:ShouldReverseMoveY() end
-
   function ENT:UpdateAnimation()
     if self:IsFlying() then
       if self:GetVelocity().z == DRGBASE_FLIGHT_HOVER then return self.FlightHoverAnimation, self.FlightHoverAnimRate
@@ -289,8 +231,84 @@ if SERVER then
     else return self.IdleAnimation, self.IdleAnimRate end
   end
 
+  function ENT:_HandleAnimations()
+    local current = self:GetSequence()
+    -- angles
+    local angles = self:GetAngles()
+    angles.r = 0
+    if self:IsFlying() and self.FlightMatchPitch then
+      local velocity = self:GetVelocity()
+      if velocity.z == DRGBASE_FLIGHT_HOVER then angles.p = 0
+      else angles.p = velocity:Angle().p end
+    else angles.p = 0 end
+    self:SetAngles(angles)
+    -- sequence callbacks
+    local callbacks = self._DrGBaseSequenceCallbacks[current]
+    if callbacks ~= nil then
+      for i, todo in ipairs(callbacks) do
+        if self._DrGBaseLastAnimCycle < todo.cycle and self:GetCycle() >= todo.cycle then
+          todo.callback(todo.cycle, self:GetCycle())
+        end
+      end
+    end
+    -- animation direction
+    if self.AnimMatchDirection then
+      local currseq = self:GetSequenceName(current)
+      local velocity = self.loco:GetGroundMotionVector()
+      local moveX = (-(math.DrG_DegreeAngle(velocity, self:GetForward())-90))/45
+      if moveX > 1 then moveX = 1
+      elseif moveX < -1 then moveX = -1 end
+      if self:ShouldReverseMoveX(currseq) then moveX = -moveX end
+      if moveX == moveX then self:SetPoseParameter("move_x", moveX) end
+      local moveY = (-(math.DrG_DegreeAngle(velocity, self:GetRight())-90))/45
+      if moveY > 1 then moveY = 1
+      elseif moveY < -1 then moveY = -1 end
+      if self:ShouldReverseMoveY(currseq) then moveY = -moveY end
+      if moveY == moveY then self:SetPoseParameter("move_y", moveY) end
+    end
+    -- if update animation
+    if self:EnableUpdateAnimation() then
+      -- fetch seq/rate
+      local seq, rate = self:UpdateAnimation()
+      --[[if istable(seq) and #seq > 0 then
+        seq = seq[math.random(#seq)]
+      else seq = nil end]]
+      if seq == nil then seq = current
+      elseif isnumber(seq) then
+        seq = self:SelectWeightedSequenceSeeded(seq, self._DrGBaseAnimationSeed)
+      elseif isstring(seq) then seq = self:LookupSequence(seq) end
+      -- change animation
+      if seq ~= -1 and (seq ~= current or self:GetCycle() == 1) then
+        self:ResetSequence(seq)
+        self._DrGBaseAnimationSeed = math.random(0, 255)
+      end
+      -- animation speed
+      if CurTime() > self._DrGBaseHandleAnimationDelay then
+        self._DrGBaseHandleAnimationDelay = CurTime() + 0.1
+        if self.AnimMatchSpeed and self:IsOnGround() and not self:IsClimbing() then
+          local velocity = self:GetVelocity()
+          velocity.z = 0
+          if velocity:IsZero() then self:SetPlaybackRate(rate or 1)
+          else
+            local speed = velocity:Length()
+            local seqspeed = self:GetSequenceGroundSpeed(seq)
+            if seqspeed == 0 then self:SetPlaybackRate(rate or 1)
+            else self:SetPlaybackRate(speed/seqspeed) end
+          end
+        else self:SetPlaybackRate(rate or 1) end
+      end
+    elseif self:GetCycle() == 1 then
+      self:ResetSequence(current)
+    end
+    self._DrGBaseLastAnimCycle = self:GetCycle()
+  end
+  function ENT:ShouldReverseMoveX() end
+  function ENT:ShouldReverseMoveY() end
+
 else
 
+  function ENT:FireAnimationEvent(pos, ang, event, name)
 
+  end
 
 end

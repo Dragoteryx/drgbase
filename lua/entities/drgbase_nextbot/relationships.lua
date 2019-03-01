@@ -1,4 +1,6 @@
 
+local MaxRadius = CreateConVar("drgbase_radius", "5000", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+
 if SERVER then
 
   -- Targettables --
@@ -148,11 +150,12 @@ if SERVER then
   local defaultVal = 1
 
   function ENT:GetRelationship(ent)
-    if not IsValid(ent) then return D_ER end
-    if self:EntIndex() == ent:EntIndex() then return D_ER end
-    if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool() or IsValid(ent:DrG_Possessing())) then return D_NU end
-    if ent.IsDrGNextbot and ent:IsDead() then return D_NU end
-    if ent:Health() <= 0 then return D_NU end
+    if not IsValid(ent) then return D_ER, defaultVal end
+    if self:EntIndex() == ent:EntIndex() then return D_ER, defaultVal end
+    if ent:IsFlagSet(FL_NOTARGET) then return D_NU, defaultVal end
+    if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool() or IsValid(ent:DrG_Possessing())) then return D_NU, defaultVal end
+    if ent.IsDrGNextbot and ent:IsDead() then return D_NU, defaultVal end
+    if ent:Health() <= 0 then return D_NU, defaultVal end
     local highest = {disposition = self:GetDefaultRelationship(), val = defaultVal}
     local relationships = {}
     local individual, indval = self:GetEntityRelationship(ent)
@@ -238,7 +241,7 @@ if SERVER then
   function ENT:AddEntityRelationship(ent, relationship, val)
     local disp, curr = self:GetEntityRelationship(ent)
     val = val or curr + 1
-    if curr >= val then return end
+    if curr >= math.Round(val) then return end
     self:SetEntityRelationship(ent, relationship, val)
   end
 
@@ -258,7 +261,7 @@ if SERVER then
   function ENT:AddClassRelationship(class, relationship, val)
     local disp, curr = self:GetClassRelationship(class)
     val = val or curr + 1
-    if curr >= val then return end
+    if curr >= math.Round(val) then return end
     self:SetClassRelationship(class, relationship, val)
   end
 
@@ -278,7 +281,7 @@ if SERVER then
   function ENT:AddModelRelationship(model, relationship, val)
     local disp, curr = self:GetModelRelationship(model)
     val = val or curr + 1
-    if curr >= val then return end
+    if curr >= math.Round(val) then return end
     self:SetModelRelationship(model, relationship, val)
   end
 
@@ -298,19 +301,21 @@ if SERVER then
   function ENT:AddFactionRelationship(faction, relationship, val)
     local disp, curr = self:GetFactionRelationship(faction)
     val = val or curr + 1
-    if curr >= val then return end
+    if curr >= math.Round(val) then return end
     self:SetFactionRelationship(faction, relationship, val)
   end
 
-  function ENT:RemoveCustomRelationshipCheck(name)
-    self._DrGBaseCustomRelationships[name] = nil
-    self:NPCRelationship()
-  end
+  -- Custom
   function ENT:DefineCustomRelationshipCheck(name, callback)
     self._DrGBaseCustomRelationships[name] = callback
     self:NPCRelationship()
   end
+  function ENT:RemoveCustomRelationshipCheck(name)
+    self._DrGBaseCustomRelationships[name] = nil
+    self:NPCRelationship()
+  end
 
+  -- Aliases
   function ENT:GetPlayersRelationship()
     self:GetClassRelationship("player")
   end
@@ -318,6 +323,7 @@ if SERVER then
     self:SetClassRelationship("player", relationship)
   end
 
+  -- Helpers
   function ENT:ResetRelationships()
     self._DrGBaseEntityRelationships = {}
     self._DrGBaseClassRelationships = {}
@@ -326,10 +332,8 @@ if SERVER then
     self._DrGBaseCustomRelationships = {}
     self._DrGBaseFactions = {}
     for i, faction in ipairs(self.Factions) do
-      self._DrGBaseFactions[string.upper(faction)] = true
-    end
-    if self.AlliedWithSelfFactions then
-      for i, faction in ipairs(self:GetFactions()) do
+      self:JoinFaction(faction)
+      if self.AlliedWithSelfFactions then
         self:SetFactionRelationship(faction, D_LI)
       end
     end
@@ -370,7 +374,6 @@ if SERVER then
       elseif relationship == D_HT and self.Frightening then
         relationship = D_FR
       end
-      self:_Debug("refresh relationship with NPC '"..ent:GetClass().."' ("..ent:EntIndex()..") => "..relationship..".")
       ent:AddEntityRelationship(self, relationship, 100)
       if ent.IsVJBaseSNPC then
         if (relationship == D_HT or relationship == D_FR) then
@@ -417,55 +420,52 @@ if SERVER then
 
   -- Helpers --
 
-  function ENT:FindEntities(range, relationship, spotted)
-    range = range or self.Radius
-    if range < 0 then return {} end
-    if range > self.Radius then range = self.Radius end
+  function ENT:_GetRelEntities(rel, spotted)
     local entities = {}
     for i, ent in ipairs(self:GetTargets()) do
-      if not IsValid(ent) then continue end
-      if self:EntIndex() == ent:EntIndex() then continue end
+      if not IsValid(ent) then continue end      
       if spotted and not self:HasSpottedEntity(ent) then continue end
-      if self:GetRangeSquaredTo(ent) > range^2 then continue end
-      if relationship and self:GetRelationship(ent) ~= relationship then continue end
-      table.insert(entities, ent)
+      if ent:IsFlagSet(FL_NOTARGET) then
+        self:ForgetEntity(ent)
+        continue
+      end
+      if self:GetRangeSquaredTo(ent) > MaxRadius:GetFloat()^2 then continue end
+      if self:GetRelationship(ent) == rel then table.insert(entities, ent) end
     end
     return entities
   end
-
   function ENT:GetAllies(spotted)
-    return self:FindEntities(self.Radius, D_LI, spotted)
+    self:_GetRelEntities(D_LI, spotted)
   end
   function ENT:GetEnemies(spotted)
-    return self:FindEntities(self.Radius, D_HT, spotted)
+    self:_GetRelEntities(D_LI, spotted)
   end
   function ENT:GetScaredOf(spotted)
-    return self:FindEntities(self.Radius, D_FR, spotted)
+    self:_GetRelEntities(D_LI, spotted)
   end
   function ENT:GetNeutrals(spotted)
-    return self:FindEntities(self.Radius, D_NU, spotted)
+    self:_GetRelEntities(D_LI, spotted)
   end
 
-  function ENT:FindClosestEntity(range, relationship, spotted)
-    local entities = self:FindEntities(range, relationship, spotted)
+  function ENT:_GetClosestRelEntity(rel, spotted)
+    local entities = self:_GetRelEntities(rel, spotted)
+    if #entities == 0 then return end
     table.sort(entities, function(ent1, ent2)
       return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
     end)
-    if #entities > 0 then return entities[1]
-    else return nil end
+    return entities[1]
   end
-
-  function ENT:FindClosestAlly(range, spotted)
-    return self:FindClosestEntity(range, D_LI, spotted)
+  function ENT:GetClosestAlly(spotted)
+    return self:_GetClosestRelEntity(D_LI, spotted)
   end
-  function ENT:FindClosestEnemy(range, spotted)
-    return self:FindClosestEntity(range, D_HT, spotted)
+  function ENT:GetClosestEnemy(spotted)
+    return self:_GetClosestRelEntity(D_HT, spotted)
   end
-  function ENT:FindClosestScaredOf(range, spotted)
-    return self:FindClosestEntity(range, D_FR, spotted)
+  function ENT:GetClosestScaredOf(spotted)
+    return self:_GetClosestRelEntity(D_FR, spotted)
   end
-  function ENT:FindClosestNeutral(range, spotted)
-    return self:FindClosestEntity(range, D_NU, spotted)
+  function ENT:GetClosestNeutral(spotted)
+    return self:_GetClosestRelEntity(D_NU, spotted)
   end
 
   function ENT:IsAlly(ent)

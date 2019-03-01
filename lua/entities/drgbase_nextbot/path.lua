@@ -1,5 +1,21 @@
 if CLIENT then return end
 
+-- Helpers --
+
+function ENT:GetPath()
+  return self._DrGBasePath
+end
+function ENT:InvalidatePath()
+  if not IsValid(self:GetPath()) then return end
+  self:GetPath():Invalidate()
+end
+function ENT:DrawPath()
+  if not IsValid(self:GetPath()) then return end
+  self:GetPath():Draw()
+end
+
+-- Meta --
+
 local pathMETA = FindMetaTable("PathFollower")
 
 function pathMETA:DrG_Compute(nextbot, pos, generator)
@@ -22,11 +38,9 @@ function pathMETA:DrG_Compute(nextbot, pos, generator)
   			return -1
       elseif deltaZ >= nextbot.loco:GetStepHeight() then
         if not IsValid(ladder) and deltaZ >= nextbot.loco:GetMaxJumpHeight() then
-          if nextbot.ClimbWalls then
-            if deltaZ > nextbot.ClimbWallsMaxHeight or deltaZ < nextbot.ClimbWallsMinHeight then
-              return -1
-            end
-  				else return -1 end
+          if not nextbot.ClimbWalls or deltaZ > nextbot.ClimbWallsMaxHeight or deltaZ < nextbot.ClimbWallsMinHeight then
+    				return -1
+          end
   			end
   			cost = cost + dist
   		end
@@ -41,4 +55,26 @@ function pathMETA:DrG_Compute(nextbot, pos, generator)
   	end
   	return compute
   else return self:Compute(nextbot, pos, generator) end
+end
+
+function pathMETA:DrG_GetSegment(i)
+  if not IsValid(self) then return end
+  return self:GetAllSegments()[i]
+end
+function pathMETA:DrG_GetSegmentNumber(segment)
+  for i, current in ipairs(self:GetAllSegments()) do
+    if current.distanceFromStart == segment.distanceFromStart then return i end
+  end
+  return -1
+end
+function pathMETA:DrG_GetRelativeSegment(i)
+  if not IsValid(self) then return end
+  local current = self:DrG_GetSegmentNumber(self:GetCurrentGoal())
+  if current > -1 then return self:DrG_GetSegment(current + i) end
+end
+function pathMETA:DrG_GetPreviousSegment()
+  return self:DrG_GetRelativeSegment(-1)
+end
+function pathMETA:DrG_GetNextSegment()
+  return self:DrG_GetRelativeSegment(1)
 end

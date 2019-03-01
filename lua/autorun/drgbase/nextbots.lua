@@ -30,7 +30,7 @@ function DrGBase.Nextbots.IsLoaded(nextbot)
   return list.Get("DrGBaseNextbot")[nextbot] ~= nil
 end
 
-local DebugCommands = CreateConVar("drgbase_debug_commands", "0")
+local DebugCommands = CreateConVar("drgbase_debug_commands", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 if SERVER then
 
@@ -52,7 +52,7 @@ else
 
   -- Commands --
 
-  concommand.DrG_Add("!", "drgbase_nextbots_count", function()
+  concommand.DrG_Add("!", "drgbase_count_nextbots", function()
     if not GetConVar("developer"):GetBool() or not DebugCommands:GetBool() then return end
     local nextbots = {}
     for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
@@ -65,6 +65,6 @@ else
       str = str.."\n"..class..": "..count
     end
     DrGBase.Print(str)
-  end)  
+  end)
 
 end

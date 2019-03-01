@@ -7,7 +7,7 @@ if SERVER then
   function ENT:OnContact(ent)
     if CurTime() < self._DrGBaseOnContactDelay then return end
     self._DrGBaseOnContactDelay = CurTime() + 0.2
-    self:_Debug("contact with '"..ent:GetClass().."' ("..ent:EntIndex()..").")
+    self:_Debug("contact with '"..ent:GetClass().."' ("..ent:EntIndex()..").", "drgbase_debug_misc")
     if IsValid(ent) and self:IsTarget(ent) then self:SpotEntity(ent) end
     if ent:GetClass() == "prop_combine_ball" then
       local reaction = self:CombineBall()
@@ -94,20 +94,20 @@ if SERVER then
 
   hook.Add("EntityTakeDamage", "DrGBaseNextbotDamage", function(ent, dmg)
     if not ent.IsDrGNextbot then return end
-    if IsValid(dmg:GetAttacker()) then ent:SpotEntity(dmg:GetAttacker()) end
     if dmg:GetDamage() <= 0 then return true end
     local hitgroups, bone = ent:FetchHitGroups(dmg)
     local res = ent:OnTakeDamage(dmg, hitgroups, bone)
+    if IsValid(dmg:GetAttacker()) then ent:SpotEntity(dmg:GetAttacker()) end
     if isnumber(res) then
       dmg:ScaleDamage(res)
     end
     if res ~= true then
+      ent:_Debug("take damage: "..dmg:GetDamage()..".", "drgbase_debug_health")
       local data = util.DrG_SaveDmg(dmg)
       ent:CallInCoroutine(function(delay)
         dmg = util.DrG_LoadDmg(data)
         ent:AfterTakeDamage(dmg, hitgroups, bone, delay)
       end)
-      ent:_Debug("take damage => "..dmg:GetDamage()..".")
     else return true end
   end)
   function ENT:OnTakeDamage() end
@@ -174,54 +174,48 @@ if SERVER then
 
   function ENT:OnStuck()
     if self:IsPossessed() then return end
-    self:_Debug("stuck.")
   end
 
   function ENT:OnUnStuck()
     if self:IsPossessed() then return end
-    self:_Debug("unstuck.")
   end
 
   -- Handlers --
+
   local function CalcFallDamage(zvelocity, waterlevel)
     if waterlevel == 3 then return end
     if zvelocity > 700 then return zvelocity/20/(waterlevel+1) end
   end
 
   function ENT:_HandleCustomHooks()
-    -- OnExtinguish
     if not self:IsOnFire() and self._DrGBaseOnFire then
       self:OnExtinguish()
     end
     self._DrGBaseOnFire = self:IsOnFire()
-    -- CustomOnLandOnGround
     if self:IsOnGround() and not self._DrGBaseOnGround then
-      -- touch ground
-      self:_Debug("touch ground.")
-      self:_Debug("downwards velocity: "..self._DrGBaseDownwardsVelocity..".")
+      self:_Debug("touch ground.", "drgbase_debug_movement")
       self:InvalidatePath()
       if self._DrGBaseDownwardsVelocity > 0 and not self:IsFlying() and not self:IsClimbing() and self.FallDamage then
-        local val = CalcFallDamage(self._DrGBaseDownwardsVelocity/self:GetScale(), self:WaterLevel()) or 0
+        local down = self._DrGBaseDownwardsVelocity/self:GetScale()
+        local val = CalcFallDamage(down, self:WaterLevel()) or 0
         if val > 0 then
-          self:_Debug("fall damage => "..val..".")
           local dmg = DamageInfo()
           dmg:SetDamage(val)
           dmg:SetDamageType(DMG_FALL)
           dmg:SetAttacker(self)
-          if not self:OnFallDamage(dmg, self._DrGBaseDownwardsVelocity/self:GetScale()) then
+          if not self:OnFallDamage(dmg, down) then
+            self:_Debug("fall damage: "..val..".", "drgbase_debug_health")
             self:TakeDamageInfo(dmg)
           end
         end
       end
     elseif not self:IsOnGround() and self._DrGBaseOnGround then
-      -- leave ground
-      self:_Debug("leave ground.")
+      self:_Debug("leave ground.", "drgbase_debug_movement")
     end
     self._DrGBaseOnGround = self:IsOnGround()
     self._DrGBaseDownwardsVelocity = -self:GetVelocity().z
-    -- OnHealthChange
     if self:Health() ~= self._DrGBaseHealth then
-      self:_Debug("health change from "..self._DrGBaseHealth.." to "..self:Health()..".")
+      self:_Debug("health change: "..self._DrGBaseHealth.." => "..self:Health()..".", "drgbase_debug_health")
       self:OnHealthChange(self._DrGBaseHealth, self:Health())
     end
     self._DrGBaseHealth = self:Health()

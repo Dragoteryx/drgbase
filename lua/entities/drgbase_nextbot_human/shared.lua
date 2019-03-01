@@ -107,7 +107,7 @@ if SERVER then
   function ENT:_BaseInitialize()
     self._DrGBaseGrenadeThrowDelay = 0
     self:SetDrGVar("DrGBaseCrouching", false)
-    self:DefineHitGroup(HITGROUP_HEAD, {
+    --[[self:DefineHitGroup(HITGROUP_HEAD, {
       "ValveBiped.Bip01_Neck1",
       "ValveBiped.Bip01_Head1",
       "ValveBiped.forward"
@@ -179,7 +179,7 @@ if SERVER then
     })
     self:DefineHitGroup(HITGROUP_GEAR, {
       "ValveBiped.Bip01_Pelvis"
-    })
+    })]]
   end
   function ENT:_BaseThink()
     if not self:IsPossessed() then

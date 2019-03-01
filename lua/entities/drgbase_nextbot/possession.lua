@@ -1,11 +1,5 @@
 
-function ENT:IsPossessed()
-  return IsValid(self:GetPossessor())
-end
-
-function ENT:GetPossessor()
-  return self._DrGBasePossessor
-end
+-- View --
 
 function ENT:CurrentPossessionView()
   if not self:IsPossessed() then return end
@@ -76,6 +70,18 @@ function ENT:PossessorTrace(options)
   return util.TraceLine(options)
 end
 
+-- Getters --
+
+function ENT:IsPossessed()
+  return IsValid(self:GetPossessor())
+end
+
+function ENT:GetPossessor()
+  return self._DrGBasePossessor
+end
+
+-- Helpers --
+
 function ENT:PossessorForward()
   if SERVER and self:IsPossessed() or
   CLIENT and self:IsPossessedByLocalPlayer() then
@@ -87,7 +93,6 @@ function ENT:PossessorForward()
     end
   else return false end
 end
-
 function ENT:PossessorBackward()
   if SERVER and self:IsPossessed() or
   CLIENT and self:IsPossessedByLocalPlayer() then
@@ -95,7 +100,6 @@ function ENT:PossessorBackward()
     not self:GetPossessor():KeyDown(IN_FORWARD)
   else return false end
 end
-
 function ENT:PossessorLeft()
   if SERVER and self:IsPossessed() or
   CLIENT and self:IsPossessedByLocalPlayer() then
@@ -103,7 +107,6 @@ function ENT:PossessorLeft()
     not self:GetPossessor():KeyDown(IN_MOVERIGHT)
   else return false end
 end
-
 function ENT:PossessorRight()
   if SERVER and self:IsPossessed() or
   CLIENT and self:IsPossessedByLocalPlayer() then
@@ -129,6 +132,29 @@ function ENT:KeyDownLast(key)
   else return false end
 end
 
+-- Handlers --
+
+function ENT:_HandlePossessionBinds(coroutine)
+  if self:IsPossessed() then
+    local possessor = self:GetPossessor()
+    if CLIENT or not self:PossessionBlockInput() then
+      for i, move in ipairs(self.PossessionBinds) do
+        if CLIENT and not move.client then continue end
+        if SERVER and ((not coroutine and move.coroutine) or (coroutine and not move.coroutine)) then continue end
+        if move.onkeypressed == nil then move.onkeypressed = function() end end
+        if move.onkeydown == nil then move.onkeydown = function() end end
+        if move.onkeyup == nil then move.onkeyup = function() end end
+        if move.onkeydownlast == nil then move.onkeydownlast = function() end end
+        if move.onkeyreleased == nil then move.onkeyreleased = function() end end
+        if possessor:KeyPressed(move.bind) then move.onkeypressed(self, possessor) end
+        if possessor:KeyDown(move.bind) then move.onkeydown(self, possessor) else move.onkeyup(self, possessor) end
+        if possessor:KeyDownLast(move.bind) then move.onkeydownlast(self, possessor) end
+        if possessor:KeyReleased(move.bind) then move.onkeyreleased(self, possessor) end
+      end
+    end
+  end
+end
+
 if SERVER then
   util.AddNetworkString("DrGBaseNextbotPossess")
   util.AddNetworkString("DrGBaseNextbotDispossess")
@@ -136,70 +162,61 @@ if SERVER then
   util.AddNetworkString("DrGBaseNextbotCantPossess")
   util.AddNetworkString("DrGBaseNextbotCyclePossessionViews")
 
+  -- Activate --
+
   function ENT:Possess(ply, _client)
-    if not self.PossessionEnabled then return DRGBASE_POSSESS_DISABLED end
-    if not IsValid(ply) then return DRGBASE_POSSESS_INVALID end
-    if not ply:IsPlayer() then return DRGBASE_POSSESS_NOT_PLAYER end
-    if not ply:Alive() then return DRGBASE_POSSESS_NOT_ALIVE end
-    if IsValid(ply:DrG_Possessing()) then return DRGBASE_POSSESS_ALREADY end
-    if self:IsPossessed() then return DRGBASE_POSSESS_NOT_EMPTY end
-    if #self.PossessionViews == 0 then return DRGBASE_POSSESS_NOVIEWS end
+    if not self.PossessionEnabled then return "disabled" end
+    if not IsValid(ply) then return "invalid player" end
+    if not ply:IsPlayer() then return "not player" end
+    if not ply:Alive() then return "not alive" end
+    if IsValid(ply:DrG_Possessing()) then return "already possessing" end
+    if self:IsPossessed() then return "already_possessed" end
+    if #self.PossessionViews == 0 then return "no views" end
     local hookres = hook.Run("DrGBase/Possess", self, ply, _client or false)
-    if hookres ~= nil and not hookres then return DRGBASE_POSSESS_NOT_ALLOWED end
+    if hookres ~= nil and not hookres then return "not allowed" end
     hookres = self:OnPossess(ply)
-    if hookres ~= nil and not hookres then return DRGBASE_POSSESS_NOT_ALLOWED end
+    if hookres ~= nil and not hookres then return "not allowed" end
     drive.PlayerStartDriving(ply, self, "drive_drgbase_nextbot")
-    if not ply:IsDrivingEntity(self) then return DRGBASE_POSSESS_ERROR end
-    --self:SetSolidMask(MASK_NPCSOLID)
-    self:SetEnemy(nil)
-    self:SetDestination(nil)
+    if not ply:IsDrivingEntity(self) then return "error" end
+    self:_Debug("possessed by player '"..ply:GetName().."'.", "drgbase_debug_misc")
     ply._DrGBasePossessing = self
     self._DrGBasePossessor = ply
+    --ply:SetNoTarget(true)
+    for i, ent in ipairs(self:GetTargets()) do
+      self:ForgetEntity(ent)
+    end
     net.Start("DrGBaseNextbotPossess")
     net.WriteEntity(self)
     net.WriteEntity(ply)
     net.Broadcast()
     self:SetDrGVar("DrGBasePossessionView", 1)
-    self:_Debug("possessed by player '"..ply:Nick().."' ("..ply:EntIndex()..").")
-    return DRGBASE_POSSESS_OK
+    return "ok"
   end
   function ENT:OnPossess() end
 
   function ENT:Dispossess(_client)
-    if not self:IsPossessed() then return DRGBASE_DISPOSSESS_EMPTY end
+    if not self:IsPossessed() then return "not possessed" end
     local possessor = self:GetPossessor()
     local hookres = hook.Run("DrGBase/Dispossess", self, possessor, _client or false)
-    if hookres ~= nil and not hookres then return DRGBASE_DISPOSSESS_NOT_ALLOWED end
+    if hookres ~= nil and not hookres then return "not allowed" end
     hookres = self:OnDispossess(possessor)
-    if hookres ~= nil and not hookres then return DRGBASE_DISPOSSESS_NOT_ALLOWED end
+    if hookres ~= nil and not hookres then return "not allowed" end
     drive.PlayerStopDriving(possessor)
-    if possessor:IsDrivingEntity(self) then return DRGBASE_DISPOSSESS_ERROR end
-    --self:SetSolidMask(MASK_NPCSOLID_BRUSHONLY)
+    if possessor:IsDrivingEntity(self) then return "error" end
+    self:_Debug("dispossessed by player '"..possessor:GetName().."'.", "drgbase_debug_misc")
     possessor._DrGBasePossessing = nil
     self._DrGBasePossessor = nil
+    possessor:SetNoTarget(false)
     net.Start("DrGBaseNextbotDispossess")
     net.WriteEntity(self)
     net.WriteEntity(possessor)
     net.Broadcast()
     self:SetDrGVar("DrGBasePossessionView", 1)
-    self:_Debug("no longer possessed by player '"..possessor:Nick().."' ("..possessor:EntIndex()..").")
-    return DRGBASE_DISPOSSESS_OK
+    return "ok"
   end
   function ENT:OnDispossess() end
 
-  function ENT:CyclePossessionViews()
-    local view = self:GetDrGVar("DrGBasePossessionView")
-    view = view+1
-    if view > #self.PossessionViews then view = 1 end
-    self:SetDrGVar("DrGBasePossessionView", view)
-  end
-
-  net.Receive("DrGBaseNextbotCyclePossessionViews", function(len, ply)
-    if not ply:DrG_IsPossessing() then return end
-    ply:DrG_Possessing():CyclePossessionViews()
-  end)
-
-  -- Handlers --
+  -- Setters --
 
   function ENT:PossessionBlockInput(bool)
     if bool == nil then return self._DrGBaseBlockInput
@@ -213,20 +230,22 @@ if SERVER then
     else self._DrGBaseBlockYaw = false end
   end
 
-  function ENT:_HandlePossessionThink()
-    if not self:IsPossessed() then return end
-    self:_HandlePossessionBinds(false)
+  -- Views --
+
+  function ENT:CyclePossessionViews()
+    local view = self:GetDrGVar("DrGBasePossessionView")
+    view = view+1
+    if view > #self.PossessionViews then view = 1 end
+    self:SetDrGVar("DrGBasePossessionView", view)
   end
 
-  function ENT:_HandlePossessionCoroutine()
-    if not self:IsPossessed() then return end
-    local possessor = self:GetPossessor()
-    self:_SetState(DRGBASE_STATE_POSSESSED)
-    if not self:PossessionBlockInput() then
-      self:PossessionControls()
-      self:_HandlePossessionBinds(true)
-    end
-  end
+  net.Receive("DrGBaseNextbotCyclePossessionViews", function(len, ply)
+    if not ply:DrG_IsPossessing() then return end
+    ply:DrG_Possessing():CyclePossessionViews()
+  end)
+
+  -- Hooks --
+
   function ENT:PossessionControls()
     if self:IsFlying() then
       local moving = false
@@ -263,31 +282,29 @@ if SERVER then
     end
   end
 
-  function ENT:_HandlePossessionBinds(coroutine)
-    if self:IsPossessed() then
-      local possessor = self:GetPossessor()
-      if not IsValid(possessor) or not possessor:Alive() then
-        self:Dispossess()
-        return
-      end
-      if self._DrGBaseReady and not self:PossessionBlockInput() then
-        for i, move in ipairs(self.PossessionBinds) do
-          if (not coroutine and move.coroutine) or (coroutine and not move.coroutine) then continue end
-          if move.onkeypressed == nil then move.onkeypressed = function() end end
-          if move.onkeydown == nil then move.onkeydown = function() end end
-          if move.onkeyup == nil then move.onkeyup = function() end end
-          if move.onkeydownlast == nil then move.onkeydownlast = function() end end
-          if move.onkeyreleased == nil then move.onkeyreleased = function() end end
-          if possessor:KeyPressed(move.bind) then move.onkeypressed(self, possessor) end
-          if possessor:KeyDown(move.bind) then move.onkeydown(self, possessor) else move.onkeyup(self, possessor) end
-          if possessor:KeyDownLast(move.bind) then move.onkeydownlast(self, possessor) end
-          if possessor:KeyReleased(move.bind) then move.onkeyreleased(self, possessor) end
-        end
-      end
+  -- Handlers --
+
+  function ENT:_HandlePossessionThink()
+    if not self:IsPossessed() then return end
+    local possessor = self:GetPossessor()
+    if not IsValid(possessor) or not possessor:Alive() then
+      self:Dispossess()
+      return
+    end
+    self:_HandlePossessionBinds(false)
+  end
+
+  function ENT:_HandlePossessionCoroutine()
+    if not self:IsPossessed() then return end
+    local possessor = self:GetPossessor()
+    self:_SetState(DRGBASE_STATE_POSSESSED)
+    if not self:PossessionBlockInput() then
+      self:PossessionControls()
+      self:_HandlePossessionBinds(true)
     end
   end
 
-  -- Hooks (move spawned ents when possessing) --
+  -- Move spawned ents --
 
   local function MoveEnt(ply, ent)
     if not IsValid(ply:DrG_Possessing()) then return end
@@ -356,6 +373,13 @@ else
     local possessing = LocalPlayer():DrG_Possessing()
     if not IsValid(possessing) then return end
     possessing:PossessionRender(possessing:CurrentPossessionView())
+  end)
+
+  function ENT:PossessionHalos() end
+  hook.Add("PreDrawHalos", "DrGBasePossessionHalos", function()
+    local possessing = LocalPlayer():DrG_Possessing()
+    if not IsValid(possessing) then return end
+    possessing:PossessionHalos(possessing:CurrentPossessionView())
   end)
 
 end

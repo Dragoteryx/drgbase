@@ -2,29 +2,6 @@ ENT.Type = "nextbot"
 ENT.Base = "base_nextbot"
 ENT.IsDrGNextbot = true
 
-function ENT:_Debug(text, convar)
-  if not GetConVar("developer"):GetBool() then return end
-  if isstring(convar) and not GetConVar(convar):GetBool() then return end
-  DrGBase.Print("Nextbot '"..self:GetClass().."' ("..self:EntIndex().."): "..text)
-end
-
-DrGBase.IncludeFile("ai.lua")
-DrGBase.IncludeFile("animations.lua")
-DrGBase.IncludeFile("behaviours.lua")
-DrGBase.IncludeFile("detection.lua")
-DrGBase.IncludeFile("flying.lua")
-DrGBase.IncludeFile("hooks.lua")
-DrGBase.IncludeFile("loco.lua")
-DrGBase.IncludeFile("meta.lua")
-DrGBase.IncludeFile("misc.lua")
-DrGBase.IncludeFile("movement.lua")
-DrGBase.IncludeFile("path.lua")
-DrGBase.IncludeFile("possession.lua")
-DrGBase.IncludeFile("projectiles.lua")
-DrGBase.IncludeFile("relationships.lua")
-DrGBase.IncludeFile("sounds.lua")
-DrGBase.IncludeFile("weapons.lua")
-
 -- Misc --
 ENT.Models = {"models/player/kleiner.mdl"}
 ENT.Skins = {0}
@@ -178,8 +155,31 @@ ENT.Footsteps = {
 -- Stats --
 ENT.MaxHealth = 100
 ENT.HealthRegen = 0
-ENT.Radius = 10000
 ENT.FallDamage = false
+
+-- AI --
+ENT.PursueTime = 10
+ENT.SearchTime = 50
+ENT.Factions = {}
+ENT.AlliedWithSelfFactions = true
+ENT.CommunicateWithAllies = false
+ENT.Frightening = false
+ENT.EnemyReach = 250
+--ENT.EnemyStop = ENT.EnemyReach
+ENT.EnemyAvoid = 0
+ENT.AllyReach = 250
+ENT.ScaredAvoid = 500
+ENT.AttackScared = false
+
+-- Detection --
+ENT.Omniscient = false
+ENT.SightFOV = 150
+ENT.SightRange = math.huge
+ENT.EyeBone = ""
+ENT.EyeOffset = Vector(0, 0, 0)
+ENT.EyeAngle = Angle(0, 0, 0)
+ENT.HearingRange = 250
+ENT.HearingRangeBullets = 5000
 
 -- Movements --
 ENT.RunSpeed = 200
@@ -223,18 +223,6 @@ ENT.FlightBackward = false
 ENT.FlightUp = false
 ENT.FlightDown = false
 
--- AI --
-ENT.Factions = {}
-ENT.AlliedWithSelfFactions = true
-ENT.CommunicateWithAllies = false
-ENT.Frightening = false
-ENT.EnemyReach = 250
---ENT.EnemyStop = ENT.EnemyReach
-ENT.EnemyAvoid = 0
-ENT.AllyReach = 250
-ENT.ScaredAvoid = 500
-ENT.AttackScared = false
-
 -- Weapons --
 ENT.UseWeapons = false
 ENT.Weapons = {}
@@ -244,18 +232,6 @@ ENT.WeaponAttachmentRH = "Anim_Attachment_RH"
 ENT.DropWeaponOnDeath = false
 ENT.AcceptPlayerWeapons = false
 
--- Detection --
-ENT.Omniscient = false
-ENT.PursueTime = 10
-ENT.SearchTime = 50
-ENT.SightFOV = 150
-ENT.SightRange = 6000
-ENT.EyeBone = ""
-ENT.EyeOffset = Vector(0, 0, 0)
-ENT.EyeAngle = Angle(0, 0, 0)
-ENT.HearingRange = 250
-ENT.HearingRangeBullets = 5000
-
 -- Possession --
 ENT.PossessionEnabled = false
 ENT.PossessionPrompt = true
@@ -263,15 +239,36 @@ ENT.PossessionRemote = true
 ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
 
---[[
-function ENT:HandleAnimEvent(event, eventTime, cycle, type, options)
-  print(event, eventTime, cycle, type, options)
-end
+local DebugAI = CreateConVar("drgbase_debug_ai", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local DebugLOS = CreateConVar("drgbase_debug_los", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local DebugMisc = CreateConVar("drgbase_debug_misc", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local DebugHealth = CreateConVar("drgbase_debug_health", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local DebugPath = CreateConVar("drgbase_debug_path", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local DebugMovement = CreateConVar("drgbase_debug_movement", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
-function ENT:FireAnimationEvent(pos, ang, event, name)
-  print(pos, ang, event, name)
+DrGBase.IncludeFile("ai.lua")
+DrGBase.IncludeFile("animations.lua")
+DrGBase.IncludeFile("behaviours.lua")
+DrGBase.IncludeFile("detection.lua")
+DrGBase.IncludeFile("flying.lua")
+DrGBase.IncludeFile("hooks.lua")
+DrGBase.IncludeFile("loco.lua")
+DrGBase.IncludeFile("memory.lua")
+DrGBase.IncludeFile("meta.lua")
+DrGBase.IncludeFile("misc.lua")
+DrGBase.IncludeFile("movement.lua")
+DrGBase.IncludeFile("path.lua")
+DrGBase.IncludeFile("possession.lua")
+DrGBase.IncludeFile("projectiles.lua")
+DrGBase.IncludeFile("relationships.lua")
+DrGBase.IncludeFile("sounds.lua")
+DrGBase.IncludeFile("weapons.lua")
+
+function ENT:_Debug(text, convar)
+  if not GetConVar("developer"):GetBool() then return end
+  if isstring(convar) and not GetConVar(convar):GetBool() then return end
+  DrGBase.Print("Nextbot '"..self:GetClass().."' ("..self:EntIndex().."): "..text)
 end
-]]
 
 function ENT:GetState()
   return self:GetDrGVar("DrGBaseState")
@@ -291,7 +288,7 @@ if SERVER then
   end)
 
   function ENT:Initialize()
-    self:_Debug("spawn.")
+    self:_Debug("spawn.", "drgbase_debug_misc")
     self:SetModel(self.Models[math.random(#self.Models)])
     self:SetModelScale(self.ModelScale)
     self:SetSkin(self.Skins[math.random(#self.Skins)])
@@ -309,9 +306,8 @@ if SERVER then
     --self:SetSolidMask(MASK_NPCSOLID_BRUSHONLY)
     self.VJ_AddEntityToSNPCAttackList = true -- so vj snpcs can damage us
     self._DrGBaseCoroutineCallbacks = {} -- call functions inside coroutine
-    self._DrGBaseSpotted = {} -- list of spotted entities
+    self._DrGBaseMemory = {} -- list of spotted entities
     self._DrGBaseSyncAnimations = true -- sync animations with speed
-    self._DrGBaseCurrentAnimLastCycle = 0 -- current anim cycle
     self._DrGBaseCustomThinkDelay = 0 -- delay for custom think
     self._DrGBaseLOSCheckDelay = 0 -- los checks delay
     self._DrGBaseCustomBehaviour = false -- whether or not to use the custom behaviour
@@ -319,7 +315,6 @@ if SERVER then
     self._DrGBaseOnFire = false -- save if the nextbot is on fire or not
     self._DrGBaseDownwardsVelocity = 0 -- used for fall damage
     self._DrGBaseHealth = self.MaxHealth -- log current health
-    self._DrGBaseMaxHealth = self.MaxHealth -- log max health
     self._DrGBaseSequenceCallbacks = {} -- custom animation callbacks
     self._DrGBaseDefaultRelationship = D_NU -- default relationship
     self._DrGBaseEntityRelationships = {} -- relationships with entities
@@ -328,7 +323,6 @@ if SERVER then
     self._DrGBaseFactionRelationships = {} -- relationships with factions
     self._DrGBaseCustomRelationships = {} -- custom relationship checks
     self._DrGBaseHandleEnemy = 0 -- search for enemy delay
-    self._DrGBaseReady = false -- called after self:OnSpawn()
     self._DrGBaseFactions = {} -- list of factions that the nextbot is part of
     self._DrGBaseHealthRegenDelay = 0 -- health regen delay
     self._DrGBaseDefinedAttacks = {} -- attacks table
@@ -345,26 +339,27 @@ if SERVER then
     self._DrGBaseTargetsList = {} -- to quickly check targets
     self._DrGBaseAnimationSeed = math.random(0, 255) -- to pick a random sequence
     self._DrGBasePitch = 0 -- flying pitch, 0 by default
-    self._DrGBaseThinkDelay = 0 -- limit think calls
     self._DrGBaseDynamicAvoidance = true -- dynamic avoidance
     self._DrGBaseHandleScaredOf = 0 -- delay between scared of checks
-    self._DrGBaseThinkDelay = 0 -- think optimisation
     self._DrGBaseNbHitGroups = 0 -- number of defined hitgroups
     self._DrGBaseDefinedProjectiles = {} -- defined projectiles
     self._DrGBaseThrownProjectiles = {} -- thrown projectiles
+    self._DrGBaseHandleAnimationDelay = 0 -- animation think delay
+    self._DrGBaseHandleMovementDelay = 0 -- movement think delay
+    self._DrGBaseLineOfSight = {} -- register whether or not an entity is in sight
+    self._DrGBaseEnableAmbientSounds = true -- toggle ambient sounds
     self:SetDrGVar("DrGBaseState", DRGBASE_STATE_NONE)
     self:SetDrGVar("DrGBaseSpeed", 0)
     self:SetDrGVar("DrGBaseDying", false)
     self:SetDrGVar("DrGBaseDead", false)
     self:SetDrGVar("DrGBaseEnemy", nil)
     self:SetDrGVar("DrGBaseDestination", nil)
-    self:SetDrGVar("DrGBaseHealth", self.MaxHealth)
-    self:SetDrGVar("DrGBaseMaxHealth", self.MaxHealth)
     self:SetDrGVar("DrGBaseScale", 1)
     self:SetDrGVar("DrGBasePossessionView", 1)
     self:SetDrGVar("DrGBaseClimbing", false)
     self:SetDrGVar("DrGBaseFlying", false)
     self:SetDrGVar("DrGBaseWeaponReady", false)
+    self:SetDrGVar("DrGBaseHostile", true)
     self:ResetRelationships() -- sets the factions
     if self.UseWeapons and #self.Weapons > 0 then
       self:GiveWeapon(self.Weapons[math.random(#self.Weapons)])
@@ -376,7 +371,7 @@ if SERVER then
         self:StopSound(self._DrGBaseAmbientSound)
         self._DrGBaseAmbientSound = nil
       end
-      self:_Debug("remove.")
+      self:_Debug("remove.", "drgbase_debug_misc")
     end)
     self:_BaseInitialize()
     self:CustomInitialize()
@@ -389,23 +384,21 @@ if SERVER then
   -- Think --
 
   function ENT:Think()
-    if CurTime() > self._DrGBaseThinkDelay then
-      self._DrGBaseThinkDelay = CurTime() + 0.025
-      self:_HandleCustomHooks()
-      self:_HandleAnimations()
-      self:_HandleMovement()
-      self:_HandleFlight()
-      self:_HandlePossessionThink()
-      self:_HandleAmbientSounds()
-      self:_HandleHealthRegen()
-      if not GetConVar("ai_disabled"):GetBool() then
-        self:_HandleEnemy()
-        self:_HandleScaredOf()
-        self:_HandleLineOfSight()
-      end
-      self:_BaseThink(self:GetState())
+    self:_HandleCustomHooks()
+    self:_HandleAnimations()
+    self:_HandleMovement()
+    self:_HandleFlight()
+    self:_HandlePossessionThink()
+    self:_HandleAmbientSounds()
+    self:_HandleHealthRegen()
+    if not GetConVar("ai_disabled"):GetBool() then
+      self:_HandleEnemy()
+      self:_HandleScaredOf()
+      self:_HandleLineOfSight()
     end
-    if not self._DrGBaseMovingToPos and self:IsMoving() and not self:IsCharging() and self:IsOnGround() then
+    self:_BaseThink(self:GetState())
+    if not self._DrGBaseMovingToPos and self:IsMoving() and
+    not self:IsCharging() and self:IsOnGround() then
       self:_DynamicAvoidance(false)
     end
     if CurTime() > self._DrGBaseCustomThinkDelay then
@@ -427,7 +420,6 @@ if SERVER then
 
     -- check for navmesh
     if not navmesh.IsLoaded() then
-      self:_Debug("no navmesh.")
       self:NoNavmesh()
       net.Start("DrGBaseNextbotNoNavmesh")
       net.WriteEntity(self)
@@ -437,7 +429,6 @@ if SERVER then
 
     -- on spawn
     self:OnSpawn()
-    self._DrGBaseReady = true
 
     while true do
 
@@ -475,7 +466,7 @@ if SERVER then
     if oldstate ~= state then
       self:SetDrGVar("DrGBaseState", state)
       oldstate = oldstate or DRGBASE_NEXTBOT_STATE_NONE
-      self:_Debug("state change ("..oldstate.." => "..state..")")
+      self:_Debug("state change: "..oldstate.." => "..state..".", "drgbase_debug_ai")
       self:OnStateChange(oldstate, state)
     end
   end
@@ -518,10 +509,7 @@ if SERVER then
 
 else
 
-  local DebugMisc = CreateClientConVar("drgbase_debug_misc", "0")
-  local DebugLOS = CreateClientConVar("drgbase_debug_los", "0")
   local DebugRange = CreateClientConVar("drgbase_debug_range", "0")
-  local DebugAvoid = CreateClientConVar("drgbase_debug_avoid", "0")
 
   -- Client Init --
 
@@ -562,15 +550,9 @@ else
     -- line of sight debug
     if GetConVar("developer"):GetBool() and DebugLOS:GetBool() then
       self:CanSeeEntity(LocalPlayer(), function(los)
-        --print("los:")
-        --print(los)
         self._DrGBaseCanSeeLocalPlayer = los
       end)
     end
-    --[[self:GetRelationship(LocalPlayer(), function(res)
-      print("rel:")
-      print(res)
-    end)]]
     -- custom base think
     self:_BaseThink(self:GetState())
     -- custom
@@ -578,9 +560,12 @@ else
       local nextThink = self:CustomThink(self:GetState()) or 0
       self._DrGBaseCustomThinkDelay = CurTime() + nextThink
     end
-    if self:IsPossessedByLocalPlayer() and CurTime() > self._DrGBasePossessionThinkDelay then
-      local nextThink = self:PossessionThink(self:GetPossessor(), self:PossessorTrace()) or 0
-      self._DrGBasePossessionThinkDelay = CurTime() + nextThink
+    if self:IsPossessedByLocalPlayer() then
+      self:_HandlePossessionBinds()
+      if CurTime() > self._DrGBasePossessionThinkDelay then
+        local nextThink = self:PossessionThink(self:GetPossessor(), self:PossessorTrace()) or 0
+        self._DrGBasePossessionThinkDelay = CurTime() + nextThink
+      end
     end
   end
   function ENT:_BaseThink() end
@@ -600,9 +585,9 @@ else
         render.DrawWireframeBox(self:GetPos(), Angle(0, 0, 0), bound1, bound2, DrGBase.Colors.White, false)
         render.DrawLine(center, center + self:GetVelocity(), DrGBase.Colors.Orange, false)
         render.DrawWireframeSphere(center, 2*self:GetScale(), 4, 4, DrGBase.Colors.Orange, false)
-        if self:HaveEnemy() then
-          render.DrawLine(center, self:GetEnemy():WorldSpaceCenter(), DrGBase.Colors.Red, false)
-        end
+      end
+      if DebugAI:GetBool() and self:HaveEnemy() then
+        render.DrawLine(center, self:GetEnemy():WorldSpaceCenter(), DrGBase.Colors.Red, false)
       end
       if DebugLOS:GetBool() and self._DrGBaseCanSeeLocalPlayer ~= nil then
         local los = DrGBase.Colors.Red

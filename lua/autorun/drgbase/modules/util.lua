@@ -93,7 +93,9 @@ function util.DrG_BallisticTrace(start, velocity, data)
     data.start = info.Predict(t)
     data.endpos = info.Predict(t + 0.01)
     tr = util.TraceLine(data)
-    if tr.Hit then return tr
+    if tr.Hit then
+      tr.StartPos = start
+      return tr
     else t = t + 0.01 end
   end
 end
