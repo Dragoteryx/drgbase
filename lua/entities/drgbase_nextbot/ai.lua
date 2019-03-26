@@ -1,38 +1,28 @@
+-- Getters/setters --
 
--- Scared of --
-
-function ENT:IsScared()
-  if self:IsPossessed() then return false, nil end
-  local ent = self:GetDrGVar("DrGBaseScaredOf")
-  return IsValid(ent), ent
-end
-
--- Enemy --
-
-function ENT:GetHostile()
-  return self:GetDrGVar("DrGBaseHostile")
+function ENT:GetState()
+  return self:GetNW2Int("DrGBaseState", DRGBASE_STATE_NONE)
 end
 
 function ENT:GetEnemy()
-  if self:IsPossessed() then return nil end
-  return self:GetDrGVar("DrGBaseEnemy")
-end
-function ENT:HaveEnemy()
-  if self:IsPossessed() then return false end
-  return IsValid(self:GetEnemy())
+  return self:GetNW2Entity("DrGBaseEnemy")
 end
 function ENT:HasEnemy()
-  return self:HaveEnemy()
+  return IsValid(self:GetEnemy())
 end
 
--- Destination --
+function ENT:GetScaredOf()
+  return nil
+end
 
 function ENT:GetDestination()
-  if self:IsPossessed() then return nil end
-  return self:GetDrGVar("DrGBaseDestination")
+  local dest = self:GetNW2Vector("DrGBaseDestination", false)
+  if not dest then return nil else return dest end
 end
 
--- Helpers --
+function ENT:IsHostile()
+  return self:GetNW2Bool("DrGBaseHostile")
+end
 
 function ENT:IsAgressive()
   local state = self:GetState()
@@ -41,116 +31,148 @@ function ENT:IsAgressive()
   state == DRGBASE_STATE_POSSESSED
 end
 
+-- Functions --
+
+-- Hooks --
+
+function ENT:OnStateChange() end
+function ENT:OnEnemyChange() end
+function ENT:OnDestinationChange() end
+
+-- Handlers --
+
+function ENT:_InitAI()
+  if SERVER then
+    self:_SetState(DRGBASE_STATE_NONE)
+    self:SetHostile(true)
+    coroutine.DrG_Create(function()
+      while IsValid(self) do
+        self:_HandleAI()
+        coroutine.yield()
+      end
+    end)
+    -- init enemy search
+    self:LoopTimer(0.5, function(self)
+      self._DrGBaseAfraidOf = self:GetClosestAfraidOf()
+      if not IsValid(self._DrGBasePrioritizedEnemy) or not self:IsEnemy(self._DrGBasePrioritizedEnemy) then
+        if self:IsHostile() then
+          local enemy = self:GetClosestEnemy(true)
+          if not self:HasLostEntity(enemy) then
+            self:_InitMemory(enemy)
+            self._DrGBaseMemory[enemy:GetCreationID()].pos = enemy:GetPos()
+          end
+          self:SetEnemy(enemy)
+        else self:SetEnemy(nil) end
+      end
+    end)
+  end
+  self:SetNWVarProxy("DrGBaseState", function(self, name, old, new)
+    if old ~= new then self:OnStateChange(old or DRGBASE_STATE_NONE, new or DRGBASE_STATE_NONE) end
+  end)
+  self:SetNWVarProxy("DrGBaseEnemy", function(self, name, old, new)
+    if old ~= new then self:OnEnemyChange(old, new) end
+  end)
+  self:SetNWVarProxy("DrGBaseDestination", function(self, name, old, new)
+    if old ~= new then self:OnDestinationChange(old, new) end
+  end)
+end
+
 if SERVER then
 
-  -- Scared of --
+  -- Getters/setters --
 
-  function ENT:SetScaredOf(ent, delay)
-    if self:IsPossessed() then return end
-    if delay ~= nil and delay >= 0 then
-      self._DrGBaseHandleScaredOf = CurTime() + delay
-    end
-    self:SetDrGVar("DrGBaseScaredOf", ent)
-  end
-  function ENT:_HandleScaredOf()
-    if self:IsPossessed() then return end
-    if CurTime() < self._DrGBaseHandleScaredOf then return end
-    self:SetScaredOf(self:GetClosestScaredOf(true), 0.5)
+  function ENT:_SetState(state)
+    if state == self:GetState() then return end
+    self:SetNW2Int("DrGBaseState", state)
   end
 
-  function ENT:OnAvoidScaredOf() end
-
-  -- Enemy --
-
-  function ENT:SetHostile(bool)
-    if bool then self:SetDrGVar("DrGBaseHostile", true)
-    else self:SetDrGVar("DrGBaseHostile", false) end
+  function ENT:SetEnemy(ent)
+    if ent == self:GetEnemy() then return end
+    self:SetNW2Entity("DrGBaseEnemy", ent)
+    self._DrGBasePrioritizedEnemy = nil
   end
-
-  function ENT:SetEnemy(ent, delay)
-    if self:IsPossessed() then return end
-    if delay ~= nil and delay >= 0 then
-      self._DrGBaseHandleEnemy = CurTime() + delay
-    end
-    self:SetDrGVar("DrGBaseEnemy", ent)
+  function ENT:PrioritizeEnemy(ent)
+    if not self:IsEnemy(ent) then return end
+    self:SetEnemy(ent)
+    self._DrGBasePrioritizedEnemy = ent
   end
-  function ENT:_HandleEnemy()
-    if self:IsPossessed() then return end
-    if CurTime() < self._DrGBaseHandleEnemy then return end
-    local enemy = self:GetClosestEnemy(true)
-    self:SetEnemy(enemy, 0.5)
-    if not self:HasLostEntity(enemy) then
-      self._DrGBaseMemory[enemy:GetCreationID()].pos = enemy:GetPos()
-    end
-  end
-
-  function ENT:OnAvoidEnemy() end
-  function ENT:OnPatrolEnemy() end
-  function ENT:OnSearchEnemy() end
-  function ENT:OnPursueEnemy() end
-  function ENT:EnemyInRange() end
-
-  -- Destination --
 
   function ENT:SetDestination(pos)
-    self:SetDrGVar("DrGBaseDestination", pos)
+    if pos == self:GetDestination() then return end
+    self:SetNW2Vector("DrGBaseDestination", pos)
   end
+
+  function ENT:SetHostile(bool)
+    if bool == self:IsHostile() then return end
+    self:SetNW2Bool("DrGBaseHostile", bool)
+  end
+
+  -- Functions --
+
+  -- Hooks --
+
+  function ENT:OnAvoidAfraidOf() end
+
+  function ENT:OnAvoidEnemy() end
+  function ENT:OnPursueEnemy() end
+  function ENT:OnSearchEnemy() end
+  function ENT:EnemyInRange() end
 
   function ENT:FetchDestination() end
   function ENT:MovingToDestination() end
   function ENT:ReachedDestination() end
 
-  -- Hooks --
-
   function ENT:ShouldRun(state)
     return state == DRGBASE_STATE_AI_PURSUE or
     state == DRGBASE_STATE_AI_SEARCH or
-    state == DRGBASE_STATE_AI_AVOID
+    state == DRGBASE_STATE_AI_AVOID or
+    self:IsOnFire()
   end
 
   -- Handlers --
 
   function ENT:_DefaultBehaviour()
-    local scared, scaredOf = self:IsScared()
-    if scared and self:InRange(scaredOf, self.ScaredAvoid) and
-    self:LineOfSight(scaredOf, 360, math.huge) then
+    local afraidof = self._DrGBaseAfraidOf
+    if IsValid(afraidof) and self:IsInRange(afraidof, self.AfraidAvoid) and self:Visible(afraidof) then
       self:_SetState(DRGBASE_STATE_AI_AVOID)
-      if not self:OnAvoidScaredOf(scaredOf) then
+      if not self:OnAvoidAfraidOf(afraidof) then
+        self:MoveAwayFromEntity(afraidof)
         self:InvalidatePath()
-        self:StepAwayFromPos(scaredOf:GetPos())
       end
-      if self.AttackScared and IsValid(scaredOf) and
-      self:InRange(scaredOf, self.EnemyReach) and self:Visible(scaredOf) then
-        self:EnemyInRange(scaredOf, true)
+      if self.AttackScared and IsValid(scared) and
+      self:IsInRange(scared, self.EnemyReach) and self:Visible(scared) then
+        self:EnemyInRange(scared, true)
       end
-    elseif self:GetHostile() and self:GetEnemy() ~= nil then
+    elseif self:IsHostile() and self:HasEnemy() then
       self:SetDestination(nil)
       local enemy = self:GetEnemy()
-      if IsValid(enemy) and not self:HasLostEntity(enemy) then
-        self:_SetState(DRGBASE_STATE_AI_PURSUE)
-      else self:_SetState(DRGBASE_STATE_AI_SEARCH) end
-      if IsValid(enemy) then
+      if not IsValid(enemy) then
+        self:_SetState(DRGBASE_STATE_AI_SEARCH)
+      else
+        if not self:HasLostEntity(enemy) then
+          self:_SetState(DRGBASE_STATE_AI_PURSUE)
+        else self:_SetState(DRGBASE_STATE_AI_SEARCH) end
         local stop = self.EnemyStop or self.EnemyReach
-        if self:InRange(enemy, self.EnemyAvoid) and self:Visible(enemy) then
+        if self:IsInRange(enemy, self.EnemyAvoid) and self:Visible(enemy) then
           if not self:OnAvoidEnemy(enemy) then
-            self:StepAwayFromPos(enemy:GetPos())
+            self:MoveAwayFromEntity(enemy)
           end
-          if self:InRange(enemy, self.EnemyReach) and self:Visible(enemy) then
+          if self:IsInRange(enemy, self.EnemyReach) and self:Visible(enemy) then
             self:EnemyInRange(enemy, false)
           end
-        elseif not self:InRange(enemy, stop) or not self:Visible(enemy) then
+        elseif not self:IsInRange(enemy, stop) or not self:Visible(enemy) then
           local hookres
           if self:HasLostEntity(enemy) then
             hookres = self:OnSearchEnemy(enemy)
           else hookres = self:OnPursueEnemy(enemy) end
           if not hookres then
             local res = self:FollowEntityMemory(enemy, {
-              maxage = 0.5
+              maxage = 0.5, avoid = true
             }, function()
               if self:IsPossessed() then return "possession" end
-              if self:CoroutineCallbacks() then return "callbacks" end
-              if self:InRange(enemy, stop) then return "keepdistance" end
-              if self:InRange(enemy, self.EnemyReach) and self:Visible(enemy) then
+              if self:CoroutineCalls() then return "callbacks" end
+              if self:IsInRange(enemy, stop) and self:Visible(enemy) then return "keepdistance" end
+              if self:IsInRange(enemy, self.EnemyReach) and self:Visible(enemy) then
                 self:EnemyInRange(enemy, false)
               end
             end)
@@ -166,11 +188,12 @@ if SERVER then
         local reached = self:MovingToDestination(destination)
         if reached == nil then
           local res = self:MoveToPos(destination, {
-            maxage = 0.5
+            maxage = 0.5, avoid = true
           }, function()
             if self:IsPossessed() then return "possession" end
-            if self:CoroutineCallbacks() then return "callbacks" end
-            if self:GetHostile() and self:HaveEnemy() then return "enemy" end
+            if self:CoroutineCalls() then return "callbacks" end
+            if self:GetDestination() == nil then return "no destination" end
+            if self:IsHostile() and self:HasEnemy() then return "enemy" end
           end)
           reached = (res == "ok")
         end
@@ -184,5 +207,12 @@ if SERVER then
 
 else
 
+  -- Getters/setters --
+
+  -- Functions --
+
+  -- Hooks --
+
+  -- Handlers --
 
 end

@@ -42,30 +42,23 @@ function plyMETA:DrG_IsPossessing()
   return IsValid(self:DrG_Possessing())
 end
 function plyMETA:DrG_Possessing()
-  return self._DrGBasePossessing
+  return self:GetNW2Entity("DrGBasePossessing")
 end
 function plyMETA:DrG_SteamAvatar(callback, onerror)
-  if callback == nil then
-    return drg_promise.New(function(resolve, reject)
-      self:DrG_SteamAvatar(resolve, reject)
-    end)
-  else
-    http.Fetch("https://steamcommunity.com/profiles/"..self:SteamID64().."?xml=1", function(body)
-      -- fetch the avatar from the xml file
-      callback(avatar)
-    end, function(err)
-      if isfunction(onerror) then onerror(err) end
-    end)
-  end
+  http.Fetch("https://steamcommunity.com/profiles/"..self:SteamID64().."?xml=1", function(body)
+    -- fetch the avatar from the xml file
+    callback(avatar)
+  end, function(err)
+    if isfunction(onerror) then onerror(err) end
+  end)
 end
 
-local DebugTrajectory = CreateConVar("drgbase_debug_trajectory", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 function physMETA:DrG_BallisticTrajectory(pos, options)
   options = options or {}
-  if options.draw == nil then options.draw = GetConVar("developer"):GetBool() and DebugTrajectory:GetBool() end
   local vec, info = math.DrG_BallisticTrajectory(self:GetPos(), pos, options)
   if not vec:IsZero() then
-    if not options.drag then self:EnableDrag(false) end
+    if not options.drag then self:EnableDrag(false)
+    else self:EnableDrag(true) end
     if options.draw then
       debugoverlay.DrG_BallisticTrajectory(self:GetPos(), vec, 5, nil, false, {
         from = -info.duration, to = info.duration*2, colors = function(t)

@@ -7,6 +7,11 @@ ENT.Category = "DrGBase"
 
 DrGBase.IncludeFile("meta.lua")
 
+function ENT:Timer(duration, callback)
+  timer.Simple(duration, function()
+    if IsValid(self) then callback(self) end
+  end)
+end
 function ENT:ScreenShake(amplitude, frequency, duration, radius)
   return util.ScreenShake(self:GetPos(), amplitude, frequency, duration, radius)
 end

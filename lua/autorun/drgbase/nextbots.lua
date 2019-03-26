@@ -30,25 +30,18 @@ function DrGBase.Nextbots.IsLoaded(nextbot)
   return list.Get("DrGBaseNextbot")[nextbot] ~= nil
 end
 
+DrGBase.Nextbots._Spawned = DrGBase.Nextbots._Spawned or {}
+function DrGBase.Nextbots.GetAll()
+  return DrGBase.Nextbots._Spawned
+end
+
 local DebugCommands = CreateConVar("drgbase_debug_commands", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 if SERVER then
 
-  DrGBase.Nextbots._Spawned = DrGBase.Nextbots._Spawned or {}
-  function DrGBase.Nextbots.GetAll()
-    return DrGBase.Nextbots._Spawned
-  end
+
 
 else
-
-  function DrGBase.Nextbots.GetAll()
-    local nextbots = {}
-    for i, ent in ipairs(ents.GetAll()) do
-      if not ent.IsDrGNextbot then continue end
-      table.insert(nextbots, ent)
-    end
-    return nextbots
-  end
 
   -- Commands --
 

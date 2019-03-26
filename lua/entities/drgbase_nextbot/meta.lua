@@ -1,5 +1,10 @@
 
+local RagdollRemove = CreateConVar("drgbase_ragdoll_remove", "-1")
+
 local entMETA = FindMetaTable("Entity")
+local nextbotMETA = FindMetaTable("NextBot")
+
+-- Entity --
 
 local old_EyePos = entMETA.EyePos
 function entMETA:EyePos()
@@ -29,6 +34,8 @@ end
 
 if SERVER then
 
+  -- Entity --
+
   local old_GetVelocity = entMETA.GetVelocity
   function entMETA:GetVelocity()
     if self.IsDrGNextbot then
@@ -41,6 +48,90 @@ if SERVER then
     if self.IsDrGNextbot then
       return self.loco:SetVelocity(velocity)
     else return old_SetVelocity(self, velocity) end
+  end
+
+  -- Nextbot --
+
+  local old_BodyMoveXY = nextbotMETA.BodyMoveXY
+  function nextbotMETA:BodyMoveXY(options)
+    if self.IsDrGNextbot then
+      options = options or {}
+      if options.rate == nil then options.rate = true end
+      if options.direction == nil then options.direction = true end
+      if options.frameadvance == nil then options.frameadvance = true end
+      if options.rate and options.direction and options.frameadvance and
+      not self:IsPlayingAnimation() and self:IsOnGround() then
+        return old_BodyMoveXY(self)
+      else
+        if options.rate and not self:IsPlayingAnimation() and
+        self:IsOnGround() then
+          local velocity = self:GetVelocity()
+          velocity.z = 0
+          if not velocity:IsZero() then
+            local speed = velocity:Length()
+            local seqspeed = self:GetSequenceGroundSpeed(seq)
+            if seqspeed ~= 0 then self:SetPlaybackRate(speed/seqspeed) end
+          end
+        end
+        if options.direction then
+          local velocity = self.loco:GetGroundMotionVector()
+          local moveX = (-(math.DrG_DegreeAngle(velocity, self:GetForward())-90))/45
+          if moveX > 1 then moveX = 1
+          elseif moveX < -1 then moveX = -1 end
+          if moveX == moveX then self:SetPoseParameter("move_x", moveX) end
+          local moveY = (-(math.DrG_DegreeAngle(velocity, self:GetRight())-90))/45
+          if moveY > 1 then moveY = 1
+          elseif moveY < -1 then moveY = -1 end
+          if moveY == moveY then self:SetPoseParameter("move_y", moveY) end
+        end
+        if options.frameadvance then
+          self:FrameAdvance()
+        end
+      end
+    else return old_BodyMoveXY(self) end
+  end
+
+  local old_BecomeRagdoll = nextbotMETA.BecomeRagdoll
+  function nextbotMETA:BecomeRagdoll(dmg)
+    if self.IsDrGNextbot then
+      local scale = self:GetModelScale()
+      local color = self:GetColor()
+      local material = self:GetMaterial()
+      local ragdoll = old_BecomeRagdoll(self, dmg)
+      if IsValid(ragdoll) then
+        ragdoll:SetModelScale(scale)
+        ragdoll:SetColor(color)
+        ragdoll:SetMaterial(material)
+        if not self:OnRagdoll(ragdoll) then
+          local remove = RagdollRemove:GetFloat()
+          if remove > 0 then
+            timer.Simple(remove, function()
+              if IsValid(ragdoll) then ragdoll:Remove() end
+            end)
+          elseif remove == 0 then
+            ragdoll:Remove()
+          end
+        end
+      end
+      return ragdoll
+    else return old_BecomeRagdoll(self, dmg) end
+  end
+  function ENT:OnRagdoll() end
+
+else
+
+  local old_Health = entMETA.Health
+  function entMETA:Health()
+    if self.IsDrGNextbot then
+      return self:GetNW2Int("DrGBaseHealth", old_Health(self))
+    else return old_Health(self) end
+  end
+
+  local old_GetMaxHealth = entMETA.GetMaxHealth
+  function entMETA:GetMaxHealth()
+    if self.IsDrGNextbot then
+      return self:GetNW2Int("DrGBaseMaxHealth", old_GetMaxHealth(self))
+    else return old_GetMaxHealth(self) end
   end
 
 end

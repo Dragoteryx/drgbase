@@ -48,11 +48,9 @@ function math.DrG_BallisticTrajectory(start, endpos, options)
   elseif not pitchnumber and not magnitudenumber then
     local normal = (endpos - start):GetNormalized()
     local forward = Vector(normal.x, normal.y, 0):GetNormalized()
-    local subangle = math.DrG_DegreeAngle(forward, normal)
     options.gravity = g
     options._length = x
-    options.pitch = (90-subangle)/2
-    options.magnitude = nil
+    options.pitch = (90 - math.DrG_DegreeAngle(forward, normal))/2
     return math.DrG_BallisticTrajectory(start, endpos, options)
   else
     pitch = options.pitch

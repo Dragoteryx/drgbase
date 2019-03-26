@@ -29,5 +29,9 @@ DrGBase.IncludeFile("drgbase/weapons.lua")
 if SERVER then
 
 else
-  DrGBase.Print("Hi! :)")
+
+  hook.Add("Initialize", "DrGBaseHello", function()
+    DrGBase.Print("Hi! :)")
+  end)
+
 end

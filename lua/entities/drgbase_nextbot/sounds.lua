@@ -1,25 +1,24 @@
 
-function ENT:EmitSlottedSound(slot, duration, soundName, soundLevel, pitchPercent, volume, channel)
-  local lastSlot = self._DrGBaseSlottedSounds[slot]
-  if lastSlot == nil or CurTime() > lastSlot then
-    self._DrGBaseSlottedSounds[slot] = CurTime() + duration
-    self:EmitSound(soundName, soundLevel, pitchPercent, volume, channel)
-  end
-end
+-- Helpers --
 
 function ENT:EmitFootstep(soundLevel, pitchPercent, volume, channel)
-  local matType = util.TraceLine({
-    start = self:GetPos(), endpos = self:GetPos() + self:GetUp()*-999, filter = self
-  }).MatType
-  local sounds = self.Footsteps[matType]
-  if sounds == nil or #sounds == 0 then
-    matType = MAT_DEFAULT
-    sounds = self.Footsteps[matType]
-  end
-  if sounds == nil or #sounds == 0 then return false end
+  local tr = util.TraceLine({
+    start = self:GetPos(),
+    endpos = self:GetPos() - self:GetUp()*999,
+    filter = self
+  })
+  local sounds = self.Footsteps[tr.MatType]
+  if not istable(sounds) or #sounds == 0 then sounds = self.Footsteps[MAT_DEFAULT] end
+  if not istable(sounds) or #sounds == 0 then return false end
   self:EmitSound(sounds[math.random(#sounds)], soundLevel, pitchPercent, volume, channel or CHAN_BODY)
   return true
 end
+
+function ENT:LoopSound(sound)
+  table.insert(self._DrGBaseLoopingSounds, self:StartLoopingSound(sound))
+end
+
+-- Music --
 
 local current = nil
 function ENT:PlayMusic(music, fade, callback)
@@ -62,8 +61,14 @@ function ENT:PlayMusic(music, fade, callback)
     end
     return false
   else
-    if isfunction(callback) then callback(sound, false) end
-    return true
+    if (istable(music) and not table.HasValue(music, current.music)) or
+    (isstring(music) and music ~= current.music) then
+      self:StopMusic()
+      return false
+    else
+      if isfunction(callback) then callback(sound, false) end
+      return true
+    end
   end
 end
 function ENT:StopMusic()
@@ -100,36 +105,3 @@ hook.Add("Think", "DrGBasePlayMusic", function()
     current.sound:Play()
   end
 end)
-
-if SERVER then
-
-  -- Handlers --
-
-  function ENT:EnableAmbientSounds(bool)
-    if bool == nil then return self._DrGBaseEnableAmbientSounds
-    elseif bool then self._DrGBaseEnableAmbientSounds = true
-    else self._DrGBaseEnableAmbientSounds = false end
-  end
-
-  function ENT:_HandleAmbientSounds()
-    if not self:EnableAmbientSounds() then return end
-    if isstring(self.AmbientSounds) then self.AmbientSounds = {sound = self.AmbientSounds} end
-    if #self.AmbientSounds > 0 and self._DrGBaseAmbientSound == nil then
-      local ambient = {sound = self._DrGBasePreviousAmbient}
-      if #self.AmbientSounds > 1 then
-        while ambient.sound == self._DrGBasePreviousAmbient do
-          ambient = self.AmbientSounds[math.random(#self.AmbientSounds)]
-        end
-      else ambient = self.AmbientSounds[1] end
-      self._DrGBaseAmbientSound = ambient.sound
-      self._DrGBasePreviousAmbient = ambient.sound
-      self:EmitSound(ambient.sound)
-      if ambient.duration ~= nil then
-        self:Timer(ambient.duration, function()
-          self._DrGBaseAmbientSound = nil
-        end)
-      end
-    end
-  end
-
-end

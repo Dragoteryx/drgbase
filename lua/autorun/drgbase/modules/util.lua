@@ -100,6 +100,16 @@ function util.DrG_BallisticTrace(start, velocity, data)
   end
 end
 
+function util.DrG_SoundDistance(sound)
+  if sound.SoundLevel > 0 then
+    local lvl = sound.SoundLevel
+    return 9*math.pow(5, (lvl-40)/20)*math.pow(2, 2+(lvl-40)/20)
+  else return math.huge end
+end
+function util.DrG_DistanceToSoundLevel(distance)
+  return 40+20*math.log10(distance/36)
+end
+
 if SERVER then
 
   function util.DrG_Explosion(pos, options)

@@ -1,7 +1,5 @@
 drg_nodegraph = drg_nodegraph or {}
 
-local Draw = CreateConVar("drgbase_nodegraph_draw", "0")
-
 local NUM_HULLS = 10
 
 local nodes = {}
@@ -296,6 +294,7 @@ if SERVER then
 
 else
 
+  local Draw = CreateClientConVar("drgbase_nodegraph_draw", "0")
   local DrawGround = CreateClientConVar("drgbase_nodegraph_draw_ground", "1")
   local DrawAir = CreateClientConVar("drgbase_nodegraph_draw_air", "0")
   local DrawClimb = CreateClientConVar("drgbase_nodegraph_draw_climb", "1")
@@ -338,7 +337,7 @@ else
 
   -- draw nodegraph
   hook.Add("PostDrawOpaqueRenderables", "NodegraphDraw", function()
-    if not Draw:GetBool() then return end
+    if not GetConVar("developer"):GetBool() or not Draw:GetBool() then return end
     local tr = LocalPlayer():GetEyeTrace()
     local dist = DrawDistance:GetFloat()
     local closest = drg_nodegraph.GetClosestNode(tr.HitPos)

@@ -82,16 +82,12 @@ function Promise:Then(onresolve, onreject)
   return Promise(function(resolve, reject)
     self:Done(function(res)
       if isfunction(onresolve) then
-        local safe, args = pcall(function()
-          resolve(onresolve(res))
-        end)
+        local safe, args = pcall(resolve, onresolve(res))
         if not safe then reject(args) end
       else resolve(res) end
     end, function(err)
       if isfunction(onreject) then
-        local safe, args = pcall(function()
-          resolve(onreject(err))
-        end)
+        local safe, args = pcall(resolve, onreject(err))
         if not safe then reject(args) end
       else reject(err) end
     end)
@@ -99,6 +95,23 @@ function Promise:Then(onresolve, onreject)
 end
 function Promise:Catch(onreject)
   return self:Then(nil, onreject)
+end
+function Promise:Finally(ondone)
+  return Promise(function(resolve, reject)
+    self:Done(function(res)
+      if isfunction(ondone) then
+        local safe, args = pcall(ondone)
+        if not safe then reject(args)
+        else resolve(res) end
+      else resolve(res) end
+    end, function(err)
+      if isfunction(ondone) then
+        local safe, args = pcall(ondone)
+        if not safe then reject(args)
+        else reject(res) end
+      else reject(res) end
+    end)
+  end)
 end
 function Promise:Await()
   if not coroutine.running() then return end

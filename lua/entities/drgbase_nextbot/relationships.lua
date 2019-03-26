@@ -1,67 +1,39 @@
 
-local MaxRadius = CreateConVar("drgbase_radius", "5000", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+-- Handlers --
+
+function ENT:_InitRelationships()
+  if CLIENT then return end
+  self._DrGBaseRelationships = {}
+  self._DrGBaseIsConsidered = {}
+  self._DrGBaseConsideredEntities = {}
+  self._DrGBaseEntityCaches = {
+    [D_LI] = {}, [D_HT] = {}, [D_FR] = {}
+  }
+  self._DrGBaseIgnoredEntities = {}
+  self._DrGBaseDefaultRelationship = D_NU
+  self._DrGBaseEntityRelationships = {}
+  self._DrGBaseClassRelationships = {}
+  self._DrGBaseModelRelationships = {}
+  self._DrGBaseFactionRelationships = {}
+  self._DrGBaseFrightening = tobool(self.Frightening)
+  self:UpdateRelationships()
+  self._DrGBaseFactions = {}
+  for i, faction in ipairs(self.Factions) do
+    self:JoinFaction(faction)
+  end
+end
 
 if SERVER then
 
-  -- Targettables --
-
-  local ignore = {
-    ["npc_bullseye"] = true,
-    ["weapon_striderbuster"] = true,
-    ["npc_grenade_frag"] = true
+  local DEFAULT_PRIORITY = 1
+  local DISP_PRIORITIES = {
+    [D_LI] = 4,
+    [D_HT] = 3,
+    [D_FR] = 2,
+    [D_NU] = 1,
+    [D_ER] = 0
   }
-  local exceptions = {
-    ["replicator_melon"] = true,
-    ["replicator_queen"] = true,
-    ["replicator_queen_hive"] = true,
-    ["replicator_worker"] = true
-  }
-  function ENT:GetTargets()
-    return self._DrGBaseTargets
-  end
-  function ENT:RefreshTargets()
-    self._DrGBaseTargets = {}
-    self._DrGBaseTargetsList = {}
-    for i, ent in ipairs(ents.GetAll()) do
-      if self:TargetCheck(ent) then self:_AddTarget(ent) end
-    end
-    self:NPCRelationship()
-    return self:GetTargets()
-  end
-  function ENT:IsTarget(ent)
-    return self._DrGBaseTargetsList[ent:GetCreationID()] or false
-  end
-  function ENT:_AddTarget(ent)
-    table.insert(self._DrGBaseTargets, ent)
-    self._DrGBaseTargetsList[ent:GetCreationID()] = true
-  end
-  function ENT:TargetCheck(ent)
-    if not IsValid(ent) then return false end
-    if ent:EntIndex() == self:EntIndex() then return false end
-    if not ignore[ent:GetClass()] and (
-      ent:IsPlayer() or
-      ent:IsNPC() or
-      ent.Type == "nextbot" or
-      ent:IsFlagSet(FL_OBJECT) or
-      string.StartWith(ent:GetClass(), "npc_") or
-      exceptions[ent:GetClass()]
-    ) then return true end
-    for name, callback in pairs(self._DrGBaseCustomTargetChecks) do
-      if callback(ent) then return true end
-    end
-  end
-  function ENT:DefineCustomTargetCheck(name, callback)
-    self._DrGBaseCustomTargetChecks[name] = callback
-    self:RefreshTargets()
-  end
-  function ENT:RemoveCustomTargetCheck(name)
-    self._DrGBaseCustomTargetChecks[name] = nil
-    self:RefreshTargets()
-  end
-
-  -- Relationships --
-
-  local defaultFactions = {
+  local DEFAULT_FACTIONS = {
     ["npc_crow"] = DRGBASE_FACTION_ANIMALS,
     ["npc_monk"] = DRGBASE_FACTION_REBELS,
     ["npc_pigeon"] = DRGBASE_FACTION_ANIMALS,
@@ -139,214 +111,298 @@ if SERVER then
     ["npc_strider_dropship"] = DRGBASE_FACTION_COMBINE
   }
 
-  local relPrios = {
-    [D_LI] = 4,
-    [D_HT] = 3,
-    [D_FR] = 2,
-    [D_NU] = 1,
-    [D_ER] = 0
-  }
+  local function IsValidDisposition(disp)
+    return isnumber(disp) and table.HasValue({D_LI, D_HT, D_FR, D_NU}, disp)
+  end
 
-  local defaultVal = 1
+  -- Getters/setters --
 
+  function ENT:IsIgnored(ent)
+    return self._DrGBaseIgnoredEntities[ent:GetCreationID()] or false
+  end
+  function ENT:SetIgnored(ent, bool)
+    self._DrGBaseIgnoredEntities[ent:GetCreationID()] = tobool(bool)
+  end
+
+  function ENT:IsFrightening()
+    return self._DrGBaseFrightening or false
+  end
+  function ENT:SetFrightening(bool)
+    self._DrGBaseFrightening = tobool(bool)
+    self:UpdateRelationships()
+  end
+
+  function ENT:IsAlly(ent)
+    return self:GetRelationship(ent) == D_LI
+  end
+  function ENT:IsEnemy(ent)
+    return self:GetRelationship(ent) == D_HT
+  end
+  function ENT:IsAfraidOf(ent)
+    return self:GetRelationship(ent) == D_FR
+  end
+  function ENT:IsNeutral(ent)
+    return self:GetRelationship(ent) == D_NU
+  end
+
+  function ENT:IsConsidered(ent)
+    return self._DrGBaseIsConsidered[ent:GetCreationID()] or false
+  end
+  function ENT:ConsideredEntities(original)
+    if not original then
+      local entities = {}
+      for i, ent in ipairs(self._DrGBaseConsideredEntities) do
+        if IsValid(ent) then table.insert(entities, ent) end
+      end
+      return entities
+    else return self._DrGBaseConsideredEntities end
+  end
+
+  -- Get/set relationship
   function ENT:GetRelationship(ent)
-    if not IsValid(ent) then return D_ER, defaultVal end
-    if self:EntIndex() == ent:EntIndex() then return D_ER, defaultVal end
-    if ent:IsFlagSet(FL_NOTARGET) then return D_NU, defaultVal end
-    if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool() or IsValid(ent:DrG_Possessing())) then return D_NU, defaultVal end
-    if ent.IsDrGNextbot and ent:IsDead() then return D_NU, defaultVal end
-    if ent:Health() <= 0 then return D_NU, defaultVal end
-    local highest = {disposition = self:GetDefaultRelationship(), val = defaultVal}
-    local relationships = {}
-    local individual, indval = self:GetEntityRelationship(ent)
-    local class, classval = self:GetClassRelationship(ent:GetClass())
-    local model, modelval = self:GetModelRelationship(ent:GetModel())
-    table.insert(relationships, {
-      disposition = individual, val = indval
-    })
-    table.insert(relationships, {
-      disposition = class, val = classval
-    })
-    table.insert(relationships, {
-      disposition = model, val = modelval
-    })
-    for faction, relationship in pairs(self._DrGBaseFactionRelationships) do
-      if ent:IsPlayer() then
-        if ent:DrG_IsInFaction(faction) then
-          table.insert(relationships, relationship)
-        end
-      elseif ent.IsDrGNextbot then
-        if ent:IsInFaction(faction) then
-          table.insert(relationships, relationship)
-        end
-      elseif ent:DrG_IsSanic() then
-        if faction == DRGBASE_FACTION_SANIC then
-          table.insert(relationships, relationship)
-        end
-      elseif ent.IsVJBaseSNPC then
-        for i, class in ipairs(ent.VJ_NPC_Class) do
-          if string.upper(class) ~= faction then continue end
-          table.insert(relationships, relationship)
-          break
-        end
-      elseif ent.CPTBase_NPC or ent.IV04NextBot then
-        if string.upper(ent.Faction) == faction then
-          table.insert(relationships, relationship)
-        end
-      elseif ent:IsNPC() then
-        local def = defaultFactions[ent:GetClass()]
-        if def == faction then
-          table.insert(relationships, relationship)
-        end
+    if not IsValid(ent) then return D_ER end
+    if self == ent then return D_ER end
+    if not self:IsConsidered(ent) then return D_NU end
+    if self:IsIgnored(ent) then return D_NU end
+    if ent:IsFlagSet(FL_NOTARGET) then return D_NU end
+    if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then return D_NU end
+    if ent:Health() <= 0 then return D_NU end
+    return self._DrGBaseRelationships[ent:GetCreationID()] or D_NU
+  end
+  function ENT:_SetRelationship(ent, disp)
+    if not IsValid(ent) or ent == self then return end
+    local disps = {D_LI, D_HT, D_FR}
+    if IsValidDisposition(disp) then
+      local old = self:GetRelationship(ent, true)
+      if old == disp then return end
+      self._DrGBaseRelationships[ent:GetCreationID()] = disp
+      if not self:IsConsidered(ent) then
+        self._DrGBaseIsConsidered[ent:GetCreationID()] = true
+        table.insert(self._DrGBaseConsideredEntities, ent)
       end
-    end
-    for name, callback in pairs(self._DrGBaseCustomRelationships) do
-      local disp, val = callback(ent, self)
-      if disp then
-        table.insert(relationships, {
-          disposition = disp, val = math.Round(val or defaultVal)
-        })
+      for i, disp2 in ipairs(disps) do
+        if disp ~= disp2 then
+          table.RemoveByValue(self._DrGBaseEntityCaches[disp2], ent)
+        else table.insert(self._DrGBaseEntityCaches[disp2], ent) end
       end
+      if ent:IsNPC() then self:_UpdateNPCRelationship(ent, disp) end
+      if old ~= disp then self:OnRelationshipChange(ent, old, disp) end
+    elseif disp == nil or disp == D_ER then
+      if not self:IsConsidered(ent) then return end
+      local old = self:GetRelationship(ent, true)
+      self._DrGBaseRelationships[ent:GetCreationID()] = nil
+      self._DrGBaseIsConsidered[ent:GetCreationID()] = false
+      table.RemoveByValue(self._DrGBaseConsideredEntities, ent)
+      for i, disp2 in ipairs(disps) do
+        table.RemoveByValue(self._DrGBaseEntityCaches[disp2], ent)
+      end
+      if ent:IsNPC() then self:_UpdateNPCRelationship(ent, D_NU) end
+      if old ~= D_NU then self:OnRelationshipChange(ent, old, D_NU) end
     end
-    for i, relationship in ipairs(relationships) do
-      if relationship.val > highest.val then highest = relationship
-      elseif relationship.val == highest.val and
-      relPrios[relationship.disposition] > relPrios[highest.disposition] then highest = relationship end
-    end
-    return highest.disposition, highest.val
   end
 
   -- Default
   function ENT:GetDefaultRelationship()
-    return self._DrGBaseDefaultRelationship, defaultVal
+    return self._DrGBaseDefaultRelationship, DEFAULT_PRIORITY
   end
-  function ENT:SetDefaultRelationship(relationship)
-    self._DrGBaseDefaultRelationship = relationship
-    self:NPCRelationship()
+  function ENT:SetDefaultRelationship(disp)
+    if not IsValidDisposition(disp) then return end
+    self._DrGBaseDefaultRelationship = disp
+    self:UpdateRelationships()
   end
 
-  -- Individual
+  -- Entity
   function ENT:GetEntityRelationship(ent)
-    if not IsValid(ent) then return D_ER, defaultVal end
+    if not IsValid(ent) then return D_ER, DEFAULT_PRIORITY end
     local rel = self._DrGBaseEntityRelationships[ent:GetCreationID()]
-    if rel == nil then return D_ER, defaultVal end
-    return rel.disposition, rel.val
+    if rel == nil then return D_NU, DEFAULT_PRIORITY end
+    return rel.disp, rel.prio
   end
-  function ENT:SetEntityRelationship(ent, relationship, val)
+  function ENT:SetEntityRelationship(ent, disp, prio)
+    if not IsValid(ent) then return end
+    if not IsValidDisposition(disp) then return end
     self._DrGBaseEntityRelationships[ent:GetCreationID()] = {
-      disposition = relationship, val = math.Round(val or defaultVal)
+      disp = disp, prio = prio or DEFAULT_PRIORITY
     }
-    if ent:IsNPC() then self:NPCRelationship(ent) end
+    self:UpdateRelationshipWith(ent)
   end
-  function ENT:AddEntityRelationship(ent, relationship, val)
-    local disp, curr = self:GetEntityRelationship(ent)
-    val = val or curr + 1
-    if curr >= math.Round(val) then return end
-    self:SetEntityRelationship(ent, relationship, val)
+  function ENT:AddEntityRelationship(ent, disp, prio)
+    if not IsValid(ent) then return end
+    local rel = self:GetEntityRelationship(ent)
+    if not isnumber(prio) or prio >= rel.prio then
+      self:SetEntityRelationship(ent, disp, prio)
+    end
   end
 
   -- Class
   function ENT:GetClassRelationship(class)
-    if class == nil then return D_ER, defaultVal end
+    if not isstring(class) then return D_ER, DEFAULT_PRIORITY end
     local rel = self._DrGBaseClassRelationships[string.lower(class)]
-    if rel == nil then return D_ER, defaultVal end
-    return rel.disposition, rel.val
+    if rel == nil then return D_NU, DEFAULT_PRIORITY end
+    return rel.disp, rel.prio
   end
-  function ENT:SetClassRelationship(class, relationship, val)
+  function ENT:SetClassRelationship(class, disp, prio)
+    if not isstring(class) then return end
+    if not IsValidDisposition(disp) then return end
     self._DrGBaseClassRelationships[string.lower(class)] = {
-      disposition = relationship, val = math.Round(val or defaultVal)
+      disp = disp, prio = prio or DEFAULT_PRIORITY
     }
-    self:NPCRelationship()
+    self:UpdateRelationships()
   end
-  function ENT:AddClassRelationship(class, relationship, val)
-    local disp, curr = self:GetClassRelationship(class)
-    val = val or curr + 1
-    if curr >= math.Round(val) then return end
-    self:SetClassRelationship(class, relationship, val)
+  function ENT:AddClassRelationship(class, disp, prio)
+    if not isstring(class) then return end
+    local rel = self:GetClassRelationship(class)
+    if not isnumber(prio) or prio >= rel.prio then
+      self:SetClassRelationship(class, disp, prio)
+    end
+  end
+
+  -- Players
+  function ENT:GetPlayersRelationship()
+    return self:GetClassRelationship("player")
+  end
+  function ENT:SetPlayersRelationship(disp, prio)
+    return self:SetClassRelationship("player", disp, prio)
+  end
+  function ENT:AddPlayersRelationship(disp, prio)
+    return self:AddClassRelationship("player", disp, prio)
   end
 
   -- Model
   function ENT:GetModelRelationship(model)
-    if model == nil then return D_ER, defaultVal end
+    if not isstring(model) then return D_ER, DEFAULT_PRIORITY end
     local rel = self._DrGBaseModelRelationships[string.lower(model)]
-    if rel == nil then return D_ER, defaultVal end
-    return rel.disposition, rel.val
+    if rel == nil then return D_NU, DEFAULT_PRIORITY end
+    return rel.disp, rel.prio
   end
-  function ENT:SetModelRelationship(model, relationship, val)
+  function ENT:SetModelRelationship(model, disp, prio)
+    if not isstring(model) then return end
+    if not IsValidDisposition(disp) then return end
     self._DrGBaseModelRelationships[string.lower(model)] = {
-      disposition = relationship, val = math.Round(val or defaultVal)
+      disp = disp, prio = prio or DEFAULT_PRIORITY
     }
-    self:NPCRelationship()
+    self:UpdateRelationships()
   end
-  function ENT:AddModelRelationship(model, relationship, val)
-    local disp, curr = self:GetModelRelationship(model)
-    val = val or curr + 1
-    if curr >= math.Round(val) then return end
-    self:SetModelRelationship(model, relationship, val)
+  function ENT:AddModelRelationship(model, disp, prio)
+    if not isstring(model) then return end
+    local rel = self:GetModelRelationship(model)
+    if not isnumber(prio) or prio >= rel.prio then
+      self:SetModelRelationship(model, disp, prio)
+    end
   end
 
   -- Factions
   function ENT:GetFactionRelationship(faction)
-    if faction == nil then return D_ER, defaultVal end
+    if not isstring(faction) then return D_ER, DEFAULT_PRIORITY end
     local rel = self._DrGBaseFactionRelationships[string.upper(faction)]
-    if rel == nil then return D_ER, defaultVal end
-    return rel.disposition, rel.val
+    if rel == nil then return D_NU, DEFAULT_PRIORITY end
+    return rel.disp, rel.prio
   end
-  function ENT:SetFactionRelationship(faction, relationship, val)
+  function ENT:SetFactionRelationship(faction, disp, prio)
+    if not isstring(faction) then return end
+    if not IsValidDisposition(disp) then return end
     self._DrGBaseFactionRelationships[string.upper(faction)] = {
-      disposition = relationship, val = math.Round(val or defaultVal)
+      disp = disp, prio = prio or DEFAULT_PRIORITY
     }
-    self:NPCRelationship()
+    self:UpdateRelationships()
   end
-  function ENT:AddFactionRelationship(faction, relationship, val)
-    local disp, curr = self:GetFactionRelationship(faction)
-    val = val or curr + 1
-    if curr >= math.Round(val) then return end
-    self:SetFactionRelationship(faction, relationship, val)
-  end
-
-  -- Custom
-  function ENT:DefineCustomRelationshipCheck(name, callback)
-    self._DrGBaseCustomRelationships[name] = callback
-    self:NPCRelationship()
-  end
-  function ENT:RemoveCustomRelationshipCheck(name)
-    self._DrGBaseCustomRelationships[name] = nil
-    self:NPCRelationship()
-  end
-
-  -- Aliases
-  function ENT:GetPlayersRelationship()
-    self:GetClassRelationship("player")
-  end
-  function ENT:SetPlayersRelationship(relationship)
-    self:SetClassRelationship("player", relationship)
-  end
-
-  -- Helpers
-  function ENT:ResetRelationships()
-    self._DrGBaseEntityRelationships = {}
-    self._DrGBaseClassRelationships = {}
-    self._DrGBaseModelRelationships = {}
-    self._DrGBaseFactionRelationships = {}
-    self._DrGBaseCustomRelationships = {}
-    self._DrGBaseFactions = {}
-    for i, faction in ipairs(self.Factions) do
-      self:JoinFaction(faction)
-      if self.AlliedWithSelfFactions then
-        self:SetFactionRelationship(faction, D_LI)
-      end
+  function ENT:AddFactionRelationship(faction, disp, prio)
+    if not isstring(faction) then return end
+    local rel = self:GetFactionRelationship(faction)
+    if not isnumber(prio) or prio >= rel.prio then
+      self:SetFactionRelationship(faction, disp, prio)
     end
-    self:NPCRelationship()
   end
 
-  -- Factions --
+  -- Functions --
 
+  -- Update relationships
+  local function HighestRelationship(relationships)
+    table.sort(relationships, function(rel1, rel2)
+      if rel1.disp == nil then return false end
+      if rel2.disp == nil then return true end
+      if rel1.prio > rel2.prio then return true
+      elseif DISP_PRIORITIES[rel1.disp] > DISP_PRIORITIES[rel2.disp] then
+        return true
+      else return false end
+    end)
+    return relationships[1]
+  end
+
+  function ENT:UpdateRelationships()
+    for i, ent in ipairs(ents.GetAll()) do
+      if ent == self then continue end
+      self:UpdateRelationshipWith(ent)
+    end
+  end
+  function ENT:UpdateRelationshipWith(ent)
+    if not IsValid(ent) or ent == self then return end
+    if self:_ConsiderEntity(ent) then
+      local default, defprio = self:GetDefaultRelationship()
+      local entdisp, entprio = self:GetEntityRelationship(ent)
+      local classdisp, classprio = self:GetClassRelationship(ent:GetClass())
+      local modeldisp, modelprio = self:GetModelRelationship(ent:GetModel())
+      local customdisp, customprio = self:CustomRelationship(ent)
+      local relationships = {
+        {disp = default, prio = defprio}, {disp = entdisp, prio = entprio},
+        {disp = classdisp, prio = classprio}, {disp = modeldisp, prio = modelprio},
+        {disp = customdisp or D_NU, prio = customprio or DEFAULT_PRIORITY}
+      }
+      relationships = {HighestRelationship(relationships)}
+      for faction, relationship in pairs(self._DrGBaseFactionRelationships) do
+        if relationship.disp == D_ER or relationship.prio < relationships[1].prio then continue end
+        if ent:IsPlayer() then
+          if ent:DrG_IsInFaction(faction) then
+            table.insert(relationships, relationship)
+          end
+        elseif ent.IsDrGNextbot then
+          if ent:IsInFaction(faction) then
+            table.insert(relationships, relationship)
+          end
+        elseif ent:DrG_IsSanic() then
+          if faction == DRGBASE_FACTION_SANIC then
+            table.insert(relationships, relationship)
+            break
+          end
+        elseif ent.IsVJBaseSNPC then
+          for i, class in ipairs(ent.VJ_NPC_Class) do
+            if string.upper(class) ~= faction then continue end
+            table.insert(relationships, relationship)
+            break
+          end
+        elseif ent.CPTBase_NPC or ent.IV04NextBot then
+          if string.upper(ent.Faction) == faction then
+            table.insert(relationships, relationship)
+            break
+          end
+        elseif ent:IsNPC() then
+          local def = DEFAULT_FACTIONS[ent:GetClass()]
+          if def == faction then
+            table.insert(relationships, relationship)
+            break
+          end
+        end
+      end
+      local relationship = HighestRelationship(relationships)
+      self:_SetRelationship(ent, relationship.disp)
+    else self:_SetRelationship(ent, nil) end
+  end
+
+  -- Factions
   function ENT:JoinFaction(faction)
     self._DrGBaseFactions[string.upper(faction)] = true
+    self:SetFactionRelationship(faction, D_LI)
+    for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
+      if nextbot == self then continue end
+      nextbot:UpdateRelationshipWith(self)
+    end
   end
   function ENT:LeaveFaction(faction)
-    self._DrGBaseFactions[string.upper(faction)] = false
+    self._DrGBaseFactions[string.upper(faction)] = nil
+    for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
+      if nextbot == self then continue end
+      nextbot:UpdateRelationshipWith(self)
+    end
   end
   function ENT:IsInFaction(faction)
     return self._DrGBaseFactions[string.upper(faction)] or false
@@ -359,35 +415,124 @@ if SERVER then
     return factions
   end
 
-  -- NPC Relationships --
+  -- Get entities
+  function ENT:GetEntities(disp, spotted, callback)
+    if not IsValidDisposition(disp) then return {} end
+    local maxradius = GetConVar("drgbase_max_radius"):GetFloat()^2
+    local entities = {}
+    local cache = disp == D_NU and self._DrGBaseConsideredEntities or self._DrGBaseEntityCaches[disp]
+    for i, ent in ipairs(cache) do
+      if not IsValid(ent) then continue end
+      if self:GetRangeSquaredTo(ent) > maxradius then continue end
+      if spotted and not self:HasSpottedEntity(ent) then continue end
+      if isfunction(callback) and not callback(ent) then continue end
+      if self:GetRelationship(ent) == disp then
+        table.insert(entities, ent)
+      end
+    end
+    return entities
+  end
+  function ENT:GetAllies(spotted, callback)
+    return self:GetEntities(D_LI, spotted, callback)
+  end
+  function ENT:GetEnemies(spotted, callback)
+    return self:GetEntities(D_HT, spotted, callback)
+  end
+  function ENT:GetAfraidOf(spotted, callback)
+    return self:GetEntities(D_FR, spotted, callback)
+  end
+  function ENT:GetNeutrals(spotted, callback)
+    return self:GetEntities(D_NU, spotted, callback)
+  end
 
-  function ENT:NPCRelationship(ent, relationship)
-    if ent == nil or isnumber(ent) then
-      relationship = ent
-      for i, ent in ipairs(self:GetTargets()) do
-        self:NPCRelationship(ent, relationship)
-      end
-    elseif not IsValid(ent) then return
-    elseif ent:IsNPC() then
-      relationship = relationship or self:GetRelationship(ent)
-      if relationship == D_FR then relationship = D_HT
-      elseif relationship == D_HT and self.Frightening then
-        relationship = D_FR
-      end
-      ent:AddEntityRelationship(self, relationship, 100)
-      if ent.IsVJBaseSNPC then
-        if (relationship == D_HT or relationship == D_FR) then
-          if not table.HasValue(ent.VJ_AddCertainEntityAsEnemy, self) then
-            table.insert(ent.VJ_AddCertainEntityAsEnemy, self)
-          end
-        else table.RemoveByValue(ent.VJ_AddCertainEntityAsEnemy, self) end
-        if relationship == D_LI then
-          if not table.HasValue(ent.VJ_AddCertainEntityAsFriendly, self) then
-            table.insert(ent.VJ_AddCertainEntityAsFriendly, self)
-          end
-        else table.RemoveByValue(ent.VJ_AddCertainEntityAsFriendly, self) end
-        self:_NotifyVJ(ent)
-      end
+  -- Get closest entity
+  function ENT:GetClosestEntity(disp, spotted, callback)
+    local entities = self:GetEntities(disp, spotted, callback)
+    table.sort(entities, function(ent1, ent2)
+      return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
+    end)
+    return entities[1]
+  end
+  function ENT:GetClosestAlly(spotted, callback)
+    return self:GetClosestEntity(D_LI, spotted, callback)
+  end
+  function ENT:GetClosestEnemy(spotted, callback)
+    return self:GetClosestEntity(D_HT, spotted, callback)
+  end
+  function ENT:GetClosestAfraidOf(spotted, callback)
+    return self:GetClosestEntity(D_FR, spotted, callback)
+  end
+  function ENT:GetClosestNeutral(spotted, callback)
+    return self:GetClosestEntity(D_NU, spotted, callback)
+  end
+
+  -- Number of entities left
+  function ENT:EntitiesLeft(disp, spotted, callback)
+    return #self:GetEntities(disp, spotted, callback)
+  end
+  function ENT:AlliesLeft(spotted, callback)
+    return self:EntitiesLeft(D_LI, spotted, callback)
+  end
+  function ENT:EnemiesLeft(spotted, callback)
+    return self:EntitiesLeft(D_HT, spotted, callback)
+  end
+  function ENT:AfraidOfLeft(spotted, callback)
+    return self:Entitiesleft(D_FR, spotted, callback)
+  end
+  function ENT:NeutralsLeft(spotted, callback)
+    return self:EntitiesLeft(D_NU, spotted, callback)
+  end
+
+  -- Hooks --
+
+  function ENT:ShouldConsiderEntity() end
+  function ENT:CustomRelationship() end
+  function ENT:OnRelationshipChange() end
+
+  -- Handlers --
+
+  local CONSIDER_BLACKLIST = {
+    ["npc_bullseye"] = true
+  }
+  local CONSIDER_WHITELIST = {
+    ["replicator_melon"] = true,
+    ["replicator_worker"] = true,
+    ["replicator_queen"] = true,
+    ["replicator_queen_hive"] = true
+  }
+  function ENT:_ConsiderEntity(ent)
+    if not IsValid(ent) then return false end
+    local res = self:ShouldConsiderEntity(ent)
+    if res == false then return false end
+    if CONSIDER_BLACKLIST[ent:GetClass()] then return false end
+    if ent:IsPlayer() then return true end
+    if ent:IsNPC() then return true end
+    if ent.Type == "nextbot" then return true end
+    if ent:IsFlagSet(FL_OBJECT) then return true end
+    if CONSIDER_WHITELIST[ent:GetClass()] then return true end
+    if res then return true end
+    return false
+  end
+
+  function ENT:_UpdateNPCRelationship(ent, relationship)
+    if not IsValid(ent) or not ent:IsNPC() then return end
+    if relationship == D_FR then relationship = D_HT
+    elseif relationship == D_HT and self:IsFrightening() then
+      relationship = D_FR
+    end
+    ent:AddEntityRelationship(self, relationship, 1)
+    if ent.IsVJBaseSNPC then
+      if (relationship == D_HT or relationship == D_FR) then
+        if not table.HasValue(ent.VJ_AddCertainEntityAsEnemy, self) then
+          table.insert(ent.VJ_AddCertainEntityAsEnemy, self)
+        end
+      else table.RemoveByValue(ent.VJ_AddCertainEntityAsEnemy, self) end
+      if relationship == D_LI then
+        if not table.HasValue(ent.VJ_AddCertainEntityAsFriendly, self) then
+          table.insert(ent.VJ_AddCertainEntityAsFriendly, self)
+        end
+      else table.RemoveByValue(ent.VJ_AddCertainEntityAsFriendly, self) end
+      self:_NotifyVJ(ent)
     end
   end
 
@@ -399,9 +544,7 @@ if SERVER then
       local dmg = DamageInfo()
       dmg:SetDamage(1)
       dmg:SetAttacker(self)
-      if self:HasWeapon() then
-        dmg:SetInflictor(self:GetWeapon())
-      end
+      dmg:SetInflictor(self)
       dmg:SetDamageType(DMG_DIRECT)
       ent:TakeDamageInfo(dmg)
       ent:SetHealth(health)
@@ -409,77 +552,20 @@ if SERVER then
     end
   end
 
-  hook.Add("OnEntityCreated", "DrGBaseNextbotNPCRelationships", function(ent)
+  hook.Add("OnEntityCreated", "DrGBaseNextbotRelationshipsInit", function(ent)
     timer.Simple(0, function()
+      if not IsValid(ent) then return end
       for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
-        if nextbot:TargetCheck(ent) then nextbot:_AddTarget(ent) end
-        if ent:IsNPC() then nextbot:NPCRelationship(ent) end
+        nextbot:UpdateRelationshipWith(ent)
       end
     end)
   end)
 
-  -- Helpers --
-
-  function ENT:_GetRelEntities(rel, spotted)
-    local entities = {}
-    for i, ent in ipairs(self:GetTargets()) do
-      if not IsValid(ent) then continue end      
-      if spotted and not self:HasSpottedEntity(ent) then continue end
-      if ent:IsFlagSet(FL_NOTARGET) then
-        self:ForgetEntity(ent)
-        continue
-      end
-      if self:GetRangeSquaredTo(ent) > MaxRadius:GetFloat()^2 then continue end
-      if self:GetRelationship(ent) == rel then table.insert(entities, ent) end
+  hook.Add("EntityRemoved", "DrGBaseNextbotRelationshipsRemove", function(ent)
+    for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
+      nextbot:_SetRelationship(ent, nil)
     end
-    return entities
-  end
-  function ENT:GetAllies(spotted)
-    self:_GetRelEntities(D_LI, spotted)
-  end
-  function ENT:GetEnemies(spotted)
-    self:_GetRelEntities(D_LI, spotted)
-  end
-  function ENT:GetScaredOf(spotted)
-    self:_GetRelEntities(D_LI, spotted)
-  end
-  function ENT:GetNeutrals(spotted)
-    self:_GetRelEntities(D_LI, spotted)
-  end
-
-  function ENT:_GetClosestRelEntity(rel, spotted)
-    local entities = self:_GetRelEntities(rel, spotted)
-    if #entities == 0 then return end
-    table.sort(entities, function(ent1, ent2)
-      return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
-    end)
-    return entities[1]
-  end
-  function ENT:GetClosestAlly(spotted)
-    return self:_GetClosestRelEntity(D_LI, spotted)
-  end
-  function ENT:GetClosestEnemy(spotted)
-    return self:_GetClosestRelEntity(D_HT, spotted)
-  end
-  function ENT:GetClosestScaredOf(spotted)
-    return self:_GetClosestRelEntity(D_FR, spotted)
-  end
-  function ENT:GetClosestNeutral(spotted)
-    return self:_GetClosestRelEntity(D_NU, spotted)
-  end
-
-  function ENT:IsAlly(ent)
-    return self:GetRelationship(ent) == D_LI
-  end
-  function ENT:IsEnemy(ent)
-    return self:GetRelationship(ent) == D_HT
-  end
-  function ENT:IsScaredOf(ent)
-    return self:GetRelationship(ent) == D_FR
-  end
-  function ENT:IsNeutral(ent)
-    return self:GetRelationship(ent) == D_NU
-  end
+  end)
 
   -- Aliases --
 
@@ -498,33 +584,19 @@ if SERVER then
     elseif relationship == "D_LI" then relationship = D_LI
     elseif relationship == "D_NU" then relationship = D_NU
     else return end
-    local val = math.Round(tonumber(split[3]))
-    local disp, curr = self:GetClassRelationship(class)
-    if curr >= val then return end
+    local val = tonumber(split[3])
+    if val ~= val then return end
     self:AddClassRelationship(class, relationship, val)
   end
 
-  -- Callbacks
-
-  net.DrG_DefineCallback("DrGBaseNextbotEntityRelationship", function(data)
-    local nextbot = Entity(data.nextbot)
-    local ent = Entity(data.ent)
-    if not IsValid(nextbot) then return D_ER end
-    return nextbot:GetRelationship(ent)
-  end)
-
 else
 
-  function ENT:GetRelationship(ent, callback)
-    if IsValid(ent) then
-      net.DrG_UseCallback("DrGBaseNextbotEntityRelationship", {
-        nextbot = self:EntIndex(), ent = ent:EntIndex()
-      }, function(res)
-        if not IsValid(self) then return end
-        if not IsValid(ent) then callback(D_ER)
-        else callback(res) end
-      end)
-    else callback(D_ER) end
-  end
+  -- Getters/setters --
+
+  -- Functions --
+
+  -- Hooks --
+
+  -- Handlers --
 
 end
