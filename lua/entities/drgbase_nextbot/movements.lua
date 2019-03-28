@@ -100,9 +100,12 @@ if SERVER then
     options = options or {}
     options.tolerance = options.tolerance or 20
     options.maxage = options.maxage or math.huge
-    while self:_MoveToPosGround(pos, options, callback) == 0 do
+    local res = 0
+    while res == 0 do
+      res = self:_MoveToPosGround(pos, options, callback)
       coroutine.yield()
     end
+    return res
   end
 
   function ENT:_MoveToPosGround(pos, options, callback)
