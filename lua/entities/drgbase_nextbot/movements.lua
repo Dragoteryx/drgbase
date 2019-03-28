@@ -278,7 +278,7 @@ if SERVER then
     else self:MoveTowards(away) end
   end
   function ENT:MoveAwayFromEntity(ent, face)
-    self:MoveAwayFrom(ent:GetPos())
+    self:MoveAwayFrom(ent:GetPos(), face)
   end
 
   function ENT:MoveForward()

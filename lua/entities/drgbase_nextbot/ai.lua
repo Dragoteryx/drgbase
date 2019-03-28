@@ -136,7 +136,7 @@ if SERVER then
     if IsValid(afraidof) and self:IsInRange(afraidof, self.AfraidAvoid) and self:Visible(afraidof) then
       self:_SetState(DRGBASE_STATE_AI_AVOID)
       if not self:OnAvoidAfraidOf(afraidof) then
-        self:MoveAwayFromEntity(afraidof)
+        self:MoveAwayFromEntity(afraidof, self.AttackAfraid)
         self:InvalidatePath()
       end
       if self.AttackAfraid and IsValid(afraidof) and
