@@ -121,9 +121,13 @@ function math.DrG_ManhattanDistance(pos1, pos2)
   return math.abs(math.abs(pos1.x - pos2.x) + math.abs(pos1.y - pos2.y) + math.abs(pos1.z - pos2.z))
 end
 
-function math.DrG_DegreeAngle(v1, v2, origin)
+function math.DrG_DegreeAngle(vec1, vec2, origin)
   origin = origin or Vector(0, 0, 0)
-  v1 = v1 - origin
-  v2 = v2 - origin
-  return math.deg(math.acos(v1:GetNormalized():Dot(v2:GetNormalized())))
+  vec1 = vec1 - origin
+  vec2 = vec2 - origin
+  return math.deg(math.acos(vec1:GetNormalized():Dot(vec2:GetNormalized())))
+end
+
+function math.DrG_VectorsNormal(vec1, vec2)
+  return (vec2 - vec1):GetNormalized()
 end

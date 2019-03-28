@@ -1,5 +1,5 @@
 if not DrGBase then return end -- return if DrGBase isn't installed
-ENT.Base = "drgbase_nextbot2" -- DO NOT TOUCH (obviously)
+ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
 
 -- Misc --
 ENT.Name = "DrGBase Test Nextbot"

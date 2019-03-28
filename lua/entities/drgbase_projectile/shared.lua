@@ -12,6 +12,13 @@ function ENT:Timer(duration, callback)
     if IsValid(self) then callback(self) end
   end)
 end
+function ENT:LoopTimer(delay, callback)
+  timer.DrG_Loop(delay, function()
+    if not IsValid(self) then return false end
+    return callback(self)
+  end)
+end
+
 function ENT:ScreenShake(amplitude, frequency, duration, radius)
   return util.ScreenShake(self:GetPos(), amplitude, frequency, duration, radius)
 end
@@ -56,7 +63,7 @@ if SERVER then
     if not ent:IsWorld() and not IsValid(ent) then return false end
     local owner = self:GetOwner()
     if IsValid(owner) then
-      if self:FilterOwner() and owner:EntIndex() == ent:EntIndex() then return false end
+      if self:FilterOwner() and owner == ent then return false end
       if self:FilterAllies() and owner:IsAlly(ent) then return false end
     end
     return self:CustomFilter(ent) or false
@@ -86,14 +93,12 @@ if SERVER then
 
   function ENT:FilterOwner(bool)
     if bool == nil then return self._DrGBaseFilterOwner
-    elseif bool then self._DrGBaseFilterOwner = true
-    else self._DrGBaseFilterOwner = false end
+    else self._DrGBaseFilterOwner = tobool(bool) end
   end
 
   function ENT:FilterAllies(bool)
     if bool == nil then return self._DrGBaseFilterAllies
-    elseif bool then self._DrGBaseFilterAllies = true
-    else self._DrGBaseFilterAllies = false end
+    else self._DrGBaseFilterAllies = tobool(bool) end
   end
 
   -- Helpers --

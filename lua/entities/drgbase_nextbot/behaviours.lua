@@ -112,7 +112,7 @@ if SERVER then
       if attack.delay < 0 then attack.delay = 0 end
       attack.damage = attack.damage or 0
       attack.type = attack.type or DMG_GENERIC
-      attack.force = attack.force or Vector(0, 0, 1)
+      attack.force = attack.force or Vector(150, 0, 0)
       attack.range = attack.range or self.EnemyReach
       attack.angle = attack.angle or 90
       self:Timer(attack.delay, function()

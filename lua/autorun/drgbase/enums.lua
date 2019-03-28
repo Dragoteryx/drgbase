@@ -38,3 +38,17 @@ DRGBASE_FACTION_HECU = "FACTION_HL_HECU"
 DRGBASE_AMMO_INFINITE = -1
 
 DRGBASE_FLIGHT_HOVER = 0
+
+if SERVER then
+
+
+
+else
+
+  D_ER = 0
+  D_HT = 1
+  D_FR = 2
+  D_LI = 3
+  D_NU = 4
+
+end

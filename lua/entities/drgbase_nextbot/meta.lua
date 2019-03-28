@@ -32,6 +32,15 @@ function entMETA:EyeAngles()
   else return old_EyeAngles(self) end
 end
 
+local old_EmitSound = entMETA.EmitSound
+function entMETA:EmitSound(soundName, soundLevel, pitchPercent, volume, channel)
+  if self.IsDrGNextbot then
+    local res = old_EmitSound(self, soundName, soundLevel, pitchPercent, volume, channel)
+    table.insert(self._DrGBaseEmitSounds, soundName)
+    return res
+  else return old_EmitSound(self, soundName, soundLevel, pitchPercent, volume, channel) end
+end
+
 if SERVER then
 
   -- Entity --
@@ -60,11 +69,11 @@ if SERVER then
       if options.direction == nil then options.direction = true end
       if options.frameadvance == nil then options.frameadvance = true end
       if options.rate and options.direction and options.frameadvance and
-      not self:IsPlayingAnimation() and self:IsOnGround() then
+      not self:IsPlayingAnimation() and self:IsOnGround() and not self:IsClimbing() then
         return old_BodyMoveXY(self)
       else
         if options.rate and not self:IsPlayingAnimation() and
-        self:IsOnGround() then
+        self:IsOnGround() and not self:IsClimbing() then
           local velocity = self:GetVelocity()
           velocity.z = 0
           if not velocity:IsZero() then

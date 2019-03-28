@@ -85,19 +85,19 @@ function ENT:PossessorView()
     return endpos, viewangle
   end
 end
-
 function ENT:PossessorTrace(options)
   if not self:IsPossessed() then return end
   local origin, angles = self:PossessorView()
   options = options or {}
   options.filter = options.filter or {}
   table.insert(options.filter, self)
-  --table.insert(options.filter, self:GetWeapon())
+  if self:HasWeapon() then
+    table.insert(options.filter, self:GetWeapon())
+  end
   options.start = origin
-  options.endpos = origin + angles:Forward()*math.huge
+  options.endpos = origin + angles:Forward()*999999999
   return util.TraceLine(options)
 end
-
 function ENT:PossessorNormal()
   local origin, angles = self:PossessorView()
   return angles:Forward()
@@ -136,23 +136,38 @@ function ENT:_HandlePossession(cor)
     local left = possessor:KeyDown(IN_MOVELEFT)
     local right = possessor:KeyDown(IN_MOVERIGHT)
     self:PossessionControls(forward and not backward, backward and not forward, right and not left, left and not right)
-  elseif SERVER then self:FacePos(self:GetPos() + self:PossessorNormal()) end
+    if self.ClimbLadders and navmesh.IsLoaded() then
+      local ladders = navmesh.GetNearestNavArea(self:GetPos()):GetLadders()
+      for i, ladder in ipairs(ladders) do
+        if self.ClimbLadderUp then
+          if self:GetHullRangeSquaredTo(ladder:GetBottom()) < 20^2 then
+            self:ClimbLadderUp(ladder)
+            break
+          end
+        elseif self.ClimbLaddersDown then
+          if self:GetHullRangeSquaredTo(ladder:GetTop()) < 20^2 then
+            self:ClimbLadderDown(ladder)
+            break
+          end
+        end
+      end
+    end
+  elseif SERVER and not self:IsClimbing() then
+    local origin, angles = self:PossessorView()
+    self:SetAngles(Angle(0, angles.y, 0))
+  end
   for i, move in ipairs(self.PossessionBinds) do
     if CLIENT and not move.client then continue end
     if SERVER and ((not cor and move.coroutine) or (cor and not move.coroutine)) then continue end
-    if move.button then
-
-    else
-      if move.onkeypressed == nil then move.onkeypressed = function() end end
-      if move.onkeydown == nil then move.onkeydown = function() end end
-      if move.onkeyup == nil then move.onkeyup = function() end end
-      if move.onkeydownlast == nil then move.onkeydownlast = function() end end
-      if move.onkeyreleased == nil then move.onkeyreleased = function() end end
-      if possessor:KeyPressed(move.bind) then move.onkeypressed(self, possessor) end
-      if possessor:KeyDown(move.bind) then move.onkeydown(self, possessor) else move.onkeyup(self, possessor) end
-      if possessor:KeyDownLast(move.bind) then move.onkeydownlast(self, possessor) end
-      if possessor:KeyReleased(move.bind) then move.onkeyreleased(self, possessor) end
-    end
+    if move.onkeypressed == nil then move.onkeypressed = function() end end
+    if move.onkeydown == nil then move.onkeydown = function() end end
+    if move.onkeyup == nil then move.onkeyup = function() end end
+    if move.onkeydownlast == nil then move.onkeydownlast = function() end end
+    if move.onkeyreleased == nil then move.onkeyreleased = function() end end
+    if possessor:KeyPressed(move.bind) then move.onkeypressed(self, possessor) end
+    if possessor:KeyDown(move.bind) then move.onkeydown(self, possessor) else move.onkeyup(self, possessor) end
+    if possessor:KeyDownLast(move.bind) then move.onkeydownlast(self, possessor) end
+    if possessor:KeyReleased(move.bind) then move.onkeyreleased(self, possessor) end
   end
 end
 
@@ -215,21 +230,15 @@ if SERVER then
   function ENT:OnDispossess() end
 
   function ENT:PossessionControls(forward, backward, right, left)
-    if self:ForwardMovement() then
-      if forward then
-        self:MoveForward()
-      end
-    else
-      if forward then
-        self:MoveForward()
-      elseif backward then
-        self:MoveBackward()
-      end
-      if right then
-        self:MoveRight()
-      elseif left then
-        self:MoveLeft()
-      end
+    if forward then
+      self:MoveForward()
+    elseif backward then
+      self:MoveBackward()
+    end
+    if right then
+      self:MoveRight()
+    elseif left then
+      self:MoveLeft()
     end
   end
 

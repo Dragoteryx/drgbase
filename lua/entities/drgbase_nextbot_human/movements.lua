@@ -1,6 +1,6 @@
 
 function ENT:IsCrouching()
-  return self:GetDrGVar("DrGBaseCrouching")
+  return self:GetNW2Bool("DrGBaseCrouching")
 end
 function ENT:Crouching()
   return self:IsCrouching()
@@ -10,10 +10,11 @@ if SERVER then
 
   -- Crouching --
 
-  function ENT:ToggleCrouching(bool)
-    if bool == nil then self:ToggleCrouching(not self:IsCrouching())
-    elseif bool then self:SetDrGVar("DrGBaseCrouching", true)
-    else self:SetDrGVar("DrGBaseCrouching", false) end
+  function ENT:SetCrouching(bool)
+    self:SetNW2Bool("DrGBaseCrouching", bool)
+  end
+  function ENT:ToggleCrouching()
+    self:SetCrouching(not self:IsCrouching())
   end
 
   -- Handlers --

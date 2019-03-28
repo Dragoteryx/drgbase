@@ -133,6 +133,17 @@ ENT.JumpAnimations = {
 
 if SERVER then
 
+  -- Functions --
+
+  function ENT:LookAt(pos)
+    self:DirectPoseParametersAt(pos, "head_pitch", "head_yaw", self:EyePos())
+  end
+  function ENT:AimAt(pos)
+    self:DirectPoseParametersAt(pos, "aim_pitch", "aim_yaw", self:GetShootPos())
+  end
+
+  -- Hooks --
+
   local passives = {
     ["ar2"] = true,
     ["smg"] = true,
@@ -147,24 +158,21 @@ if SERVER then
     ["duel"] = true
   }
   function ENT:UpdateAnimation()
-    if self:IsFlying() then
-      -- do stuff
-    else
-      if self:IsClimbing() then return self.ClimbAnimation, self.ClimbAnimRate end
-      local holdtype = self:HasWeapon() and self:GetActiveWeapon():GetHoldType() or "normal"
-      if not self:IsWeaponReady() then
-        if passives[holdtype] then holdtype = "passive"
-        elseif normals[holdtype] then holdtype = "normal" end
-      end
-      if not self:IsOnGround() then
-        return self.JumpAnimations[holdtype], self.JumpAnimRate
-      elseif self:IsCrouching() then
-        if self:IsSpeedMore(0, true) then return self.CrouchWalkAnimations[holdtype]
-        else return self.CrouchIdleAnimations[holdtype] end
-      elseif self:IsSpeedMore(self.WalkSpeed*1.1, true) then return self.RunAnimations[holdtype]
-      elseif self:IsSpeedMore(0, true) then return self.WalkAnimations[holdtype]
-      else return self.IdleAnimations[holdtype] end
+    if self:IsClimbingUp() then return self.ClimbUpAnimation, self.ClimbAnimRate end
+    if self:IsClimbingDown() then return self.ClimbDownAnimation, self.ClimbAnimRate end
+    local holdtype = self:HasWeapon() and self:GetWeapon():GetHoldType() or "normal"
+    if self:IsWeaponHolstered() then
+      if passives[holdtype] then holdtype = "passive"
+      elseif normals[holdtype] then holdtype = "normal" end
     end
+    if not self:IsOnGround() then
+      return self.JumpAnimations[holdtype], self.JumpAnimRate
+    elseif self:IsCrouching() then
+      if self:IsMoving() then return self.CrouchWalkAnimations[holdtype], self.CrouchWalkAnimRate
+      else return self.CrouchIdleAnimations[holdtype], self.CrouchIdleAnimRate end
+    elseif self:IsRunning() then return self.RunAnimations[holdtype], self.RunAnimRate
+    elseif self:IsMoving() then return self.WalkAnimations[holdtype], self.WalkAnimRate
+    else return self.IdleAnimations[holdtype], self.IdleAnimRate end
   end
 
 end

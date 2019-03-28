@@ -4,10 +4,6 @@ local plyMETA = FindMetaTable("Player")
 local npcMETA = FindMetaTable("NPC")
 local physMETA = FindMetaTable("PhysObj")
 
-function entMETA:GetDrGVar(name)
-  return net.DrG_GetVar(name, self)
-end
-
 function entMETA:DrG_FadeOut(duration, callback)
   self:SetRenderMode(RENDERMODE_TRANSCOLOR)
   local alpha = self:GetColor().a
@@ -76,10 +72,6 @@ end
 if SERVER then
   util.AddNetworkString("DrGBaseCreationID")
 
-  function entMETA:SetDrGVar(name, value)
-    return net.DrG_SetVar(name, value, self)
-  end
-
   function entMETA:DrG_Explode(options)
     options = options or {}
     if options.remove == nil then options.remove = true end
@@ -109,11 +101,19 @@ if SERVER then
 
   function plyMETA:DrG_JoinFaction(faction)
     self:DrG_InitFactions()
+    if self:DrG_IsInFaction(faction) then return end
     self._DrGBaseFactions[string.upper(faction)] = true
+    for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
+      nextbot:UpdateRelationshipWith(self)
+    end
   end
   function plyMETA:DrG_LeaveFaction(faction)
     self:DrG_InitFactions()
+    if not self:DrG_IsInFaction(faction) then return end
     self._DrGBaseFactions[string.upper(faction)] = false
+    for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
+      nextbot:UpdateRelationshipWith(self)
+    end
   end
   function plyMETA:DrG_IsInFaction(faction)
     self:DrG_InitFactions()
@@ -129,6 +129,19 @@ if SERVER then
   end
   function plyMETA:DrG_InitFactions()
     self._DrGBaseFactions = self._DrGBaseFactions or {}
+  end
+  function plyMETA:DrG_JoinFactions(factions)
+    for i, faction in ipairs(factions) do
+      self:DrG_JoinFaction(faction)
+    end
+  end
+  function plyMETA:DrG_LeaveFactions(factions)
+    for i, faction in ipairs(factions) do
+      self:DrG_LeaveFaction(faction)
+    end
+  end
+  function plyMETA:DrG_LeaveAllFactions()
+    self:DrG_LeaveFactions(self:DrG_GetFactions())
   end
 
   -- Hooks --

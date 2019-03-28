@@ -54,7 +54,7 @@ function ENT:_InitAnimations()
         self:ResetSequence(seq)
         self._DrGBaseAnimSeed = math.random(0, 255)
       end
-      if not self.AnimMatchSpeed or not self:IsOnGround() then self:SetPlaybackRate(rate or 1) end
+      if not self.AnimMatchSpeed or not self:IsOnGround() or self:IsClimbing() then self:SetPlaybackRate(rate or 1) end
       return true
     end)
   end
@@ -159,7 +159,7 @@ if SERVER then
     return self:PlaySequenceAndMove(anim, rate, callback)
   end
 
-  function ENT:PlaySequenceAndMoveAbsolute(anim, rate, callback)
+  function ENT:PlaySequenceAndMoveAbsolute(seq, rate, callback)
     if isstring(seq) then seq = self:LookupSequence(seq)
     elseif not isnumber(seq) then return end
     if seq == -1 then return end
@@ -209,6 +209,20 @@ if SERVER then
     return self:PlaySequence(anim, rate, callback)
   end
 
+  function ENT:DirectPoseParametersAt(pos, pitch, yaw, center)
+    if isentity(pos) then
+      return self:DirectPoseParametersAt(pos:WorldSpaceCenter(), pitch, yaw)
+    elseif isvector(pos) then
+      center = center or self:WorldSpaceCenter()
+      local angle = (pos - center):Angle()
+      self:SetPoseParameter(pitch, math.AngleDifference(angle.p, self:GetAngles().p))
+      self:SetPoseParameter(yaw, math.AngleDifference(angle.y, self:GetAngles().y))
+    else
+      self:SetPoseParameter(pitch, 0)
+      self:SetPoseParameter(yaw, 0)
+    end
+  end
+
   -- Hooks --
 
   function ENT:BodyUpdate()
@@ -219,7 +233,9 @@ if SERVER then
   end
 
   function ENT:UpdateAnimation()
-    if not self:IsOnGround() then return self.JumpAnimation, self.JumpAnimRate
+    if self:IsClimbingUp() then return self.ClimbUpAnimation, self.ClimbAnimRate
+    elseif self:IsClimbingDown() then return self.ClimbDownAnimation, self.ClimbAnimRate
+    elseif not self:IsOnGround() then return self.JumpAnimation, self.JumpAnimRate
     elseif self:IsRunning() then return self.RunAnimation, self.RunAnimRate
     elseif self:IsMoving() then return self.WalkAnimation, self.WalkAnimRate
     else return self.IdleAnimation, self.IdleAnimRate end

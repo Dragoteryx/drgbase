@@ -30,7 +30,6 @@ function SWEP:Initialize()
   if SERVER then
     self:SetHoldType(self.HoldType)
   end
-  self:SetNWBool("DrGBaseAiming", false)
   self:_BaseInitialize()
   self:CustomInitialize()
 end

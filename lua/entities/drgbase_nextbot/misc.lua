@@ -39,6 +39,17 @@ function ENT:IsAIDisabled()
   return self:GetNW2Bool("DrGBaseAIDisabled") or GetConVar("ai_disabled"):GetBool()
 end
 
+function ENT:GetEyeTrace()
+  return util.TraceLine({
+    start = self:EyePos(),
+    endpos = self:EyeAngles():Forward()*999999999,
+    filter = self
+  })
+end
+function ENT:GetEyeTraceNoCursor()
+  return self:GetEyeTrace()
+end
+
 -- Functions --
 
 function ENT:Timer(delay, callback)
@@ -57,14 +68,29 @@ end
 function ENT:IsInRange(ent, range)
   return self:GetPos():DistToSqr(ent:NearestPoint(self:GetPos())) <= math.pow(range*self:GetScale(), 2)
 end
+function ENT:GetHullRangeTo(pos)
+  return self:NearestPoint(pos):Distance(pos)
+end
+function ENT:GetHullRangeSquaredTo(pos)
+  return self:NearestPoint(pos):DistToSqr(pos)
+end
 
 function ENT:ScreenShake(amplitude, frequency, duration, radius)
   local res = util.ScreenShake(self:GetPos(), amplitude, frequency, duration, radius)
   if CLIENT then return res end
   for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
     if ent == self then continue end
-    if self:GetRangeSquaredTo(ent) > radius ^2 then continue end
+    if self:GetRangeSquaredTo(ent) > radius^2 then continue end
     ent:OnShake(self, amplitude, frequency, duration, radius)
+  end
+end
+
+function ENT:RandomizeBodygroup(id)
+  self:SetBodygroup(id, math.random(0, self:GetBodygroupCount(id)-1))
+end
+function ENT:RandomizeBodygroups()
+  for i, bodygroup in ipairs(self:GetBodyGroups()) do
+    self:RandomizeBodygroup(bodygroup.id)
   end
 end
 
@@ -76,6 +102,8 @@ function ENT:OnScaleChange() end
 
 function ENT:_InitMisc()
   self._DrGBaseLoopingSounds = {}
+  self._DrGBaseSlotSounds = {}
+  self._DrGBaseEmitSounds = {}
   if CLIENT then return end
   self:SetHealthRegen(self.HealthRegen)
   self._DrGBaseOnGround = self:IsOnGround()
@@ -84,6 +112,7 @@ function ENT:_InitMisc()
   self._DrGBaseHealth = self:Health()
   self._DrGBaseMaxHealth = self:GetMaxHealth()
   self._DrGBaseOnContactDelay = 0
+  self._DrGBaseDamagedByAllies = {}
   self:LoopTimer(1, function(self)
     if self:IsDead() then return end
     local regen = self:GetHealthRegen()
@@ -100,6 +129,9 @@ function ENT:_InitMisc()
     end
     return not self:IsDead()
   end)
+  self:AddCallback("OnAngleChange", function(self, angles)
+    self:SetAngles(Angle(0, angles.y, 0))
+  end)
 end
 
 function ENT:_HandleMisc()
@@ -114,7 +146,7 @@ function ENT:_HandleMisc()
   if self._DrGBaseOnGround and not self:IsOnGround() then
 
   elseif not self._DrGBaseOnGround and self:IsOnGround() then
-    self:InvalidatePath()
+    self:ForcePathRefresh()
   end
   self._DrGBaseOnGround = self:IsOnGround()
   if self._DrGBaseOnFire and not self:IsOnFire() then
@@ -150,8 +182,14 @@ if SERVER then
     self:SetScale(self:GetScale()*mult)
   end
 
-  function ENT:DisableAI(bool)
+  function ENT:SetAIDisabled(bool)
     self:SetNW2Bool("DrGBaseAIDisabled", bool)
+  end
+  function ENT:DisableAI()
+    self:SetAIDisabled(true)
+  end
+  function ENT:EnableAI()
+    self:SetAIDisabled(false)
   end
 
   function ENT:GetNoTarget()

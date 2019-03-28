@@ -159,19 +159,22 @@ if SERVER then
   end
 
   -- Get/set relationship
-  function ENT:GetRelationship(ent)
+  function ENT:GetRelationship(ent, absolute)
     if not IsValid(ent) then return D_ER end
     if self == ent then return D_ER end
-    if not self:IsConsidered(ent) then return D_NU end
-    if self:IsIgnored(ent) then return D_NU end
-    if ent:IsFlagSet(FL_NOTARGET) then return D_NU end
-    if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then return D_NU end
-    if ent:Health() <= 0 then return D_NU end
+    if not absolute then
+      if not self:IsConsidered(ent) then return D_NU end
+      if self:IsIgnored(ent) then return D_NU end
+      if ent:IsFlagSet(FL_NOTARGET) then return D_NU end
+      if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then return D_NU end
+      if (ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot") and ent:Health() <= 0 then return D_NU end
+    end
     return self._DrGBaseRelationships[ent:GetCreationID()] or D_NU
   end
   function ENT:_SetRelationship(ent, disp)
     if not IsValid(ent) or ent == self then return end
     local disps = {D_LI, D_HT, D_FR}
+    if disp == D_NU and not self:_ConsiderEntity(ent) then disp = nil end
     if IsValidDisposition(disp) then
       local old = self:GetRelationship(ent, true)
       if old == disp then return end
@@ -186,7 +189,7 @@ if SERVER then
         else table.insert(self._DrGBaseEntityCaches[disp2], ent) end
       end
       if ent:IsNPC() then self:_UpdateNPCRelationship(ent, disp) end
-      if old ~= disp then self:OnRelationshipChange(ent, old, disp) end
+      if old ~= disp then self:OnRelationshipChange(ent, old or D_NU, disp) end
     elseif disp == nil or disp == D_ER then
       if not self:IsConsidered(ent) then return end
       local old = self:GetRelationship(ent, true)
@@ -228,8 +231,8 @@ if SERVER then
   end
   function ENT:AddEntityRelationship(ent, disp, prio)
     if not IsValid(ent) then return end
-    local rel = self:GetEntityRelationship(ent)
-    if not isnumber(prio) or prio >= rel.prio then
+    local gdisp, gprio = self:GetEntityRelationship(ent)
+    if not isnumber(prio) or prio >= gprio then
       self:SetEntityRelationship(ent, disp, prio)
     end
   end
@@ -251,8 +254,8 @@ if SERVER then
   end
   function ENT:AddClassRelationship(class, disp, prio)
     if not isstring(class) then return end
-    local rel = self:GetClassRelationship(class)
-    if not isnumber(prio) or prio >= rel.prio then
+    local gdisp, gprio = self:GetClassRelationship(class)
+    if not isnumber(prio) or prio >= gprio then
       self:SetClassRelationship(class, disp, prio)
     end
   end
@@ -266,6 +269,17 @@ if SERVER then
   end
   function ENT:AddPlayersRelationship(disp, prio)
     return self:AddClassRelationship("player", disp, prio)
+  end
+
+  -- Same class
+  function ENT:GetSelfClassRelationship()
+    return self:GetClassRelationship(self:GetClass())
+  end
+  function ENT:SetSelfClassRelationship(disp, prio)
+    return self:SetClassRelationship(self:GetClass(), disp, prio)
+  end
+  function ENT:AddSelfClassRelationship(disp, prio)
+    return self:AddClassRelationship(self:GetClass(), disp, prio)
   end
 
   -- Model
@@ -285,10 +299,21 @@ if SERVER then
   end
   function ENT:AddModelRelationship(model, disp, prio)
     if not isstring(model) then return end
-    local rel = self:GetModelRelationship(model)
-    if not isnumber(prio) or prio >= rel.prio then
+    local gdisp, gprio = self:GetModelRelationship(model)
+    if not isnumber(prio) or prio >= gprio then
       self:SetModelRelationship(model, disp, prio)
     end
+  end
+
+  -- Same model
+  function ENT:GetSelfModelRelationship()
+    return self:GetModelRelationship(self:GetModel())
+  end
+  function ENT:SetSelfModelRelationship(disp, prio)
+    return self:SetModelRelationship(self:GetModel(), disp, prio)
+  end
+  function ENT:AddSelfModelRelationship(disp, prio)
+    return self:AddModelRelationship(self:GetModel(), disp, prio)
   end
 
   -- Factions
@@ -308,8 +333,8 @@ if SERVER then
   end
   function ENT:AddFactionRelationship(faction, disp, prio)
     if not isstring(faction) then return end
-    local rel = self:GetFactionRelationship(faction)
-    if not isnumber(prio) or prio >= rel.prio then
+    local gdisp, gprio = self:GetFactionRelationship(faction)
+    if not isnumber(prio) or prio >= gprio then
       self:SetFactionRelationship(faction, disp, prio)
     end
   end
@@ -390,6 +415,7 @@ if SERVER then
 
   -- Factions
   function ENT:JoinFaction(faction)
+    if self:IsInFaction(faction) then return end
     self._DrGBaseFactions[string.upper(faction)] = true
     self:SetFactionRelationship(faction, D_LI)
     for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
@@ -398,7 +424,12 @@ if SERVER then
     end
   end
   function ENT:LeaveFaction(faction)
+    if not self:IsInFaction(faction) then return end
     self._DrGBaseFactions[string.upper(faction)] = nil
+    local disp, prio = self:GetFactionRelationship(faction)
+    if disp == D_LI and prio == DEFAULT_PRIORITY then
+      self:SetFactionRelationship(faction, D_NU)
+    end
     for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
       if nextbot == self then continue end
       nextbot:UpdateRelationshipWith(self)
@@ -413,6 +444,19 @@ if SERVER then
       if joined then table.insert(factions, faction) end
     end
     return factions
+  end
+  function ENT:JoinFactions(factions)
+    for i, faction in ipairs(factions) do
+      self:JoinFaction(faction)
+    end
+  end
+  function ENT:LeaveFactions(factions)
+    for i, faction in ipairs(factions) do
+      self:LeaveFaction(faction)
+    end
+  end
+  function ENT:LeaveAllFactions()
+    self:LeaveFactions(self:GetFactions())
   end
 
   -- Get entities
@@ -505,11 +549,12 @@ if SERVER then
     local res = self:ShouldConsiderEntity(ent)
     if res == false then return false end
     if CONSIDER_BLACKLIST[ent:GetClass()] then return false end
+    if CONSIDER_WHITELIST[ent:GetClass()] then return true end
+    if ent.DrGBaseShouldConsider then return true end
     if ent:IsPlayer() then return true end
     if ent:IsNPC() then return true end
     if ent.Type == "nextbot" then return true end
-    if ent:IsFlagSet(FL_OBJECT) then return true end
-    if CONSIDER_WHITELIST[ent:GetClass()] then return true end
+    if string.StartWith(ent:GetClass(), "npc_") then return true end      
     if res then return true end
     return false
   end

@@ -18,6 +18,14 @@ function ENT:LoopSound(sound)
   table.insert(self._DrGBaseLoopingSounds, self:StartLoopingSound(sound))
 end
 
+function ENT:EmitSlotSound(slot, duration, soundName, soundLevel, pitchPercent, volume, channel)
+  local lastSlot = self._DrGBaseSlotSounds[slot]
+  if lastSlot == nil or CurTime() > lastSlot then
+    self._DrGBaseSlotSounds[slot] = CurTime() + duration
+    self:EmitSound(soundName, soundLevel, pitchPercent, volume, channel)
+  end
+end
+
 -- Music --
 
 local current = nil

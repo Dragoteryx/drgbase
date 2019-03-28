@@ -35,6 +35,15 @@ end
 function ENT:IsMoving()
   return self:IsSpeedMore(0)
 end
+function ENT:IsClimbing()
+  return self:GetNW2Bool("DrGBaseClimbing")
+end
+function ENT:IsClimbingUp()
+  return self:IsClimbing() and not self:IsClimbingDown()
+end
+function ENT:IsClimbingDown()
+  return self:IsClimbing() and self:GetNW2Bool("DrGBaseClimbingDown")
+end
 
 -- Functions --
 
@@ -46,8 +55,6 @@ function ENT:OnSpeedChange() end
 
 function ENT:_InitMovements()
   if SERVER then
-    self:ForwardMovement(self.ForwardOnly)
-    self:SetTurnRate(self.TurnRate)
     self._DrGBaseUpdateSpeed = true
     self:LoopTimer(0.1, self._HandleSpeed)
   end
@@ -73,17 +80,16 @@ if SERVER then
     self.loco:SetDesiredSpeed(speed*self:GetScale())
   end
 
-  function ENT:ForwardMovement(bool)
-    if bool == nil then return self._DrGBaseForwardMovement
-    elseif bool then self._DrGBaseForwardMovement = true
-    else self._DrGBaseForwardMovement = false end
+  function ENT:IsClimbingLadder(ladder)
+    if IsValid(ladder) then
+      return self:IsClimbingLadder() and ladder == self._DrGBaseClimbLadder
+    else
+      if not self:IsClimbing() then return false end
+      return IsValid(self._DrGBaseClimbLadder), self._DrGBaseClimbLadder
+    end
   end
-
-  function ENT:GetTurnRate()
-    return self.loco:GetMaxYawRate()
-  end
-  function ENT:SetTurnRate(rate)
-    self.loco:SetMaxYawRate(rate)
+  function ENT:IsClimbingWall()
+    return self:IsClimbing() and not IsValid(self._DrGBaseClimbLadder)
   end
 
   -- Functions --
@@ -94,11 +100,14 @@ if SERVER then
     options = options or {}
     options.tolerance = options.tolerance or 20
     options.maxage = options.maxage or math.huge
-    return self:_MoveToPosGround(pos, options, callback)
+    while self:_MoveToPosGround(pos, options, callback) == 0 do
+      coroutine.yield()
+    end
   end
 
   function ENT:_MoveToPosGround(pos, options, callback)
     options.maxage = options.maxage or math.huge
+    if options.avoid == nil then options.avoid = true end
     if not navmesh.IsLoaded() then
       local delay = CurTime() + options.maxage
       while self:GetRangeSquaredTo(pos) > options.tolerance^2 do
@@ -107,9 +116,7 @@ if SERVER then
         if isstring(res) then return res
         elseif isvector(res) then pos = res end
         if self:CanMove() and not (options.avoid and self:AvoidObstacles(true)) then
-          if self:ForwardMovement() then
-            self:MoveForwardTo(pos)
-          else self:MoveTowards(pos) end
+          self:MoveTowards(pos)
         end
         if self.loco:IsStuck() then
       		self:HandleStuck()
@@ -136,21 +143,45 @@ if SERVER then
         local res = callback(path, options)
         if isstring(res) then return res
         elseif isvector(res) then pos = res end
-        if path:GetAge() >= options.repath then
-          if pos:DistToSqr(path:GetEnd()) > options.tolerance^2 then
+        if self._DrGBaseForcePathRefresh or path:GetAge() >= options.repath then
+          if self._DrGBaseForcePathRefresh or pos:DistToSqr(path:GetEnd()) > options.tolerance^2 then
+            self._DrGBaseForcePathRefresh = false
             path:Compute(self, pos, options.generator)
           else path:ResetAge() end
         end
         if not IsValid(path) then return "failed" end
         if options.draw then path:Draw() end
-        if self:CanMove() and not (options.avoid and self:AvoidObstacles(true)) then
-          if self:ForwardMovement() then
-            local cursor = path:GetCursorData()
-            self:MoveForwardTo(self:GetPos() + cursor.forward)
-            path:MoveCursorToClosestPosition(self:GetPos(), nil, 1)
-          else path:Update(self) end
+        if self:CanMove() then
+          local current = path:GetCurrentGoal()
+          if current.type == 4 then
+            if self.ClimbLaddersUp then
+              if self:GetHullRangeSquaredTo(current.ladder:GetBottom()) < options.tolerance^2 then
+                self:ClimbLadderUp(current.ladder)
+                self:InvalidatePath()
+                return 0
+              elseif not options.avoid or not self:AvoidObstacles(true) then
+                self:MoveTowards(current.pos)
+              end
+            else self:MoveTowards(self:GetPos() + current.forward) end
+          elseif current.type == 5 then
+            if self.ClimbLaddersDown then
+              if self:GetHullRangeSquaredTo(current.ladder:GetTop()) < options.tolerance^2 then
+                self:ClimbLadderDown(current.ladder)
+                self:InvalidatePath()
+                return 0
+              elseif not options.avoid or not self:AvoidObstacles(true) then
+                self:MoveTowards(current.pos)
+              end
+            else self:MoveTowards(self:GetPos() + current.forward) end
+          elseif not options.avoid or not self:AvoidObstacles(true) then
+            path:Update(self)
+          end
         end
         if not IsValid(path) then return "ok" end
+        if self:GetHullRangeSquaredTo(path:GetEnd()) <= options.tolerance^2 then
+          self:InvalidatePath()
+          return "ok"
+        end
         if self.loco:IsStuck() then
       		self:HandleStuck()
       		return "stuck"
@@ -194,6 +225,8 @@ if SERVER then
     else return res end
   end
 
+  -- Decomposed moving stuff
+
   function ENT:FacePos(pos)
     local angle = (pos - self:GetPos()):Angle()
     self:SetAngles(Angle(0, angle.y, 0))
@@ -234,14 +267,14 @@ if SERVER then
     return self:MoveForwardTo(ent:GetPos())
   end
 
-  function ENT:MoveAwayFrom(pos)
+  function ENT:MoveAwayFrom(pos, face)
     local away = self:GetPos()*2 - pos
-    if not self:ForwardMovement() then
+    if face then
       self:FaceTowards(pos)
       self:Approach(away)
-    else self:MoveForwardTo(away) end
+    else self:MoveTowards(away) end
   end
-  function ENT:MoveAwayFromEntity(ent)
+  function ENT:MoveAwayFromEntity(ent, face)
     self:MoveAwayFrom(ent:GetPos())
   end
 
@@ -348,6 +381,61 @@ if SERVER then
     end
   end
 
+  -- Climbing
+
+  function ENT:ClimbLadder(ladder, down)
+    if self:IsClimbing() then return end
+    if self:OnStartClimbing(ladder, down) == false then return end
+    self:SetNW2Bool("DrGBaseClimbing", true)
+    self:SetNW2Bool("DrGBaseClimbingDown", down)
+    self._DrGBaseClimbLadder = ladder
+    self:FacePos(self:GetPos() - ladder:GetNormal())
+    local offset = self:GetForward()*self.ClimbOffset.x +
+    self:GetRight()*self.ClimbOffset.y +
+    self:GetUp()*self.ClimbOffset.z
+    local wait = 0.01
+    local startingHeight = self:GetPos().z
+    local i = 1
+    while not self:IsDying() do
+      self:FacePos(self:GetPos() - ladder:GetNormal())
+      if down then
+        if self:GetPos().z <= ladder:GetBottom().z then break end
+        local pos = ladder:GetPosAtHeight(startingHeight - self:GetSpeed()*wait*self:GetScale()*i)
+        if self:WhileClimbing(ladder, pos.z - ladder:GetBottom().z, true) then break end
+        self:SetPos(pos + offset)
+      else
+        if self:GetPos().z >= ladder:GetTop().z then break end
+        local pos = ladder:GetPosAtHeight(startingHeight + self:GetSpeed()*wait*self:GetScale()*i)
+        if self:WhileClimbing(ladder, ladder:GetTop().z - pos.z, false) then break end
+        self:SetPos(pos + offset)
+      end
+      i = i+1
+      coroutine.wait(wait)
+    end
+    if down then
+      self:SetPos(ladder:GetPosAtHeight(startingHeight - self:GetSpeed()*wait*self:GetScale()*(i-1)) + offset)
+    else self:SetPos(ladder:GetPosAtHeight(startingHeight + self:GetSpeed()*wait*self:GetScale()*(i-1)) + offset) end
+    self:OnStopClimbing(ladder, down)
+    self:SetNW2Bool("DrGBaseClimbing", false)
+    self._DrGBaseClimbLadder = nil
+    if not self:IsDying() then
+      local pos = self:GetPos()
+      self:SetPos(navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos))
+    end
+  end
+  function ENT:ClimbLadderUp(ladder)
+    return self:ClimbLadder(ladder, false)
+  end
+  function ENT:ClimbLadderDown(ladder)
+    return self:ClimbLadder(ladder, true)
+  end
+  function ENT:ClimbWall()
+    if self:IsClimbing() then return end
+    if self:OnStartClimbing(nil, false) == false then return end
+    self:SetNW2Bool("DrGBaseClimbing", true)
+    self:SetNW2Bool("DrGBaseClimbingDown", false)
+  end
+
   -- Hooks --
 
   function ENT:HandleStuck()
@@ -357,8 +445,13 @@ if SERVER then
   function ENT:CanMove() return true end
   function ENT:CanRun() return true end
 
+  function ENT:OnStartClimbing() end
+  function ENT:WhileClimbing() end
+  function ENT:OnStopClimbing() end
+
   function ENT:UpdateSpeed(run)
-    if run then return self.RunSpeed
+    if self:IsClimbing() then return self.ClimbSpeed
+    elseif run then return self.RunSpeed
     else return self.WalkSpeed end
   end
 
@@ -370,8 +463,52 @@ if SERVER then
       if self:IsPossessed() then
         run = self:GetPossessor():KeyDown(IN_SPEED)
       else run = self:ShouldRun(self:GetState()) end
-      self:SetSpeed(self:UpdateSpeed(run))
+      self:SetSpeed(self:UpdateSpeed(run or false))
     else self:SetSpeed(self:UpdateSpeed(false)) end
+  end
+
+  -- Aliases --
+
+  function ENT:GetStepHeight()
+    return self.loco:GetStepHeight()
+  end
+  function ENT:SetStepHeight(height)
+    return self.loco:SetStepHeight(height)
+  end
+
+  function ENT:GetJumpHeight()
+    return self.loco:GetJumpHeight()
+  end
+  function ENT:SetJumpHeight(height)
+    return self.loco:SetJumpHeight(height)
+  end
+
+  function ENT:GetDeathDropHeight()
+    return self.loco:GetDeathDropHeight()
+  end
+  function ENT:SetDeathDropHeight(height)
+    return self.loco:SetDeathDropHeight(height)
+  end
+
+  function ENT:GetAcceleration()
+    return self.loco:GetAcceleration()
+  end
+  function ENT:SetAcceleration(accel)
+    return self.loco:SetAcceleration(accel)
+  end
+
+  function ENT:GetDeceleration()
+    return self.loco:GetDeceleration()
+  end
+  function ENT:SetDeceleration(decel)
+    return self.loco:SetDeceleration()
+  end
+
+  function ENT:GetMaxYawRate()
+    return self.loco:GetMaxYawRate()
+  end
+  function ENT:SetMaxYawRate(rate)
+    return self.loco:SetMaxYawRate(rate)
   end
 
 else

@@ -139,9 +139,9 @@ if SERVER then
         self:MoveAwayFromEntity(afraidof)
         self:InvalidatePath()
       end
-      if self.AttackScared and IsValid(scared) and
-      self:IsInRange(scared, self.EnemyReach) and self:Visible(scared) then
-        self:EnemyInRange(scared, true)
+      if self.AttackAfraid and IsValid(afraidof) and
+      self:IsInRange(afraidof, self.EnemyReach) and self:Visible(afraidof) then
+        self:EnemyInRange(afraidof, true)
       end
     elseif self:IsHostile() and self:HasEnemy() then
       self:SetDestination(nil)
@@ -155,7 +155,7 @@ if SERVER then
         local stop = self.EnemyStop or self.EnemyReach
         if self:IsInRange(enemy, self.EnemyAvoid) and self:Visible(enemy) then
           if not self:OnAvoidEnemy(enemy) then
-            self:MoveAwayFromEntity(enemy)
+            self:MoveAwayFromEntity(enemy, true)
           end
           if self:IsInRange(enemy, self.EnemyReach) and self:Visible(enemy) then
             self:EnemyInRange(enemy, false)
@@ -167,7 +167,7 @@ if SERVER then
           else hookres = self:OnPursueEnemy(enemy) end
           if not hookres then
             local res = self:FollowEntityMemory(enemy, {
-              maxage = 0.5, avoid = true
+              maxage = 0.5
             }, function()
               if self:IsPossessed() then return "possession" end
               if self:CoroutineCalls() then return "callbacks" end
@@ -188,7 +188,7 @@ if SERVER then
         local reached = self:MovingToDestination(destination)
         if reached == nil then
           local res = self:MoveToPos(destination, {
-            maxage = 0.5, avoid = true
+            maxage = 0.5
           }, function()
             if self:IsPossessed() then return "possession" end
             if self:CoroutineCalls() then return "callbacks" end

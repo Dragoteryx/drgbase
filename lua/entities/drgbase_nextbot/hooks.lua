@@ -19,6 +19,11 @@ if SERVER then
   function ENT:OnDeath() end
   function ENT:DoOnDeath() end
 
+  function ENT:OnDamagedByAlly() end
+  function ENT:OnDamagedByEnemy() end
+  function ENT:OnDamagedByAfraidOf() end
+  function ENT:OnDamagedByNeutral() end
+
   function ENT:OnCombineBall() end
   function ENT:OnContactAny(ent)
     self:SpotEntity(ent)
@@ -46,6 +51,22 @@ if SERVER then
     end
     if dmg:GetDamage() <= 0 then return end
     local res = self:OnTakeDamage(dmg)
+    local attacker = dmg:GetAttacker()
+    if self:IsAlly(attacker) then
+      if not self:OnDamagedByAlly(attacker, dmg) and self.AllyDamageTolerance >= 0 then
+        local crea = attacker:GetCreationID()
+        if self._DrGBaseDamagedByAllies[crea] ~= nil then
+          self._DrGBaseDamagedByAllies[crea] = self._DrGBaseDamagedByAllies[crea] + 1
+        else self._DrGBaseDamagedByAllies[crea] = 1 end
+        if self._DrGBaseDamagedByAllies[crea] > self.AllyDamageTolerance then
+          self:AddEntityRelationship(attacker, D_HT, self.AllyDamagePriority)
+        end
+      end
+    elseif self:IsEnemy(attacker) then
+      self:OnDamagedByEnemy(attacker, dmg)
+    elseif self:IsAfraidOf(attacker) then
+      self:OnDamagedByAfraidOf(attacker, dmg)
+    else self:OnDamagedByNeutral(attacker, dmg) end
     if res ~= true then
       local data = util.DrG_SaveDmg(dmg)
       self:CallInCoroutine(function(self, delay)
@@ -57,7 +78,7 @@ if SERVER then
 
   local function NextbotDeath(self, dmg)
     hook.Run("OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor())
-    if self.DropWeaponOnDeath then
+    if self:HasWeapon() and self.DropWeaponOnDeath then
       self:DropWeapon()
     end
     if self.RagdollOnDeath then

@@ -174,7 +174,9 @@ ENT.EnemyStop = ENT.EnemyReach
 ENT.EnemyAvoid = 100
 ENT.AllyReach = 250
 ENT.AfraidAvoid = 500
-ENT.AttackScared = false
+ENT.AttackAfraid = false
+ENT.AllyDamageTolerance = 3
+ENT.AllyDamagePriority = 99
 
 -- Movements/animations --
 DrGBase.IncludeFile("animations.lua")
@@ -191,8 +193,19 @@ ENT.JumpAnimation = ACT_JUMP
 ENT.JumpAnimRate = 1
 ENT.AnimMatchSpeed = true
 ENT.AnimMatchDirection = true
-ENT.ForwardOnly = false
-ENT.TurnRate = 250
+
+-- Climbing --
+ENT.ClimbWalls = false
+ENT.ClimbLadders = false
+ENT.ClimbLaddersUp = true
+ENT.ClimbLaddersDown = false
+ENT.ClimbWallsMaxHeight = math.huge
+ENT.ClimbWallsMinHeight = 0
+ENT.ClimbSpeed = 100
+ENT.ClimbUpAnimation = ACT_CLIMB_UP
+ENT.ClimbDownAnimation = ACT_CLIMB_DOWN
+ENT.ClimbAnimRate = 1
+ENT.ClimbOffset = Vector(0, 0, 0)
 
 -- Detection --
 DrGBase.IncludeFile("detection.lua")
@@ -210,8 +223,7 @@ DrGBase.IncludeFile("weapons.lua")
 ENT.UseWeapons = false
 ENT.Weapons = {}
 ENT.WeaponAccuracy = 1
-ENT.WeaponAttachmentLH = "Anim_Attachment_LH"
-ENT.WeaponAttachmentRH = "Anim_Attachment_RH"
+ENT.WeaponAttachment = "Anim_Attachment_RH"
 ENT.DropWeaponOnDeath = false
 ENT.AcceptPlayerWeapons = false
 
@@ -271,6 +283,7 @@ function ENT:Initialize()
   self:_InitMovements()
   self:_InitPossession()
   self:_InitRelationships()
+  self:_InitWeapons()
   self:_InitAI()
   table.insert(DrGBase.Nextbots._Spawned, self)
   self:CallOnRemove("DrGBaseCallOnRemove", function()
@@ -278,6 +291,9 @@ function ENT:Initialize()
       if self:IsPossessed() then self:Dispossess() end
     end
     table.RemoveByValue(DrGBase.Nextbots._Spawned, self)
+    for i, sound in ipairs(self._DrGBaseEmitSounds) do
+      self:StopSound(sound)
+    end
     for i, sound in ipairs(self._DrGBaseLoopingSounds) do
       self:StopLoopingSound(sound)
     end
@@ -408,6 +424,9 @@ if SERVER then
 
 else
 
+  local DisplayCollisions = CreateClientConVar("drgbase_display_collisions", "0")
+  local DisplaySight = CreateClientConVar("drgbase_display_sight", "0")
+
   -- Getters --
 
   -- Setters --
@@ -428,7 +447,16 @@ else
   function ENT:Draw()
     self:DrawModel()
     if GetConVar("developer"):GetBool() then
-
+      if DisplayCollisions:GetBool() then
+        local bound1, bound2 = self:GetCollisionBounds()
+        local center = self:GetPos() + (bound1 + bound2)/2
+        render.DrawWireframeBox(self:GetPos(), Angle(0, 0, 0), bound1, bound2, DrGBase.Colors.White, false)
+        render.DrawLine(center, center + self:GetVelocity(), DrGBase.Colors.Orange, false)
+        render.DrawWireframeSphere(center, 2*self:GetScale(), 4, 4, DrGBase.Colors.Orange, false)
+      end
+      if DisplaySight:GetBool() then
+         local eyepos = self:EyePos()
+      end
     end
     self:_BaseDraw()
     self:CustomDraw()
