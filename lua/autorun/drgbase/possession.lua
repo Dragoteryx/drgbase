@@ -7,9 +7,9 @@ properties.Add("drgbasepossess", {
 	MenuIcon = "drgbase/icon16.png",
 	Filter = function(self, ent, ply)
     return ent.IsDrGNextbot and
-		ent.PossessionEnabled and
+		PossessionEnabled:GetBool() and
 		ent.PossessionPrompt and
-		PossessionEnabled:GetBool()
+		ent:IsPossessionEnabled()		
 	end,
 	Action = function(self, ent)
     self:MsgStart()

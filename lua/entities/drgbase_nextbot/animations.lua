@@ -1,3 +1,4 @@
+
 -- Getters/setters --
 
 -- Functions --
@@ -133,26 +134,13 @@ if SERVER then
       local success, vec, angles = self:GetSequenceMovement(seq, previousCycle, cycle)
       if success then
         vec:Rotate(self:GetAngles() + angles)
-        local data = {
-          endpos = self:GetPos() + vec,
-          filter = {self, self:GetWeapon()},
-          collisiongroup = self:GetCollisionGroup(),
-          mask = self:GetSolidMask()
-        }
-        local tr1 = self:TraceHull(data)
-        if tr1.Hit then
-          local tr2 = self:TraceHull(data, true)
-          if not tr2.Hit then
-            data.start = tr2.HitPos
-            data.endpos = tr2.HitPos + Vector(0, 0, -self.loco:GetStepHeight()-1)
-            local tr3 = self:TraceHull(data)
-            self:SetPos(self:GetPos() + vec + Vector(0, 0, tr3.HitPos.z - self:GetPos().z))
-          end
-        else self:SetPos(self:GetPos() + vec) end
+        if not self:TraceHull(vec, true).Hit then
+          self:SetPos(self:GetPos() + vec)
+        end
       end
       previousCycle = cycle
       return callback(cycle)
-    end, options)
+    end)
   end
   function ENT:PlayAnimationAndMove(anim, rate, callback)
     if isnumber(anim) then anim = self:SelectRandomSequence(anim) end
@@ -165,14 +153,17 @@ if SERVER then
     if seq == -1 then return end
     if callback == nil then callback = function() end end
     local startpos = self:GetPos()
+    local lastpos = self:GetPos()
     local res = self:PlaySequenceAndWait(seq, rate, function(cycle)
       local success, vec, angles = self:GetSequenceMovement(seq, 0, cycle)
       if success then
         vec:Rotate(self:GetAngles() + angles)
-        self:SetPos(startpos + vec)
+        lastpos = startpos + vec
+        self:SetPos(lastpos)
       end
       return callback(cycle)
-    end, options)
+    end)
+    self:SetPos(lastpos)
     self:SetVelocity(Vector(0, 0, 0))
     return res
   end

@@ -1,38 +1,33 @@
 
+-- Getters/setters --
+
+function ENT:IsIdling()
+  return self:GetNW2Bool("DrGBaseIdling")
+end
+function ENT:IsAttacking()
+  return self:GetNW2Bool("DrGBaseAttacking")
+end
+
 if SERVER then
-
-  -- Getters/setters --
-
-  function ENT:IsIdling()
-    return self._DrGBaseIdling or false
-  end
-
-  function ENT:IsCharging()
-    return self._DrGBaseCharging or false
-  end
-
-  function ENT:IsAttacking()
-    return self._DrGBaseAttacking or false
-  end
 
   -- Functions --
 
   function ENT:Idle(duration, callback)
     if duration <= 0 then return end
     if callback == nil then callback = function() end end
+    self:SetNW2Bool("DrGBaseIdling", true)
     local delay = CurTime() + duration
     local targetdelay = 0
     local now = CurTime()
-    self._DrGBaseIdling = true
     while CurTime() < delay do
-      if callback(CurTime() - now) then break end
-      if IsValid(self:GetEnemy()) then break end
       if self:CoroutineCalls() then break end
       if self:IsPossessed() then break end
+      if self:HasEnemy() then break end
+      if callback(CurTime() - now) then break end
       --if self:IsFlying() then self:FlightHover() end
       coroutine.yield()
     end
-    self._DrGBaseIdling = false
+    self:SetNW2Bool("DrGBaseIdling", false)
   end
 
   function ENT:QuickJump(pos)
@@ -72,26 +67,6 @@ if SERVER then
     end)
   end
 
-  function ENT:Charge(speed, callback)
-    if self:IsFlying() then return end
-    if self:IsCharging() then return end
-    self._DrGBaseCharging = true
-    local upd = self:IsUpdatingSpeed()
-    self:SetUpdateSpeed(false)
-    if speed ~= nil then self:SetSpeed(speed) end
-    if callback == nil then callback = function() end end
-    local now = CurTime()
-    while true and not self:IsDying() do
-      if callback(CurTime() - now, self._DrGBaseChargingEnt) then break end
-      self._DrGBaseChargingEnt = nil
-      self:MoveForward()
-      coroutine.yield()
-    end
-    self:SetUpdateSpeed(upd)
-    self._DrGBaseChargingEnt = nil
-    self._DrGBaseCharging = false
-  end
-
   function ENT:Attack(attacks, options, onattack)
     if self:IsAttacking() then return end
     options = options or {}
@@ -106,8 +81,11 @@ if SERVER then
       local delay2 = attack2.delay or 0
       return delay1 < delay2
     end)
+    if #self.OnAttackSounds > 0 then
+      self:EmitSound(self.OnAttackSounds[math.random(#self.OnAttackSounds)])
+    end
     for i, attack in ipairs(attacks) do
-      self._DrGBaseAttacking = true
+      self:SetNW2Bool("DrGBaseAttacking", true)
       attack.delay = attack.delay or 0
       if attack.delay < 0 then attack.delay = 0 end
       attack.damage = attack.damage or 0
@@ -153,10 +131,15 @@ if SERVER then
             end
             table.insert(hit, target)
           end
+          if #hit > 0 and #self.OnHitSounds > 0 then
+            self:EmitSound(self.OnHitSounds[math.random(#self.OnHitSounds)])
+          elseif #self.OnMissSounds > 0 then
+            self:EmitSound(self.OnMissSounds[math.random(#self.OnMissSounds)])
+          end
           onattack(hit, i, attack)
         end
         if i == #attacks then
-          self._DrGBaseAttacking = false
+          self:SetNW2Bool("DrGBaseAttacking", false)
         end
       end)
     end

@@ -2,6 +2,7 @@ if SERVER then return end
 
 local defaultIcon = "drgbase/icon16.png"
 local hookName = "PopulateDrGBaseSpawnmenuHook"
+
 hook.Add(hookName, "AddDrGBaseNextbots", function(pnlContent, tree, node)
 	local list = list.Get("DrGBaseNextbot")
 	local categories = {}
@@ -65,7 +66,7 @@ hook.Add(hookName, "AddDrGBaseWeapons", function(pnlContent, tree, node)
 					nicename	= ent.Name or class,
 					spawnname	= class,
 					material	= "entities/"..class..".png",
-					admin	= ent.AdminOnly
+					admin	= ent.AdminOnly or false
 				})
 			end
 		end

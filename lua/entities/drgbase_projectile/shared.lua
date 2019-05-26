@@ -24,7 +24,7 @@ function ENT:ScreenShake(amplitude, frequency, duration, radius)
 end
 
 if SERVER then
-  AddCSLuaFile("shared.lua")
+  AddCSLuaFile()
 
   function ENT:Initialize()
     self:SetModel("models/props_junk/watermelon01.mdl")

@@ -1,19 +1,10 @@
 
 if SERVER then
 
-  -- Getters/setters --
-
-  function ENT:IsDying()
-    return self:GetNW2Bool("DrGBaseDying")
-  end
-  function ENT:IsDead()
-    return self:GetNW2Bool("DrGBaseDead") or self:IsDying()
-  end
-
   -- Hooks --
 
   function ENT:OnTakeDamage(dmg)
-    self:SpotEntity(dmg:GetAttacker())
+    --self:SpotEntity(dmg:GetAttacker())
   end
   function ENT:AfterTakeDamage() end
   function ENT:OnDeath() end
@@ -26,7 +17,7 @@ if SERVER then
 
   function ENT:OnCombineBall() end
   function ENT:OnContactAny(ent)
-    self:SpotEntity(ent)
+    --self:SpotEntity(ent)
   end
   function ENT:OnPhysContact() end
   function ENT:OnAllyContact() end
@@ -50,17 +41,17 @@ if SERVER then
       if dmg:IsDamageType(type) then dmg:ScaleDamage(mult) end
     end
     if dmg:GetDamage() <= 0 then return end
+    if #self.OnDamageSounds > 0 then
+      self:EmitSlotSound("DrGBaseOnDamage", self.DamageSoundDelay, self.OnDamageSounds[math.random(#self.OnDamageSounds)])
+    end
     local res = self:OnTakeDamage(dmg)
     local attacker = dmg:GetAttacker()
     if self:IsAlly(attacker) then
-      if not self:OnDamagedByAlly(attacker, dmg) and self.AllyDamageTolerance >= 0 then
+      if not self:OnDamagedByAlly(attacker, dmg) then
         local crea = attacker:GetCreationID()
-        if self._DrGBaseDamagedByAllies[crea] ~= nil then
-          self._DrGBaseDamagedByAllies[crea] = self._DrGBaseDamagedByAllies[crea] + 1
-        else self._DrGBaseDamagedByAllies[crea] = 1 end
-        if self._DrGBaseDamagedByAllies[crea] > self.AllyDamageTolerance then
-          self:AddEntityRelationship(attacker, D_HT, self.AllyDamagePriority)
-        end
+        self._DrGBaseAllyDamageTolerance[crea] = self._DrGBaseAllyDamageTolerance[crea] or 0
+        self._DrGBaseAllyDamageTolerance[crea] = self._DrGBaseAllyDamageTolerance[crea] + self.AllyDamageTolerance
+        self:AddEntityRelationship(attacker, D_HT, self._DrGBaseAllyDamageTolerance[crea])
       end
     elseif self:IsEnemy(attacker) then
       self:OnDamagedByEnemy(attacker, dmg)
@@ -82,10 +73,13 @@ if SERVER then
       self:DropWeapon()
     end
     if self.RagdollOnDeath then
-      self:BecomeRagdoll(dmg)
+      return self:BecomeRagdoll(dmg)
     else self:Remove() end
   end
   function ENT:OnKilled(dmg)
+    if #self.OnDeathSounds > 0 then
+      self:EmitSound(self.OnDeathSounds[math.random(#self.OnDeathSounds)])
+    end
     if self:OnDeath(dmg) then
       self._DrGBaseCoroutineCalls = {}
       local data = util.DrG_SaveDmg(dmg)
@@ -104,6 +98,7 @@ if SERVER then
   end
 
   function ENT:OnContact(ent)
+    self:SetNW2Entity("DrGBaseLastTouchedEntity", ent)
     if CurTime() < self._DrGBaseOnContactDelay then return end
     self._DrGBaseOnContactDelay = CurTime() + 0.2
     if ent:GetClass() == "prop_combine_ball" then
@@ -120,7 +115,6 @@ if SERVER then
       ent:Replicate(self)
       self:Remove()
     else
-      if self:IsCharging() then self._DrGBaseChargingEnt = ent end
       self:OnContactAny(ent)
       if not ent:IsWorld() and IsValid(ent:GetPhysicsObject()) then
         self:OnPhysContact(ent, ent:GetPhysicsObject())

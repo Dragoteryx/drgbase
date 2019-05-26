@@ -1,4 +1,5 @@
 
+
 local RagdollRemove = CreateConVar("drgbase_ragdoll_remove", "-1")
 
 local entMETA = FindMetaTable("Entity")
@@ -120,8 +121,9 @@ if SERVER then
           elseif remove == 0 then
             ragdoll:Remove()
           end
-        end
+        end        
       end
+      self:Remove()
       return ragdoll
     else return old_BecomeRagdoll(self, dmg) end
   end

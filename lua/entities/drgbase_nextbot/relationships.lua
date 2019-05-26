@@ -25,6 +25,11 @@ end
 
 if SERVER then
 
+  function ENT:GetClosestEnemy()
+    if GetConVar("ai_ignoreplayers"):GetBool() then return end
+    if Entity(1):Alive() then return Entity(1) end
+  end
+
   local DEFAULT_PRIORITY = 1
   local DISP_PRIORITIES = {
     [D_LI] = 4,
@@ -202,6 +207,7 @@ if SERVER then
       if ent:IsNPC() then self:_UpdateNPCRelationship(ent, D_NU) end
       if old ~= D_NU then self:OnRelationshipChange(ent, old, D_NU) end
     end
+    self:UpdateBehaviourTree()
   end
 
   -- Default
@@ -400,7 +406,7 @@ if SERVER then
             table.insert(relationships, relationship)
             break
           end
-        elseif ent:IsNPC() then
+        else
           local def = DEFAULT_FACTIONS[ent:GetClass()]
           if def == faction then
             table.insert(relationships, relationship)
@@ -460,72 +466,6 @@ if SERVER then
   end
 
   -- Get entities
-  function ENT:GetEntities(disp, spotted, callback)
-    if not IsValidDisposition(disp) then return {} end
-    local maxradius = GetConVar("drgbase_max_radius"):GetFloat()^2
-    local entities = {}
-    local cache = disp == D_NU and self._DrGBaseConsideredEntities or self._DrGBaseEntityCaches[disp]
-    for i, ent in ipairs(cache) do
-      if not IsValid(ent) then continue end
-      if self:GetRangeSquaredTo(ent) > maxradius then continue end
-      if spotted and not self:HasSpottedEntity(ent) then continue end
-      if isfunction(callback) and not callback(ent) then continue end
-      if self:GetRelationship(ent) == disp then
-        table.insert(entities, ent)
-      end
-    end
-    return entities
-  end
-  function ENT:GetAllies(spotted, callback)
-    return self:GetEntities(D_LI, spotted, callback)
-  end
-  function ENT:GetEnemies(spotted, callback)
-    return self:GetEntities(D_HT, spotted, callback)
-  end
-  function ENT:GetAfraidOf(spotted, callback)
-    return self:GetEntities(D_FR, spotted, callback)
-  end
-  function ENT:GetNeutrals(spotted, callback)
-    return self:GetEntities(D_NU, spotted, callback)
-  end
-
-  -- Get closest entity
-  function ENT:GetClosestEntity(disp, spotted, callback)
-    local entities = self:GetEntities(disp, spotted, callback)
-    table.sort(entities, function(ent1, ent2)
-      return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
-    end)
-    return entities[1]
-  end
-  function ENT:GetClosestAlly(spotted, callback)
-    return self:GetClosestEntity(D_LI, spotted, callback)
-  end
-  function ENT:GetClosestEnemy(spotted, callback)
-    return self:GetClosestEntity(D_HT, spotted, callback)
-  end
-  function ENT:GetClosestAfraidOf(spotted, callback)
-    return self:GetClosestEntity(D_FR, spotted, callback)
-  end
-  function ENT:GetClosestNeutral(spotted, callback)
-    return self:GetClosestEntity(D_NU, spotted, callback)
-  end
-
-  -- Number of entities left
-  function ENT:EntitiesLeft(disp, spotted, callback)
-    return #self:GetEntities(disp, spotted, callback)
-  end
-  function ENT:AlliesLeft(spotted, callback)
-    return self:EntitiesLeft(D_LI, spotted, callback)
-  end
-  function ENT:EnemiesLeft(spotted, callback)
-    return self:EntitiesLeft(D_HT, spotted, callback)
-  end
-  function ENT:AfraidOfLeft(spotted, callback)
-    return self:Entitiesleft(D_FR, spotted, callback)
-  end
-  function ENT:NeutralsLeft(spotted, callback)
-    return self:EntitiesLeft(D_NU, spotted, callback)
-  end
 
   -- Hooks --
 
@@ -536,7 +476,10 @@ if SERVER then
   -- Handlers --
 
   local CONSIDER_BLACKLIST = {
-    ["npc_bullseye"] = true
+    ["npc_bullseye"] = true,
+    ["npc_grenade_frag"] = true,
+    ["npc_tripmine"] = true,
+    ["npc_satchel"] = true
   }
   local CONSIDER_WHITELIST = {
     ["replicator_melon"] = true,
@@ -554,7 +497,7 @@ if SERVER then
     if ent:IsPlayer() then return true end
     if ent:IsNPC() then return true end
     if ent.Type == "nextbot" then return true end
-    if string.StartWith(ent:GetClass(), "npc_") then return true end      
+    if string.StartWith(ent:GetClass(), "npc_") then return true end
     if res then return true end
     return false
   end
@@ -633,15 +576,5 @@ if SERVER then
     if val ~= val then return end
     self:AddClassRelationship(class, relationship, val)
   end
-
-else
-
-  -- Getters/setters --
-
-  -- Functions --
-
-  -- Hooks --
-
-  -- Handlers --
 
 end

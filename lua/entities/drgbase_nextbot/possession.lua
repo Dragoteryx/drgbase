@@ -152,10 +152,7 @@ function ENT:_HandlePossession(cor)
         end
       end
     end
-  elseif SERVER and not self:IsClimbing() then
-    local origin, angles = self:PossessorView()
-    self:SetAngles(Angle(0, angles.y, 0))
-  end
+  elseif SERVER and not self:IsClimbing() then self:FaceInstant(self:GetPos() + self:PossessorNormal()) end
   for i, move in ipairs(self.PossessionBinds) do
     if CLIENT and not move.client then continue end
     if SERVER and ((not cor and move.coroutine) or (cor and not move.coroutine)) then continue end
@@ -197,6 +194,7 @@ if SERVER then
     ply:SetNW2Entity("DrGBasePossessing", self)
     self:SetNW2Int("DrGBasePossessionView", 1)
     ply:SetNoTarget(true)
+    self:UpdateBehaviourTree()
     return "ok"
   end
 
@@ -209,6 +207,7 @@ if SERVER then
     self:SetNW2Entity("DrGBasePossessor", nil)
     ply:SetNW2Entity("DrGBasePossessing", nil)
     ply:SetNoTarget(false)
+    self:UpdateBehaviourTree()
     return "ok"
   end
 

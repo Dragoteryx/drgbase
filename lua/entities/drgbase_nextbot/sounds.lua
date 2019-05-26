@@ -7,7 +7,7 @@ function ENT:EmitFootstep(soundLevel, pitchPercent, volume, channel)
     endpos = self:GetPos() - self:GetUp()*999,
     filter = self
   })
-  local sounds = self.Footsteps[tr.MatType]
+  local sounds = self.Footsteps[tr.MatType] or self.DefaultFootsteps[tr.MatType]
   if not istable(sounds) or #sounds == 0 then sounds = self.Footsteps[MAT_DEFAULT] end
   if not istable(sounds) or #sounds == 0 then return false end
   self:EmitSound(sounds[math.random(#sounds)], soundLevel, pitchPercent, volume, channel or CHAN_BODY)

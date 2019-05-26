@@ -25,25 +25,6 @@ function util.DrG_RunTraces(starts, ends, data, callback)
   }
 end
 
-function util.DrG_RandomPos(pos, maxradius, minradius, nodegraph)
-  minradius = minradius or 0
-  if nodegraph or CLIENT then
-    local node = DrGBase.Nodegraph.RandomNode(pos, maxradius, minradius)
-    if node ~= nil then return node:GetPos() end
-  elseif navmesh.IsLoaded() then
-    local point = nil
-    while point == nil do
-      local x = math.random(minradius, maxradius)
-      local y = math.random(minradius, maxradius)
-      if math.random(2) == 2 then x = x*-1 end
-      if math.random(2) == 2 then y = y*-1 end
-      local area = navmesh.GetNearestNavArea(pos + Vector(x, y, 0))
-      if area ~= nil then point = area:GetRandomPoint() end
-    end
-    return point
-  end
-end
-
 function util.DrG_BitFlag(num, flag)
   return bit.band(num, flag) ~= 0
 end

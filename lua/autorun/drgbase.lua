@@ -1,14 +1,18 @@
+
 DrGBase = DrGBase or {}
 function DrGBase.IncludeFile(file)
   AddCSLuaFile(file)
   include(file)
 end
+function DrGBase.IncludeFolder(folder)
+
+end
 function DrGBase.Print(msg, _err)
-  local color = DrGBase.Colors.Green
-  if SERVER then color = DrGBase.Colors.Cyan
-  elseif CLIENT then color = DrGBase.Colors.Orange end
-  local color2 = DrGBase.Colors.White
-  if _err then color2 = DrGBase.Colors.Red end
+  local color = DrGBase.CLR_GREEN
+  if SERVER then color = DrGBase.CLR_CYAN
+  elseif CLIENT then color = DrGBase.CLR_ORANGE end
+  local color2 = DrGBase.CLR_WHITE
+  if _err then color2 = DrGBase.CLR_RED end
   MsgC(color, "[DrGBase] ", color2, msg, "\n")
 end
 function DrGBase.Error(msg)
@@ -25,6 +29,18 @@ DrGBase.IncludeFile("drgbase/possession.lua")
 DrGBase.IncludeFile("drgbase/resources.lua")
 DrGBase.IncludeFile("drgbase/spawnmenu.lua")
 DrGBase.IncludeFile("drgbase/weapons.lua")
+
+for i, fileName in ipairs({
+  "behaviours.lua",
+  "colors.lua",
+  "commands.lua",
+  "misc.lua",
+  "nextbots.lua",
+  "projectiles.lua",
+  "weapons.lua"
+}) do
+  DrGBase.IncludeFile("../drgbase/"..fileName)
+end
 
 if SERVER then
 

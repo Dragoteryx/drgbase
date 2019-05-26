@@ -35,10 +35,6 @@ function ENT:GetScale()
   return self:GetNW2Float("DrGBaseScale", 1)
 end
 
-function ENT:IsAIDisabled()
-  return self:GetNW2Bool("DrGBaseAIDisabled") or GetConVar("ai_disabled"):GetBool()
-end
-
 function ENT:GetEyeTrace()
   return util.TraceLine({
     start = self:EyePos(),
@@ -48,6 +44,17 @@ function ENT:GetEyeTrace()
 end
 function ENT:GetEyeTraceNoCursor()
   return self:GetEyeTrace()
+end
+
+function ENT:IsDying()
+  return self:GetNW2Bool("DrGBaseDying")
+end
+function ENT:IsDead()
+  return self:GetNW2Bool("DrGBaseDead") or self:IsDying()
+end
+
+function ENT:LastTouchedEntity()
+  return self:GetNW2Entity("DrGBaseLastTouchedEntity")
 end
 
 -- Functions --
@@ -65,13 +72,15 @@ function ENT:LoopTimer(delay, callback)
   end)
 end
 
-function ENT:IsInRange(ent, range)
-  return self:GetPos():DistToSqr(ent:NearestPoint(self:GetPos())) <= math.pow(range*self:GetScale(), 2)
+function ENT:IsInRange(pos, range)
+  return self:GetHullRangeSquaredTo(pos) <= math.pow(range*self:GetScale(), 2)
 end
 function ENT:GetHullRangeTo(pos)
+  if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
   return self:NearestPoint(pos):Distance(pos)
 end
 function ENT:GetHullRangeSquaredTo(pos)
+  if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
   return self:NearestPoint(pos):DistToSqr(pos)
 end
 
@@ -83,6 +92,7 @@ function ENT:ScreenShake(amplitude, frequency, duration, radius)
     if self:GetRangeSquaredTo(ent) > radius^2 then continue end
     ent:OnShake(self, amplitude, frequency, duration, radius)
   end
+  return res
 end
 
 function ENT:RandomizeBodygroup(id)
@@ -94,9 +104,20 @@ function ENT:RandomizeBodygroups()
   end
 end
 
--- Hooks --
+function ENT:CalcPosDirection(pos)
+  local angle = math.AngleDifference(self:GetAngles().y + 202.5, (pos - self:GetPos()):Angle().y) + 180
+  local direction = "N"
+  if angle > 45 and angle <= 90 then direction = "NE"
+  elseif angle > 90 and angle <= 135 then direction = "E"
+  elseif angle > 135 and angle <= 180 then direction = "SE"
+  elseif angle > 180 and angle <= 225 then direction = "S"
+  elseif angle > 225 and angle <= 270 then direction = "SW"
+  elseif angle > 270 and angle <= 315 then direction = "W"
+  elseif angle > 315 and angle <= 360 then direction = "NW" end
+  return direction, angle
+end
 
-function ENT:OnScaleChange() end
+-- Hooks --
 
 -- Handlers --
 
@@ -106,29 +127,16 @@ function ENT:_InitMisc()
   self._DrGBaseEmitSounds = {}
   if CLIENT then return end
   self:SetHealthRegen(self.HealthRegen)
+  self._DrGBaseOnContactDelay = 0
   self._DrGBaseOnGround = self:IsOnGround()
   self._DrGBaseOnFire = self:IsOnFire()
   self._DrGBaseWaterLevel = self:WaterLevel()
   self._DrGBaseHealth = self:Health()
   self._DrGBaseMaxHealth = self:GetMaxHealth()
-  self._DrGBaseOnContactDelay = 0
-  self._DrGBaseDamagedByAllies = {}
-  self:LoopTimer(1, function(self)
-    if self:IsDead() then return end
-    local regen = self:GetHealthRegen()
-    if regen > 0 then
-      local max = self:GetMaxHealth()
-      local health = self:Health() + regen
-      self:SetHealth(health > max and max or health)
-    elseif regen < 0 then
-      local dmg = DamageInfo()
-      dmg:SetAttacker(self)
-      dmg:SetDamage(regen)
-      dmg:SetDamageType(DMG_DIRECT)
-      self:TakeDamageInfo(dmg)
-    end
-    return not self:IsDead()
-  end)
+  self._DrGBaseDamageMultipliers = {}
+  for type, mult in pairs(self.DamageMultipliers) do
+    self:SetDamageMultiplier(type, mult)
+  end
   self:AddCallback("OnAngleChange", function(self, angles)
     self:SetAngles(Angle(0, angles.y, 0))
   end)
@@ -146,7 +154,7 @@ function ENT:_HandleMisc()
   if self._DrGBaseOnGround and not self:IsOnGround() then
 
   elseif not self._DrGBaseOnGround and self:IsOnGround() then
-    self:ForcePathRefresh()
+    self:InvalidatePath()
   end
   self._DrGBaseOnGround = self:IsOnGround()
   if self._DrGBaseOnFire and not self:IsOnFire() then
@@ -182,24 +190,6 @@ if SERVER then
     self:SetScale(self:GetScale()*mult)
   end
 
-  function ENT:SetAIDisabled(bool)
-    self:SetNW2Bool("DrGBaseAIDisabled", bool)
-  end
-  function ENT:DisableAI()
-    self:SetAIDisabled(true)
-  end
-  function ENT:EnableAI()
-    self:SetAIDisabled(false)
-  end
-
-  function ENT:GetNoTarget()
-    return self:IsFlagSet(FL_NOTARGET)
-  end
-  function ENT:SetNoTarget(bool)
-    if bool then self:AddFlags(FL_NOTARGET)
-    else self:RemoveFlags(FL_NOTARGET) end
-  end
-
   function ENT:GetDamageMultiplier(type)
     return self._DrGBaseDamageMultipliers[type] or 1
   end
@@ -224,11 +214,7 @@ if SERVER then
     self:Kill(self)
   end
 
-  function ENT:RandomPos(maxradius, minradius)
-    return util.DrG_RandomPos(self:GetPos(), maxradius, minradius)
-  end
-
-  function ENT:TraceHull(data, steps)
+  function ENT:TraceHull(vec, steps)
     local bound1, bound2 = self:GetCollisionBounds()
     if bound1.z < bound2.z then
       local temp = bound1
@@ -236,14 +222,12 @@ if SERVER then
       bound2 = temp
     end
     if steps then bound2.z = self.loco:GetStepHeight() end
-    data = data or {}
-    if data.start == nil then
-      local center = self:GetPos() + (bound1 + bound2)/2
-      center.z = self:GetPos().z
-      data.start = center
-    end
-    data.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
-    data.mask = data.mask or self:GetSolidMask()
+    local data = {}
+    data.start = self:GetPos()
+    data.endpos = data.start + vec
+    data.mask = self:GetSolidMask()
+    data.collisiongroup = self:GetCollisionGroup()
+    data.filter = {self, self:GetWeapon()}
     data.maxs = bound1
     data.mins = bound2
     return util.TraceHull(data)
@@ -258,13 +242,14 @@ if SERVER then
       bound1 = bound2
       bound2 = temp
     end
-    bound2.z = self.loco:GetStepHeight()
+    bound2.z = self.loco:GetStepHeight() + 1
     local center = self:GetPos() + (bound1 + bound2)/2
     center.z = self:GetPos().z
     local data = {
       start = center,
-      filter = {self},
-      --filter = {self, self:GetWeapon(), self:GetEnemy()},
+      mask = self:GetSolidMask(),
+      collisiongroup = self:GetCollisionGroup(),
+      filter = {self, self:GetWeapon(), self:GetEnemy()},
       maxs = bound1, mins = bound2
     }
     data.endpos = center + self:GetForward()*distance + self:GetRight()*-distance
@@ -297,6 +282,25 @@ if SERVER then
     else return path:GetLength() end
   end
 
+  function ENT:RandomPos(min, max)
+    if not isnumber(max) then
+      max = min
+      min = 0
+    end
+    if not navmesh.IsLoaded() then return self:GetPos() end
+    local areas = {}
+    for i, area in ipairs(navmesh.Find(self:GetPos(), max, max, max)) do
+      local distsqr = self:GetRangeSquaredTo(area:GetCenter())
+      if distsqr >= min^2 then table.insert(areas, area) end
+    end
+    if #areas == 0 then return self:GetPos()
+    else return areas[math.random(#areas)]:GetRandomPoint() end
+  end
+
+  function ENT:ClearLastTouchedEntity()
+    return self:SetNW2Entity("DrGBaseLastTouchedEntity", nil)
+  end
+
   -- Hooks --
 
   function ENT:OnExtinguish() end
@@ -304,15 +308,22 @@ if SERVER then
   function ENT:OnHealthChange() end
   function ENT:OnMaxHealthChange() end
   function ENT:OnLandInWater() end
-  function ENT:OnShake(ent)
-    self:SpotEntity(ent)
-  end
 
   -- Handlers --
 
 else
 
   -- Getters/setters --
+
+  function ENT:GetRangeTo(pos)
+    if isentity(pos) then pos = pos:GetPos() end
+    return self:GetPos():Distance(pos)
+  end
+
+  function ENT:GetRangeSquaredTo(pos)
+    if isentity(pos) then pos = pos:GetPos() end
+    return self:GetPos():DistToSqr(pos)
+  end
 
   -- Functions --
 

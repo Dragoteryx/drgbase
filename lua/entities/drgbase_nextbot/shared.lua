@@ -8,11 +8,14 @@ ENT.ModelScale = 1
 ENT.Skins = {0}
 ENT.CollisionBounds = Vector(15, 15, 72)
 ENT.RagdollOnDeath = true
-ENT.Killicon = {
-  icon = "HUD/killicons/default",
-  color = Color(255, 80, 0, 255)
-}
-ENT.Footsteps = {
+ENT.OnSpawnSounds = {}
+ENT.OnAttackSounds = {}
+ENT.OnHitSounds = {}
+ENT.OnMissSounds = {}
+ENT.OnDamageSounds = {}
+ENT.DamageSoundDelay = 0.25
+ENT.OnDeathSounds = {}
+ENT.DefaultFootsteps = {
   [MAT_ANTLION] = {
     "physics/flesh/flesh_impact_hard1.wav",
     "physics/flesh/flesh_impact_hard2.wav",
@@ -154,6 +157,7 @@ ENT.Footsteps = {
     "physics/glass/glass_sheet_step4.wav"
   }
 }
+ENT.Footsteps = {}
 
 -- Stats --
 ENT.SpawnHealth = 100
@@ -163,24 +167,33 @@ ENT.DamageMultipliers = {}
 
 -- AI --
 DrGBase.IncludeFile("ai.lua")
-DrGBase.IncludeFile("memory.lua")
 DrGBase.IncludeFile("relationships.lua")
-ENT.PursueTime = 10
-ENT.SearchTime = 50
+ENT.BehaviourTree = "DefaultAI"
 ENT.Factions = {}
 ENT.Frightening = false
-ENT.EnemyReach = 250
-ENT.EnemyStop = ENT.EnemyReach
-ENT.EnemyAvoid = 100
-ENT.AllyReach = 250
-ENT.AfraidAvoid = 500
+ENT.AvoidAfraid = 500
 ENT.AttackAfraid = false
-ENT.AllyDamageTolerance = 3
-ENT.AllyDamagePriority = 99
+ENT.AttackRange = 150
+ENT.EnemyTooFar = 100
+ENT.EnemyTooClose = 50
+ENT.AllyDamageTolerance = 0.25
+ENT.SpottedAwarenessDecrease = 0.1
+ENT.LostAwarenessDecrease = 1
+
+-- Locomotion --
+DrGBase.IncludeFile("locomotion.lua")
+DrGBase.IncludeFile("path.lua")
+ENT.Acceleration = 400
+ENT.Deceleration = 400
+ENT.JumpHeight = 58
+ENT.StepHeight = 20
+ENT.MaxYawRate = 250
+ENT.DeathDropHeight = 200
+ENT.AvoidObstacles = true
 
 -- Movements/animations --
-DrGBase.IncludeFile("animations.lua")
 DrGBase.IncludeFile("movements.lua")
+DrGBase.IncludeFile("animations.lua")
 ENT.WalkSpeed = 100
 ENT.WalkAnimation = ACT_WALK
 ENT.WalkAnimRate = 1
@@ -195,12 +208,16 @@ ENT.AnimMatchSpeed = true
 ENT.AnimMatchDirection = true
 
 -- Climbing --
-ENT.ClimbWalls = false
+ENT.ClimbLedges = false
+ENT.ClimbLedgesMaxHeight = math.huge
+ENT.ClimbLedgesMinHeight = 0
 ENT.ClimbLadders = false
 ENT.ClimbLaddersUp = true
+ENT.ClimbLaddersUpMaxHeight = math.huge
+ENT.ClimbLaddersUpMinHeight = 0
 ENT.ClimbLaddersDown = false
-ENT.ClimbWallsMaxHeight = math.huge
-ENT.ClimbWallsMinHeight = 0
+ENT.ClimbLaddersDownMaxHeight = math.huge
+ENT.ClimbLaddersDownMinHeight = 0
 ENT.ClimbSpeed = 100
 ENT.ClimbUpAnimation = ACT_CLIMB_UP
 ENT.ClimbDownAnimation = ACT_CLIMB_DOWN
@@ -209,10 +226,10 @@ ENT.ClimbOffset = Vector(0, 0, 0)
 
 -- Detection --
 DrGBase.IncludeFile("detection.lua")
+DrGBase.IncludeFile("awareness.lua")
 ENT.Omniscient = false
-ENT.SightRange = math.huge
 ENT.SightFOV = 150
-ENT.SightDuration = 0
+ENT.SightRange = math.huge
 ENT.EyeBone = ""
 ENT.EyeOffset = Vector(0, 0, 0)
 ENT.EyeAngle = Angle(0, 0, 0)
@@ -234,19 +251,15 @@ ENT.PossessionPrompt = true
 ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
 
--- Other --
+-- Other modules --
 DrGBase.IncludeFile("behaviours.lua")
 DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("meta.lua")
 DrGBase.IncludeFile("misc.lua")
-DrGBase.IncludeFile("path.lua")
 DrGBase.IncludeFile("projectiles.lua")
 DrGBase.IncludeFile("sounds.lua")
 
--- Convars --
-local Radius = CreateConVar("drgbase_max_radius", "5000")
-
--- Initialize --
+-- Init and Think --
 
 function ENT:Initialize()
   if SERVER then
@@ -264,33 +277,22 @@ function ENT:Initialize()
     self:AddFlags(FL_OBJECT + FL_CLIENT)
     self.VJ_AddEntityToSNPCAttackList = true
     self.vFireIsCharacter = true
-    self._DrGBaseCustomBehaviour = false
     self._DrGBaseCoroutineCalls = {}
-    self._DrGBaseDamageMultipliers = {}
-    for type, mult in pairs(self.DamageMultipliers) do
-      self:SetDamageMultiplier(type, mult)
-    end
+    self._DrGBaseBT = DrGBase.GetBehaviourTree(self.BehaviourTree)
+    self._DrGBaseBTLastID = -1
   else
     self:SetIK(true)
   end
   self._DrGBaseBaseThinkDelay = 0
   self._DrGBaseCustomThinkDelay = 0
   self._DrGBasePossessionThinkDelay = 0
-  self:_InitAnimations()
-  self:_InitDetection()
-  self:_InitMemory()
-  self:_InitMisc()
-  self:_InitMovements()
-  self:_InitPossession()
-  self:_InitRelationships()
-  self:_InitWeapons()
-  self:_InitAI()
-  table.insert(DrGBase.Nextbots._Spawned, self)
-  self:CallOnRemove("DrGBaseCallOnRemove", function()
+  self:_InitModules()
+  table.insert(DrGBase._SpawnedNextbots, self)
+  self:CallOnRemove("DrGBaseCallOnRemove", function(self)
+    table.RemoveByValue(DrGBase._SpawnedNextbots, self)
     if SERVER then
       if self:IsPossessed() then self:Dispossess() end
     end
-    table.RemoveByValue(DrGBase.Nextbots._Spawned, self)
     for i, sound in ipairs(self._DrGBaseEmitSounds) do
       self:StopSound(sound)
     end
@@ -300,21 +302,27 @@ function ENT:Initialize()
   end)
   self:_BaseInitialize()
   self:CustomInitialize()
-  if SERVER and not navmesh.IsLoaded() then
-    self:NoNavmesh()
-    net.Start("DrGBaseNoNavmesh")
-    net.WriteEntity(self)
-    net.Broadcast()
+end
+function ENT:_InitModules()
+  if SERVER then
+    self:_InitLocomotion()
   end
+  self:_InitAI()
+  self:_InitAnimations()
+  self:_InitAwareness()
+  self:_InitDetection()
+  self:_InitMisc()
+  self:_InitMovements()
+  self:_InitPossession()
+  self:_InitRelationships()
+  self:_InitWeapons()
 end
 function ENT:_BaseInitialize() end
 function ENT:CustomInitialize() end
 
--- Think --
-
 function ENT:Think()
-  self:_HandleMisc()
   self:_HandleAnimations()
+  self:_HandleMisc()
   if CurTime() > self._DrGBaseBaseThinkDelay then
     local delay = self:_BaseThink() or 0
     self._DrGBaseBaseThinkDelay = CurTime() + delay
@@ -337,28 +345,32 @@ function ENT:PossessionThink() end
 
 if SERVER then
   AddCSLuaFile()
-  util.AddNetworkString("DrGBaseNoNavmesh")
 
-  -- Getters --
-
-  -- Setters --
+  -- Getters/setters --
 
   -- Functions --
-
-  function ENT:UseCustomBehaviour(bool)
-    if bool == nil then return self._DrGBaseCustomBehaviour
-    elseif bool then self._DrGBaseCustomBehaviour = true
-    else self._DrGBaseCustomBehaviour = false end
-  end
 
   function ENT:CallInCoroutine(callback)
     table.insert(self._DrGBaseCoroutineCalls, {
       callback = callback,
       now = CurTime()
     })
+    self:UpdateBehaviourTree()
   end
   function ENT:CoroutineCalls()
     return #self._DrGBaseCoroutineCalls > 0
+  end
+
+  function ENT:GetBehaviourTree()
+    return self._DrGBaseBT, self._DrGBaseBTLastID
+  end
+  function ENT:RunBehaviourTree(root, callback)
+    return root:Start(self, callback)
+  end
+  function ENT:UpdateBehaviourTree()
+    local tree, id = self:GetBehaviourTree()
+    if not tree then return end
+    tree:Update(id)
   end
 
   -- Hooks --
@@ -384,7 +396,6 @@ if SERVER then
   	else
       local ok, args = coroutine.resume(self.BehaveThread)
     	if not ok then
-        self:_SetState(DRGBASE_STATE_ERROR)
     		self.BehaveThread = nil
         if not self:OnError(args) then
           ErrorNoHalt(self, " Error: ", args, "\n")
@@ -396,6 +407,9 @@ if SERVER then
   function ENT:RunBehaviour()
     if not self._DrGBaseSpawned then
       self._DrGBaseSpawned = true
+      if #self.OnSpawnSounds > 0 then
+        self:EmitSound(self.OnSpawnSounds[math.random(#self.OnSpawnSounds)])
+      end
       self:OnSpawn()
     end
     while true do
@@ -404,14 +418,15 @@ if SERVER then
         cor.callback(self, CurTime() - cor.now)
       end
       if self:IsPossessed() then
-        self:_SetState(DRGBASE_STATE_POSSESSED)
         self:_HandlePossession(true)
       elseif not self:IsAIDisabled() then
-        if self:UseCustomBehaviour() then
-          self:_SetState(DRGBASE_STATE_AI_CUSTOM)
-          self:CustomBehaviour()
-        else self:_DefaultBehaviour() end
-      else self:_SetState(DRGBASE_STATE_NONE) end
+        local tree = self:GetBehaviourTree()
+        if tree then
+          self:RunBehaviourTree(tree, function(id)
+            self._DrGBaseBTLastID = id
+          end)
+        else self:CustomBehaviour() end
+      end
       coroutine.yield()
     end
   end
@@ -424,40 +439,8 @@ if SERVER then
 
 else
 
-  local DisplayCollisions = CreateClientConVar("drgbase_display_collisions", "0")
-  local DisplaySight = CreateClientConVar("drgbase_display_sight", "0")
-
-  -- Getters --
-
-  -- Setters --
-
-  -- Functions --
-
-  -- Hooks --
-
-  function ENT:NoNavmesh() end
-  net.Receive("DrGBaseNoNavmesh", function()
-    local ent = net.ReadEntity()
-    if not IsValid(ent) then return end
-    ent:NoNavmesh()
-  end)
-
-  -- Handlers --
-
   function ENT:Draw()
     self:DrawModel()
-    if GetConVar("developer"):GetBool() then
-      if DisplayCollisions:GetBool() then
-        local bound1, bound2 = self:GetCollisionBounds()
-        local center = self:GetPos() + (bound1 + bound2)/2
-        render.DrawWireframeBox(self:GetPos(), Angle(0, 0, 0), bound1, bound2, DrGBase.Colors.White, false)
-        render.DrawLine(center, center + self:GetVelocity(), DrGBase.Colors.Orange, false)
-        render.DrawWireframeSphere(center, 2*self:GetScale(), 4, 4, DrGBase.Colors.Orange, false)
-      end
-      if DisplaySight:GetBool() then
-         local eyepos = self:EyePos()
-      end
-    end
     self:_BaseDraw()
     self:CustomDraw()
     if self:IsPossessedByLocalPlayer() then

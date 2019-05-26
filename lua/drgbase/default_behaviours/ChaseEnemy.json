@@ -1,0 +1,76 @@
+{
+  "type": "Sequence",
+  "children": [
+    {
+      "type": "Leaf",
+      "description": "Has enemy?",
+      "run": ":HasEnemy"
+    },
+    {
+      "type": "RepeatUntil",
+      "child": {
+        "type": "Sequence",
+        "children": [
+          {
+            "type": "Leaf",
+            "description": "Has enemy?",
+            "run": "HasEnemyOrRefresh"
+          },
+          {
+            "type": "Succeeder",
+            "child": {
+              "type": "Selector",
+              "children": [
+                {
+                  "type": "Sequence",
+                  "children": [
+                    {
+                      "type": "Leaf",
+                      "description": "Enemy too far?",
+                      "run": "EnemyTooFar"
+                    },
+                    {
+                      "type": "Leaf",
+                      "description": "Move closer to enemy",
+                      "run": "MoveCloserToEnemy"
+                    }
+                  ]
+                },
+                {
+                  "type": "Sequence",
+                  "children": [
+                    {
+                      "type": "Leaf",
+                      "description": "Enemy too close?",
+                      "run": "EnemyTooClose"
+                    },
+                    {
+                      "type": "Leaf",
+                      "description": "Move away from enemy",
+                      "run": "MoveAwayFromEnemy"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "type": "Leaf",
+            "description": "Has enemy?",
+            "run": "HasEnemyOrRefresh"
+          },
+          {
+            "type": "Conditional",
+            "description": "Is enemy in attack range?",
+            "run": "CheckAttackRange",
+            "success": {
+              "type": "Leaf",
+              "description": "Enemy in attack range",
+              "run": "InAttackRange"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

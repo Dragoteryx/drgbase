@@ -1,5 +1,5 @@
 if not DrGBase then return end -- return if DrGBase isn't installed
-ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
+ENT.Base = "drgbase_nextbot_old" -- DO NOT TOUCH (obviously)
 
 -- Stats --
 ENT.FallDamage = true
@@ -123,7 +123,7 @@ if SERVER then
   function ENT:_BaseThink()
     if not self:IsPossessed() then
       if self:IsMoving() then self:SetCrouching(false) end
-      if self:HasEnemy() then
+      if self:HasEnemy() and not self:IsAIDisabled() then
         local enemy = self:GetEnemy()
         self:UnholsterWeapon()
         if self:IsInSight(enemy) then
