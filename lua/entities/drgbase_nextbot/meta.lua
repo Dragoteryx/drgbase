@@ -85,11 +85,11 @@ if SERVER then
         end
         if options.direction then
           local velocity = self.loco:GetGroundMotionVector()
-          local moveX = (-(math.DrG_DegreeAngle(velocity, self:GetForward())-90))/45
+          local moveX = (-(velocity:DrG_Degrees(self:GetForward())-90))/45
           if moveX > 1 then moveX = 1
           elseif moveX < -1 then moveX = -1 end
           if moveX == moveX then self:SetPoseParameter("move_x", moveX) end
-          local moveY = (-(math.DrG_DegreeAngle(velocity, self:GetRight())-90))/45
+          local moveY = (-(velocity:DrG_Degrees(self:GetRight())-90))/45
           if moveY > 1 then moveY = 1
           elseif moveY < -1 then moveY = -1 end
           if moveY == moveY then self:SetPoseParameter("move_y", moveY) end

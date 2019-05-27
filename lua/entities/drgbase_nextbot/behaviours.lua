@@ -101,7 +101,7 @@ if SERVER then
             if not self:IsInRange(target, attack.range) then continue end
             if self:IsPossessed() and self:GetPossessor() == target then continue end
             if not attack.friendlyfire and not self:IsPossessed() and self:IsAlly(target)  then continue end
-            local angle = math.DrG_DegreeAngle(self:GetPos() + self:GetForward(), target:GetPos(), self:GetPos())
+            local angle = (self:GetPos() + self:GetForward()):DrG_Degrees(target:GetPos(), self:GetPos())
             if angle > attack.angle/2 then continue end
             if not self:Visible(target) then continue end
             local dmg = DamageInfo()

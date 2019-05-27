@@ -122,7 +122,7 @@ function vecMETA:DrG_ManhattanDistance(pos)
   return math.abs(math.abs(self.x - pos.x) + math.abs(self.y - pos.y) + math.abs(self.z - pos.z))
 end
 
-function vecMETA:DrG_ToOther(pos)
+function vecMETA:DrG_Direction(pos)
   return pos - self
 end
 

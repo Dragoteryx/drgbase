@@ -23,7 +23,8 @@ end
 
 function BT.EnemyTooFar()
   return function(self, data)
-    return not self:IsInRange(self:GetEnemy(), self.EnemyTooFar)
+    local enemy = self:GetEnemy()
+    return not self:IsInRange(enemy, self.EnemyTooFar) or not self:VisibleVec(enemy:WorldSpaceCenter())
   end
 end
 function BT.MoveCloserToEnemy()

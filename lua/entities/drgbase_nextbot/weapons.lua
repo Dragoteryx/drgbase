@@ -26,9 +26,9 @@ end
 function ENT:GetAimVector()
   local normal
   if self:IsPossessed() then
-    return math.DrG_VectorsNormal(self:GetShootPos(), self:PossessorTrace().HitPos)
+    return self:GetShootPos():DrG_Direction(self:PossessorTrace().HitPos)
   elseif self:HasEnemy() then
-    return math.DrG_VectorsNormal(self:GetShootPos(), self:GetEnemy():WorldSpaceCenter())
+    return self:GetShootPos():DrG_Direction(self:GetEnemy():WorldSpaceCenter())
   else normal = self:GetForward() end
   local cap = 10
   local accuracy = (1 - self.WeaponAccuracy)*cap

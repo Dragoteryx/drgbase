@@ -70,7 +70,7 @@ if SERVER then
   function ENT:IsInSight(ent)
     if self:EyePos():DistToSqr(ent:GetPos()) > self:GetSightRange()^2 then return false end
     local eyepos = self:EyePos()
-    local angle = math.DrG_DegreeAngle(eyepos + self:EyeAngles():Forward(), ent:WorldSpaceCenter(), eyepos)
+    local angle = (eyepos + self:EyeAngles():Forward()):DrG_Degrees(ent:WorldSpaceCenter(), eyepos)
     if angle > self:GetSightFOV()/2 then return false end
     local los = self:Visible(ent)
     if los then
