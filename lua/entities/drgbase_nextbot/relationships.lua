@@ -1,4 +1,6 @@
 
+local MaxRadius = CreateConVar("drgbase_max_radius", "5000")
+
 -- Handlers --
 
 function ENT:_InitRelationships()
@@ -24,11 +26,6 @@ function ENT:_InitRelationships()
 end
 
 if SERVER then
-
-  function ENT:GetClosestEnemy()
-    if GetConVar("ai_ignoreplayers"):GetBool() then return end
-    if Entity(1):Alive() then return Entity(1) end
-  end
 
   local DEFAULT_PRIORITY = 1
   local DISP_PRIORITIES = {
@@ -424,7 +421,7 @@ if SERVER then
     if self:IsInFaction(faction) then return end
     self._DrGBaseFactions[string.upper(faction)] = true
     self:SetFactionRelationship(faction, D_LI)
-    for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
+    for i, nextbot in ipairs(DrGBase.GetNextbots()) do
       if nextbot == self then continue end
       nextbot:UpdateRelationshipWith(self)
     end
@@ -436,7 +433,7 @@ if SERVER then
     if disp == D_LI and prio == DEFAULT_PRIORITY then
       self:SetFactionRelationship(faction, D_NU)
     end
-    for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
+    for i, nextbot in ipairs(DrGBase.GetNextbots()) do
       if nextbot == self then continue end
       nextbot:UpdateRelationshipWith(self)
     end
@@ -466,6 +463,71 @@ if SERVER then
   end
 
   -- Get entities
+  function ENT:GetEntities(disp, spotted)
+    if not IsValidDisposition(disp) then return {} end
+    local maxradius = MaxRadius:GetFloat()^2
+    local entities = {}
+    local cache = disp == D_NU and self._DrGBaseConsideredEntities or self._DrGBaseEntityCaches[disp]
+    for i, ent in ipairs(cache) do
+      if not IsValid(ent) then continue end
+      if self:GetRangeSquaredTo(ent) > maxradius then continue end
+      if spotted and not self:HasSpottedEntity(ent) then continue end
+      if self:GetRelationship(ent) == disp then
+        table.insert(entities, ent)
+      end
+    end
+    return entities
+  end
+  function ENT:GetAllies(spotted)
+    return self:GetEntities(D_LI, spotted)
+  end
+  function ENT:GetEnemies(spotted)
+    return self:GetEntities(D_HT, spotted)
+  end
+  function ENT:GetAfraidOf(spotted)
+    return self:GetEntities(D_FR, spotted)
+  end
+  function ENT:GetNeutrals(spotted)
+    return self:GetEntities(D_NU, spotted)
+  end
+
+  -- Get closest entity
+  function ENT:GetClosestEntity(disp, spotted)
+    local entities = self:GetEntities(disp, spotted)
+    table.sort(entities, function(ent1, ent2)
+      return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
+    end)
+    return entities[1]
+  end
+  function ENT:GetClosestAlly(spotted)
+    return self:GetClosestEntity(D_LI, spotted)
+  end
+  function ENT:GetClosestEnemy(spotted)
+    return self:GetClosestEntity(D_HT, spotted)
+  end
+  function ENT:GetClosestAfraidOf(spotted)
+    return self:GetClosestEntity(D_FR, spotted)
+  end
+  function ENT:GetClosestNeutral(spotted)
+    return self:GetClosestEntity(D_NU, spotted)
+  end
+
+  -- Number of entities left
+  function ENT:EntitiesLeft(disp, spotted)
+    return #self:GetEntities(disp, spotted)
+  end
+  function ENT:AlliesLeft(spotted)
+    return self:EntitiesLeft(D_LI, spotted)
+  end
+  function ENT:EnemiesLeft(spotted)
+    return self:EntitiesLeft(D_HT, spotted)
+  end
+  function ENT:AfraidOfLeft(spotted)
+    return self:Entitiesleft(D_FR, spotted)
+  end
+  function ENT:NeutralsLeft(spotted)
+    return self:EntitiesLeft(D_NU, spotted)
+  end
 
   -- Hooks --
 
@@ -543,14 +605,14 @@ if SERVER then
   hook.Add("OnEntityCreated", "DrGBaseNextbotRelationshipsInit", function(ent)
     timer.Simple(0, function()
       if not IsValid(ent) then return end
-      for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
+      for i, nextbot in ipairs(DrGBase.GetNextbots()) do
         nextbot:UpdateRelationshipWith(ent)
       end
     end)
   end)
 
   hook.Add("EntityRemoved", "DrGBaseNextbotRelationshipsRemove", function(ent)
-    for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
+    for i, nextbot in ipairs(DrGBase.GetNextbots()) do
       nextbot:_SetRelationship(ent, nil)
     end
   end)

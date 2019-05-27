@@ -1,4 +1,6 @@
 
+-- Registry --
+
 function DrGBase.AddNextbot(ENT)
   local class = string.Replace(ENT.Folder, "entities/", "")
   if ENT.Name == nil or ENT.Category == nil then return false end
@@ -23,6 +25,8 @@ function DrGBase.AddNextbot(ENT)
   DrGBase.Print("Nextbot '"..class.."': loaded.")
   return true
 end
+
+-- Misc --
 
 DrGBase._SpawnedNextbots = DrGBase._SpawnedNextbots or {}
 function DrGBase.GetNextbots()

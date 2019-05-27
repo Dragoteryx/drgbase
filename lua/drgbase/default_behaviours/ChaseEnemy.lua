@@ -13,7 +13,7 @@ function BT.EnemyTooClose()
 end
 function BT.MoveAwayFromEnemy()
   return function(self, data)
-    local res = self:MovingAwayFromEnemy(self:GetEnemy())
+    local res = self:OnAvoidEnemy(self:GetEnemy())
     if res == nil then
       self:MoveAwayFrom(self:GetEnemy(), true)
       return true
@@ -28,7 +28,7 @@ function BT.EnemyTooFar()
 end
 function BT.MoveCloserToEnemy()
   return function(self, data)
-    local res = self:MovingTowardsEnemy(self:GetEnemy())
+    local res = self:OnChaseEnemy(self:GetEnemy())
     if res == nil then
       return self:MoveCloserTo(self:GetEnemy()) ~= "unreachable"
     else return res end
@@ -44,7 +44,7 @@ end
 
 function BT.InAttackRange()
   return function(self, data)
-    self:InAttackRange(self:GetEnemy())
+    self:OnAttack(self:GetEnemy())
     return true
   end
 end

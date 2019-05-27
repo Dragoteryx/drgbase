@@ -1,7 +1,7 @@
 if SERVER then return end
 
 function render.DrG_DrawTrajectory(start, velocity, color, writeZ, options)
-  local info = math.DrG_BallisticTrajectoryInfoVectors(start, velocity)
+  local info = start:DrG_TrajectoryInfo(velocity)
   options = options or {}
   options.from = options.from or 0
   options.to = options.to or 10

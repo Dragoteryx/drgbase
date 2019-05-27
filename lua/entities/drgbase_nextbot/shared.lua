@@ -6,7 +6,7 @@ ENT.IsDrGNextbot = true
 ENT.Models = {"models/player/kleiner.mdl"}
 ENT.ModelScale = 1
 ENT.Skins = {0}
-ENT.CollisionBounds = Vector(15, 15, 72)
+ENT.CollisionBounds = Vector(10, 10, 72)
 ENT.RagdollOnDeath = true
 ENT.OnSpawnSounds = {}
 ENT.OnAttackSounds = {}
@@ -177,8 +177,6 @@ ENT.AttackRange = 150
 ENT.EnemyTooFar = 100
 ENT.EnemyTooClose = 50
 ENT.AllyDamageTolerance = 0.25
-ENT.SpottedAwarenessDecrease = 0.1
-ENT.LostAwarenessDecrease = 1
 
 -- Locomotion --
 DrGBase.IncludeFile("locomotion.lua")
@@ -225,8 +223,8 @@ ENT.ClimbAnimRate = 1
 ENT.ClimbOffset = Vector(0, 0, 0)
 
 -- Detection --
-DrGBase.IncludeFile("detection.lua")
 DrGBase.IncludeFile("awareness.lua")
+DrGBase.IncludeFile("detection.lua")
 ENT.Omniscient = false
 ENT.SightFOV = 150
 ENT.SightRange = math.huge
@@ -234,6 +232,9 @@ ENT.EyeBone = ""
 ENT.EyeOffset = Vector(0, 0, 0)
 ENT.EyeAngle = Angle(0, 0, 0)
 ENT.HearingCoefficient = 1
+ENT.SpottedAwarenessDecrease = 1/60
+ENT.LostAwarenessDecrease = 1
+ENT.AwarenessDecreaseDelay = 1
 
 -- Weapons --
 DrGBase.IncludeFile("weapons.lua")
@@ -307,15 +308,15 @@ function ENT:_InitModules()
   if SERVER then
     self:_InitLocomotion()
   end
-  self:_InitAI()
-  self:_InitAnimations()
   self:_InitAwareness()
   self:_InitDetection()
-  self:_InitMisc()
+  self:_InitAnimations()
   self:_InitMovements()
-  self:_InitPossession()
   self:_InitRelationships()
+  self:_InitPossession()
   self:_InitWeapons()
+  self:_InitAI()
+  self:_InitMisc()
 end
 function ENT:_BaseInitialize() end
 function ENT:CustomInitialize() end
@@ -439,8 +440,25 @@ if SERVER then
 
 else
 
+  local DisplayCollisions = CreateClientConVar("drgbase_display_collisions", "0")
+  local DisplaySight = CreateClientConVar("drgbase_display_sight", "0")
+
   function ENT:Draw()
     self:DrawModel()
+    if GetConVar("developer"):GetBool() then
+      if DisplayCollisions:GetBool() then
+        local bound1, bound2 = self:GetCollisionBounds()
+        local center = self:GetPos() + (bound1 + bound2)/2
+        render.DrawWireframeBox(self:GetPos(), Angle(0, 0, 0), bound1, bound2, DrGBase.CLR_WHITE, false)
+        render.DrawLine(center, center + self:GetVelocity(), DrGBase.CLR_ORANGE, false)
+        render.DrawWireframeSphere(center, 2*self:GetScale(), 4, 4, DrGBase.CLR_ORANGE, false)
+      end
+      if DisplaySight:GetBool() then
+         local eyepos = self:EyePos()
+         render.DrawWireframeSphere(eyepos, 2*self:GetScale(), 4, 4, DrGBase.CLR_GREEN, false)
+         render.DrawLine(eyepos, eyepos + self:EyeAngles():Forward()*15, DrGBase.CLR_GREEN, false)
+      end
+    end
     self:_BaseDraw()
     self:CustomDraw()
     if self:IsPossessedByLocalPlayer() then

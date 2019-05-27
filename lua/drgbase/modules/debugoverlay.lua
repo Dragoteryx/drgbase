@@ -1,6 +1,6 @@
 
-function debugoverlay.DrG_BallisticTrajectory(start, velocity, lifetime, color, ignoreZ, options)
-  local info = math.DrG_BallisticTrajectoryInfoVectors(start, velocity)
+function debugoverlay.DrG_Trajectory(start, velocity, lifetime, color, ignoreZ, options)
+  local info = start:DrG_TrajectoryInfo(velocity)
   options = options or {}
   options.from = options.from or 0
   options.to = options.to or 10

@@ -99,20 +99,20 @@ if SERVER then
 
   function ENT:RefreshEnemy()
     if self:HasNemesis() then return end
-    local enemy = self:GetClosestEnemy()
+    local enemy = self:GetClosestEnemy(true)
     self:SetEnemy(enemy)
     return enemy
   end
 
   -- Hooks --
 
-  function ENT:InAttackRange() end
-  function ENT:MovingTowardsEnemy() end
-  function ENT:MovingAwayFromEnemy() end
+  function ENT:OnAttack() end
+  function ENT:OnChaseEnemy() end
+  function ENT:OnAvoidEnemy() end
 
-  function ENT:ReachedPatrolPos() end
-  function ENT:PatrolPosUnreachable() end
-  function ENT:MovingTowardsPatrolPos() end
+  function ENT:OnReachedPatrol() end
+  function ENT:OnPatrolUnreachable() end
+  function ENT:WhilePatrolling() end
 
   function ENT:OnIdle() end
 
@@ -130,9 +130,14 @@ if SERVER then
   end, "DrGBaseDisableAIUpdateBT")
 
   cvars.AddChangeCallback("ai_ignoreplayers", function(name, old, new)
-    if not tobool(new) then return end
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
-      nextbot:UpdateBehaviourTree()
+      nextbot:RefreshEnemy()
+      if tobool(new) then
+        nextbot:UpdateBehaviourTree()
+        for h, ply in ipairs(player.GetAll()) do
+          nextbot:LoseEntity(ply)
+        end
+      end
     end
   end, "DrGBaseIgnorePlayersUpdateBT")
 

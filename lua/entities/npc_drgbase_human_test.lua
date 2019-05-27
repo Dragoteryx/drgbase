@@ -3,7 +3,6 @@ ENT.Base = "drgbase_nextbot_human" -- DO NOT TOUCH (obviously)
 
 -- Misc --
 ENT.Name = "DrGBase Test Human Nextbot"
-ENT.Class = "npc_drgbase_human_test"
 ENT.Category = "DrGBase"
 ENT.Models = {
   "models/player/kleiner.mdl",
@@ -32,12 +31,10 @@ if SERVER then
     end
   end
 
-  function ENT:FetchDestination()
-    return self:RandomPos(1500)
+  function ENT:OnIdle()
+    self:AddPatrolPos(self:RandomPos(1500))
   end
-  function ENT:ReachedDestination(pos)
-    self:Idle(math.random(3, 7))
-  end
+
   function ENT:CustomRelationship(ent)
     if ent:GetModel() == "models/props_junk/watermelon01.mdl" then return D_HT end
   end
@@ -46,10 +43,4 @@ end
 
 -- DO NOT TOUCH --
 AddCSLuaFile()
-DrGBase.Nextbots.Load({
-  Name = ENT.Name,
-  Class = ENT.Class,
-  Category = ENT.Category,
-  Killicon = ENT.Killicon,
-  Models = ENT.Models
-})
+DrGBase.AddNextbot(ENT)

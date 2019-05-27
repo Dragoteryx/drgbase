@@ -86,7 +86,7 @@ function ENT:StopMusic()
   self._DrGBaseWantToPlayMusicCheck = nil
   if current == nil or current.stopping then return end
   if current.ent:EntIndex() ~= self:EntIndex() then return end
-  for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
+  for i, ent in ipairs(DrGBase.GetNextbots()) do
     if ent:EntIndex() == self:EntIndex() then continue end
     if ent._DrGBaseWantToPlayMusic == nil then continue end
     if not ent._DrGBaseWantToPlayMusicCheck[current.music] then continue end
@@ -100,7 +100,7 @@ function ENT:StopMusic()
   end
   current.sound:FadeOut(current.fade or 0)
   current.stopping = true
-  for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
+  for i, ent in ipairs(DrGBase.GetNextbots()) do
     if ent:EntIndex() == self:EntIndex() then continue end
     if ent._DrGBaseWantToPlayMusic ~= nil then
       ent:PlayMusic(ent._DrGBaseWantToPlayMusic, self._DrGBaseWantToPlayMusicFade, self._DrGBaseWantToPlayMusicCallback)

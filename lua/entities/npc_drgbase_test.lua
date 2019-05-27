@@ -3,7 +3,6 @@ ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
 
 -- Misc --
 ENT.Name = "DrGBase Test Nextbot"
-ENT.Class = "npc_drgbase_test"
 ENT.Category = "DrGBase"
 ENT.Models = {"models/player/gman_high.mdl"}
 
@@ -22,7 +21,7 @@ ENT.ClimbOffset = Vector(-14, 0, 0)
 -- Detection --
 ENT.EyeBone = "ValveBiped.Bip01_Head1"
 ENT.EyeOffset = Vector(5, 0, 2.5)
-ENT.EyeAngle = Angle(75, 0, 0)
+ENT.EyeAngle = Angle(0, 0, 0)
 
 -- Possession --
 ENT.PossessionEnabled = true
@@ -48,7 +47,6 @@ ENT.PossessionBinds = {
 }
 
 if SERVER then
-  DrGBase.GetBehaviourTree("DefaultAI"):Print()
 
   sound.Add({
     name = "DrGBaseRiseAndShine",
@@ -58,7 +56,8 @@ if SERVER then
   })
 
   function ENT:CustomInitialize()
-    self:SetPlayersRelationship(D_HT)
+    self:SetDefaultRelationship(D_HT)
+    self:SetSelfClassRelationship(D_LI)
     self:DefineSequenceCallback({
       self:SelectRandomSequence(self.RunAnimation),
       self:SelectRandomSequence(self.WalkAnimation)
@@ -67,24 +66,15 @@ if SERVER then
     end)
   end
 
-  function ENT:Use()
-    self:SpotEntity(Entity(1))
-  end
-
-  function ENT:CustomThink()
-    --print(#DrGBase.GetNextbots())
-    print(self:GetAwarenessLevel(Entity(1)))
-  end
-
-  function ENT:InAttackRange(enemy)
+  function ENT:OnAttack(enemy)
     self:FaceTowards(enemy)
-    --self:PlayAnimation("gesture_wave")
     self:EmitSlotSound("riseandshine", 7, "DrGBaseRiseAndShine")
   end
-
-  function ENT:OnIdle()
+  function ENT:OnReachedPatrol()
     self:PlaySequenceAndWait("menu_gman")
-    self:AddPatrolPos(self:RandomPos(15000))
+  end
+  function ENT:OnIdle()
+    self:AddPatrolPos(self:RandomPos(1500))
   end
 
   function ENT:OnLandOnGround()

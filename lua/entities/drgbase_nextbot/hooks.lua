@@ -17,7 +17,7 @@ if SERVER then
 
   function ENT:OnCombineBall() end
   function ENT:OnContactAny(ent)
-    --self:SpotEntity(ent)
+    self:SpotEntity(ent)
   end
   function ENT:OnPhysContact() end
   function ENT:OnAllyContact() end
@@ -91,6 +91,7 @@ if SERVER then
         NextbotDeath(self, dmg)
       end)
       self:SetNW2Bool("DrGBaseDying", true)
+      self:UpdateBehaviourTree()
     else
       self:SetNW2Bool("DrGBaseDead", true)
       NextbotDeath(self, dmg)

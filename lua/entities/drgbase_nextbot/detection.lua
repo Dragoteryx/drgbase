@@ -29,6 +29,22 @@ function ENT:_InitDetection()
   self:SetSightFOV(self.SightFOV)
   self:SetSightRange(self.SightRange)
   self:SetHearingCoefficient(self.HearingCoefficient)
+  self._DrGBaseSight = {}
+  self:LoopTimer(0.25, function()
+    for i, ent in ipairs(self:ConsideredEntities()) do
+      local crea = ent:GetCreationID()
+      local res = self:IsInSight(ent)
+      if res and not self._DrGBaseSight[crea] then
+        self._DrGBaseSight[crea] = true
+        self:OnSight(ent, true)
+      elseif not res and self._DrGBaseSight[crea] then
+        self._DrGBaseSight[crea] = false
+        self:OnLostSight(ent)
+      elseif res and self._DrGBaseSight[crea] then
+        self:OnSight(ent, false)
+      end
+    end
+  end)
 end
 
 if SERVER then
@@ -51,13 +67,32 @@ if SERVER then
 
   -- Functions --
 
+  function ENT:IsInSight(ent)
+    if self:EyePos():DistToSqr(ent:GetPos()) > self:GetSightRange()^2 then return false end
+    local eyepos = self:EyePos()
+    local angle = math.DrG_DegreeAngle(eyepos + self:EyeAngles():Forward(), ent:WorldSpaceCenter(), eyepos)
+    if angle > self:GetSightFOV()/2 then return false end
+    local los = self:Visible(ent)
+    if los then
+      return self:OnSightCheck(ent) or false
+    else return false end
+  end
+
   -- Hooks --
 
+  function ENT:OnSightCheck(ent) return true end
   function ENT:OnSight(ent)
-    self:SpotEntity(ent)
+    if self:HasSpottedEntity(ent) then
+      self:IncreaseAwarenessLevel(ent, 0.5)
+    else
+      self:IncreaseAwarenessLevel(ent, 0.2)
+    end
   end
   function ENT:OnLostSight(ent) end
   function ENT:OnSound(ent, sound)
+    self:SpotEntity(ent)
+  end
+  function ENT:OnShake(ent)
     self:SpotEntity(ent)
   end
 

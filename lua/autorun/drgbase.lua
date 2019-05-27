@@ -1,11 +1,13 @@
 
 DrGBase = DrGBase or {}
-function DrGBase.IncludeFile(file)
-  AddCSLuaFile(file)
-  include(file)
+function DrGBase.IncludeFile(fileName)
+  AddCSLuaFile(fileName)
+  include(fileName)
 end
-function DrGBase.IncludeFolder(folder)
-
+function DrGBase.IncludeFiles(files)
+  for i, fileName in ipairs(files) do
+    DrGBase.IncludeFile(fileName)
+  end
 end
 function DrGBase.Print(msg, _err)
   local color = DrGBase.CLR_GREEN
@@ -19,28 +21,22 @@ function DrGBase.Error(msg)
   DrGBase.Print(msg, true)
 end
 
-DrGBase.IncludeFile("drgbase/colors.lua")
-DrGBase.IncludeFile("drgbase/enums.lua")
-DrGBase.IncludeFile("drgbase/meta.lua")
-DrGBase.IncludeFile("drgbase/modules.Lua")
-DrGBase.IncludeFile("drgbase/nextbots.lua")
-DrGBase.IncludeFile("drgbase/possession_drive.lua")
-DrGBase.IncludeFile("drgbase/possession.lua")
-DrGBase.IncludeFile("drgbase/resources.lua")
-DrGBase.IncludeFile("drgbase/spawnmenu.lua")
-DrGBase.IncludeFile("drgbase/weapons.lua")
-
-for i, fileName in ipairs({
-  "behaviours.lua",
-  "colors.lua",
-  "commands.lua",
-  "misc.lua",
-  "nextbots.lua",
-  "projectiles.lua",
-  "weapons.lua"
-}) do
-  DrGBase.IncludeFile("../drgbase/"..fileName)
-end
+local str = "../drgbase/"
+DrGBase.IncludeFiles({
+  str.."behaviours.lua",
+  str.."colors.lua",
+  str.."commands.lua",
+  str.."enumerations.lua",
+  str.."extensions.lua",
+  str.."misc.lua",
+  str.."modules.lua",
+  str.."nextbots.lua",
+  str.."possession.lua",
+  str.."projectiles.lua",
+  str.."resources.lua",
+  str.."spawnmenu.lua",
+  str.."weapons.lua"
+})
 
 if SERVER then
 

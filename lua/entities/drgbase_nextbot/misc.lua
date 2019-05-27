@@ -87,7 +87,7 @@ end
 function ENT:ScreenShake(amplitude, frequency, duration, radius)
   local res = util.ScreenShake(self:GetPos(), amplitude, frequency, duration, radius)
   if CLIENT then return res end
-  for i, ent in ipairs(DrGBase.Nextbots.GetAll()) do
+  for i, ent in ipairs(DrGBase.GetNextbots()) do
     if ent == self then continue end
     if self:GetRangeSquaredTo(ent) > radius^2 then continue end
     ent:OnShake(self, amplitude, frequency, duration, radius)
@@ -198,6 +198,14 @@ if SERVER then
     if mult < 0 then mult = 0 end
     if mult == 1 then mult = nil end
     self._DrGBaseDamageMultipliers[type] = mult
+  end
+
+  function ENT:GetNoTarget()
+    return self:IsFlagSet(FL_NOTARGET)
+  end
+  function ENT:SetNoTarget(bool)
+    if bool then self:AddFlags(FL_NOTARGET)
+    else self:RemoveFlags(FL_NOTARGET) end
   end
 
   -- Functions --

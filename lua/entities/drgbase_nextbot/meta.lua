@@ -104,27 +104,24 @@ if SERVER then
   local old_BecomeRagdoll = nextbotMETA.BecomeRagdoll
   function nextbotMETA:BecomeRagdoll(dmg)
     if self.IsDrGNextbot then
-      local scale = self:GetModelScale()
-      local color = self:GetColor()
-      local material = self:GetMaterial()
-      local ragdoll = old_BecomeRagdoll(self, dmg)
-      if IsValid(ragdoll) then
-        ragdoll:SetModelScale(scale)
-        ragdoll:SetColor(color)
-        ragdoll:SetMaterial(material)
-        if not self:OnRagdoll(ragdoll) then
-          local remove = RagdollRemove:GetFloat()
-          if remove > 0 then
-            timer.Simple(remove, function()
+      if RagdollRemove:GetFloat() ~= 0 then
+        --local scale = self:GetModelScale()
+        local color = self:GetColor()
+        local material = self:GetMaterial()
+        local ragdoll = old_BecomeRagdoll(self, dmg)
+        if IsValid(ragdoll) then
+          --ragdoll:SetModelScale(scale)
+          ragdoll:SetColor(color)
+          ragdoll:SetMaterial(material)
+          if not self:OnRagdoll(ragdoll) and RagdollRemove:GetFloat() > 0 then
+            timer.Simple(RagdollRemove:GetFloat(), function()
               if IsValid(ragdoll) then ragdoll:Remove() end
             end)
-          elseif remove == 0 then
-            ragdoll:Remove()
           end
-        end        
-      end
-      self:Remove()
-      return ragdoll
+        end
+        self:Remove()
+        return ragdoll
+      else self:Remove() end
     else return old_BecomeRagdoll(self, dmg) end
   end
   function ENT:OnRagdoll() end

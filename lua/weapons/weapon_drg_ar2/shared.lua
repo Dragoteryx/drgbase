@@ -47,13 +47,5 @@ SWEP.Primary.Sound = "Weapon_AR2.Single"
 SWEP.Primary.EmptySound = "Weapon_AR2.Empty"
 
 -- DO NOT TOUCH --
-if SERVER then
-  AddCSLuaFile("shared.lua")
-end
-DrGBase.Weapons.Load({
-  Name = SWEP.PrintName,
-  Class = SWEP.Class,
-  Category = SWEP.Category,
-  Spawnable = SWEP.Spawnable,
-  AdminOnly = SWEP.AdminOnly
-})
+AddCSLuaFile()
+DrGBase.AddWeapon(SWEP)

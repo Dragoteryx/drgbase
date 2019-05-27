@@ -1,13 +1,13 @@
 if not DrGBase then return end -- return if DrGBase isn't installed
-ENT.Base = "drgbase_nextbot_old" -- DO NOT TOUCH (obviously)
+ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
 
 -- Stats --
 ENT.FallDamage = true
 
 -- AI --
-ENT.EnemyReach = 1500
-ENT.EnemyStop = 750
-ENT.EnemyAvoid = 375
+ENT.AttackRange = 1500
+ENT.EnemyTooFar = 750
+ENT.EnemyTooClose = 375
 ENT.AttackAfraid = true
 
 -- Movements/animations --
@@ -146,8 +146,8 @@ if SERVER then
 
   -- AI --
 
-  function ENT:EnemyInRange(enemy)
-    if not self:IsMoving() then self:FaceTowardsEntity(enemy)end
+  function ENT:OnAttack(enemy)
+    if not self:IsMoving() then self:FaceTowards(enemy)end
     if math.random(50) == 1 then self:SetCrouching(true) end
     if not self:HasWeapon() then return end
     if not self:IsInSight(enemy) then return end

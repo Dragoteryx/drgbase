@@ -1,0 +1,2 @@
+
+local npcMETA = FindMetaTable("NPC")

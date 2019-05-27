@@ -17,6 +17,7 @@ function ENT:_InitAwareness()
   self._DrGBaseAwareness = {}
   self:SetSpottedAwarenessDecrease(self.SpottedAwarenessDecrease)
   self:SetLostAwarenessDecrease(self.LostAwarenessDecrease)
+  self:SetAwarenessDecreaseDelay(self.AwarenessDecreaseDelay)
 end
 
 if SERVER then
@@ -31,7 +32,8 @@ if SERVER then
     aware._ent = ent
     aware._level = 0
     aware._callbacks = {}
-    self._spotted = false
+    aware._spotted = false
+    aware._decreasedelay = 0
     setmetatable(aware, self)
     aware:Init()
     return aware
@@ -43,6 +45,7 @@ if SERVER then
     if level > 1 then level = 1 end
     if level < 0 then level = 0 end
     local old = self._level
+    if level > old then self._decreasedelay = CurTime() end
     self._level = level
     if not IsValid(self._nextbot) or not IsValid(self._ent) then return end
     for str, act in pairs(self._callbacks) do
@@ -68,10 +71,12 @@ if SERVER then
   function Awareness:Init()
     coroutine.DrG_Create(function()
       while IsValid(self._nextbot) and IsValid(self._ent) do
-        if self:Spotted() then
-          self:DecreaseLevel(self._nextbot:GetSpottedAwarenessDecrease()/5)
-        else
-          self:DecreaseLevel(self._nextbot:GetLostAwarenessDecrease()/5)
+        if CurTime() > self._decreasedelay + self._nextbot:GetAwarenessDecreaseDelay() then
+          if self:Spotted() then
+            self:DecreaseLevel(self._nextbot:GetSpottedAwarenessDecrease()/5)
+          else
+            self:DecreaseLevel(self._nextbot:GetLostAwarenessDecrease()/5)
+          end
         end
         coroutine.wait(0.2)
       end
@@ -101,12 +106,15 @@ if SERVER then
         if not awareness:Spotted() then
           awareness._spotted = true
           self:OnSpotEntity(ent)
+          if self:IsEnemy(ent) then self:RefreshEnemy() end
+          self:UpdateBehaviourTree()
         end
       end)
       awareness:AddCallback("DrGBaseOnLostEntity", 0, 0, function(old, new)
         if awareness:Spotted() then
           awareness._spotted = false
           self:OnLostEntity(ent)
+          self:UpdateBehaviourTree()
         end
       end)
       self._DrGBaseAwareness[crea] = awareness
@@ -115,14 +123,21 @@ if SERVER then
   end
 
   function ENT:GetAwarenessLevel(ent)
+    if self:IsOmniscient() then return 1 end
     return self:_GetAwareness(ent):GetLevel()
   end
   function ENT:SetAwarenessLevel(ent, level)
+    if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() and level > 0 then
+      return self:SetAwarenessLevel(ent, 0)
+    end
     self:_GetAwareness(ent):SetLevel(level)
   end
 
   function ENT:HasSpottedEntity(ent)
     return self:IsOmniscient() or self:_GetAwareness(ent):Spotted()
+  end
+  function ENT:HasLostEntity(ent)
+    return not self:HasSpottedEntity(ent)
   end
 
   function ENT:GetSpottedAwarenessDecrease()
@@ -139,7 +154,22 @@ if SERVER then
     self._DrGBaseLostAwarenessDecrease = decr
   end
 
+  function ENT:GetAwarenessDecreaseDelay()
+    return self._DrGBaseAwarenessDecreaseDelay
+  end
+  function ENT:SetAwarenessDecreaseDelay(delay)
+    if delay < 0.25 then delay = 0.25 end
+    self._DrGBaseAwarenessDecreaseDelay = delay
+  end
+
   -- Functions --
+
+  function ENT:IncreaseAwarenessLevel(ent, incr)
+    self:_GetAwareness(ent):IncreaseLevel(incr)
+  end
+  function ENT:DecreaseAwarenessLevel(ent, decr)
+    self:_GetAwareness(ent):DecreaseLevel(decr)
+  end
 
   function ENT:SpotEntity(ent)
     self:SetAwarenessLevel(ent, 1)
