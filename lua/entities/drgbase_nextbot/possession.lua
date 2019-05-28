@@ -167,7 +167,8 @@ function ENT:_HandlePossession(cor)
       elseif backward then direction = direction - self:PossessorForward() end
       if right then direction = direction + self:PossessorRight()
       elseif left then direction = direction - self:PossessorRight() end
-      if direction ~= self:GetPos() then self:MoveTowards(direction) end
+      if direction ~= self:GetPos() then self:MoveTowards(direction)
+      else self:FaceTowards(self:GetPos() + self:PossessorNormal()) end
     else self:PossessionControls(forward, backward, right, left) end
     if self.ClimbLadders and navmesh.IsLoaded() then
       local ladders = navmesh.GetNearestNavArea(self:GetPos()):GetLadders()
