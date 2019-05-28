@@ -104,20 +104,68 @@ function ENT:RandomizeBodygroups()
   end
 end
 
-function ENT:CalcPosDirection(pos)
-  local angle = math.AngleDifference(self:GetAngles().y + 202.5, (pos - self:GetPos()):Angle().y) + 180
+function ENT:CalcPosDirection(pos, subs)
   local direction = "N"
-  if angle > 45 and angle <= 90 then direction = "NE"
-  elseif angle > 90 and angle <= 135 then direction = "E"
-  elseif angle > 135 and angle <= 180 then direction = "SE"
-  elseif angle > 180 and angle <= 225 then direction = "S"
-  elseif angle > 225 and angle <= 270 then direction = "SW"
-  elseif angle > 270 and angle <= 315 then direction = "W"
-  elseif angle > 315 and angle <= 360 then direction = "NW" end
-  return direction, angle
+  if subs then
+    local angle = math.AngleDifference(self:GetAngles().y + 202.5, (pos - self:GetPos()):Angle().y) + 180
+    if angle > 45 and angle <= 90 then direction = "NE"
+    elseif angle > 90 and angle <= 135 then direction = "E"
+    elseif angle > 135 and angle <= 180 then direction = "SE"
+    elseif angle > 180 and angle <= 225 then direction = "S"
+    elseif angle > 225 and angle <= 270 then direction = "SW"
+    elseif angle > 270 and angle <= 315 then direction = "W"
+    elseif angle > 315 and angle <= 360 then direction = "NW" end
+    return direction, angle
+  else
+    local angle = math.AngleDifference(self:GetAngles().y + 225, (pos - self:GetPos()):Angle().y) + 180
+    if angle > 90 and angle <= 180 then direction = "E"
+    elseif angle > 180 and angle <= 270 then direction = "S"
+    elseif angle > 270 and angle <= 360 then direction = "W" end
+    return direction, angle
+  end
+end
+
+function ENT:HasPhysics()
+  return IsValid(self:GetPhysicsObject())
+end
+
+function ENT:TraceLine(vec)
+  local data = {}
+  local center = self:OBBCenter()
+  data.start = self:GetPos() + center
+  data.endpos = self:GetPos() + center + vec
+  data.mask = self:GetSolidMask()
+  data.collisiongroup = self:GetCollisionGroup()
+  data.filter = {self, self:GetWeapon()}
+  return util.TraceLine(data)
+end
+
+function ENT:TraceHull(vec, steps)
+  local bound1, bound2 = self:GetCollisionBounds()
+  if bound1.z < bound2.z then
+    local temp = bound1
+    bound1 = bound2
+    bound2 = temp
+  end
+  if steps then bound2.z = self.loco:GetStepHeight() end
+  local data = {}
+  data.start = self:GetPos()
+  data.endpos = data.start + vec
+  data.mask = self:GetSolidMask()
+  data.collisiongroup = self:GetCollisionGroup()
+  data.filter = {self, self:GetWeapon()}
+  data.maxs = bound1
+  data.mins = bound2
+  return util.TraceHull(data)
 end
 
 -- Hooks --
+
+function ENT:OnExtinguish() end
+function ENT:OnWaterLevelChange() end
+function ENT:OnHealthChange() end
+function ENT:OnMaxHealthChange() end
+function ENT:OnLandInWater() end
 
 -- Handlers --
 
@@ -125,25 +173,41 @@ function ENT:_InitMisc()
   self._DrGBaseLoopingSounds = {}
   self._DrGBaseSlotSounds = {}
   self._DrGBaseEmitSounds = {}
-  if CLIENT then return end
-  self:SetHealthRegen(self.HealthRegen)
-  self._DrGBaseOnContactDelay = 0
   self._DrGBaseOnGround = self:IsOnGround()
   self._DrGBaseOnFire = self:IsOnFire()
   self._DrGBaseWaterLevel = self:WaterLevel()
   self._DrGBaseHealth = self:Health()
   self._DrGBaseMaxHealth = self:GetMaxHealth()
+  if CLIENT then return end
+  self:SetHealthRegen(self.HealthRegen)
+  self:LoopTimer(1, function()
+    local regen = self:GetHealthRegen()
+    if regen > 0 then
+      local health = self:Health() + regen
+      if health > self:GetMaxHealth() then
+        self:SetHealth(self:GetMaxHealth())
+      else self:SetHealth(health) end
+    elseif regen < 0 then
+      local dmg = DamageInfo()
+      dmg:SetDamage(regen)
+      dmg:SetAttacker(self)
+      dmg:SetInflictor(self)
+      dmg:SetDamageType(DMG_DIRECT)
+      self:TakeDamageInfo(dmg)
+    end
+  end)
+  self._DrGBaseOnContactDelay = 0
   self._DrGBaseDamageMultipliers = {}
   for type, mult in pairs(self.DamageMultipliers) do
     self:SetDamageMultiplier(type, mult)
   end
   self:AddCallback("OnAngleChange", function(self, angles)
+    if self:HasPhysics() then return end
     self:SetAngles(Angle(0, angles.y, 0))
   end)
 end
 
 function ENT:_HandleMisc()
-  if CLIENT then return end
   if self._DrGBaseWaterLevel ~= self:WaterLevel() then
     self:OnWaterLevelChange(self._DrGBaseWaterLevel, self:WaterLevel())
     if not self._DrGBaseOnGround and self._DrGBaseWaterLevel == 0 then
@@ -152,22 +216,25 @@ function ENT:_HandleMisc()
     self._DrGBaseWaterLevel = self:WaterLevel()
   end
   if self._DrGBaseOnGround and not self:IsOnGround() then
-
+    if CLIENT then self:OnLeaveGround() end
   elseif not self._DrGBaseOnGround and self:IsOnGround() then
+    if CLIENT then self:OnLandOnGround() end
     self:InvalidatePath()
   end
   self._DrGBaseOnGround = self:IsOnGround()
   if self._DrGBaseOnFire and not self:IsOnFire() then
     self:OnExtinguish()
+  elseif not self._DrGBaseOnFire and self:IsOnFire() then
+    if CLIENT then self:OnIgnite() end
   end
   self._DrGBaseOnFire = self:IsOnFire()
   if self._DrGBaseHealth ~= self:Health() then
-    self:SetNW2Int("DrGBaseHealth", self:Health())
+    if SERVER then self:SetNW2Int("DrGBaseHealth", self:Health()) end
     self:OnHealthChange(self._DrGBaseHealth, self:Health())
     self._DrGBaseHealth = self:Health()
   end
   if self._DrGBaseMaxHealth ~= self:GetMaxHealth() then
-    self:SetNW2Int("DrGBaseMaxHealth", self:GetMaxHealth())
+    if SERVER then self:SetNW2Int("DrGBaseMaxHealth", self:GetMaxHealth()) end
     self:OnMaxHealthChange(self._DrGBaseMaxHealth, self:GetMaxHealth())
     self._DrGBaseMaxHealth = self:GetMaxHealth()
   end
@@ -220,25 +287,6 @@ if SERVER then
   end
   function ENT:Suicide()
     self:Kill(self)
-  end
-
-  function ENT:TraceHull(vec, steps)
-    local bound1, bound2 = self:GetCollisionBounds()
-    if bound1.z < bound2.z then
-      local temp = bound1
-      bound1 = bound2
-      bound2 = temp
-    end
-    if steps then bound2.z = self.loco:GetStepHeight() end
-    local data = {}
-    data.start = self:GetPos()
-    data.endpos = data.start + vec
-    data.mask = self:GetSolidMask()
-    data.collisiongroup = self:GetCollisionGroup()
-    data.filter = {self, self:GetWeapon()}
-    data.maxs = bound1
-    data.mins = bound2
-    return util.TraceHull(data)
   end
 
   function ENT:CollisionHulls(distance, forwardOnly)
@@ -311,11 +359,9 @@ if SERVER then
 
   -- Hooks --
 
-  function ENT:OnExtinguish() end
-  function ENT:OnWaterLevelChange() end
-  function ENT:OnHealthChange() end
-  function ENT:OnMaxHealthChange() end
-  function ENT:OnLandInWater() end
+  function ENT:OnDoor(door, help)
+    help:Open(true)
+  end
 
   -- Handlers --
 
@@ -336,6 +382,10 @@ else
   -- Functions --
 
   -- Hooks --
+
+  function ENT:OnLandOnGround() end
+  function ENT:OnLeaveGround() end
+  function ENT:OnIgnite() end
 
   -- Handlers --
 

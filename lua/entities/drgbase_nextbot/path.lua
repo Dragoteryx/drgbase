@@ -68,10 +68,6 @@ end
 
 -- Meta --
 
-local function Generator()
-
-end
-
 local pathMETA = FindMetaTable("PathFollower")
 DrGBase_pathMETA = DrGBase_pathMETA or false
 
@@ -82,7 +78,10 @@ if not DrGBase_pathMETA then
   function pathMETA:Update(nextbot)
     if nextbot.IsDrGNextbot and IsValid(self) then
       local pos = self:GetCurrentGoal().pos
-      if nextbot:OnTurn(pos, nextbot:CalcPosDirection(pos)) == false then return end
+      --[[local tr = self:TraceLine(pos - nextbot:GetPos())
+      if IsValid(tr.Entity) and tr.Entity:DrG_IsDoor() then
+        self:OnDoor(tr.Entity, tr.Entity:DrG_DoorOpener(self))
+      end]]
       if nextbot:OnMove(pos) == false then
         self:MoveCursorToClosestPosition(nextbot:GetPos())
       else return old_Update(self, nextbot) end

@@ -38,6 +38,7 @@ if SERVER then
 
   function ENT:OnInjured(dmg)
     for type, mult in pairs(self._DrGBaseDamageMultipliers) do
+      if type == DMG_DIRECT then continue end
       if dmg:IsDamageType(type) then dmg:ScaleDamage(mult) end
     end
     if dmg:GetDamage() <= 0 then return end
@@ -59,6 +60,7 @@ if SERVER then
       self:OnDamagedByAfraidOf(attacker, dmg)
     else self:OnDamagedByNeutral(attacker, dmg) end
     if res ~= true then
+      if isnumber(res) then dmg:ScaleDamage(res) end
       local data = util.DrG_SaveDmg(dmg)
       self:CallInCoroutine(function(self, delay)
         dmg = util.DrG_LoadDmg(data)

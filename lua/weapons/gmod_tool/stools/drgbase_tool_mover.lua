@@ -69,6 +69,6 @@ else
     if not IsValid(wep) or wep:GetClass() ~= "gmod_tool" then return end
     local tool = LocalPlayer():GetTool()
     if tool == nil or tool.Mode ~= "drgbase_tool_mover" then return end
-    halo.Add(selected, DrGBase.Colors.Cyan)
+    halo.Add(selected, DrGBase.CLR_CYAN)
   end)
 end

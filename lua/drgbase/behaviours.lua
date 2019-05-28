@@ -28,7 +28,7 @@ BT_NODES = nil
 local DEFAULTS = {
   ["MoveToPosition"] = true,
   ["Patrol"] = true,
-  ["DefaultAI"] = true,
+  ["BaseAI"] = true,
   ["ChaseEnemy"] = true
 }
 local BEHAVIOURS = {}

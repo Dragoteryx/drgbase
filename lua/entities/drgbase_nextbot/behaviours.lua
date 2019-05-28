@@ -1,8 +1,8 @@
 
 -- Getters/setters --
 
-function ENT:IsIdling()
-  return self:GetNW2Bool("DrGBaseIdling")
+function ENT:IsWaiting()
+  return self:GetNW2Bool("DrGBaseWaiting")
 end
 function ENT:IsAttacking()
   return self:GetNW2Bool("DrGBaseAttacking")
@@ -12,10 +12,10 @@ if SERVER then
 
   -- Functions --
 
-  function ENT:Idle(duration, callback)
+  function ENT:Wait(duration, callback)
     if duration <= 0 then return end
     if callback == nil then callback = function() end end
-    self:SetNW2Bool("DrGBaseIdling", true)
+    self:SetNW2Bool("DrGBaseWaiting", true)
     local delay = CurTime() + duration
     local targetdelay = 0
     local now = CurTime()
@@ -27,7 +27,7 @@ if SERVER then
       --if self:IsFlying() then self:FlightHover() end
       coroutine.yield()
     end
-    self:SetNW2Bool("DrGBaseIdling", false)
+    self:SetNW2Bool("DrGBaseWaiting", false)
   end
 
   function ENT:QuickJump(pos)
@@ -91,7 +91,7 @@ if SERVER then
       attack.damage = attack.damage or 0
       attack.type = attack.type or DMG_GENERIC
       attack.force = attack.force or Vector(150, 0, 0)
-      attack.range = attack.range or self.EnemyReach
+      attack.range = attack.range or self.AttackRange
       attack.angle = attack.angle or 90
       self:Timer(attack.delay, function()
         if not attack._cooldown then
@@ -114,7 +114,7 @@ if SERVER then
             self:GetRight()*attack.force.y +
             self:GetUp()*attack.force.z
             dmg:SetDamageForce(force)
-            if target.Type == "nextbot" then
+            if target.Type == "nextbot" and not target.ShoveResistance then
               local jumpheight = target.loco:GetJumpHeight()
               target.loco:SetJumpHeight(1)
               target.loco:Jump()
@@ -150,7 +150,7 @@ if SERVER then
         animation = animation[math.random(#animation)]
       end
       if options.gesture then self:PlayAnimation(animation, options.rate, options.callback)
-      elseif options.movement then self:PlayAnimationAndMove(animation, options.rate, options.callback)
+      elseif options.movement ~= false then self:PlayAnimationAndMove(animation, options.rate, options.callback)
       else self:PlayAnimationAndWait(animation, options.rate, options.callback) end
     end
   end

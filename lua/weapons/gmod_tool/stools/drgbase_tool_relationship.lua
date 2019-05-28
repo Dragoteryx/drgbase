@@ -79,9 +79,9 @@ else
     local tool = LocalPlayer():GetTool()
     if tool == nil or tool.Mode ~= "drgbase_tool_relationship" then return end
 		local disp = GetConVar("drgbase_tool_relationship_disposition"):GetInt()
-		if disp == D_LI then halo.Add(selected, DrGBase.Colors.Green)
-		elseif disp == D_HT then halo.Add(selected, DrGBase.Colors.Red)
-		elseif disp == D_FR then halo.Add(selected, DrGBase.Colors.Purple)
-		else halo.Add(selected, DrGBase.Colors.Cyan) end
+		if disp == D_LI then halo.Add(selected, DrGBase.CLR_GREEN)
+		elseif disp == D_HT then halo.Add(selected, DrGBase.CLR_RED)
+		elseif disp == D_FR then halo.Add(selected, DrGBase.CLR_PURPLE)
+		else halo.Add(selected, DrGBase.CLR_CYAN) end
   end)
 end

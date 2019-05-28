@@ -24,12 +24,12 @@ if CLIENT then
     if tool == nil or tool.Mode ~= "drgbase_tool_omniscient" then return end
     local enabled = {}
     local disabled = {}
-    for i, nextbot in ipairs(DrGBase.Nextbots.GetAll()) do
+    for i, nextbot in ipairs(DrGBase.GetNextbots()) do
       if not IsValid(nextbot) then continue end
       if nextbot:IsOmniscient() then table.insert(enabled, nextbot)
       else table.insert(disabled, nextbot) end
     end
-    halo.Add(enabled, DrGBase.Colors.Green)
-    halo.Add(disabled, DrGBase.Colors.Red)
+    halo.Add(enabled, DrGBase.CLR_GREEN)
+    halo.Add(disabled, DrGBase.CLR_RED)
   end)
 end

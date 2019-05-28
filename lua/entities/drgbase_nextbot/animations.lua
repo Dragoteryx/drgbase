@@ -14,9 +14,9 @@ function ENT:DefineSequenceCallback(seq, cycles, callback)
     end
   else
     if isstring(seq) then seq = self:LookupSequence(seq) end
-    if seq == -1 then return end
-    self._DrGBaseSequenceCallbacks[seq] = self._DrGBaseSequenceCallbacks[seq] or {}
-    if not istable(cycles) then cycles = {cycles} end
+    if not isnumber(seq) then return end
+    if isnumber(cycles) then cycles = {cycles} end
+    if not istable(cycles) then return end
     self._DrGBaseSequenceCallbacks[seq] = {
       cycles = cycles, callback = callback
     }
@@ -44,19 +44,18 @@ function ENT:_InitAnimations()
     self._DrGBaseCurrentGestures = {}
     self:LoopTimer(0.1, function(self)
       if not self:IsUpdatingAnimation() then return true end
-      local current = self:GetSequence()
       local seq, rate = self:UpdateAnimation()
-      if seq == nil or seq == -1 then seq = current
-      elseif isnumber(seq) then
+      if isnumber(seq) then
         seq = self:SelectWeightedSequenceSeeded(seq, self._DrGBaseAnimSeed)
       elseif isstring(seq) then seq = self:LookupSequence(seq) end
-      if not isnumber(seq) or seq == -1 then seq = current end
-      if seq ~= current or self:GetCycle() == 1 then
-        self:ResetSequence(seq)
-        self._DrGBaseAnimSeed = math.random(0, 255)
+      if isnumber(seq) and seq ~= -1 then
+        local current = self:GetSequence()
+        if seq ~= current or self:GetCycle() == 1 then
+          self:ResetSequence(seq)
+          self._DrGBaseAnimSeed = math.random(0, 255)
+        end
       end
       if not self.AnimMatchSpeed or not self:IsOnGround() or self:IsClimbing() then self:SetPlaybackRate(rate or 1) end
-      return true
     end)
   end
   self._DrGBaseLastAnimCycle = 0
@@ -136,6 +135,7 @@ if SERVER then
         vec:Rotate(self:GetAngles() + angles)
         if not self:TraceHull(vec, true).Hit then
           self:SetPos(self:GetPos() + vec)
+          self:SetAngles(self:LocalToWorldAngles(angles))
         end
       end
       previousCycle = cycle
@@ -160,6 +160,7 @@ if SERVER then
         vec:Rotate(self:GetAngles() + angles)
         lastpos = startpos + vec
         self:SetPos(lastpos)
+        self:SetAngles(self:LocalToWorldAngles(angles))
       end
       return callback(cycle)
     end)

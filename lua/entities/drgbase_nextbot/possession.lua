@@ -99,8 +99,24 @@ function ENT:PossessorTrace(options)
   return util.TraceLine(options)
 end
 function ENT:PossessorNormal()
+  if not self:IsPossessed() then return end
   local origin, angles = self:PossessorView()
   return angles:Forward()
+end
+function ENT:PossessorForward()
+  if not self:IsPossessed() then return end
+  local normal = self:PossessorNormal()
+  normal.z = 0
+  return normal:GetNormalized()
+end
+function ENT:PossessorRight()
+  if not self:IsPossessed() then return end
+  local forward = self:PossessorForward()
+  forward:Rotate(Angle(0, -90, 0))
+  return forward
+end
+function ENT:PossessorUp()
+  return Vector(0, 0, 1)
 end
 
 function ENT:PossessionAddBind(bind, data)
@@ -131,28 +147,45 @@ function ENT:_HandlePossession(cor)
   if not self:IsPossessed() then return end
   local possessor = self:GetPossessor()
   if cor then
-    local forward = possessor:KeyDown(IN_FORWARD)
-    local backward = possessor:KeyDown(IN_BACK)
-    local left = possessor:KeyDown(IN_MOVELEFT)
-    local right = possessor:KeyDown(IN_MOVERIGHT)
-    self:PossessionControls(forward and not backward, backward and not forward, right and not left, left and not right)
+    local f = possessor:KeyDown(IN_FORWARD)
+    local b = possessor:KeyDown(IN_BACK)
+    local l = possessor:KeyDown(IN_MOVELEFT)
+    local r = possessor:KeyDown(IN_MOVERIGHT)
+    local forward = f and not b
+    local backward = b and not f
+    local right = r and not l
+    local left = l and not r
+    if self.PossessionMovement == POSSESSION_MOVE_COMPASS then
+      self:FaceTowards(self:GetPos() + self:PossessorNormal())
+      if forward then self:Approach(self:GetPos() + self:PossessorForward())
+      elseif backward then self:Approach(self:GetPos() - self:PossessorForward()) end
+      if right then self:Approach(self:GetPos() + self:PossessorRight())
+      elseif left then self:Approach(self:GetPos() - self:PossessorRight()) end
+    elseif self.PossessionMovement == POSSESSION_MOVE_FORWARD then
+      local direction = self:GetPos()
+      if forward then direction = direction + self:PossessorForward()
+      elseif backward then direction = direction - self:PossessorForward() end
+      if right then direction = direction + self:PossessorRight()
+      elseif left then direction = direction - self:PossessorRight() end
+      if direction ~= self:GetPos() then self:MoveTowards(direction) end
+    else self:PossessionControls(forward, backward, right, left) end
     if self.ClimbLadders and navmesh.IsLoaded() then
       local ladders = navmesh.GetNearestNavArea(self:GetPos()):GetLadders()
       for i, ladder in ipairs(ladders) do
         if self.ClimbLadderUp then
-          if self:GetHullRangeSquaredTo(ladder:GetBottom()) < 20^2 then
+          if self:GetHullRangeSquaredTo(ladder:GetBottom()) < self.LaddersUpDistance^2 then
             self:ClimbLadderUp(ladder)
             break
           end
         elseif self.ClimbLaddersDown then
-          if self:GetHullRangeSquaredTo(ladder:GetTop()) < 20^2 then
+          if self:GetHullRangeSquaredTo(ladder:GetTop()) < self.LaddersDownDistance^2 then
             self:ClimbLadderDown(ladder)
             break
           end
         end
       end
     end
-  elseif SERVER and not self:IsClimbing() then self:FaceInstant(self:GetPos() + self:PossessorNormal()) end
+  end
   for i, move in ipairs(self.PossessionBinds) do
     if CLIENT and not move.client then continue end
     if SERVER and ((not cor and move.coroutine) or (cor and not move.coroutine)) then continue end
@@ -227,19 +260,7 @@ if SERVER then
   function ENT:CanDispossess() return true end
   function ENT:OnPossess() end
   function ENT:OnDispossess() end
-
-  function ENT:PossessionControls(forward, backward, right, left)
-    if forward then
-      self:MoveForward()
-    elseif backward then
-      self:MoveBackward()
-    end
-    if right then
-      self:MoveRight()
-    elseif left then
-      self:MoveLeft()
-    end
-  end
+  function ENT:PossessionControls(forward, backward, right, left) end
 
   -- Handlers --
 

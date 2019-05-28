@@ -76,6 +76,9 @@ if SERVER then
   function ENT:OnIdle()
     self:AddPatrolPos(self:RandomPos(1500))
   end
+  function ENT:OnDoor(door, obj)
+    if self:GetHullRangeSquaredTo(door) < 20^2 then obj:Open() end
+  end
 
   function ENT:OnLandOnGround()
     self:EmitFootstep()

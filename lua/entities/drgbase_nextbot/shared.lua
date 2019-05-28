@@ -4,8 +4,10 @@ ENT.IsDrGNextbot = true
 
 -- Misc --
 ENT.Models = {"models/player/kleiner.mdl"}
+ENT.VPhysics = false
 ENT.ModelScale = 1
 ENT.Skins = {0}
+ENT.BloodColor = BLOOD_COLOR_RED
 ENT.CollisionBounds = Vector(10, 10, 72)
 ENT.RagdollOnDeath = true
 ENT.OnSpawnSounds = {}
@@ -163,12 +165,13 @@ ENT.Footsteps = {}
 ENT.SpawnHealth = 100
 ENT.HealthRegen = 0
 ENT.FallDamage = false
+ENT.ShoveResistance = false
 ENT.DamageMultipliers = {}
 
 -- AI --
 DrGBase.IncludeFile("ai.lua")
 DrGBase.IncludeFile("relationships.lua")
-ENT.BehaviourTree = "DefaultAI"
+ENT.BehaviourTree = "BaseAI"
 ENT.Factions = {}
 ENT.Frightening = false
 ENT.AvoidAfraid = 500
@@ -211,9 +214,11 @@ ENT.ClimbLedgesMaxHeight = math.huge
 ENT.ClimbLedgesMinHeight = 0
 ENT.ClimbLadders = false
 ENT.ClimbLaddersUp = true
+ENT.LaddersUpDistance = 20
 ENT.ClimbLaddersUpMaxHeight = math.huge
 ENT.ClimbLaddersUpMinHeight = 0
 ENT.ClimbLaddersDown = false
+ENT.LaddersDownDistance = 20
 ENT.ClimbLaddersDownMaxHeight = math.huge
 ENT.ClimbLaddersDownMinHeight = 0
 ENT.ClimbSpeed = 100
@@ -249,6 +254,7 @@ ENT.AcceptPlayerWeapons = false
 DrGBase.IncludeFile("possession.lua")
 ENT.PossessionEnabled = false
 ENT.PossessionPrompt = true
+ENT.PossessionMovement = POSSESSION_MOVE_COMPASS
 ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
 
@@ -269,11 +275,24 @@ function ENT:Initialize()
     self:SetSkin(self.Skins[math.random(#self.Skins)])
     self:SetMaxHealth(self.SpawnHealth)
     self:SetHealth(self.SpawnHealth)
+    self:SetBloodColor(self.BloodColor)
     self:SetCollisionGroup(COLLISION_GROUP_NPC)
-    self:SetCollisionBounds(
-      Vector(self.CollisionBounds.x, self.CollisionBounds.y, self.CollisionBounds.z),
-      Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0)
-    )
+    if self.VPhysics then
+      local min, max = self:GetModelBounds()
+      self:SetCollisionBounds(min, max)
+      self:PhysicsInit(SOLID_VPHYSICS)
+      self:SetMoveType(MOVETYPE_VPHYSICS)
+      self:SetSolid(SOLID_VPHYSICS)
+      local phys = self:GetPhysicsObject()
+      if (phys:IsValid()) then
+          phys:Wake()
+      end
+    else
+      self:SetCollisionBounds(
+        Vector(self.CollisionBounds.x, self.CollisionBounds.y, self.CollisionBounds.z),
+        Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0)
+      )
+    end
     self:SetUseType(SIMPLE_USE)
     self:AddFlags(FL_OBJECT + FL_CLIENT)
     self.VJ_AddEntityToSNPCAttackList = true
@@ -322,6 +341,7 @@ function ENT:_BaseInitialize() end
 function ENT:CustomInitialize() end
 
 function ENT:Think()
+  --if SERVER then print(#DrGBase.GetNextbots()) end
   self:_HandleAnimations()
   self:_HandleMisc()
   if CurTime() > self._DrGBaseBaseThinkDelay then
@@ -448,7 +468,7 @@ else
     if GetConVar("developer"):GetBool() then
       if DisplayCollisions:GetBool() then
         local bound1, bound2 = self:GetCollisionBounds()
-        local center = self:GetPos() + (bound1 + bound2)/2
+        local center = self:GetPos() + self:OBBCenter()
         render.DrawWireframeBox(self:GetPos(), Angle(0, 0, 0), bound1, bound2, DrGBase.CLR_WHITE, false)
         render.DrawLine(center, center + self:GetVelocity(), DrGBase.CLR_ORANGE, false)
         render.DrawWireframeSphere(center, 2*self:GetScale(), 4, 4, DrGBase.CLR_ORANGE, false)

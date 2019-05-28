@@ -6,24 +6,23 @@ function ENT:IsAIDisabled()
 end
 
 function ENT:GetEnemy()
-  if self:HasNemesis() then
-    return self:GetNemesis()
-  else return self:GetNW2Entity("DrGBaseEnemy") end
+  if self:IsPossessed() then return NULL end
+  return self:GetNW2Entity("DrGBaseEnemy")
 end
 function ENT:HasEnemy()
   return IsValid(self:GetEnemy())
 end
-
-function ENT:GetNemesis()
-  return self:GetNW2Entity("DrGBaseNemesis")
-end
-function ENT:HasNemesis()
-  return IsValid(self:GetNemesis())
+function ENT:HaveEnemy()
+  return self:HasEnemy()
 end
 
 -- Functions --
 
 -- Hooks --
+
+function ENT:OnNewEnemy() end
+function ENT:OnEnemyChange() end
+function ENT:OnLastEnemy() end
 
 -- Handlers --
 
@@ -34,6 +33,19 @@ function ENT:_InitAI()
   self:RefreshEnemy()
   self:LoopTimer(0.5, function()
     self:RefreshEnemy()
+  end)
+  self:SetNWVarProxy("DrGBaseEnemy", function(self, name, old, new)
+    if not self._DrGBaseHasEnemy and IsValid(new) then
+      self._DrGBaseHasEnemy = true
+      self:OnNewEnemy(new)
+    elseif self._DrGBaseHasEnemy and not IsValid(new) then
+      self._DrGBaseHasEnemy = false
+      self:OnLastEnemy(old)
+    else self:OnEnemyChange(old, new) end
+    self:UpdateBehaviourTree()
+  end)
+  self:SetNWVarProxy("DrGBaseAIDisabled", function(self, name)
+    self:UpdateBehaviourTree()
   end)
 end
 
@@ -53,18 +65,7 @@ if SERVER then
   end
 
   function ENT:SetEnemy(enemy)
-    local old_enemy = self:GetEnemy()
-    self:SetNW2Entity("DrGBaseNemesis", nil)
     self:SetNW2Entity("DrGBaseEnemy", enemy)
-    if (IsValid(old_enemy) and IsValid(enemy) and old_enemy ~= enemy) or
-    (not IsValid(old_enemy) and IsValid(enemy)) or
-    (IsValid(old_enemy) and not IsValid(enemy)) then
-      self:UpdateBehaviourTree()
-    end
-  end
-  function ENT:SetNemesis(nemesis)
-    self:SetNW2Entity("DrGBaseNemesis", nemesis)
-    self:UpdateBehaviourTree()
   end
 
   function ENT:AddPatrolPos(pos, i)
@@ -98,7 +99,6 @@ if SERVER then
   -- Functions --
 
   function ENT:RefreshEnemy()
-    if self:HasNemesis() then return end
     local enemy = self:GetClosestEnemy(true)
     self:SetEnemy(enemy)
     return enemy

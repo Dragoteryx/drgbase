@@ -127,7 +127,7 @@ if SERVER then
     return self:_GetAwareness(ent):GetLevel()
   end
   function ENT:SetAwarenessLevel(ent, level)
-    if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() and level > 0 then
+    if ent:IsPlayer() and (GetConVar("ai_ignoreplayers"):GetBool() or not ent:Alive()) and level > 0 then
       return self:SetAwarenessLevel(ent, 0)
     end
     self:_GetAwareness(ent):SetLevel(level)
@@ -184,6 +184,12 @@ if SERVER then
   function ENT:OnLostEntity() end
 
   -- Handlers --
+
+  hook.Add("PostPlayerDeath", "DrGBaseForgetDeadPlayers", function(ply)
+    for i, nextbot in ipairs(DrGBase.GetNextbots()) do
+      nextbot:LoseEntity(ply)
+    end
+  end)
 
 else
 

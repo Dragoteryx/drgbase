@@ -97,11 +97,14 @@ if SERVER then
   function ENT:Approach(pos, nb)
     if isentity(pos) then pos = pos:GetPos() end
     if self:OnMove(pos) == false then return end
+    --[[local tr = self:TraceLine((pos - self:GetPos())*999999)
+    if IsValid(tr.Entity) and tr.Entity:DrG_IsDoor() then
+      self:OnDoor(tr.Entity, tr.Entity:DrG_DoorOpener(self))
+    end]]
     self.loco:Approach(pos, nb or 1)
   end
   function ENT:FaceTowards(pos)
     if isentity(pos) then pos = pos:GetPos() end
-    if self:OnTurn(pos, self:CalcPosDirection(pos)) == false then return end
     self.loco:FaceTowards(pos)
   end
   function ENT:FaceInstant(pos)
@@ -270,8 +273,8 @@ if SERVER then
       local current = path:GetCurrentGoal()
       local ladder = current.ladder
       if current.type == 4 then
-        if not self.ClimbLadderUp then return "unreachable" end
-        if self:GetHullRangeSquaredTo(ladder:GetBottom()) < options.tolerance^2 then
+        if not self.ClimbLaddersUp then return "unreachable" end
+        if self:GetHullRangeSquaredTo(ladder:GetBottom()) < self.LaddersUpDistance^2 then
           self:ClimbLadderUp(ladder)
           path:Invalidate()
           return "ladder_up", ladder
@@ -286,7 +289,7 @@ if SERVER then
             self:MoveTowards(self:GetPos() + current.forward)
             return "moving"
           else return "unreachable" end
-        elseif self:GetHullRangeSquaredTo(ladder:GetTop()) < options.tolerance^2 then
+        elseif self:GetHullRangeSquaredTo(ladder:GetTop()) < self.LaddersDownDistance^2 then
           self:ClimbLadderDown(ladder)
           path:Invalidate()
           return "ladder_down", ladder
@@ -352,13 +355,13 @@ if SERVER then
     while not self:IsDying() do
       self:FaceInstant(self:GetPos() - ladder:GetNormal())
       if down then
-        if self:GetPos().z <= ladder:GetBottom().z then break end
         local pos = ladder:GetPosAtHeight(startingHeight - self:GetSpeed()*wait*self:GetScale()*i)
+        if pos.z - ladder:GetBottom().z == 0 then break end
         if self:WhileClimbing(ladder, pos.z - ladder:GetBottom().z, true) then break end
         self:SetPos(pos + offset)
       else
-        if self:GetPos().z >= ladder:GetTop().z then break end
         local pos = ladder:GetPosAtHeight(startingHeight + self:GetSpeed()*wait*self:GetScale()*i)
+        if ladder:GetTop().z - pos.z == 0 then break end
         if self:WhileClimbing(ladder, ladder:GetTop().z - pos.z, false) then break end
         self:SetPos(pos + offset)
       end
@@ -386,7 +389,6 @@ if SERVER then
   -- Hooks --
 
   function ENT:OnMove() end
-  function ENT:OnTurn() end
   function ENT:OnRun() end
 
   function ENT:OnStartClimbing() end

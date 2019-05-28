@@ -34,20 +34,20 @@ end
 function util.DrG_LoadDmg(data)
   local dmg = DamageInfo()
   if not istable(data) then return end
-  smg:SetAmmoType(data.ammoType)
+  dmg:SetAmmoType(data.ammoType)
   if IsValid(data.attacker) then
-    smg:SetAttacker(data.attacker)
+    dmg:SetAttacker(data.attacker)
   end
-  smg:SetDamage(data.damage)
-  smg:SetDamageBonus(data.damageBonus)
-  smg:SetDamageCustom(data.damageCustom)
-  smg:SetDamageForce(data.damageForce)
-  smg:SetDamagePosition(data.damagePosition)
-  smg:SetDamageType(data.damageType)
+  dmg:SetDamage(data.damage)
+  dmg:SetDamageBonus(data.damageBonus)
+  dmg:SetDamageCustom(data.damageCustom)
+  dmg:SetDamageForce(data.damageForce)
+  dmg:SetDamagePosition(data.damagePosition)
+  dmg:SetDamageType(data.damageType)
   if IsValid(data.inflictor) then
-    smg:SetInflictor(data.inflictor)
+    dmg:SetInflictor(data.inflictor)
   end
-  smg:SetMaxDamage(data.maxDamage)
-  smg:SetReportedPosition(data.reportedPosition)
+  dmg:SetMaxDamage(data.maxDamage)
+  dmg:SetReportedPosition(data.reportedPosition)
   return dmg
 end

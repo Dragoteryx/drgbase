@@ -68,6 +68,7 @@ if SERVER then
   -- Functions --
 
   function ENT:IsInSight(ent)
+    if ent:IsPlayer() and (GetConVar("ai_ignoreplayers"):GetBool() or not ent:Alive()) then return false end
     if self:EyePos():DistToSqr(ent:GetPos()) > self:GetSightRange()^2 then return false end
     local eyepos = self:EyePos()
     local angle = (eyepos + self:EyeAngles():Forward()):DrG_Degrees(ent:WorldSpaceCenter(), eyepos)
@@ -100,9 +101,12 @@ if SERVER then
 
   hook.Add("EntityEmitSound", "DrGBaseNextbotHearing", function(sound)
     if not IsValid(sound.Entity) then return end
+    if sound.Entity:IsPlayer() and
+    (GetConVar("ai_ignoreplayers"):GetBool() or not sound.Entity:Alive()) then return end
     if #DrGBase.GetNextbots() == 0 then return end
     local pos = sound.Pos or sound.Entity:WorldSpaceCenter()
-    local distance = math.pow(sound.SoundLevel/2, 2)*sound.Volume
+    local distance = math.pow(sound.SoundLevel/2, 2)*sound.Volume/2.5
+    --print(distance)
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
       if nextbot:IsDeaf() then continue end
       if sound.Entity == nextbot then continue end

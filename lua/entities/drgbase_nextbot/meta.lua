@@ -105,14 +105,25 @@ if SERVER then
   function nextbotMETA:BecomeRagdoll(dmg)
     if self.IsDrGNextbot then
       if RagdollRemove:GetFloat() ~= 0 then
-        --local scale = self:GetModelScale()
+        local ragdoll
+        local scale = self:GetModelScale()
         local color = self:GetColor()
         local material = self:GetMaterial()
-        local ragdoll = old_BecomeRagdoll(self, dmg)
-        if IsValid(ragdoll) then
-          --ragdoll:SetModelScale(scale)
+        if self:HasPhysics() then
+          ragdoll = ents.Create("prop_physics")
+          ragdoll:SetModel(self:GetModel())
+          ragdoll:SetModelScale(scale)
           ragdoll:SetColor(color)
           ragdoll:SetMaterial(material)
+          ragdoll:SetPos(self:GetPos())
+          ragdoll:SetAngles(self:GetAngles())
+          ragdoll:Spawn()
+        else
+          ragdoll = old_BecomeRagdoll(self, dmg)
+          ragdoll:SetColor(color)
+          ragdoll:SetMaterial(material)
+        end
+        if IsValid(ragdoll) then
           if not self:OnRagdoll(ragdoll) and RagdollRemove:GetFloat() > 0 then
             timer.Simple(RagdollRemove:GetFloat(), function()
               if IsValid(ragdoll) then ragdoll:Remove() end
