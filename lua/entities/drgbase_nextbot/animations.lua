@@ -55,7 +55,9 @@ function ENT:_InitAnimations()
           self._DrGBaseAnimSeed = math.random(0, 255)
         end
       end
-      if not self.AnimMatchSpeed or not self:IsOnGround() or self:IsClimbing() then self:SetPlaybackRate(rate or 1) end
+      if not self.AnimMatchSpeed and not self._DrGBasePlayingAnimation then
+        self:SetPlaybackRate(rate or 1)
+      end
     end)
   end
   self._DrGBaseLastAnimCycle = 0

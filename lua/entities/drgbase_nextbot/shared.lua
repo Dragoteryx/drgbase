@@ -179,7 +179,9 @@ ENT.AttackAfraid = false
 ENT.AttackRange = 150
 ENT.EnemyTooFar = 100
 ENT.EnemyTooClose = 50
-ENT.AllyDamageTolerance = 0.25
+ENT.AllyDamageTolerance = 0.33
+ENT.AfraidDamageTolerance = 0.33
+ENT.NeutralDamageTolerance = 0.33
 
 -- Locomotion --
 DrGBase.IncludeFile("locomotion.lua")
@@ -380,7 +382,7 @@ if SERVER then
   function ENT:YieldCoroutine(caninterrupt)
     local didStuff = false
     if self:IsDying() then
-      self._DrGBaseDoOnDeath()
+      self._DrGBaseOnDeath()
     end
     while caninterrupt and not self._DrGBaseExecCorCalls and #self._DrGBaseCorCalls > 0 do
       didStuff = true

@@ -293,7 +293,7 @@ else
 
   -- Hooks --
 
-  function ENT:PossessionHUD() end
+  --[[function ENT:PossessionHUD() end
   hook.Add("HUDPaint", "DrGBasePossessionHUD", function()
     local possessing = LocalPlayer():DrG_Possessing()
     if not IsValid(possessing) then return end
@@ -315,7 +315,7 @@ else
     local possessing = LocalPlayer():DrG_Possessing()
     if not IsValid(possessing) then return end
     possessing:PossessionHalos()
-  end)
+  end)]]
 
   -- Handlers --
 

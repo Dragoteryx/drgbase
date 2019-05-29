@@ -97,6 +97,7 @@ if SERVER then
           local hit = {}
           for i, target in ipairs(attack.collateral and ents.GetAll() or self:ConsideredEntities()) do
             if target == self then continue end
+            if not IsValid(target) then continue end
             if not self:IsInRange(target, attack.range) then continue end
             if self:IsPossessed() and self:GetPossessor() == target then continue end
             if not attack.friendlyfire and not self:IsPossessed() and self:IsAlly(target)  then continue end

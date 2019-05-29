@@ -89,7 +89,7 @@ if SERVER then
         local now = CurTime()
         if not self:OnFatalDamage(dmg) then
           self:SetNW2Bool("DrGBaseDying", true)
-          self._DrGBaseDoOnDeath = function()
+          self._DrGBaseOnDeath = function()
             self:SetNW2Bool("DrGBaseDying", false)
             self:SetNW2Bool("DrGBaseDead", true)
             dmg = self:OnDeath(util.DrG_LoadDmg(data), CurTime()-now)
