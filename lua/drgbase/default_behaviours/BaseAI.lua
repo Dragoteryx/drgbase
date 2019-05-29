@@ -12,8 +12,11 @@ BT.Tree = {
     },
     {
       ["type"] = "Leaf",
-      ["description"] = "Idle",
-      ["run"] = ":OnIdle"
+      ["description"] = "On idle",
+      ["run"] = function(nextbot, data)
+        nextbot:OnIdle()
+        return true
+      end
     }
   }
 }

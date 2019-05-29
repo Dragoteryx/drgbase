@@ -54,50 +54,41 @@ local DECORATORS = {
 }
 
 local FUNCTIONS = {}
-function FUNCTIONS.CreateBehaviourTree(name, args)
+function FUNCTIONS.CreateBehaviourTree(name, args, branch)
   name = string.lower(name)
   if not istable(args) then args = {} end
   local default = tobool(DEFAULTS[name])
   local luaFolder = default and "default_behaviours/" or "behaviours/"
-  if file.Exists("drgbase/"..luaFolder..name..".json", "LUA") then
-    BT = {}
-    BT.Args = args
-    if file.Exists("drgbase/"..luaFolder..name..".lua", "LUA") then
-      include(luaFolder..name..".lua")
+  if file.Exists("drgbase/"..luaFolder..name..".lua", "LUA") then
+    if not branch then
+      DrGBase.Print("Generating behaviour tree '"..name.."'.")
     end
-    local json = file.Read("drgbase/"..luaFolder..name..".json", "LUA")
-    local tree = FUNCTIONS.CreateNode(util.JSONToTable(json), BT)
-    BT = nil
-    return tree
-  elseif file.Exists("drgbase/"..luaFolder..name..".txt", "LUA") then
-    BT = {}
-    BT.Args = args
-    if file.Exists("drgbase/"..luaFolder..name..".lua", "LUA") then
-      include(luaFolder..name..".lua")
-    end
-    local json = file.Read("drgbase/"..luaFolder..name..".txt", "LUA")
-    local tree = FUNCTIONS.CreateNode(util.JSONToTable(json), BT)
-    BT = nil
-    return tree
-  elseif file.Exists("drgbase/"..luaFolder..name..".lua", "LUA") then
     BT = {}
     BT.Tree = {}
     BT.Args = args
     include(luaFolder..name..".lua")
-    local tree = FUNCTIONS.CreateNode(BT.Tree, BT)
+    local tree = FUNCTIONS.CreateNode(BT.Tree)
     BT = nil
+    if not branch then
+      if tree then DrGBase.Print("Behaviour tree '"..name.."' successfully generated.")
+      else DrGBase.Error("Error while creating behaviour tree '"..name.."'.") end
+    end
     return tree
+  elseif not branch then
+    DrGBase.Error("Unable to find behaviour tree '"..name.."'.")
   end
 end
-function FUNCTIONS.CreateNode(tbl, bt)
+function FUNCTIONS.CreateNode(tbl)
+  if not istable(tbl) then return end
   if not isstring(tbl.type) then return end
   if tbl.type == "Tree" then
-    return FUNCTIONS.CreateBehaviourTree(tbl.name, tbl.args)
+    return FUNCTIONS.CreateBehaviourTree(tbl.name, tbl.args, true)
   elseif COMPOSITES[tbl.type] then
     local node = NODE_TYPES[tbl.type]:New(tobool(tbl.random))
     if istable(tbl.children) then
       for i, child in ipairs(tbl.children) do
-        node:AddChild(FUNCTIONS.CreateNode(child, bt))
+        if not istable(child) then continue end
+        node:AddChild(FUNCTIONS.CreateNode(child))
       end
     end
     return node
@@ -106,40 +97,18 @@ function FUNCTIONS.CreateNode(tbl, bt)
     if tbl.type == "RepeatFor" then
       node = RepeatFor:New(isnumber(tbl.nb) and tbl.nb or 1)
     else node = NODE_TYPES[tbl.type]:New() end
-    node:SetChild(FUNCTIONS.CreateNode(tbl.child, bt))
-    return node
-  else
-    local run
-    if not isstring(tbl.run) then return end
-    if string.StartWith(tbl.run, ":") then
-      local func = string.Replace(tbl.run, ":", "")
-      run = function(nextbot, data)
-        local method = nextbot[func]
-        if not isfunction(method) then return false end
-        local res = method(nextbot, unpack(tbl.args or {}))
-        if res == nil or res then return true
-        else return false end
-      end
-    elseif string.StartWith(tbl.run, ".") then
-      local func = string.Replace(tbl.run, ".", "")
-      run = function(nextbot, data)
-        local method = nextbot[func]
-        if not isfunction(method) then return false end
-        local res = method(unpack(tbl.args or {}))
-        if res == nil or res then return true
-        else return false end
-      end
-    else
-      local generator = bt[tbl.run]
-      if not generator then return end
-      run = generator(unpack(tbl.args or {}))
+    if istable(tbl.child) then
+      node:SetChild(FUNCTIONS.CreateNode(tbl.child))
     end
-    local node = NODE_TYPES[tbl.type]:New(isstring(tbl.description) and tbl.description or tbl.run, run)
+    return node
+  elseif NODE_TYPES[tbl.type] then
+    if not isfunction(tbl.run) then return end
+    local node = NODE_TYPES[tbl.type]:New(isstring(tbl.description) and tbl.description or tbl.type, tbl.run)
     if tbl.type == "Conditional" then
-      if tbl.success then
+      if istable(tbl.success) then
         node:SetSuccessChild(FUNCTIONS.CreateNode(tbl.success, BT))
       end
-      if tbl.failure then
+      if istable(tbl.failure) then
         node:SetFailureChild(FUNCTIONS.CreateNode(tbl.failure, BT))
       end
     end
@@ -154,29 +123,12 @@ function DrGBase.RefreshBehaviourTree(name)
   else CUSTOM_BEHAVIOURS[name] = tree end
   return tree
 end
-
--- Default behaviours
 for name, default in pairs(DEFAULTS) do
   DrGBase.RefreshBehaviourTree(name)
 end
-
--- Custom behaviours
-local generated = {}
-for i, name in ipairs(file.Find("drgbase/behaviours/*.json", "LUA")) do
-  name = string.Replace(name, ".json", "")
-  if generated[name] then return end
-  local tree = DrGBase.RefreshBehaviourTree(name)
-  if IsValid(tree) then generated[name] = true end
-end
-for i, name in ipairs(file.Find("drgbase/behaviours/*.txt", "LUA")) do
-  name = string.Replace(name, ".txt", "")
-  if generated[name] then return end
-  local tree = DrGBase.RefreshBehaviourTree(name)
-  if IsValid(tree) then generated[name] = true end
-end
 for i, name in ipairs(file.Find("drgbase/behaviours/*.lua", "LUA")) do
-  name = string.Replace(name, ".txt", "")
-  if generated[name] then return end
-  local tree = DrGBase.RefreshBehaviourTree(name)
-  if IsValid(tree) then generated[name] = true end
+  name = string.Replace(name, ".lua", "")
+  DrGBase.RefreshBehaviourTree(name)
 end
+
+--PrintTable(DrGBase.GetBehaviourTree("BaseAI"))

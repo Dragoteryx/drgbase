@@ -1,29 +1,66 @@
 
-function BT.HasPatrolPos()
-  return function(self, data)
-    return isvector(self:GetPatrolPos(1))
-  end
-end
-
-function BT.FetchPatrolPos()
-  return function(self, data)
-    data.pos = self:GetPatrolPos(1)
-    return isvector(data.pos)
-  end
-end
-
-function BT.ReachedPatrolPos()
-  return function(self, data)
-    self:RemovePatrolPos(1)
-    self:OnReachedPatrol(data.pos)
-    return true
-  end
-end
-
-function BT.PatrolPosUnreachable()
-  return function(self, data)
-    self:RemovePatrolPos(1)
-    self:OnPatrolUnreachable(data.pos)
-    return true
-  end
-end
+BT.Tree = {
+  ["type"] = "Sequence",
+  ["children"] = {
+    {
+      ["type"] = "Leaf",
+      ["description"] = "Has patrol positions?",
+      ["run"] = function(nextbot, data)
+        return isvector(nextbot:GetPatrolPos(1))
+      end
+    },
+    {
+      ["type"] = "RepeatUntil",
+      ["child"] = {
+        ["type"] = "Sequence",
+        ["children"] = {
+          {
+            ["type"] = "Leaf",
+            ["description"] = "Fetch next patrol pos",
+            ["run"] = function(nextbot, data)
+              data.pos = nextbot:GetPatrolPos(1)
+              return isvector(data.pos)
+            end
+          },
+          {
+            ["type"] = "Selector",
+            ["children"] = {
+              {
+                ["type"] = "Sequence",
+                ["children"] = {
+                  {
+                    ["type"] = "Tree",
+                    ["name"] = "MoveToPosition",
+                    ["args"] = {
+                      ["call"] = function(nextbot, data)
+                        return nextbot:WhilePatrolling(data.pos)
+                      end
+                    }
+                  },
+                  {
+                    ["type"] = "Leaf",
+                    ["description"] = "Reached patrol pos",
+                    ["run"] = function(nextbot, data)
+                      nextbot:RemovePatrolPos(1)
+                      nextbot:OnReachedPatrol(data.pos)
+                      return true
+                    end
+                  }
+                }
+              },
+              {
+                ["type"] = "Leaf",
+                ["description"] = "Patrol pos unreachable",
+                ["run"] = function(nextbot, data)
+                  nextbot:RemovePatrolPos(1)
+                  nextbot:OnPatrolUnreachable(data.pos)
+                  return true
+                end
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

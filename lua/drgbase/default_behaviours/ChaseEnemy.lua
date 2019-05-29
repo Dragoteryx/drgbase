@@ -1,51 +1,106 @@
 
-function BT.HasEnemyOrRefresh()
-  return function(self, data)
-    if self:HasEnemy() then return true end
-    return IsValid(self:RefreshEnemy())
-  end
+local function HasEnemyOrRefresh(nextbot, data)
+  if nextbot:HasEnemy() then return true end
+  return IsValid(nextbot:RefreshEnemy())
 end
 
-function BT.EnemyTooClose()
-  return function(self, data)
-    return self:IsInRange(self:GetEnemy(), self.EnemyTooClose)
-  end
-end
-function BT.MoveAwayFromEnemy()
-  return function(self, data)
-    local res = self:OnAvoidEnemy(self:GetEnemy())
-    if res == nil then
-      self:MoveAwayFrom(self:GetEnemy(), true)
-      return true
-    else return res end
-  end
-end
-
-function BT.EnemyTooFar()
-  return function(self, data)
-    local enemy = self:GetEnemy()
-    return not self:IsInRange(enemy, self.EnemyTooFar) or not self:VisibleVec(enemy:WorldSpaceCenter())
-  end
-end
-function BT.MoveCloserToEnemy()
-  return function(self, data)
-    local res = self:OnChaseEnemy(self:GetEnemy())
-    if res == nil then
-      return self:MoveCloserTo(self:GetEnemy()) ~= "unreachable"
-    else return res end
-  end
-end
-
-function BT.CheckAttackRange()
-  return function(self, data)
-    local enemy = self:GetEnemy()
-    return self:IsInRange(enemy, self.AttackRange) and self:VisibleVec(enemy:WorldSpaceCenter())
-  end
-end
-
-function BT.InAttackRange()
-  return function(self, data)
-    self:OnAttack(self:GetEnemy())
-    return true
-  end
-end
+BT.Tree = {
+  ["type"] = "Sequence",
+  ["children"] = {
+    {
+      ["type"] = "Leaf",
+      ["description"] = "Has enemy?",
+      ["run"] = function(nextbot, data)
+        return nextbot:HasEnemy()
+      end
+    },
+    {
+      ["type"] = "RepeatUntil",
+      ["child"] = {
+        ["type"] = "Sequence",
+        ["children"] = {
+          {
+            ["type"] = "Leaf",
+            ["description"] = "Has enemy?",
+            ["run"] = HasEnemyOrRefresh
+          },
+          {
+            ["type"] = "Succeeder",
+            ["child"] = {
+              ["type"] = "Selector",
+              ["children"] = {
+                {
+                  ["type"] = "Sequence",
+                  ["children"] = {
+                    {
+                      ["type"] = "Leaf",
+                      ["description"] = "Enemy too far or not visible?",
+                      ["run"] = function(nextbot, data)
+                        local enemy = nextbot:GetEnemy()
+                        return not nextbot:IsInRange(enemy, nextbot.EnemyTooFar) or not nextbot:VisibleVec(enemy:WorldSpaceCenter())
+                      end
+                    },
+                    {
+                      ["type"] = "Leaf",
+                      ["description"] = "Move closer to enemy",
+                      ["run"] = function(nextbot, data)
+                        local res = nextbot:OnChaseEnemy(nextbot:GetEnemy())
+                        if res == nil then
+                          return nextbot:MoveCloserTo(nextbot:GetEnemy()) ~= "unreachable"
+                        else return res end
+                      end
+                    }
+                  }
+                },
+                {
+                  ["type"] = "Sequence",
+                  ["children"] = {
+                    {
+                      ["type"] = "Leaf",
+                      ["description"] = "Enemy too close?",
+                      ["run"] = function(nextbot, data)
+                        return nextbot:IsInRange(nextbot:GetEnemy(), nextbot.EnemyTooClose)
+                      end
+                    },
+                    {
+                      ["type"] = "Leaf",
+                      ["description"] = "Move away from enemy",
+                      ["run"] = function(nextbot, data)
+                        local res = nextbot:OnAvoidEnemy(nextbot:GetEnemy())
+                        if res == nil then
+                          nextbot:MoveAwayFrom(nextbot:GetEnemy(), true)
+                          return true
+                        else return res end
+                      end
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            ["type"] = "Leaf",
+            ["description"] = "Has enemy?",
+            ["run"] = HasEnemyOrRefresh
+          },
+          {
+            ["type"] = "Conditional",
+            ["description"] = "Is enemy in attack range?",
+            ["run"] = function(nextbot, data)
+              local enemy = nextbot:GetEnemy()
+              return nextbot:IsInRange(enemy, nextbot.AttackRange) and nextbot:VisibleVec(enemy:WorldSpaceCenter())
+            end,
+            ["success"] = {
+              ["type"] = "Leaf",
+              ["description"] = "Enemy in attack range",
+              ["run"] = function(nextbot, data)
+                nextbot:OnAttack(nextbot:GetEnemy())
+                return true
+              end
+            }
+          }
+        }
+      }
+    }
+  }
+}
