@@ -27,10 +27,10 @@ BT_NODES = nil
 -- BEHAVIOUR REGISTRY --
 
 local DEFAULTS = {
-  ["movetoposition"] = true,
-  ["patrol"] = true,
   ["baseai"] = true,
-  ["chaseenemy"] = true
+  ["chaseenemy"] = true,
+  ["patrol"] = true,
+  ["movetoposition"] = true
 }
 local BEHAVIOURS = {}
 local CUSTOM_BEHAVIOURS = {}
