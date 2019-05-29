@@ -3,7 +3,7 @@ local physMETA = FindMetaTable("PhysObj")
 
 function physMETA:DrG_Trajectory(pos, options)
   options = options or {}
-  local vec, info = self:GetPos():DrG_Trajectory(pos, options)
+  local vec, info = self:GetPos():DrG_CalcTrajectory(pos, options)
   if not vec:IsZero() then
     if not options.drag then self:EnableDrag(false)
     else self:EnableDrag(true) end

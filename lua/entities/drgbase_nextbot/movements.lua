@@ -229,7 +229,7 @@ if SERVER then
         if callback(delay - CurTime(), direction) then return end
         local avoided, direction = self:ObstacleAvoidance(forwardOnly)
         if not avoided then return false end
-        coroutine.yield()
+        self:YieldCoroutine(true)
       end
       return true
     end
@@ -265,7 +265,6 @@ if SERVER then
         if tolerance < options.tolerance then tolerance = options.tolerance end
         if path:GetEnd():DistToSqr(pos) > tolerance^2 then
           path:Compute(self, pos, options.generator)
-          coroutine.yield()
         end
       end
       if not self._DrGBaseComputeSuccess and not IsValid(path) then return "unreachable" end
@@ -323,7 +322,7 @@ if SERVER then
       if res == "reached" then return "ok"
       elseif res == "unreachable" then return "failed"
       elseif res == "stuck" then return "stuck" end
-      coroutine.yield()
+      self:YieldCoroutine(true)
     end
   end
 
@@ -345,32 +344,29 @@ if SERVER then
     self:SetNW2Bool("DrGBaseClimbing", true)
     self:SetNW2Bool("DrGBaseClimbingDown", down)
     self._DrGBaseClimbLadder = ladder
-    for i = 1, 1000 do self:FaceTowards(self:GetPos() - ladder:GetNormal()) end
     local offset = self:GetForward()*self.ClimbOffset.x +
     self:GetRight()*self.ClimbOffset.y +
     self:GetUp()*self.ClimbOffset.z
-    local wait = 0.01
-    local startingHeight = self:GetPos().z
-    local i = 1
+    local lastHeight = self:GetPos().z
+    local lastTime = CurTime()
     while not self:IsDying() do
-      self:FaceInstant(self:GetPos() - ladder:GetNormal())
+      self:FaceTowards(self:GetPos() - ladder:GetNormal())
+      local pos
       if down then
-        local pos = ladder:GetPosAtHeight(startingHeight - self:GetSpeed()*wait*self:GetScale()*i)
-        if pos.z - ladder:GetBottom().z == 0 then break end
-        if self:WhileClimbing(ladder, pos.z - ladder:GetBottom().z, true) then break end
+        pos = ladder:GetPosAtHeight(lastHeight - self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
         self:SetPos(pos + offset)
+        if ladder:GetBottom().z - pos.z <= 0 then break end
+        if self:WhileClimbing(ladder, ladder:GetBottom().z - pos.z, false) then break end
       else
-        local pos = ladder:GetPosAtHeight(startingHeight + self:GetSpeed()*wait*self:GetScale()*i)
-        if ladder:GetTop().z - pos.z == 0 then break end
-        if self:WhileClimbing(ladder, ladder:GetTop().z - pos.z, false) then break end
+        pos = ladder:GetPosAtHeight(lastHeight + self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
         self:SetPos(pos + offset)
+        if ladder:GetTop().z - pos.z <= 0 then break end
+        if self:WhileClimbing(ladder, ladder:GetTop().z - pos.z, false) then break end
       end
-      i = i+1
-      coroutine.wait(wait)
+      lastHeight = pos.z
+      lastTime = CurTime()
+      self:YieldCoroutine(false)
     end
-    if down then
-      self:SetPos(ladder:GetPosAtHeight(startingHeight - self:GetSpeed()*wait*self:GetScale()*(i-1)) + offset)
-    else self:SetPos(ladder:GetPosAtHeight(startingHeight + self:GetSpeed()*wait*self:GetScale()*(i-1)) + offset) end
     self:OnStopClimbing(ladder, down)
     self:SetNW2Bool("DrGBaseClimbing", false)
     self._DrGBaseClimbLadder = nil

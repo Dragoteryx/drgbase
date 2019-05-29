@@ -20,12 +20,11 @@ if SERVER then
     local targetdelay = 0
     local now = CurTime()
     while CurTime() < delay do
-      if self:CoroutineCalls() then break end
       if self:IsPossessed() then break end
       if self:HasEnemy() then break end
       if callback(CurTime() - now) then break end
       --if self:IsFlying() then self:FlightHover() end
-      coroutine.yield()
+      self:YieldCoroutine(true)
     end
     self:SetNW2Bool("DrGBaseWaiting", false)
   end
@@ -48,7 +47,7 @@ if SERVER then
     if callback == nil then callback = function() end end
     while not self:IsOnGround() and not self:IsDying() do
       if callback() then return end
-      coroutine.yield()
+      self:YieldCoroutine(true)
     end
   end
 

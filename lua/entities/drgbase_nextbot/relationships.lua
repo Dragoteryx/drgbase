@@ -170,6 +170,7 @@ if SERVER then
       if ent:IsFlagSet(FL_NOTARGET) then return D_NU end
       if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then return D_NU end
       if (ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot") and ent:Health() <= 0 then return D_NU end
+      if ent.IsDrGNextbot and (ent:IsDown() or ent:IsDead()) then return D_NU end
     end
     return self._DrGBaseRelationships[ent:GetCreationID()] or D_NU
   end

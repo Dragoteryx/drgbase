@@ -16,6 +16,10 @@ function ENT:HaveEnemy()
   return self:HasEnemy()
 end
 
+function ENT:IsPatrolling()
+  return self:GetNW2Bool("DrGBasePatrol")
+end
+
 -- Functions --
 
 -- Hooks --

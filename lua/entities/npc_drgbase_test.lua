@@ -14,7 +14,7 @@ ENT.JumpAnimation = ACT_HL2MP_JUMP_KNIFE
 
 -- Climbing --
 ENT.ClimbLadders = true
-ENT.ClimbSpeed = 100
+ENT.ClimbSpeed = 60
 ENT.ClimbUpAnimation = ACT_ZOMBIE_CLIMB_UP
 ENT.ClimbOffset = Vector(-14, 0, 0)
 

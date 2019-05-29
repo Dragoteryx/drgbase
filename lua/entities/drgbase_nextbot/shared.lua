@@ -221,7 +221,7 @@ ENT.ClimbLaddersDown = false
 ENT.LaddersDownDistance = 20
 ENT.ClimbLaddersDownMaxHeight = math.huge
 ENT.ClimbLaddersDownMinHeight = 0
-ENT.ClimbSpeed = 100
+ENT.ClimbSpeed = 60
 ENT.ClimbUpAnimation = ACT_CLIMB_UP
 ENT.ClimbDownAnimation = ACT_CLIMB_DOWN
 ENT.ClimbAnimRate = 1
@@ -237,7 +237,7 @@ ENT.EyeBone = ""
 ENT.EyeOffset = Vector(0, 0, 0)
 ENT.EyeAngle = Angle(0, 0, 0)
 ENT.HearingCoefficient = 1
-ENT.SpottedAwarenessDecrease = 1/60
+ENT.SpottedAwarenessDecrease = 30
 ENT.LostAwarenessDecrease = 1
 ENT.AwarenessDecreaseDelay = 1
 
@@ -254,7 +254,7 @@ ENT.AcceptPlayerWeapons = false
 DrGBase.IncludeFile("possession.lua")
 ENT.PossessionEnabled = false
 ENT.PossessionPrompt = true
-ENT.PossessionMovement = POSSESSION_MOVE_COMPASS
+ENT.PossessionMovement = POSSESSION_MOVE_NSEW
 ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
 
@@ -297,7 +297,7 @@ function ENT:Initialize()
     self:AddFlags(FL_OBJECT + FL_CLIENT)
     self.VJ_AddEntityToSNPCAttackList = true
     self.vFireIsCharacter = true
-    self._DrGBaseCoroutineCalls = {}
+    self._DrGBaseCorCalls = {}
     self._DrGBaseBT = DrGBase.GetBehaviourTree(self.BehaviourTree)
     self._DrGBaseBTLastID = -1
   else
@@ -372,14 +372,33 @@ if SERVER then
   -- Functions --
 
   function ENT:CallInCoroutine(callback)
-    table.insert(self._DrGBaseCoroutineCalls, {
+    table.insert(self._DrGBaseCorCalls, {
       callback = callback,
       now = CurTime()
     })
-    self:UpdateBehaviourTree()
   end
-  function ENT:CoroutineCalls()
-    return #self._DrGBaseCoroutineCalls > 0
+  function ENT:YieldCoroutine(caninterrupt)
+    local didStuff = false
+    if self:IsDying() then
+      self._DrGBaseDoOnDeath()
+    end
+    while caninterrupt and not self._DrGBaseExecCorCalls and #self._DrGBaseCorCalls > 0 do
+      didStuff = true
+      self._DrGBaseExecCorCalls = true
+      local cor = table.remove(self._DrGBaseCorCalls, 1)
+      cor.callback(self, CurTime() - cor.now)
+      self._DrGBaseExecCorCalls = false
+    end
+    coroutine.yield()
+    return didStuff
+  end
+  function ENT:WaitCoroutine(duration, caninterrupt)
+    local delay = CurTime() + duration
+    local didStuff = false
+    while CurTime() < delay do
+      if self:YieldCoroutine(caninterrupt) then didStuff = true end
+    end
+    return didStuff
   end
 
   function ENT:GetBehaviourTree()
@@ -434,10 +453,6 @@ if SERVER then
       self:OnSpawn()
     end
     while true do
-      while self:CoroutineCalls() do
-        local cor = table.remove(self._DrGBaseCoroutineCalls, 1)
-        cor.callback(self, CurTime() - cor.now)
-      end
       if self:IsPossessed() then
         self:_HandlePossession(true)
       elseif not self:IsAIDisabled() then
@@ -448,7 +463,7 @@ if SERVER then
           end)
         else self:CustomBehaviour() end
       end
-      coroutine.yield()
+      self:YieldCoroutine(true)
     end
   end
 

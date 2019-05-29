@@ -107,7 +107,7 @@ if SERVER then
     local phys = self:GetPhysicsObject()
     if not IsValid(phys) then return Vector(0, 0, 0) end
     if isentity(target) then
-      local vec, info = self:GetPos():DrG_Trajectory(target:WorldSpaceCenter(), options)
+      local vec, info = self:GetPos():DrG_CalcTrajectory(target:WorldSpaceCenter(), options)
       return self:ThrowAt(target:WorldSpaceCenter() + target:GetVelocity()*info.duration, options)
     else return phys:DrG_Trajectory(target, options) end
   end

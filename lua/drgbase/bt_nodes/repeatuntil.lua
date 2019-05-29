@@ -12,7 +12,7 @@ end
 function RepeatUntil:Decorate(child, nextbot, data, id)
   while child:Run(nextbot, data, id) do
     if self:ShouldUpdate(id) then return false end
-    coroutine.yield()
+    nextbot:YieldCoroutine(true)
   end
   return true
 end

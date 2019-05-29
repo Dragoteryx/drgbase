@@ -14,7 +14,7 @@ function RepeatFor:Decorate(child, nextbot, data, id)
   for i = 1, self._nb do
     if self:ShouldUpdate(id) then return false end
     if not child:Run(nextbot, data, id) then return false end
-    coroutine.yield()
+    nextbot:YieldCoroutine(true)
   end
   return true
 end

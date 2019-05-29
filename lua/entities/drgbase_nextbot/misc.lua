@@ -46,6 +46,9 @@ function ENT:GetEyeTraceNoCursor()
   return self:GetEyeTrace()
 end
 
+function ENT:IsDown()
+  return self:GetNW2Bool("DrGBaseDown")
+end
 function ENT:IsDying()
   return self:GetNW2Bool("DrGBaseDying")
 end
@@ -181,6 +184,7 @@ function ENT:_InitMisc()
   if CLIENT then return end
   self:SetHealthRegen(self.HealthRegen)
   self:LoopTimer(1, function()
+    if self:IsDead() then return end
     local regen = self:GetHealthRegen()
     if regen > 0 then
       local health = self:Health() + regen

@@ -23,6 +23,14 @@ BT.Tree = {
             end
           },
           {
+            ["type"] = "Leaf",
+            ["description"] = "Is patrolling",
+            ["run"] = function(nextbot, data)
+              nextbot:SetNW2Bool("DrGBasePatrol", true)
+              return true
+            end
+          },
+          {
             ["type"] = "Selector",
             ["children"] = {
               {
@@ -61,6 +69,14 @@ BT.Tree = {
           }
         }
       }
+    },
+    {
+      ["type"] = "Leaf",
+      ["description"] = "Is not patrolling",
+      ["run"] = function(nextbot, data)
+        nextbot:SetNW2Bool("DrGBasePatrol", false)
+        return true
+      end
     }
   }
 }

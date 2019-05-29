@@ -4,7 +4,7 @@ if SERVER then
   -- Hooks --
 
   function ENT:OnTakeDamage(dmg)
-    --self:SpotEntity(dmg:GetAttacker())
+    self:SpotEntity(dmg:GetAttacker())
   end
   function ENT:AfterTakeDamage() end
   function ENT:OnDeath() end
@@ -36,12 +36,28 @@ if SERVER then
 
   -- Handlers --
 
-  function ENT:OnInjured(dmg)
+  local function NextbotDeath(self, dmg)
+    hook.Run("OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor())
+    if self:HasWeapon() and self.DropWeaponOnDeath then
+      self:DropWeapon()
+    end
+    if self.RagdollOnDeath then
+      return self:BecomeRagdoll(dmg)
+    else self:Remove() end
+  end
+
+  function ENT:OnInjured() end
+  function ENT:OnKilled()
+    Error("OnKilled has been called. This should never happen!\n")
+  end
+
+  hook.Add("EntityTakeDamage", "DrGBaseHandleNextbotDamage", function(self, dmg)
+    if not self.IsDrGNextbot then return end
     for type, mult in pairs(self._DrGBaseDamageMultipliers) do
       if type == DMG_DIRECT then continue end
       if dmg:IsDamageType(type) then dmg:ScaleDamage(mult) end
     end
-    if dmg:GetDamage() <= 0 then return end
+    if dmg:GetDamage() <= 0 then return true end
     if #self.OnDamageSounds > 0 then
       self:EmitSlotSound("DrGBaseOnDamage", self.DamageSoundDelay, self.OnDamageSounds[math.random(#self.OnDamageSounds)])
     end
@@ -66,39 +82,34 @@ if SERVER then
         dmg = util.DrG_LoadDmg(data)
         self:AfterTakeDamage(dmg, delay)
       end)
-    else dmg:SetDamage(0) end
-  end
-
-  local function NextbotDeath(self, dmg)
-    hook.Run("OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor())
-    if self:HasWeapon() and self.DropWeaponOnDeath then
-      self:DropWeapon()
-    end
-    if self.RagdollOnDeath then
-      return self:BecomeRagdoll(dmg)
-    else self:Remove() end
-  end
-  function ENT:OnKilled(dmg)
-    if #self.OnDeathSounds > 0 then
-      self:EmitSound(self.OnDeathSounds[math.random(#self.OnDeathSounds)])
-    end
-    if self:OnDeath(dmg) then
-      self._DrGBaseCoroutineCalls = {}
+    else return true end
+    if self:IsDown() or self:IsDead() then return true end
+    if dmg:GetDamage() >= self:Health() then
+      self:SetHealth(0)
+      if #self.OnDeathSounds > 0 then
+        self:EmitSound(self.OnDeathSounds[math.random(#self.OnDeathSounds)])
+      end
+      local now = CurTime()
       local data = util.DrG_SaveDmg(dmg)
-      self:CallInCoroutine(function(self, delay)
-        self:SetNW2Bool("DrGBaseDying", false)
-        self:SetNW2Bool("DrGBaseDead", true)
-        dmg = self:DoOnDeath(util.DrG_LoadDmg(data), delay)
-        if dmg == nil then dmg = util.DrG_LoadDmg(data) end
-        NextbotDeath(self, dmg)
-      end)
-      self:SetNW2Bool("DrGBaseDying", true)
-      self:UpdateBehaviourTree()
-    else
-      self:SetNW2Bool("DrGBaseDead", true)
-      NextbotDeath(self, dmg)
+      if not self:OnDeath(dmg) then
+        self:SetNW2Bool("DrGBaseDying", true)
+        self._DrGBaseDoOnDeath = function()
+          self:SetNW2Bool("DrGBaseDying", false)
+          self:SetNW2Bool("DrGBaseDead", true)
+          dmg = self:DoOnDeath(util.DrG_LoadDmg(data), CurTime()-now)
+          if dmg == nil then dmg = util.DrG_LoadDmg(data) end
+          NextbotDeath(self, dmg)
+        end
+      else
+        self:SetNW2Bool("DrGBaseDown", true)
+        self:CallInCoroutine(function(self, delay)
+          self:DoOnDeath(util.DrG_LoadDmg(data), delay)
+          self:SetNW2Bool("DrGBaseDown", false)
+        end)
+      end
+      return true
     end
-  end
+  end)
 
   function ENT:OnContact(ent)
     self:SetNW2Entity("DrGBaseLastTouchedEntity", ent)

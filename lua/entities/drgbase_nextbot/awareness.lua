@@ -73,9 +73,9 @@ if SERVER then
       while IsValid(self._nextbot) and IsValid(self._ent) do
         if CurTime() > self._decreasedelay + self._nextbot:GetAwarenessDecreaseDelay() then
           if self:Spotted() then
-            self:DecreaseLevel(self._nextbot:GetSpottedAwarenessDecrease()/5)
+            self:DecreaseLevel(1/(self._nextbot:GetSpottedAwarenessDecrease()/5))
           else
-            self:DecreaseLevel(self._nextbot:GetLostAwarenessDecrease()/5)
+            self:DecreaseLevel(1/(self._nextbot:GetLostAwarenessDecrease()/5))
           end
         end
         coroutine.wait(0.2)

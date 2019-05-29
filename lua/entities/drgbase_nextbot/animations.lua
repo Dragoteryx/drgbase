@@ -112,7 +112,7 @@ if SERVER then
     while CurTime() < delay and not self:IsDying() do
       local cycle = self:GetCycle()
       if callback(cycle) then break end
-      coroutine.yield()
+      self:YieldCoroutine(false)
     end
     self._DrGBasePlayingAnimation = false
     self:SetUpdateAnimation(upd)
@@ -161,7 +161,7 @@ if SERVER then
         lastpos = startpos + vec
         self:SetPos(lastpos)
         self:SetAngles(self:LocalToWorldAngles(angles))
-      end
+      else self:SetPos(lastpos) end
       return callback(cycle)
     end)
     self:SetPos(lastpos)

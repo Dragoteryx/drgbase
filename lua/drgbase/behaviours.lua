@@ -61,16 +61,17 @@ function FUNCTIONS.CreateBehaviourTree(name, args, branch)
   local luaFolder = default and "default_behaviours/" or "behaviours/"
   if file.Exists("drgbase/"..luaFolder..name..".lua", "LUA") then
     if not branch then
-      DrGBase.Print("Generating behaviour tree '"..name.."'.")
+      DrGBase.Print("Creating behaviour tree '"..name.."'.")
     end
     BT = {}
+    BT.Name = name
     BT.Tree = {}
     BT.Args = args
-    include(luaFolder..name..".lua")
+    DrGBase.IncludeFile(luaFolder..name..".lua")
     local tree = FUNCTIONS.CreateNode(BT.Tree)
     BT = nil
     if not branch then
-      if tree then DrGBase.Print("Behaviour tree '"..name.."' successfully generated.")
+      if tree then DrGBase.Print("Behaviour tree '"..name.."' created.")
       else DrGBase.Error("Error while creating behaviour tree '"..name.."'.") end
     end
     return tree
