@@ -50,7 +50,7 @@ if SERVER then
 
   function ENT:OnInjured() end
   function ENT:OnKilled()
-    Error("OnKilled has been called. This should never happen!\n")
+    DrGBase.Error("OnKilled has been called. This should never happen!\n")
   end
 
   hook.Add("EntityTakeDamage", "DrGBaseHandleNextbotDamage", function(self, dmg)
