@@ -7,8 +7,10 @@ if SERVER then
     self:SpotEntity(dmg:GetAttacker())
   end
   function ENT:AfterTakeDamage() end
+
+  function ENT:OnFatalDamage() end
   function ENT:OnDeath() end
-  function ENT:DoOnDeath() end
+  function ENT:OnDowned() end
 
   function ENT:OnDamagedByAlly() end
   function ENT:OnDamagedByEnemy() end
@@ -78,37 +80,38 @@ if SERVER then
     if res ~= true then
       if isnumber(res) then dmg:ScaleDamage(res) end
       local data = util.DrG_SaveDmg(dmg)
-      self:CallInCoroutine(function(self, delay)
-        dmg = util.DrG_LoadDmg(data)
-        self:AfterTakeDamage(dmg, delay)
-      end)
-    else return true end
-    if self:IsDown() or self:IsDead() then return true end
-    if dmg:GetDamage() >= self:Health() then
-      self:SetHealth(0)
-      if #self.OnDeathSounds > 0 then
-        self:EmitSound(self.OnDeathSounds[math.random(#self.OnDeathSounds)])
-      end
-      local now = CurTime()
-      local data = util.DrG_SaveDmg(dmg)
-      if not self:OnDeath(dmg) then
-        self:SetNW2Bool("DrGBaseDying", true)
-        self._DrGBaseDoOnDeath = function()
-          self:SetNW2Bool("DrGBaseDying", false)
-          self:SetNW2Bool("DrGBaseDead", true)
-          dmg = self:DoOnDeath(util.DrG_LoadDmg(data), CurTime()-now)
-          if dmg == nil then dmg = util.DrG_LoadDmg(data) end
-          NextbotDeath(self, dmg)
+      if self:IsDown() or self:IsDead() then return true end
+      if dmg:GetDamage() >= self:Health() then
+        self:SetHealth(0)
+        if #self.OnDeathSounds > 0 then
+          self:EmitSound(self.OnDeathSounds[math.random(#self.OnDeathSounds)])
         end
+        local now = CurTime()
+        if not self:OnFatalDamage(dmg) then
+          self:SetNW2Bool("DrGBaseDying", true)
+          self._DrGBaseDoOnDeath = function()
+            self:SetNW2Bool("DrGBaseDying", false)
+            self:SetNW2Bool("DrGBaseDead", true)
+            dmg = self:OnDeath(util.DrG_LoadDmg(data), CurTime()-now)
+            if dmg == nil then dmg = util.DrG_LoadDmg(data) end
+            NextbotDeath(self, dmg)
+          end
+        else
+          self:SetNW2Bool("DrGBaseDown", true)
+          self:CallInCoroutine(function(self, delay)
+            self:OnDowned(util.DrG_LoadDmg(data), delay)
+            if self:Health() <= 0 then self:SetHealth(1) end
+            self:SetNW2Bool("DrGBaseDown", false)
+          end)
+        end
+        return true
       else
-        self:SetNW2Bool("DrGBaseDown", true)
         self:CallInCoroutine(function(self, delay)
-          self:DoOnDeath(util.DrG_LoadDmg(data), delay)
-          self:SetNW2Bool("DrGBaseDown", false)
+          dmg = util.DrG_LoadDmg(data)
+          self:AfterTakeDamage(dmg, delay)
         end)
       end
-      return true
-    end
+    else return true end
   end)
 
   function ENT:OnContact(ent)

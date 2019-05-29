@@ -103,13 +103,12 @@ if SERVER then
   end
 
   function ENT:OnDeath(dmg)
-    return dmg:GetDamageForce():Length() < 10000
-  end
-  function ENT:DoOnDeath(dmg)
-    local deaths = {
-      "death_01", "death_02", "death_03", "death_04"
-    }
-    self:PlaySequenceAndWait(deaths[math.random(#deaths)])
+    if dmg:GetDamageForce():Length() < 10000 then
+      local deaths = {
+        "death_01", "death_02", "death_03", "death_04"
+      }
+      self:PlaySequenceAndWait(deaths[math.random(#deaths)])
+    end
   end
 
 end
