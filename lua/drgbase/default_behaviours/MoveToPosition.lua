@@ -1,5 +1,5 @@
 
-local movingHook = BT_ARGS.hook
+local movingHook = BT.Args["hook"]
 
 function BT.ValidPosition()
   return function(self, data)

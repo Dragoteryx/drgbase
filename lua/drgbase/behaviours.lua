@@ -1,3 +1,4 @@
+if CLIENT then return end
 
 -- LOAD NODES --
 BT_NODES = {}
@@ -26,14 +27,15 @@ BT_NODES = nil
 -- BEHAVIOUR REGISTRY --
 
 local DEFAULTS = {
-  ["MoveToPosition"] = true,
-  ["Patrol"] = true,
-  ["BaseAI"] = true,
-  ["ChaseEnemy"] = true
+  ["movetoposition"] = true,
+  ["patrol"] = true,
+  ["baseai"] = true,
+  ["chaseenemy"] = true
 }
 local BEHAVIOURS = {}
 local CUSTOM_BEHAVIOURS = {}
 function DrGBase.GetBehaviourTree(name)
+  name = string.lower(name)
   if BEHAVIOURS[name] then return BEHAVIOURS[name]
   else return CUSTOM_BEHAVIOURS[name] end
 end
@@ -53,20 +55,39 @@ local DECORATORS = {
 
 local FUNCTIONS = {}
 function FUNCTIONS.CreateBehaviourTree(name, args)
+  name = string.lower(name)
   if not istable(args) then args = {} end
   local default = tobool(DEFAULTS[name])
   local luaFolder = default and "default_behaviours/" or "behaviours/"
-  if not file.Exists("drgbase/"..luaFolder..name..".json", "LUA") then return end
-  BT = {}
-  BT_ARGS = args
-  if file.Exists("drgbase/"..luaFolder..name..".lua", "LUA") then
-    DrGBase.IncludeFile(luaFolder..name..".lua")
+  if file.Exists("drgbase/"..luaFolder..name..".json", "LUA") then
+    BT = {}
+    BT.Args = args
+    if file.Exists("drgbase/"..luaFolder..name..".lua", "LUA") then
+      include(luaFolder..name..".lua")
+    end
+    local json = file.Read("drgbase/"..luaFolder..name..".json", "LUA")
+    local tree = FUNCTIONS.CreateNode(util.JSONToTable(json), BT)
+    BT = nil
+    return tree
+  elseif file.Exists("drgbase/"..luaFolder..name..".txt", "LUA") then
+    BT = {}
+    BT.Args = args
+    if file.Exists("drgbase/"..luaFolder..name..".lua", "LUA") then
+      include(luaFolder..name..".lua")
+    end
+    local json = file.Read("drgbase/"..luaFolder..name..".txt", "LUA")
+    local tree = FUNCTIONS.CreateNode(util.JSONToTable(json), BT)
+    BT = nil
+    return tree
+  elseif file.Exists("drgbase/"..luaFolder..name..".lua", "LUA") then
+    BT = {}
+    BT.Tree = {}
+    BT.Args = args
+    include(luaFolder..name..".lua")
+    local tree = FUNCTIONS.CreateNode(BT.Tree, BT)
+    BT = nil
+    return tree
   end
-  BT_ARGS = nil
-  local json = util.JSONToTable(file.Read("drgbase/"..luaFolder..name..".json", "LUA"))
-  local tree = FUNCTIONS.CreateNode(json, BT)
-  BT = nil
-  return tree
 end
 function FUNCTIONS.CreateNode(tbl, bt)
   if not isstring(tbl.type) then return end
@@ -127,14 +148,35 @@ function FUNCTIONS.CreateNode(tbl, bt)
 end
 
 function DrGBase.RefreshBehaviourTree(name)
+  name = string.lower(name)
   local tree = FUNCTIONS.CreateBehaviourTree(name)
   if DEFAULTS[name] then BEHAVIOURS[name] = tree
   else CUSTOM_BEHAVIOURS[name] = tree end
+  return tree
 end
+
+-- Default behaviours
 for name, default in pairs(DEFAULTS) do
   DrGBase.RefreshBehaviourTree(name)
 end
+
+-- Custom behaviours
+local generated = {}
 for i, name in ipairs(file.Find("drgbase/behaviours/*.json", "LUA")) do
   name = string.Replace(name, ".json", "")
-  DrGBase.RefreshBehaviourTree(name)
+  if generated[name] then return end
+  local tree = DrGBase.RefreshBehaviourTree(name)
+  if IsValid(tree) then generated[name] = true end
+end
+for i, name in ipairs(file.Find("drgbase/behaviours/*.txt", "LUA")) do
+  name = string.Replace(name, ".txt", "")
+  if generated[name] then return end
+  local tree = DrGBase.RefreshBehaviourTree(name)
+  if IsValid(tree) then generated[name] = true end
+end
+for i, name in ipairs(file.Find("drgbase/behaviours/*.lua", "LUA")) do
+  name = string.Replace(name, ".txt", "")
+  if generated[name] then return end
+  local tree = DrGBase.RefreshBehaviourTree(name)
+  if IsValid(tree) then generated[name] = true end
 end
