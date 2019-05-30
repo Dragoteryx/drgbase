@@ -21,7 +21,7 @@ function DrGBase.Error(msg)
   DrGBase.Print(msg, true)
 end
 
-local str = "../drgbase/"
+--[[local str = "../drgbase/"
 DrGBase.IncludeFiles({
   str.."behaviours.lua",
   str.."colors.lua",
@@ -36,7 +36,7 @@ DrGBase.IncludeFiles({
   str.."resources.lua",
   str.."spawnmenu.lua",
   str.."weapons.lua"
-})
+})]]
 
 if SERVER then
 
