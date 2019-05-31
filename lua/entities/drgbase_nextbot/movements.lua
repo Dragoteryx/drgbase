@@ -245,14 +245,7 @@ if SERVER then
     if isentity(pos) then pos = pos:GetPos() end
     options = options or {}
     options.tolerance = options.tolerance or 20
-    if not navmesh.IsLoaded() then
-      if not self:ObstacleAvoidance(true) then
-        self:MoveTowards(pos)
-        if self:GetHullRangeSquaredTo(pos) < options.tolerance^2 then
-          return "reached"
-        else return "moving" end
-      else return "obstacle" end
-    else
+    if navmesh.IsLoaded() then
       pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
       options.lookahead = options.lookahead or 300
       local path = self:GetPath()
@@ -302,6 +295,13 @@ if SERVER then
       elseif not self:ObstacleAvoidance(true) then
         path:Update(self)
         if not IsValid(path) then return "reached"
+        else return "moving" end
+      else return "obstacle" end  
+    else
+      if not self:ObstacleAvoidance(true) then
+        self:MoveTowards(pos)
+        if self:GetHullRangeSquaredTo(pos) < options.tolerance^2 then
+          return "reached"
         else return "moving" end
       else return "obstacle" end
     end

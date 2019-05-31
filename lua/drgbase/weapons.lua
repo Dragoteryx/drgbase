@@ -12,12 +12,11 @@ function DrGBase.AddWeapon(SWEP)
     }
     killicon.Add(class, SWEP.Killicon.icon, SWEP.Killicon.color)
   else resource.AddFile("materials/weapons/"..class..".png") end
-  local weapon = {
-    PrintName = ENT.Name,
+  list.Set("DrGBaseWeapons", class, {
+    PrintName = SWEP.Name,
     Class = class,
-    Category = ENT.Category
-  }
-  list.Set("DrGBaseWeapons", class, SWEP)
+    Category = SWEP.Category
+  })
   DrGBase.Print("Weapon '"..class.."': loaded.")
 end
 

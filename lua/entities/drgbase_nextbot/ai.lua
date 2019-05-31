@@ -16,6 +16,17 @@ function ENT:HaveEnemy()
   return self:HasEnemy()
 end
 
+function ENT:GetNemesis()
+  if self:HasNemesis() then return self:GetEnemy()
+  else return NULL end
+end
+function ENT:HasNemesis()
+  return self:GetNW2Bool("DrGBaseNemesis") and self:HasEnemy()
+end
+function ENT:HaveNemesis()
+  return self:HasNemesis()
+end
+
 function ENT:IsPatrolling()
   return self:GetNW2Bool("DrGBasePatrol")
 end
@@ -70,6 +81,11 @@ if SERVER then
 
   function ENT:SetEnemy(enemy)
     self:SetNW2Entity("DrGBaseEnemy", enemy)
+    self:SetNW2Bool("DrGBaseNemesis", false)
+  end
+  function ENT:SetNemesis(nemesis)
+    self:SetEnemy(nemesis)
+    self:SetNW2Bool("DrGBaseNemesis", true)
   end
 
   function ENT:AddPatrolPos(pos, i)
@@ -103,6 +119,7 @@ if SERVER then
   -- Functions --
 
   function ENT:RefreshEnemy()
+    if self:HasNemesis() then return self:GetNemesis() end
     local enemy = self:GetClosestEnemy(true)
     self:SetEnemy(enemy)
     return enemy

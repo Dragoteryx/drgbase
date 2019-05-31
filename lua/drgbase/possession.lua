@@ -9,7 +9,7 @@ properties.Add("drgbasepossess", {
     return ent.IsDrGNextbot and
 		PossessionEnabled:GetBool() and
 		ent.PossessionPrompt and
-		ent:IsPossessionEnabled()		
+		ent:IsPossessionEnabled()
 	end,
 	Action = function(self, ent)
     self:MsgStart()
@@ -71,4 +71,4 @@ else
 
 end
 
-DrGBase.IncludeFile("possession_drive.lua")
+DrGBase.IncludeFolder("drgbase/possession")

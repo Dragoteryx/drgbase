@@ -1,4 +1,3 @@
-if CLIENT then return end
 
 -- LOAD NODES --
 BT_NODES = {}
@@ -59,8 +58,7 @@ function FUNCTIONS.CreateBehaviourTree(name, args, branch)
   if not istable(args) then args = {} end
   local default = tobool(DEFAULTS[name])
   local luaFolder = default and "default_behaviours/" or "behaviours/"
-  --if file.Exists("drgbase/"..luaFolder..name..".lua", "LUA") then
-  if file.Exists("autorun/server/"..luaFolder..name..".lua", "LUA") then
+  if file.Exists("drgbase/"..luaFolder..name..".lua", "LUA") then
     if not branch then
       DrGBase.Print("Creating behaviour tree '"..name.."'.")
     end
@@ -128,9 +126,7 @@ end
 for name, default in pairs(DEFAULTS) do
   DrGBase.RefreshBehaviourTree(name)
 end
---[[for i, name in ipairs(file.Find("drgbase/behaviours/*.lua", "LUA")) do
+for i, name in ipairs(file.Find("drgbase/behaviours/*.lua", "LUA")) do
   name = string.Replace(name, ".lua", "")
   DrGBase.RefreshBehaviourTree(name)
-end]]
-
---PrintTable(DrGBase.GetBehaviourTree("BaseAI"))
+end
