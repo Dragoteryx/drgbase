@@ -7,70 +7,73 @@ function ENT:SelectRandomSequence(anim)
   return self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
 end
 
-function ENT:DefineSequenceCallback(seq, cycles, callback)
+function ENT:SequenceEvent(seq, cycles, callback)
   if istable(seq) then
     for i, se in ipairs(seq) do
-      self:DefineSequenceCallback(se, cycles, callback)
+      self:SequenceEvent(se, cycles, callback)
     end
   else
-    if isstring(seq) then seq = self:LookupSequence(seq) end
-    if not isnumber(seq) then return end
+    if isstring(seq) then seq = self:LookupSequence(seq)
+    elseif not isnumber(seq) then return end
+    if seq == -1 then return end
+    self._DrGBaseSequenceEvents[seq] = self._DrGBaseSequenceEvents[seq] or {}
+    local event = self._DrGBaseSequenceEvents[seq]
     if isnumber(cycles) then cycles = {cycles} end
-    if not istable(cycles) then return end
-    self._DrGBaseSequenceCallbacks[seq] = {
-      cycles = cycles, callback = callback
-    }
-  end
-end
-function ENT:RemoveSequenceCallback(seq)
-  if istable(seq) then
-    for i, se in ipairs(seq) do
-      self:DefineSequenceCallback(se, cycles, callback)
+    for i, cycle in ipairs(cycles) do
+      event[cycle] = event[cycle] or {}
+      table.insert(event[cycle], callback)
     end
-  else
-    if isstring(seq) then seq = self:LookupSequence(seq) end
-    self._DrGBaseSequenceCallbacks[seq] = nil
   end
 end
 
 -- Hooks --
+
+function ENT:OnSequenceEvent() end
 
 -- Handlers --
 
 function ENT:_InitAnimations()
   if SERVER then
     self._DrGBaseUpdateAnimation = true
-    self._DrGBaseAnimSeed = math.random(0, 255)
     self._DrGBaseCurrentGestures = {}
+    self._DrGBaseAnimAttacks = {}
     self:LoopTimer(0.1, function(self)
-      if not self:IsUpdatingAnimation() then return true end
-      local seq, rate = self:UpdateAnimation()
-      if isnumber(seq) then
-        seq = self:SelectWeightedSequenceSeeded(seq, self._DrGBaseAnimSeed)
-      elseif isstring(seq) then seq = self:LookupSequence(seq) end
-      if isnumber(seq) and seq ~= -1 then
-        local current = self:GetSequence()
-        if seq ~= current or self:GetCycle() == 1 then
+      if not self:IsUpdatingAnimation() then return end
+      local anim, rate = self:UpdateAnimation()
+      local current = self:GetSequence()
+      local validAnim = false
+      if isnumber(anim) then
+        local seq = self:SelectRandomSequence(anim)
+        validAnim = seq ~= -1
+        if validAnim and (self:GetCycle() == 1 or anim ~= self:GetSequenceActivity(current)) then
           self:ResetSequence(seq)
-          self._DrGBaseAnimSeed = math.random(0, 255)
+        end
+      elseif isstring(anim) then
+        local seq = self:LookupSequence(anim)
+        validAnim = seq ~= -1
+        if validAnim and (self:GetCycle() == 1 or seq ~= current) then
+          self:ResetSequence(seq)
         end
       end
-      if not self.AnimMatchSpeed and not self._DrGBasePlayingAnimation then
+      if validAnim and not self.AnimMatchSpeed and not self._DrGBasePlayingAnimation then
         self:SetPlaybackRate(rate or 1)
       end
     end)
   end
   self._DrGBaseLastAnimCycle = 0
-  self._DrGBaseSequenceCallbacks = {}
+  self._DrGBaseSequenceEvents = {}
 end
 
 function ENT:_HandleAnimations()
   local current = self:GetSequence()
-  local action = self._DrGBaseSequenceCallbacks[current]
-  if action ~= nil then
-    for i, cycle in ipairs(action.cycles) do
-      if self._DrGBaseLastAnimCycle < cycle and self:GetCycle() >= cycle then
-        action.callback(self, cycle, self:GetCycle())
+  local event = self._DrGBaseSequenceEvents[current]
+  if event ~= nil then
+    for cycle, callbacks in pairs(event) do
+      local trCycle = cycle
+      if trCycle == 0 then trCycle = 0.0000001 end
+      if self._DrGBaseLastAnimCycle < trCycle and self:GetCycle() >= trCycle then
+        if self:OnSequenceEvent(self:GetSequenceName(current), cycle, false) then break end
+        for i, callback in ipairs(callbacks) do callback(self, cycle, false) end
         break
       end
     end
@@ -84,6 +87,15 @@ if SERVER then
 
   function ENT:IsPlayingAnimation()
     return self._DrGBasePlayingAnimation or false
+  end
+
+  function ENT:IsPlayingSequence(seq)
+    if isstring(seq) then seq = self:LookupSequence(seq)
+    elseif not isnumber(seq) then return false end
+    if seq == -1 then return false end
+    if self._DrGBasePlayingAnimation == seq then return true end
+    if self._DrGBaseCurrentGestures[seq] then return true end
+    return false
   end
 
   function ENT:IsUpdatingAnimation()
@@ -110,17 +122,17 @@ if SERVER then
     self:SetCycle(0)
     self:SetPlaybackRate(rate)
     local delay = CurTime() + len/rate
-    self._DrGBasePlayingAnimation = true
+    self._DrGBasePlayingAnimation = seq
     while CurTime() < delay and not self:IsDying() do
       local cycle = self:GetCycle()
       if callback(cycle) then break end
       self:YieldCoroutine(false)
     end
-    self._DrGBasePlayingAnimation = false
+    self._DrGBasePlayingAnimation = nil
     self:SetUpdateAnimation(upd)
     return len/rate
   end
-  function ENT:PlayAnimationAndWait(anim, rate, callback)
+  function ENT:PlayActivityAndWait(anim, rate, callback)
     if isnumber(anim) then anim = self:SelectRandomSequence(anim) end
     return self:PlaySequenceAndWait(anim, rate, callback)
   end
@@ -136,7 +148,7 @@ if SERVER then
       if success then
         vec:Rotate(self:GetAngles() + angles)
         if not self:TraceHull(vec, true).Hit then
-          self:SetPos(self:GetPos() + vec)
+          self:SetPos(self:GetPos() + vec*self:GetModelScale())
           self:SetAngles(self:LocalToWorldAngles(angles))
         end
       end
@@ -144,7 +156,7 @@ if SERVER then
       return callback(cycle)
     end)
   end
-  function ENT:PlayAnimationAndMove(anim, rate, callback)
+  function ENT:PlayActivityAndMove(anim, rate, callback)
     if isnumber(anim) then anim = self:SelectRandomSequence(anim) end
     return self:PlaySequenceAndMove(anim, rate, callback)
   end
@@ -160,7 +172,7 @@ if SERVER then
       local success, vec, angles = self:GetSequenceMovement(seq, 0, cycle)
       if success then
         vec:Rotate(self:GetAngles() + angles)
-        lastpos = startpos + vec
+        lastpos = startpos + vec*self:GetModelScale()
         self:SetPos(lastpos)
         self:SetAngles(self:LocalToWorldAngles(angles))
       else self:SetPos(lastpos) end
@@ -170,7 +182,7 @@ if SERVER then
     self:SetVelocity(Vector(0, 0, 0))
     return res
   end
-  function ENT:PlayAnimationAndMoveAbsolute(anim, rate, callback)
+  function ENT:PlayActivityAndMoveAbsolute(anim, rate, callback)
     if isnumber(anim) then anim = self:SelectRandomSequence(anim) end
     return self:PlaySequenceAndMoveAbsolute(anim, rate, callback)
   end
@@ -181,24 +193,38 @@ if SERVER then
     if seq == -1 then return end
     if callback == nil then callback = function() end end
     rate = rate or 1
-    if self._DrGBaseCurrentGestures[seq] ~= nil and CurTime() <= self._DrGBaseCurrentGestures[seq] then return end
+    if self._DrGBaseCurrentGestures[seq] then return end
+    self._DrGBaseCurrentGestures[seq] = true
     local duration = self:SequenceDuration(seq)/rate
-    self._DrGBaseCurrentGestures[seq] = CurTime() + duration
     local layerID = self:AddGestureSequence(seq)
     self:SetLayerPlaybackRate(layerID, rate)
     coroutine.DrG_Create(function()
       local first = true
+      local lastCycle = 0
       while IsValid(self) do
         local cycle = self:GetLayerCycle(layerID)
-        if not first and cycle == 0 then break end
-        first = false
+        if lastCycle > 0 and cycle == 0 then break end
+        local event = self._DrGBaseSequenceEvents[seq]
+        if event ~= nil then
+          for eventCycle, callbacks in pairs(event) do
+            local trCycle = eventCycle
+            if trCycle == 0 then trCycle = 0.0000001 end
+            if lastCycle < trCycle and cycle >= trCycle then
+              if self:OnSequenceEvent(self:GetSequenceName(seq), eventCycle, true) then break end
+              for i, callback in ipairs(callbacks) do callback(self, eventCycle, true) end
+              break
+            end
+          end
+        end
+        lastCycle = cycle
         callback(cycle, layerID)
         coroutine.yield()
       end
+      self._DrGBaseCurrentGestures[seq] = false
     end)
     return duration
   end
-  function ENT:PlayAnimation(anim, rate, callback)
+  function ENT:PlayActivity(anim, rate, callback)
     if isnumber(anim) then anim = self:SelectRandomSequence(anim) end
     return self:PlaySequence(anim, rate, callback)
   end

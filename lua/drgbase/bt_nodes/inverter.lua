@@ -9,12 +9,14 @@ function Inverter:New()
   return inverter
 end
 
-function Inverter:Decorate(child, nextbot, data, id)
-  return not child:Run(nextbot, data, id)
+function Inverter:Decorate(child, tree, nextbot, ...)
+  local res = child:Run(tree, nextbot, ...)
+  if res == "success" then return "failure"
+  elseif res == "failure" then return "success"
+  else return res end
 end
-
 function Inverter:__tostring()
-  return "Inverter"
+  return self:GetType()
 end
 
 BT_NODES["Inverter"] = Inverter

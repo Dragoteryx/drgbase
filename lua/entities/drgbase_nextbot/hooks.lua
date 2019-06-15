@@ -4,12 +4,14 @@ if SERVER then
   -- Hooks --
 
   function ENT:OnTakeDamage(dmg)
-    self:SpotEntity(dmg:GetAttacker())
+    local attacker = dmg:GetAttacker()
+    if not IsValid(attacker) then return end
+    self:SpotEntity(ent)
   end
   function ENT:AfterTakeDamage() end
 
   function ENT:OnFatalDamage() end
-  function ENT:OnDeath() end
+  --function ENT:OnDeath() end
   function ENT:OnDowned() end
 
   function ENT:OnDamagedByAlly() end
@@ -59,25 +61,39 @@ if SERVER then
       if type == DMG_DIRECT then continue end
       if dmg:IsDamageType(type) then dmg:ScaleDamage(mult) end
     end
-    if dmg:GetDamage() <= 0 then return true end
-    if #self.OnDamageSounds > 0 then
-      self:EmitSlotSound("DrGBaseOnDamage", self.DamageSoundDelay, self.OnDamageSounds[math.random(#self.OnDamageSounds)])
-    end
     local res = self:OnTakeDamage(dmg)
     local attacker = dmg:GetAttacker()
-    if self:IsAlly(attacker) then
-      if not self:OnDamagedByAlly(attacker, dmg) then
-        local crea = attacker:GetCreationID()
-        self._DrGBaseAllyDamageTolerance[crea] = self._DrGBaseAllyDamageTolerance[crea] or 0
-        self._DrGBaseAllyDamageTolerance[crea] = self._DrGBaseAllyDamageTolerance[crea] + self.AllyDamageTolerance
-        self:AddEntityRelationship(attacker, D_HT, self._DrGBaseAllyDamageTolerance[crea])
+    if IsValid(attacker) then
+      if self:IsAlly(attacker) then
+        if not self:OnDamagedByAlly(attacker, dmg) then
+          local crea = attacker:GetCreationID()
+          self._DrGBaseAllyDamageTolerance[crea] = self._DrGBaseAllyDamageTolerance[crea] or 0
+          self._DrGBaseAllyDamageTolerance[crea] = self._DrGBaseAllyDamageTolerance[crea] + self.AllyDamageTolerance
+          self:AddEntityRelationship(attacker, D_HT, self._DrGBaseAllyDamageTolerance[crea])
+        end
+      elseif self:IsEnemy(attacker) then
+        self:OnDamagedByEnemy(attacker, dmg)
+      elseif self:IsAfraidOf(attacker) then
+        if not self:OnDamagedByAfraidOf(attacker, dmg) then
+          local crea = attacker:GetCreationID()
+          self._DrGBaseAfraidOfDamageTolerance[crea] = self._DrGBaseAfraidOfDamageTolerance[crea] or 0
+          self._DrGBaseAfraidOfDamageTolerance[crea] = self._DrGBaseAfraidOfDamageTolerance[crea] + self.AfraidOfDamageTolerance
+          self:AddEntityRelationship(attacker, D_HT, self._DrGBaseAfraidOfDamageTolerance[crea])
+        end
+        self:OnDamagedByAfraidOf(attacker, dmg)
+      elseif self:IsNeutral(attacker) then
+        if not self:OnDamagedByNeutral(attacker, dmg) then
+          local crea = attacker:GetCreationID()
+          self._DrGBaseNeutralDamageTolerance[crea] = self._DrGBaseNeutralDamageTolerance[crea] or 0
+          self._DrGBaseNeutralDamageTolerance[crea] = self._DrGBaseNeutralDamageTolerance[crea] + self.NeutralDamageTolerance
+          self:AddEntityRelationship(attacker, D_HT, self._DrGBaseNeutralDamageTolerance[crea])
+        end
       end
-    elseif self:IsEnemy(attacker) then
-      self:OnDamagedByEnemy(attacker, dmg)
-    elseif self:IsAfraidOf(attacker) then
-      self:OnDamagedByAfraidOf(attacker, dmg)
-    else self:OnDamagedByNeutral(attacker, dmg) end
+    end
     if res ~= true then
+      if #self.OnDamageSounds > 0 then
+        self:EmitSlotSound("DrGBaseOnDamage", self.DamageSoundDelay, self.OnDamageSounds[math.random(#self.OnDamageSounds)])
+      end
       if isnumber(res) then dmg:ScaleDamage(res) end
       local data = util.DrG_SaveDmg(dmg)
       if self:IsDown() or self:IsDead() then return true end
@@ -88,12 +104,17 @@ if SERVER then
         end
         local now = CurTime()
         if not self:OnFatalDamage(dmg) then
-          self:SetNW2Bool("DrGBaseDying", true)
-          self._DrGBaseOnDeath = function()
-            self:SetNW2Bool("DrGBaseDying", false)
+          if isfunction(self.OnDeath) then
+            self:SetNW2Bool("DrGBaseDying", true)
+            self._DrGBaseOnDeath = function()
+              self:SetNW2Bool("DrGBaseDying", false)
+              self:SetNW2Bool("DrGBaseDead", true)
+              dmg = self:OnDeath(util.DrG_LoadDmg(data), CurTime()-now)
+              if dmg == nil then dmg = util.DrG_LoadDmg(data) end
+              NextbotDeath(self, dmg)
+            end
+          else
             self:SetNW2Bool("DrGBaseDead", true)
-            dmg = self:OnDeath(util.DrG_LoadDmg(data), CurTime()-now)
-            if dmg == nil then dmg = util.DrG_LoadDmg(data) end
             NextbotDeath(self, dmg)
           end
         else

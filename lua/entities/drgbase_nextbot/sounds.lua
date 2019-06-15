@@ -2,6 +2,7 @@
 -- Helpers --
 
 function ENT:EmitFootstep(soundLevel, pitchPercent, volume, channel)
+  if not self:OnGround() then return end
   local tr = util.TraceLine({
     start = self:GetPos(),
     endpos = self:GetPos() - self:GetUp()*999,
@@ -11,7 +12,6 @@ function ENT:EmitFootstep(soundLevel, pitchPercent, volume, channel)
   if not istable(sounds) or #sounds == 0 then sounds = self.Footsteps[MAT_DEFAULT] end
   if not istable(sounds) or #sounds == 0 then return false end
   self:EmitSound(sounds[math.random(#sounds)], soundLevel, pitchPercent, volume, channel or CHAN_BODY)
-  return true
 end
 
 function ENT:LoopSound(sound)

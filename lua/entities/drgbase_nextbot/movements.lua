@@ -95,7 +95,7 @@ if SERVER then
   -- Functions --
 
   function ENT:Approach(pos, nb)
-    if isentity(pos) then pos = pos:GetPos() end
+    if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
     if self:OnMove(pos) == false then return end
     --[[local tr = self:TraceLine((pos - self:GetPos())*999999)
     if IsValid(tr.Entity) and tr.Entity:DrG_IsDoor() then
@@ -104,27 +104,41 @@ if SERVER then
     self.loco:Approach(pos, nb or 1)
   end
   function ENT:FaceTowards(pos)
-    if isentity(pos) then pos = pos:GetPos() end
+    if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
+    if self:OnMove(pos) == false then return end
     self.loco:FaceTowards(pos)
   end
   function ENT:FaceInstant(pos)
-    if isentity(pos) then pos = pos:GetPos() end
+    if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
     local angle = (pos - self:GetPos()):Angle()
     self:SetAngles(Angle(0, angle.y, 0))
   end
+  function ENT:FaceTo(toface)
+    while true do
+      local pos = toface
+      if isentity(pos) then
+        if not IsValid(pos) then return end
+        pos = pos:NearestPoint(self:GetPos())
+      end
+      local angle = (pos - self:GetPos()):Angle()
+      if math.NormalizeAngle(math.Round(self:GetAngles().y)) == math.NormalizeAngle(math.Round(angle.y)) then return end
+      self:FaceTowards(pos)
+      self:YieldCoroutine(true)
+    end
+  end
 
   function ENT:MoveTowards(pos)
-    if isentity(pos) then pos = pos:GetPos() end
+    if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
     self:FaceTowards(pos)
     self:Approach(pos)
   end
   function ENT:MoveForwardTo(pos)
-    if isentity(pos) then pos = pos:GetPos() end
+    if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
     self:FaceTowards(pos)
     self:MoveForward()
   end
   function ENT:MoveAwayFrom(pos, face)
-    if isentity(pos) then pos = pos:GetPos() end
+    if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
     local away = self:GetPos()*2 - pos
     if face then
       self:FaceTowards(pos)
@@ -238,11 +252,11 @@ if SERVER then
   -- Complex --
 
   function ENT:MoveCloserTo(pos, options)
+    if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
     if self.loco:IsStuck() then
-      self:HandleStuck()
+      self:HandleStuck(pos)
       return "stuck"
     end
-    if isentity(pos) then pos = pos:GetPos() end
     options = options or {}
     options.tolerance = options.tolerance or 20
     if navmesh.IsLoaded() then
@@ -296,7 +310,7 @@ if SERVER then
         path:Update(self)
         if not IsValid(path) then return "reached"
         else return "moving" end
-      else return "obstacle" end  
+      else return "obstacle" end
     else
       if not self:ObstacleAvoidance(true) then
         self:MoveTowards(pos)
@@ -308,8 +322,9 @@ if SERVER then
   end
 
   function ENT:_GoTo(pos, options, callback)
-    if not isfunction(callback) then callback = function() end end
+    options = options or {}
     options.maxage = options.maxage or math.huge
+    if not isfunction(callback) then callback = function() end end
     local stop = CurTime() + options.maxage
     while true do
       if not isvector(pos) and not IsValid(pos) then

@@ -29,6 +29,13 @@ end
 local old_EyeAngles = entMETA.EyeAngles
 function entMETA:EyeAngles()
   if self.IsDrGNextbot then
+    --[[if isstring(self.EyeBone) then
+      local boneid = self:LookupBone(self.EyeBone)
+      if boneid ~= nil then
+        local pos, angles = self:GetBonePosition(boneid)
+        return self:GetAngles() + angles + self.EyeAngle
+      end
+    end]]
     return self:GetAngles() + self.EyeAngle
   else return old_EyeAngles(self) end
 end
@@ -124,7 +131,7 @@ if SERVER then
           ragdoll:SetMaterial(material)
         end
         if IsValid(ragdoll) then
-          if not self:OnRagdoll(ragdoll) and RagdollRemove:GetFloat() > 0 then
+          if not self.OnRagdoll(ragdoll) and RagdollRemove:GetFloat() > 0 then
             timer.Simple(RagdollRemove:GetFloat(), function()
               if IsValid(ragdoll) then ragdoll:Remove() end
             end)
@@ -151,6 +158,20 @@ else
     if self.IsDrGNextbot then
       return self:GetNW2Int("DrGBaseMaxHealth", old_GetMaxHealth(self))
     else return old_GetMaxHealth(self) end
+  end
+
+  local old_OnGround = entMETA.OnGround
+  function entMETA:OnGround()
+    if self.IsDrGNextbot then
+      return self:GetNW2Bool("DrGBaseOnGround")
+    else return old_OnGround(self) end
+  end
+
+  local old_IsOnGround = entMETA.IsOnGround
+  function entMETA:IsOnGround()
+    if self.IsDrGNextbot then
+      return self:OnGround()
+    else return old_IsOnGround(self) end
   end
 
 end

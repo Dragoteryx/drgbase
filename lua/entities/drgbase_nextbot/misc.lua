@@ -24,6 +24,11 @@ function ENT:PrintAttachments()
     print(attach.id.." => "..attach.name)
   end
 end
+function ENT:PrintBodygroups()
+  for i, group in ipairs(self:GetBodyGroups()) do
+    print(group.id.." => "..group.name.." ("..group.num.." subgroups)")
+  end
+end
 
 -- Getters/setters --
 
@@ -92,6 +97,7 @@ function ENT:ScreenShake(amplitude, frequency, duration, radius)
   if CLIENT then return res end
   for i, ent in ipairs(DrGBase.GetNextbots()) do
     if ent == self then continue end
+    if self:IsAIDisabled() then continue end
     if self:GetRangeSquaredTo(ent) > radius^2 then continue end
     ent:OnShake(self, amplitude, frequency, duration, radius)
   end
@@ -136,7 +142,7 @@ function ENT:TraceLine(vec)
   local data = {}
   local center = self:OBBCenter()
   data.start = self:GetPos() + center
-  data.endpos = self:GetPos() + center + vec
+  data.endpos = data.start + vec
   data.mask = self:GetSolidMask()
   data.collisiongroup = self:GetCollisionGroup()
   data.filter = {self, self:GetWeapon()}
@@ -162,6 +168,11 @@ function ENT:TraceHull(vec, steps)
   return util.TraceHull(data)
 end
 
+function ENT:CalcFlinchProbability(dmg)
+  local perc = math.Clamp(dmg:GetDamage()/self:Health()*100, 0, 100)
+  return math.random(100) < perc
+end
+
 -- Hooks --
 
 function ENT:OnExtinguish() end
@@ -169,6 +180,7 @@ function ENT:OnWaterLevelChange() end
 function ENT:OnHealthChange() end
 function ENT:OnMaxHealthChange() end
 function ENT:OnLandInWater() end
+function ENT:OnAngleChange() end
 
 -- Handlers --
 
@@ -176,12 +188,18 @@ function ENT:_InitMisc()
   self._DrGBaseLoopingSounds = {}
   self._DrGBaseSlotSounds = {}
   self._DrGBaseEmitSounds = {}
-  self._DrGBaseOnGround = self:IsOnGround()
   self._DrGBaseOnFire = self:IsOnFire()
   self._DrGBaseWaterLevel = self:WaterLevel()
   self._DrGBaseHealth = self:Health()
   self._DrGBaseMaxHealth = self:GetMaxHealth()
+  self:AddCallback("OnAngleChange", function(self, angles)
+    if self:OnAngleChange(angles) then return end
+    if CLIENT then return end
+    if self:HasPhysics() then return end
+    self:SetAngles(Angle(0, angles.y, 0))
+  end)
   if CLIENT then return end
+  self:SetNW2Bool("DrGBaseOnGround", self:IsOnGround())
   self:SetHealthRegen(self.HealthRegen)
   self:LoopTimer(1, function()
     if self:IsDead() then return end
@@ -205,9 +223,13 @@ function ENT:_InitMisc()
   for type, mult in pairs(self.DamageMultipliers) do
     self:SetDamageMultiplier(type, mult)
   end
-  self:AddCallback("OnAngleChange", function(self, angles)
-    if self:HasPhysics() then return end
-    self:SetAngles(Angle(0, angles.y, 0))
+  self:SetNWVarProxy("DrGBaseOnGround", function(self, name, old, new)
+    if SERVER then return end
+    if old and not new then
+      self:OnLeaveGround()
+    elseif not old and new then
+      self:OnLandOnGround()
+    end
   end)
 end
 
@@ -219,13 +241,6 @@ function ENT:_HandleMisc()
     end
     self._DrGBaseWaterLevel = self:WaterLevel()
   end
-  if self._DrGBaseOnGround and not self:IsOnGround() then
-    if CLIENT then self:OnLeaveGround() end
-  elseif not self._DrGBaseOnGround and self:IsOnGround() then
-    if CLIENT then self:OnLandOnGround() end
-    self:InvalidatePath()
-  end
-  self._DrGBaseOnGround = self:IsOnGround()
   if self._DrGBaseOnFire and not self:IsOnFire() then
     self:OnExtinguish()
   elseif not self._DrGBaseOnFire and self:IsOnFire() then
@@ -242,6 +257,19 @@ function ENT:_HandleMisc()
     self:OnMaxHealthChange(self._DrGBaseMaxHealth, self:GetMaxHealth())
     self._DrGBaseMaxHealth = self:GetMaxHealth()
   end
+  if #self.OnIdleSounds > 0 and
+  ((SERVER and not self.ClientIdleSounds) or (CLIENT and self.ClientIdleSounds)) then
+    local sound = self.OnIdleSounds[math.random(#self.OnIdleSounds)]
+    self:EmitSlotSound("DrGBaseIdle", SoundDuration(sound) + self.IdleSoundDelay, sound)
+  end
+  if SERVER then
+    if self:GetNW2Bool("DrGBaseOnGround") and not self:IsOnGround() then
+      self:SetNW2Bool("DrGBaseOnGround", false)
+    elseif not self:GetNW2Bool("DrGBaseOnGround") and self:IsOnGround() then
+      self:SetNW2Bool("DrGBaseOnGround", true)
+      self:InvalidatePath()
+    end
+  end
 end
 
 if SERVER then
@@ -252,13 +280,13 @@ if SERVER then
     self:SetNW2Float("DrGBaseHealthRegen", regen)
   end
 
-  function ENT:SetScale(scale)
+  function ENT:SetScale(scale, delta)
     self:SetNW2Float("DrGBaseScale", scale)
-    self:SetModelScale(self.ModelScale*scale)
+    self:SetModelScale(self.ModelScale*scale, delta)
     self:_HandleSpeed()
   end
-  function ENT:Scale(mult)
-    self:SetScale(self:GetScale()*mult)
+  function ENT:Scale(mult, delta)
+    self:SetScale(self:GetScale()*mult, delta)
   end
 
   function ENT:GetDamageMultiplier(type)
@@ -336,6 +364,7 @@ if SERVER then
   end
 
   function ENT:GroundDistance(pos, generator)
+    if isentity(pos) then pos = pos:GetPos() end
     local path = Path("Follow")
     path:Compute(self, pos, generator)
     if not IsValid(path) then return -1
@@ -361,6 +390,107 @@ if SERVER then
     return self:SetNW2Entity("DrGBaseLastTouchedEntity", nil)
   end
 
+  function ENT:Attack(attack, callback)
+    attack = attack or {}
+    attack.damage = attack.damage or 0
+    attack.delay = attack.delay or 0
+    attack.type = attack.type or DMG_GENERIC
+    attack.force = attack.force or Vector(0, 0, 0)
+    attack.delay = attack.delay or 0
+    attack.viewpunch = attack.viewpunch or Angle(10, 0, 0)
+    attack.range = attack.range or self.MeleeAttackRange
+    attack.angle = attack.angle or 90
+    self:Timer(math.Clamp(attack.delay, 0, math.huge), function(self)
+      local hit = {}
+      for i, ent in ipairs(ents.GetAll()) do
+        if ent == self then continue end
+        if not IsValid(ent) then continue end
+        if self:IsPossessor(ent) then continue end
+        if not self:IsEnemy(ent) then continue end
+        if not self:Visible(ent) then continue end
+        if not self:IsInRange(ent, attack.range) then continue end
+        local angle = (self:GetPos() + self:GetForward()):DrG_Degrees(ent:GetPos(), self:GetPos())
+        if angle > attack.angle/2 then continue end
+        local dmg = DamageInfo()
+        dmg:SetAttacker(self)
+        dmg:SetDamage(isfunction(attack.damage) and attack.damage(ent) or attack.damage)
+        dmg:SetDamageType(attack.type)
+        dmg:SetDamagePosition(self:WorldSpaceCenter())
+        dmg:SetReportedPosition(self:WorldSpaceCenter())
+        local force = self:GetForward()*attack.force.x +
+        self:GetRight()*attack.force.y +
+        self:GetUp()*attack.force.z
+        dmg:SetDamageForce(force)
+        ent:SetVelocity(ent:GetVelocity()+force)
+        ent:TakeDamageInfo(dmg)
+        if attack.viewpunch and ent:IsPlayer() then
+          ent:ViewPunch(attack.viewpunch)
+        end
+        table.insert(hit, ent)
+      end
+      if isfunction(callback) then callback(self, hit) end
+    end)
+  end
+
+  function ENT:IsAttacking()
+    if self:IsAttack(self:GetSequence()) then return true end
+    for seq, playing in pairs(self._DrGBaseCurrentGestures) do
+      if playing and self:IsAttack(seq) then return true end
+    end
+    return false
+  end
+  function ENT:IsAttack(seq)
+    if isstring(seq) then seq = self:LookupSequence(seq)
+    elseif not isnumber(seq) then return false end
+    if seq == -1 then return false end
+    return self._DrGBaseAnimAttacks[seq] or false
+  end
+  function ENT:SetAttack(seq, attack)
+    if isstring(seq) then seq = self:LookupSequence(seq)
+    elseif not isnumber(seq) then return false end
+    if seq ~= 1 then
+      self._DrGBaseAnimAttacks[seq] = tobool(attack)
+    end
+  end
+
+  function ENT:SequenceAttack(seq, cycle, attack, callback)
+    if istable(seq) then
+      for i, se in ipairs(seq) do self:SetAttack(se, true) end
+    else self:SetAttack(seq, true) end
+    self:SequenceEvent(seq, cycle, function(self)
+      self:Attack(attack, callback)
+    end)
+  end
+
+  function ENT:DynamicLight(color, radius, brightness)
+    if color == nil then color = Color(255, 255, 255) end
+    if not isnumber(radius) then radius = 1000 end
+    radius = math.Clamp(radius, 0, math.huge)
+    if not isnumber(brightness) then brightness = 1 end
+    brightness = math.Clamp(brightness, 0, math.huge)
+    local light = ents.Create("light_dynamic")
+  	light:SetKeyValue("brightness", tostring(brightness))
+  	light:SetKeyValue("distance", tostring(radius))
+    light:Fire("Color", tostring(color.r).." "..tostring(color.g).." "..tostring(color.b))
+  	light:SetLocalPos(self:GetPos())
+  	light:SetParent(self)
+  	light:Spawn()
+  	light:Activate()
+  	light:Fire("TurnOn", "", 0)
+  	self:DeleteOnRemove(light)
+    return light
+  end
+
+  function ENT:ParticleEffect(name, follow, attachment)
+    if follow then
+      local pattach = attachment and PATTACH_POINT_FOLLOW or PATTACH_ABSORIGIN_FOLLOW
+      ParticleEffectAttach(name, pattach, self, attachment or 1)
+    else
+      local pattach = attachment and PATTACH_POINT or PATTACH_ABSORIGIN
+      ParticleEffectAttach(name, pattach, self, attachment or 1)
+    end
+  end
+
   -- Hooks --
 
   function ENT:OnDoor(door, help)
@@ -384,6 +514,16 @@ else
   end
 
   -- Functions --
+
+  function ENT:RenderOffset(offset, origin, writeZ)
+    if not isvector(offset) then return end
+    origin = isvector(origin) and origin or self:GetPos()
+    local vec = origin + self:GetForward()*offset.x + self:GetRight()*offset.y + self:GetUp()*offset.z
+    cam.Start3D()
+    render.DrawLine(origin, origin+vec, DrGBase.CLR_WHITE, writeZ)
+    render.DrawWireframeSphere(origin+vec, 2*self:GetScale(), 4, 4, DrGBase.CLR_ORANGE, writeZ)
+    cam.End3D()
+  end
 
   -- Hooks --
 

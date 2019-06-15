@@ -3,10 +3,24 @@ local vecMETA = FindMetaTable("Vector")
 
 -- Ballistic stuff --
 
+--[[local function Trajectory(start, goal, v)
+  local g = physenv.GetGravity():Length()
+  local vec = Vector(goal.x - start.x, goal.y - start.y, 0)
+  local x = vec:Length()
+  local y = goal.z - start.z
+  local res = math.sqrt(v^4 - g*(g*x*x + 2*y*v*v))
+  if res ~= res then return end
+  local s1 = math.atan((v*v + res)/(g*x))
+  local s2 = math.atan((v*v - res)/(g*x))
+  pitch = s1 > s2 and s2 or s1
+  vec.z = math.tan(pitch)*x
+  return vec:GetNormalized()*v
+end]]
+
 function vecMETA:DrG_CalcTrajectory(endpos, options)
   options = options or {}
-  if options.recursive == nil then
-    options.recursive = (options.pitch == nil and options.magnitude == nil)
+  if not isbool(options.recursive) then
+    options.recursive = (not isnumber(options.pitch) and not isnumber(options.magnitude))
   end
   local g = isnumber(options.gravity) and options.gravity or physenv.GetGravity():Length()
   local vec = Vector(endpos.x - self.x, endpos.y - self.y, 0)
@@ -19,7 +33,7 @@ function vecMETA:DrG_CalcTrajectory(endpos, options)
   if pitchnumber and not magnitudenumber then
     pitch = options.pitch
     if pitch > 90 then pitch = 90 end
-    if pitch < -90 then pitch = 90 end
+    if pitch < -90 then pitch = -90 end
     pitch = math.rad(pitch)
     if y >= math.tan(pitch)*x then
       if options.recursive and math.deg(pitch) < 90 then
@@ -52,14 +66,17 @@ function vecMETA:DrG_CalcTrajectory(endpos, options)
     local forward = Vector(normal.x, normal.y, 0):GetNormalized()
     options.gravity = g
     options._length = x
-    options.pitch = (90 - math.DrG_DegreeAngle(forward, normal))/2
+    options.recursive = true
+    options.pitch = (90 - forward:DrG_Degrees(normal))/2
     return self:DrG_CalcTrajectory(endpos, options)
   else
     pitch = options.pitch
     magnitude = options.magnitude
   end
-  if options.maxmagnitude ~= nil and magnitude > options.maxmagnitude then magnitude = options.maxmagnitude end
-  if options.maxpitch ~= nil and math.deg(pitch) > options.maxpitch then pitch = math.rad(options.maxpitch) end
+  if isnumber(options.minmagnitude) and magnitude < options.minmagnitude then magnitude = options.minmagnitude end
+  if isnumber(options.maxmagnitude) and magnitude > options.maxmagnitude then magnitude = options.maxmagnitude end
+  if isnumber(options.minpitch) and math.deg(pitch) < options.minpitch then pitch = math.rad(options.minpitch) end
+  if isnumber(options.maxpitch) and math.deg(pitch) > options.maxpitch then pitch = math.rad(options.maxpitch) end
   vec.z = math.tan(pitch)*x
   local velocity = vec:GetNormalized()*magnitude
   local info = self:DrG_TrajectoryInfo2({
@@ -80,8 +97,8 @@ function vecMETA:DrG_TrajectoryInfo2(options)
   local pitch = math.rad(options.pitch)
   local calc = options.magnitude*math.sin(pitch)
   local highest = calc/options.gravity
+  local forward = Vector(options.direction.x, options.direction.y, 0):GetNormalized()
   local function Predict(t)
-    local forward = Vector(options.direction.x, options.direction.y, 0):GetNormalized()
     local pos = forward*options.magnitude*t*math.cos(pitch)
     pos.z = options.magnitude*t*math.sin(pitch)-(options.gravity*t*t)/2
     local velocity = forward*options.magnitude*math.cos(pitch)
@@ -89,6 +106,7 @@ function vecMETA:DrG_TrajectoryInfo2(options)
     return (self + pos), velocity
   end
   return {
+    direction = forward,
     pitch = options.pitch,
     magnitude = options.magnitude,
     highest = highest,

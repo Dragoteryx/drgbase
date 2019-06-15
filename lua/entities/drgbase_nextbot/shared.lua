@@ -4,16 +4,19 @@ ENT.IsDrGNextbot = true
 
 -- Misc --
 ENT.Models = {"models/player/kleiner.mdl"}
-ENT.VPhysics = false
 ENT.ModelScale = 1
 ENT.Skins = {0}
-ENT.BloodColor = BLOOD_COLOR_RED
 ENT.CollisionBounds = Vector(10, 10, 72)
+ENT.BloodColor = BLOOD_COLOR_RED
 ENT.RagdollOnDeath = true
+ENT.VPhysics = false
+
+-- Sounds --
+DrGBase.IncludeFile("sounds.lua")
 ENT.OnSpawnSounds = {}
-ENT.OnAttackSounds = {}
-ENT.OnHitSounds = {}
-ENT.OnMissSounds = {}
+ENT.OnIdleSounds = {}
+ENT.IdleSoundDelay = 2
+ENT.ClientIdleSounds = false
 ENT.OnDamageSounds = {}
 ENT.DamageSoundDelay = 0.25
 ENT.OnDeathSounds = {}
@@ -170,15 +173,19 @@ ENT.DamageMultipliers = {}
 
 -- AI --
 DrGBase.IncludeFile("ai.lua")
-DrGBase.IncludeFile("relationships.lua")
 ENT.BehaviourTree = "BaseAI"
+ENT.Omniscient = false
+ENT.SpotDuration = 30
+ENT.RangeAttackRange = 0
+ENT.MeleeAttackRange = 0
+ENT.ReachEnemyRange = 150
+ENT.AvoidEnemyRange = 75
+ENT.FollowPlayers = false
+
+-- Relationships --
+DrGBase.IncludeFile("relationships.lua")
 ENT.Factions = {}
 ENT.Frightening = false
-ENT.AvoidAfraid = 500
-ENT.AttackAfraid = false
-ENT.AttackRange = 150
-ENT.EnemyTooFar = 100
-ENT.EnemyTooClose = 50
 ENT.AllyDamageTolerance = 0.33
 ENT.AfraidDamageTolerance = 0.33
 ENT.NeutralDamageTolerance = 0.33
@@ -232,16 +239,14 @@ ENT.ClimbOffset = Vector(0, 0, 0)
 -- Detection --
 DrGBase.IncludeFile("awareness.lua")
 DrGBase.IncludeFile("detection.lua")
-ENT.Omniscient = false
 ENT.SightFOV = 150
 ENT.SightRange = math.huge
+ENT.MinLuminosity = 0
+ENT.MaxLuminosity = 1
 ENT.EyeBone = ""
 ENT.EyeOffset = Vector(0, 0, 0)
 ENT.EyeAngle = Angle(0, 0, 0)
 ENT.HearingCoefficient = 1
-ENT.SpottedAwarenessDecrease = 30
-ENT.LostAwarenessDecrease = 1
-ENT.AwarenessDecreaseDelay = 1
 
 -- Weapons --
 DrGBase.IncludeFile("weapons.lua")
@@ -266,9 +271,8 @@ DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("meta.lua")
 DrGBase.IncludeFile("misc.lua")
 DrGBase.IncludeFile("projectiles.lua")
-DrGBase.IncludeFile("sounds.lua")
 
--- Init and Think --
+-- Init --
 
 function ENT:Initialize()
   if SERVER then
@@ -300,8 +304,6 @@ function ENT:Initialize()
     self.VJ_AddEntityToSNPCAttackList = true
     self.vFireIsCharacter = true
     self._DrGBaseCorCalls = {}
-    self._DrGBaseBT = DrGBase.GetBehaviourTree(self.BehaviourTree)
-    self._DrGBaseBTLastID = -1
   else
     self:SetIK(true)
   end
@@ -342,10 +344,21 @@ end
 function ENT:_BaseInitialize() end
 function ENT:CustomInitialize() end
 
+hook.Add("Think", "velocitytest", function()
+  --[[for i, npc in ipairs(ents.FindByClass("npc_*")) do
+    print("===============")
+    print(npc:GetVelocity())
+    print(npc:GetVelocity():Length())
+  end]]
+end)
+
+-- Think --
+
 function ENT:Think()
   --if SERVER then print(#DrGBase.GetNextbots()) end
   self:_HandleAnimations()
   self:_HandleMisc()
+  if SERVER then self:_HandleAI() end
   if CurTime() > self._DrGBaseBaseThinkDelay then
     local delay = self:_BaseThink() or 0
     self._DrGBaseBaseThinkDelay = CurTime() + delay
@@ -356,6 +369,7 @@ function ENT:Think()
   end
   if self:IsPossessed() then
     self:_HandlePossession(false)
+    if CLIENT and not self:IsPossessedByLocalPlayer() then return end
     if CurTime() > self._DrGBasePossessionThinkDelay then
       local delay = self:PossessionThink() or 0
       self._DrGBasePossessionThinkDelay = CurTime() + delay
@@ -366,17 +380,39 @@ function ENT:_BaseThink() end
 function ENT:CustomThink() end
 function ENT:PossessionThink() end
 
+-- Use --
+
+function ENT:Use(activator, caller, useType, value)
+  local user = IsValid(caller) and caller or activator
+  if SERVER and self.FollowPlayers and user:IsPlayer() and self:IsAlly(user) then
+    local ent, dist = self:GetFollowing()
+    if IsValid(ent) then
+      if user ~= ent then
+        net.Start("DrGBaseAlreadyFollowing")
+        net.WriteEntity(self)
+        net.Send(user)
+      else self:FollowEntity(nil, 0, true) end
+    else self:FollowEntity(user, 150, true) end
+  end
+  self:_BaseUse(activator, caller, useType, value)
+  self:CustomUse(activator, caller, useType, value)
+end
+function ENT:_BaseUse() end
+function ENT:CustomUse() end
+
 if SERVER then
   AddCSLuaFile()
+  util.AddNetworkString("DrGBaseAlreadyFollowing")
 
   -- Getters/setters --
 
   -- Functions --
 
-  function ENT:CallInCoroutine(callback)
+  function ENT:CallInCoroutine(callback, exec)
     table.insert(self._DrGBaseCorCalls, {
       callback = callback,
-      now = CurTime()
+      now = CurTime(),
+      nested = nested or false
     })
   end
   function ENT:YieldCoroutine(caninterrupt)
@@ -386,10 +422,11 @@ if SERVER then
     end
     while caninterrupt and not self._DrGBaseExecCorCalls and #self._DrGBaseCorCalls > 0 do
       didStuff = true
-      self._DrGBaseExecCorCalls = true
       local cor = table.remove(self._DrGBaseCorCalls, 1)
+      local oldexec = self._DrGBaseExecCorCalls
+      self._DrGBaseExecCorCalls = not cor.nested
       cor.callback(self, CurTime() - cor.now)
-      self._DrGBaseExecCorCalls = false
+      self._DrGBaseExecCorCalls = oldexec
     end
     coroutine.yield()
     return didStuff
@@ -404,15 +441,19 @@ if SERVER then
   end
 
   function ENT:GetBehaviourTree()
-    return self._DrGBaseBT, self._DrGBaseBTLastID
+    return DrGBase.GetBehaviourTree(self.BehaviourTree)
   end
-  function ENT:RunBehaviourTree(root, callback)
-    return root:Start(self, callback)
+  function ENT:GetBT()
+    return self:GetBehaviourTree()
   end
-  function ENT:UpdateBehaviourTree()
-    local tree, id = self:GetBehaviourTree()
+
+  function ENT:BehaviourTreeEvent(event, ...)
+    local tree = self:GetBehaviourTree()
     if not tree then return end
-    tree:Update(id)
+    tree:Event(self, event, ...)
+  end
+  function ENT:BTEvent(event, ...)
+    return self:BehaviourTreeEvent(event, ...)
   end
 
   -- Hooks --
@@ -458,11 +499,8 @@ if SERVER then
       if self:IsPossessed() then
         self:_HandlePossession(true)
       elseif not self:IsAIDisabled() then
-        local tree = self:GetBehaviourTree()
-        if tree then
-          self:RunBehaviourTree(tree, function(id)
-            self._DrGBaseBTLastID = id
-          end)
+        local tree = self:GetBT()
+        if tree then tree:Run(self)
         else self:CustomBehaviour() end
       end
       self:YieldCoroutine(true)
@@ -476,6 +514,15 @@ if SERVER then
   end
 
 else
+
+  -- Follow --
+
+  net.Receive("DrGBaseAlreadyFollowing", function()
+    local ent = net.ReadEntity()
+    if not IsValid(ent) then return end
+    notification.AddLegacy(ent.PrintName.." is already following someone.", NOTIFY_ERROR, 4)
+    surface.PlaySound("buttons/button10.wav")
+  end)
 
   local DisplayCollisions = CreateClientConVar("drgbase_display_collisions", "0")
   local DisplaySight = CreateClientConVar("drgbase_display_sight", "0")

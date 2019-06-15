@@ -9,43 +9,25 @@ function Decorator:New(type)
   return decorator
 end
 
-function Decorator:IsDecorator()
-  return true
-end
-
 function Decorator:GetChild()
   return self._child
 end
-function Decorator:SetChild(child)
-  self._child = child
-  return self
+function Decorator:SetChild(node)
+  self._child = node
 end
 
 function Decorator:IsChild(node)
-  if node == nil then return end
-  return node == self._child
+  if not node then return end
+  return node == self:GetChild()
 end
 
-function Decorator:Execute(nextbot, data, id)
+function Decorator:Handle(tree, nextbot, ...)
   local child = self:GetChild()
-  if not child then return false end
-  self:RegisterNext(id, child)
-  local res = self:Decorate(child, nextbot, data, id)
-  self:RegisterNext(id, nil)
-  return res
+  if not child then return "failure" end
+  return self:Decorate(child, tree, nextbot, ...)
 end
-function Decorator:Decorate(child, nextbot, data, id)
-  return child:Run(nextbot, data, id)
-end
-function Decorator:Update(id)
-  Node.Update(self, id)
-  if self:GetChild() then self:GetChild():Update(id) end
-end
-
-function Decorator:Print(depth)
-  depth = depth or 0
-  Node.Print(self, depth)
-  if self:GetChild() then self:GetChild():Print(depth+1) end
+function Decorator:Decorate(child, tree, nextbot, ...)
+  return child:Run(tree, nextbot, ...)
 end
 
 BT_NODES["Decorator"] = Decorator

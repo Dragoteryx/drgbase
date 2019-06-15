@@ -5,200 +5,148 @@ function ENT:IsOmniscient()
   return self:GetNW2Bool("DrGBaseOmniscient")
 end
 
--- Functions --
+function ENT:GetSpotDuration()
+  return self:GetNW2Float("DrGBaseSpotDuration")
+end
+
+function ENT:HasSpotted(ent)
+  if not IsValid(ent) then return false end
+  if self:IsOmniscient() then return true end
+  return self._DrGBaseSpotted[ent] or false
+end
+function ENT:HasLost(ent)
+  if not IsValid(ent) then return false end
+  if self:IsOmniscient() then return false end
+  return self._DrGBaseSpotted[ent] == false
+end
 
 -- Hooks --
+
+function ENT:OnSpotted() end
+function ENT:OnLost() end
 
 -- Handlers --
 
 function ENT:_InitAwareness()
+  self._DrGBaseSpotted = {}
   if CLIENT then return end
   self:SetOmniscient(self.Omniscient)
-  self._DrGBaseAwareness = {}
-  self:SetSpottedAwarenessDecrease(self.SpottedAwarenessDecrease)
-  self:SetLostAwarenessDecrease(self.LostAwarenessDecrease)
-  self:SetAwarenessDecreaseDelay(self.AwarenessDecreaseDelay)
+  self._DrGBaseLastTime = {}
+  self._DrGBaseLastKnownPos = {}
+  self:SetSpotDuration(self.SpotDuration)
 end
 
 if SERVER then
-
-  -- Awareness class --
-
-  local Awareness = {}
-  Awareness.__index = Awareness
-  function Awareness:New(nextbot, ent)
-    local aware = {}
-    aware._nextbot = nextbot
-    aware._ent = ent
-    aware._level = 0
-    aware._callbacks = {}
-    aware._spotted = false
-    aware._decreasedelay = 0
-    setmetatable(aware, self)
-    aware:Init()
-    return aware
-  end
-  function Awareness:GetLevel()
-    return self._level
-  end
-  function Awareness:SetLevel(level)
-    if level > 1 then level = 1 end
-    if level < 0 then level = 0 end
-    local old = self._level
-    if level > old then self._decreasedelay = CurTime() end
-    self._level = level
-    if not IsValid(self._nextbot) or not IsValid(self._ent) then return end
-    for str, act in pairs(self._callbacks) do
-      if level < act.min or level > act.max then continue end
-      act.callback(old, level)
-    end
-  end
-  function Awareness:AddCallback(str, min, max, callback)
-    self._callbacks[str] = {
-      min = min, max = max,
-      callback = callback
-    }
-  end
-  function Awareness:RemoveCallback(str)
-    self._callbacks[str] = nil
-  end
-  function Awareness:IncreaseLevel(incr)
-    self:SetLevel(self:GetLevel() + incr)
-  end
-  function Awareness:DecreaseLevel(decr)
-    self:SetLevel(self:GetLevel() - decr)
-  end
-  function Awareness:Init()
-    coroutine.DrG_Create(function()
-      while IsValid(self._nextbot) and IsValid(self._ent) do
-        if CurTime() > self._decreasedelay + self._nextbot:GetAwarenessDecreaseDelay() then
-          if self:Spotted() then
-            self:DecreaseLevel((1/self._nextbot:GetSpottedAwarenessDecrease())/5)
-          else
-            self:DecreaseLevel((1/self._nextbot:GetLostAwarenessDecrease())/5)
-          end
-        end
-        coroutine.wait(0.2)
-      end
-    end)
-  end
-  function Awareness:GetNextbot()
-    return self._nextbot
-  end
-  function Awareness:GetEntity()
-    return self._ent
-  end
-  function Awareness:Spotted()
-    return self._spotted
-  end
+  util.AddNetworkString("DrGBaseSpottedEntity")
+  util.AddNetworkString("DrGBaseLostEntity")
 
   -- Getters/setters --
 
   function ENT:SetOmniscient(omniscient)
-    return self:SetNW2Bool("DrGBaseOmniscient", omniscient)
+    self:SetNW2Bool("DrGBaseOmniscient", omniscient)
   end
 
-  function ENT:_GetAwareness(ent)
-    local crea = ent:GetCreationID()
-    if not self._DrGBaseAwareness[crea] then
-      local awareness = Awareness:New(self, ent)
-      awareness:AddCallback("DrGBaseOnSpotEntity", 1, 1, function(old, new)
-        if not awareness:Spotted() then
-          awareness._spotted = true
-          self:OnSpotEntity(ent)
-          if self:IsEnemy(ent) then self:RefreshEnemy() end
-          self:UpdateBehaviourTree()
-        end
-      end)
-      awareness:AddCallback("DrGBaseOnLostEntity", 0, 0, function(old, new)
-        if awareness:Spotted() then
-          awareness._spotted = false
-          self:OnLostEntity(ent)
-          self:UpdateBehaviourTree()
-        end
-      end)
-      self._DrGBaseAwareness[crea] = awareness
-      return awareness
-    else return self._DrGBaseAwareness[crea] end
+  function ENT:SetSpotDuration(duration)
+    self:SetNW2Float("DrGBaseSpotDuration", duration)
   end
 
-  function ENT:GetAwarenessLevel(ent)
-    if self:IsOmniscient() then return 1 end
-    return self:_GetAwareness(ent):GetLevel()
+  function ENT:LastTimeSpotted(ent)
+    return self._DrGBaseLastTime[ent] or -1
   end
-  function ENT:SetAwarenessLevel(ent, level)
-    if ent:IsPlayer() and (GetConVar("ai_ignoreplayers"):GetBool() or not ent:Alive()) and level > 0 then
-      return self:SetAwarenessLevel(ent, 0)
-    end
-    self:_GetAwareness(ent):SetLevel(level)
+  function ENT:LastKnownPosition(ent)
+    return self._DrGBaseLastKnownPos[ent]
   end
-
-  function ENT:HasSpottedEntity(ent)
-    return self:IsOmniscient() or self:_GetAwareness(ent):Spotted()
-  end
-  function ENT:HasLostEntity(ent)
-    return not self:HasSpottedEntity(ent)
-  end
-
-  function ENT:GetSpottedAwarenessDecrease()
-    return self._DrGBaseSpottedAwarenessDecrease
-  end
-  function ENT:SetSpottedAwarenessDecrease(decr)
-    self._DrGBaseSpottedAwarenessDecrease = decr
-  end
-
-  function ENT:GetLostAwarenessDecrease()
-    return self._DrGBaseLostAwarenessDecrease
-  end
-  function ENT:SetLostAwarenessDecrease(decr)
-    self._DrGBaseLostAwarenessDecrease = decr
-  end
-
-  function ENT:GetAwarenessDecreaseDelay()
-    return self._DrGBaseAwarenessDecreaseDelay
-  end
-  function ENT:SetAwarenessDecreaseDelay(delay)
-    if delay < 0.25 then delay = 0.25 end
-    self._DrGBaseAwarenessDecreaseDelay = delay
+  function ENT:UpdateKnownPosition(ent, pos)
+    pos = isvector(pos) and pos or ent:GetPos()
+    self._DrGBaseLastKnownPos[ent] = pos
   end
 
   -- Functions --
 
-  function ENT:IncreaseAwarenessLevel(ent, incr)
-    self:_GetAwareness(ent):IncreaseLevel(incr)
-  end
-  function ENT:DecreaseAwarenessLevel(ent, decr)
-    self:_GetAwareness(ent):DecreaseLevel(decr)
-  end
-
   function ENT:SpotEntity(ent)
-    self:SetAwarenessLevel(ent, 1)
+    if not IsValid(ent) then return end
+    if self:IsIgnored(ent) then return end
+    if self:GetSpotDuration() == 0 then return end
+    local spotted = self:HasSpotted(ent)
+    self._DrGBaseLastTime[ent] = CurTime()
+    self._DrGBaseSpotted[ent] = true
+    self:UpdateKnownPosition(ent)
+    if not spotted then
+      self:OnSpotted(ent)
+      net.Start("DrGBaseSpottedEntity")
+      net.WriteEntity(self)
+      net.WriteEntity(ent)
+      net.Broadcast()
+      self:RefreshEnemy()
+      self:BehaviourTreeEvent("SpottedEntity", ent)
+    end
+    timer.Remove(self:_SpotTimerName(ent))
+    if self:GetSpotDuration() > 0 then
+      timer.Create(self:_SpotTimerName(ent), self:GetSpotDuration(), 1, function()
+        if not IsValid(self) or not IsValid(ent) then return end
+        self:LoseEntity(ent)
+      end)
+    end
   end
   function ENT:LoseEntity(ent)
-    self:SetAwarenessLevel(ent, 0)
+    if not IsValid(ent) then return end
+    if not self:HasSpotted(ent) then return end
+    if self:HasLost(ent) then return end
+    timer.Remove(self:_SpotTimerName(ent))
+    self._DrGBaseSpotted[ent] = false
+    self:OnLost(ent)
+    net.Start("DrGBaseLostEntity")
+    net.WriteEntity(self)
+    net.WriteEntity(ent)
+    net.Broadcast()
+    self:RefreshEnemy()
+    self:BehaviourTreeEvent("LostEntity", ent)
   end
-
-  -- Hooks --
-
-  function ENT:OnSpotEntity() end
-  function ENT:OnLostEntity() end
+  function ENT:_SpotTimerName(ent)
+    return "DrGBaseNB"..self:GetCreationID().."SpotENT"..ent:GetCreationID()
+  end
 
   -- Handlers --
 
-  hook.Add("PostPlayerDeath", "DrGBaseForgetDeadPlayers", function(ply)
+  cvars.AddChangeCallback("ai_ignoreplayers", function(name, old, new)
+    for i, nextbot in ipairs(DrGBase.GetNextbots()) do
+      if tobool(new) then
+        for h, ply in ipairs(player.GetAll()) do
+          nextbot:LoseEntity(ply)
+        end
+      end
+      nextbot:RefreshEnemy()
+    end
+  end, "DrGBaseIgnorePlayers")
+
+  hook.Add("PostPlayerDeath", "DrGBaseForgetPlayerDeath", function(ply)
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
       nextbot:LoseEntity(ply)
+      nextbot:RefreshEnemy()
     end
   end)
 
 else
 
-  -- Getters/setters --
-
-  -- Functions --
-
-  -- Hooks --
-
   -- Handlers --
+
+  net.Receive("DrGBaseSpottedEntity", function()
+    local nextbot = net.ReadEntity()
+    local ent = net.ReadEntity()
+    if not IsValid(nextbot) then return end
+    if not istable(nextbot._DrGBaseSpotted) then return end
+    if not IsValid(ent) then return end
+    nextbot._DrGBaseSpotted[ent] = true
+    nextbot:OnSpotted(ent)
+  end)
+  net.Receive("DrGBaseLostEntity", function()
+    local nextbot = net.ReadEntity()
+    local ent = net.ReadEntity()
+    if not IsValid(nextbot) then return end
+    if not istable(nextbot._DrGBaseSpotted) then return end
+    if not IsValid(ent) then return end
+    nextbot._DrGBaseSpotted[ent] = false
+    nextbot:OnLost(ent)
+  end)
 
 end

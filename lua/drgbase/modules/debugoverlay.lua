@@ -9,8 +9,8 @@ function debugoverlay.DrG_Trajectory(start, velocity, lifetime, color, ignoreZ, 
   if options.height == nil then options.height = true end
   local t = options.from
   while t < options.to do
-    debugoverlay.Line(info.Predict(t), info.Predict(t + options.increments), lifetime, options.colors(t) or color, ignoreZ)
-    t = t + options.increments
+    debugoverlay.Line(info.Predict(t), info.Predict(t+options.increments), lifetime, options.colors(t) or color, ignoreZ)
+    t = t+options.increments
   end
   if options.height then
     local highestPoint = info.Predict(info.highest)

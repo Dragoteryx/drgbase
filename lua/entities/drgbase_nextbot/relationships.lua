@@ -120,6 +120,8 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:IsIgnored(ent)
+    if ent:IsPlayer() and not ent:Alive() then return true end
+    if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return true end
     return self._DrGBaseIgnoredEntities[ent:GetCreationID()] or false
   end
   function ENT:SetIgnored(ent, bool)
@@ -164,15 +166,15 @@ if SERVER then
   function ENT:GetRelationship(ent, absolute)
     if not IsValid(ent) then return D_ER end
     if self == ent then return D_ER end
+    local rel = self._DrGBaseRelationships[ent:GetCreationID()] or D_NU
     if not absolute then
       if not self:IsConsidered(ent) then return D_NU end
       if self:IsIgnored(ent) then return D_NU end
       if ent:IsFlagSet(FL_NOTARGET) then return D_NU end
-      if ent:IsPlayer() and (not ent:Alive() or GetConVar("ai_ignoreplayers"):GetBool()) then return D_NU end
       if (ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot") and ent:Health() <= 0 then return D_NU end
       if ent.IsDrGNextbot and (ent:IsDown() or ent:IsDead()) then return D_NU end
     end
-    return self._DrGBaseRelationships[ent:GetCreationID()] or D_NU
+    return rel
   end
   function ENT:_SetRelationship(ent, disp)
     if not IsValid(ent) or ent == self then return end
@@ -205,7 +207,7 @@ if SERVER then
       if ent:IsNPC() then self:_UpdateNPCRelationship(ent, D_NU) end
       if old ~= D_NU then self:OnRelationshipChange(ent, old, D_NU) end
     end
-    self:UpdateBehaviourTree()
+    self:BehaviourTreeEvent("RelationshipChange", ent)
   end
 
   -- Default
@@ -240,6 +242,10 @@ if SERVER then
       self:SetEntityRelationship(ent, disp, prio)
     end
   end
+  function ENT:RemoveEntityRelationship(ent)
+    self._DrGBaseEntityRelationships[ent:GetCreationID()] = nil
+    self:UpdateRelationships()
+  end
 
   -- Class
   function ENT:GetClassRelationship(class)
@@ -263,6 +269,10 @@ if SERVER then
       self:SetClassRelationship(class, disp, prio)
     end
   end
+  function ENT:RemoveClassRelationship(class)
+    self._DrGBaseClassRelationships[string.lower(class)] = nil
+    self:UpdateRelationships()
+  end
 
   -- Players
   function ENT:GetPlayersRelationship()
@@ -274,6 +284,9 @@ if SERVER then
   function ENT:AddPlayersRelationship(disp, prio)
     return self:AddClassRelationship("player", disp, prio)
   end
+  function ENT:RemovePlayersRelationship()
+    return self:RemoveClassRelationship("player")
+  end
 
   -- Same class
   function ENT:GetSelfClassRelationship()
@@ -284,6 +297,9 @@ if SERVER then
   end
   function ENT:AddSelfClassRelationship(disp, prio)
     return self:AddClassRelationship(self:GetClass(), disp, prio)
+  end
+  function ENT:RemoveSelfClassRelationship()
+    return self:RemoveClassRelationship(self:GetClass())
   end
 
   -- Model
@@ -308,6 +324,10 @@ if SERVER then
       self:SetModelRelationship(model, disp, prio)
     end
   end
+  function ENT:RemoveModelRelationship(models)
+    self._DrGBaseModelRelationships[string.lower(model)] = nil
+    self:UpdateRelationships()
+  end
 
   -- Same model
   function ENT:GetSelfModelRelationship()
@@ -318,6 +338,9 @@ if SERVER then
   end
   function ENT:AddSelfModelRelationship(disp, prio)
     return self:AddModelRelationship(self:GetModel(), disp, prio)
+  end
+  function ENT:RemoveSelfModelRelationship()
+    return self:RemoveModelRelationship(self:GetModel())
   end
 
   -- Factions
@@ -341,6 +364,10 @@ if SERVER then
     if not isnumber(prio) or prio >= gprio then
       self:SetFactionRelationship(faction, disp, prio)
     end
+  end
+  function ENT:RemoveFactionRelationship(faction)
+    self._DrGBaseFactionRelationships[string.upper(faction)] = nil
+    self:UpdateRelationships()
   end
 
   -- Functions --
@@ -471,8 +498,8 @@ if SERVER then
     local cache = disp == D_NU and self._DrGBaseConsideredEntities or self._DrGBaseEntityCaches[disp]
     for i, ent in ipairs(cache) do
       if not IsValid(ent) then continue end
+      if spotted and not self:HasSpotted(ent) then continue end
       if self:GetRangeSquaredTo(ent) > maxradius then continue end
-      if spotted and not self:HasSpottedEntity(ent) then continue end
       if self:GetRelationship(ent) == disp then
         table.insert(entities, ent)
       end
@@ -528,6 +555,17 @@ if SERVER then
   end
   function ENT:NeutralsLeft(spotted)
     return self:EntitiesLeft(D_NU, spotted)
+  end
+
+  -- Copy relationships
+  function ENT:CopyRelationships(ent)
+    if not ent.IsDrGNextbot then return end
+    self._DrGBaseDefaultRelationship = ent._DrGBaseDefaultRelationship
+    self._DrGBaseEntityRelationships = ent._DrGBaseEntityRelationships
+    self._DrGBaseClassRelationships = ent._DrGBaseClassRelationships
+    self._DrGBaseModelRelationships = ent._DrGBaseModelRelationships
+    self._DrGBaseFactionRelationships = ent._DrGBaseFactionRelationships
+    self:UpdateRelationships()
   end
 
   -- Hooks --

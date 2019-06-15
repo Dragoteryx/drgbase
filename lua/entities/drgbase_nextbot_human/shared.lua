@@ -5,10 +5,12 @@ ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
 ENT.FallDamage = true
 
 -- AI --
-ENT.AttackRange = 1500
-ENT.EnemyTooFar = 750
-ENT.EnemyTooClose = 375
-ENT.AttackAfraid = true
+ENT.MeleeAttackRange = 0
+ENT.RangeAttackRange = 1500
+ENT.ReachEnemyRange = 750
+ENT.AvoidEnemyRange = 375
+ENT.AvoidFaceEnemy = true
+ENT.FollowPlayers = true
 
 -- Movements/animations --
 DrGBase.IncludeFile("animations.lua")
@@ -52,49 +54,54 @@ ENT.PossessionViews = {
   }
 }
 ENT.PossessionBinds = {
-  {
-    bind = IN_DUCK,
-    coroutine = false,
-    onkeypressed = function(self)
-      self:ToggleCrouching()
-    end
+  [IN_ATTACK] = {
+    {
+      coroutine = false,
+      onkeydown = function(self)
+        if not self:HasWeapon() then return end
+        if self:IsWeaponPrimaryEmpty() then
+          self:WeaponReload(self:GetReloadAnimation())
+        else self:WeaponPrimaryFire(self:GetShootAnimation()) end
+      end
+    }
   },
-  {
-    bind = IN_JUMP,
-    coroutine = false,
-    onkeydown = function(self)
-      if not self:IsOnGround() then return end
-      self:EmitFootstep()
-      self:QuickJump()
-    end
+  [IN_ATTACK2] = {
+    {
+      coroutine = false,
+      onkeydown = function(self)
+        if not self:HasWeapon() then return end
+        if self:IsWeaponSecondaryEmpty() then
+          self:WeaponReload(self:GetReloadAnimation())
+        else self:WeaponSecondaryFire(self:GetShootAnimation()) end
+      end
+    }
   },
-  {
-    bind = IN_RELOAD,
-    coroutine = false,
-    onkeypressed = function(self)
-      if not self:HasWeapon() then return end
-      self:ToggleWeaponHolstered()
-    end
+  [IN_RELOAD] = {
+    {
+      coroutine = false,
+      onkeypressed = function(self)
+        if not self:HasWeapon() then return end
+        self:ToggleWeaponHolstered()
+      end
+    }
   },
-  {
-    bind = IN_ATTACK,
-    coroutine = false,
-    onkeydown = function(self)
-      if not self:HasWeapon() then return end
-      if self:IsWeaponPrimaryEmpty() then
-        self:WeaponReload(self:GetReloadAnimation())
-      else self:WeaponPrimaryFire(self:GetShootAnimation()) end
-    end
+  [IN_JUMP] = {
+    {
+      coroutine = false,
+      onkeydown = function(self)
+        if not self:IsOnGround() then return end
+        self:EmitFootstep()
+        self:QuickJump()
+      end
+    }
   },
-  {
-    bind = IN_ATTACK2,
-    coroutine = false,
-    onkeydown = function(self)
-      if not self:HasWeapon() then return end
-      if self:IsWeaponSecondaryEmpty() then
-        self:WeaponReload(self:GetReloadAnimation())
-      else self:WeaponSecondaryFire(self:GetShootAnimation()) end
-    end
+  [IN_DUCK] = {
+    {
+      coroutine = false,
+      onkeypressed = function(self)
+        self:ToggleCrouching()
+      end
+    }
   }
 }
 
@@ -114,7 +121,7 @@ if SERVER then
     }
     for i, walk in ipairs(walks) do
       for holdtype, act in pairs(walk) do
-        self:DefineSequenceCallback(self:SelectRandomSequence(act), {0.28, 0.78}, function(self)
+        self:SequenceEvent(self:SelectRandomSequence(act), {0.28, 0.78}, function(self)
           self:EmitFootstep()
         end)
       end
@@ -146,8 +153,8 @@ if SERVER then
 
   -- AI --
 
-  function ENT:OnAttack(enemy)
-    if not self:IsMoving() then self:FaceTowards(enemy)end
+  function ENT:OnRangeAttack(enemy)
+    if not self:IsMoving() then self:FaceTowards(enemy) end
     if math.random(50) == 1 then self:SetCrouching(true) end
     if not self:HasWeapon() then return end
     if not self:IsInSight(enemy) then return end
@@ -160,6 +167,11 @@ if SERVER then
     if self:IsWeaponPrimaryEmpty() then
       self:WeaponReload(self:GetReloadAnimation())
     else self:WeaponPrimaryFire(self:GetShootAnimation()) end
+  end
+  function ENT:OnAvoidEnemy(enemy)
+    if not self:HasWeapon() then return end
+    self:MoveAwayFrom(enemy, true)
+    return true
   end
 
   -- Misc --
@@ -176,7 +188,7 @@ if SERVER then
   function ENT:OnStopClimbing(ladder, down)
     if down then return end
     local footstep = false
-    self:PlayAnimationAndMoveAbsolute(ACT_ZOMBIE_CLIMB_END, self.ClimbAnimRate, function(cycle)
+    self:PlayActivityAndMoveAbsolute(ACT_ZOMBIE_CLIMB_END, self.ClimbAnimRate, function(cycle)
       if cycle >= 0.875 and not footstep then
         footstep = true
         self:EmitFootstep()

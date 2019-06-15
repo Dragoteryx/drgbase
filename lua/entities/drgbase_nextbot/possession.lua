@@ -11,6 +11,9 @@ end
 function ENT:IsPossessed()
   return IsValid(self:GetPossessor())
 end
+function ENT:IsPossessor(ent)
+  return self:GetPossessor() == ent
+end
 
 function ENT:CurrentViewPreset()
   if not self:IsPossessed() then return -1 end
@@ -119,13 +122,6 @@ function ENT:PossessorUp()
   return Vector(0, 0, 1)
 end
 
-function ENT:PossessionAddBind(bind, data)
-  if not istable(data) then return end
-  data.bind = bind
-  data.client = CLIENT or false
-  table.insert(self.PossessionBinds, data)
-end
-
 -- Hooks --
 
 function ENT:OnPossess() end
@@ -138,6 +134,7 @@ function ENT:_InitPossession()
     self:SetPossessionEnabled(self.PossessionEnabled)
   end
   self:SetNWVarProxy("DrGBasePossessor", function(self, name, old, new)
+    if SERVER then return end
     if not IsValid(old) and IsValid(new) then self:OnPossess(new)
     elseif IsValid(old) and not IsValid(new) then self:OnDispossess(old) end
   end)
@@ -187,18 +184,20 @@ function ENT:_HandlePossession(cor)
       end
     end
   end
-  for i, move in ipairs(self.PossessionBinds) do
-    if CLIENT and not move.client then continue end
-    if SERVER and ((not cor and move.coroutine) or (cor and not move.coroutine)) then continue end
-    if move.onkeypressed == nil then move.onkeypressed = function() end end
-    if move.onkeydown == nil then move.onkeydown = function() end end
-    if move.onkeyup == nil then move.onkeyup = function() end end
-    if move.onkeydownlast == nil then move.onkeydownlast = function() end end
-    if move.onkeyreleased == nil then move.onkeyreleased = function() end end
-    if possessor:KeyPressed(move.bind) then move.onkeypressed(self, possessor) end
-    if possessor:KeyDown(move.bind) then move.onkeydown(self, possessor) else move.onkeyup(self, possessor) end
-    if possessor:KeyDownLast(move.bind) then move.onkeydownlast(self, possessor) end
-    if possessor:KeyReleased(move.bind) then move.onkeyreleased(self, possessor) end
+  for key, binds in pairs(self.PossessionBinds) do
+    for i, bind in ipairs(binds) do
+      if CLIENT and not bind.client then continue end
+      if SERVER and ((not cor and bind.coroutine) or (cor and not bind.coroutine)) then continue end
+      if bind.onkeypressed == nil then bind.onkeypressed = function() end end
+      if bind.onkeydown == nil then bind.onkeydown = function() end end
+      if bind.onkeyup == nil then bind.onkeyup = function() end end
+      if bind.onkeydownlast == nil then bind.onkeydownlast = function() end end
+      if bind.onkeyreleased == nil then bind.onkeyreleased = function() end end
+      if possessor:KeyPressed(key) then bind.onkeypressed(self, possessor) end
+      if possessor:KeyDown(key) then bind.onkeydown(self, possessor) else bind.onkeyup(self, possessor) end
+      if possessor:KeyDownLast(key) then bind.onkeydownlast(self, possessor) end
+      if possessor:KeyReleased(key) then bind.onkeyreleased(self, possessor) end
+    end
   end
 end
 
@@ -228,7 +227,9 @@ if SERVER then
     ply:SetNW2Entity("DrGBasePossessing", self)
     self:SetNW2Int("DrGBasePossessionView", 1)
     ply:SetNoTarget(true)
-    self:UpdateBehaviourTree()
+    self:RefreshEnemy()
+    self:BehaviourTreeEvent("Possessed", ply)
+    self:OnPossess(ply)
     return "ok"
   end
 
@@ -241,7 +242,8 @@ if SERVER then
     self:SetNW2Entity("DrGBasePossessor", nil)
     ply:SetNW2Entity("DrGBasePossessing", nil)
     ply:SetNoTarget(false)
-    self:UpdateBehaviourTree()
+    self:RefreshEnemy()
+    self:OnDispossess(ply)
     return "ok"
   end
 
@@ -259,8 +261,6 @@ if SERVER then
 
   function ENT:CanPossess() return true end
   function ENT:CanDispossess() return true end
-  function ENT:OnPossess() end
-  function ENT:OnDispossess() end
   function ENT:PossessionControls(forward, backward, right, left) end
 
   -- Handlers --
@@ -286,7 +286,7 @@ else
   -- Getters/setters --
 
   function ENT:IsPossessedByLocalPlayer()
-    return self:IsPossessed() and self:GetPossessor():EntIndex() == LocalPlayer():EntIndex()
+    return self:IsPossessor(LocalPlayer())
   end
 
   -- Functions --

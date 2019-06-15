@@ -1,5 +1,6 @@
 
 DrGBase = DrGBase or {}
+DrGBase.Icon = "drgbase/icon16.png"
 
 -- Print --
 

@@ -1,0 +1,23 @@
+if not DrGBase then return end -- return if DrGBase isn't installed
+ENT.Base = "proj_drg_grenade"
+
+-- Misc --
+ENT.PrintName = "Smoke Grenade"
+ENT.Category = "DrGBase"
+ENT.Spawnable = true
+ENT.Models = {"models/weapons/w_eq_smokegrenade.mdl"}
+
+-- Grenade --
+ENT.Bounce = 1
+ENT.OnBounceSounds = {"weapons/flashbang/grenade_hit1.wav"}
+
+if SERVER then
+  AddCSLuaFile()
+
+  function ENT:OnDetonate()
+    self:EmitSound("weapons/smokegrenade/sg_explode.wav")
+    self:Timer(60, self.Remove)
+    return true
+  end
+
+end

@@ -48,7 +48,7 @@ else
 	net.Receive("DrGBaseNextbotCanPossess", function()
 		local ent = net.ReadEntity()
 		if not IsValid(ent) then return end
-		notification.AddLegacy("You are now possessing this nextbot ("..ent.Name..").", NOTIFY_HINT, 4)
+		notification.AddLegacy("You are now possessing "..ent.PrintName..".", NOTIFY_HINT, 4)
 		surface.PlaySound("buttons/lightswitch2.wav")
 	end)
 
@@ -65,7 +65,7 @@ else
 		elseif enum == "disabled" then reason = "possession is not available for this nextbot."
 		elseif enum == "no views" then reason = "no defined camera views."
 		end
-		notification.AddLegacy("You can't possess this nextbot ("..ent.Name.."): "..reason, NOTIFY_ERROR, 4)
+		notification.AddLegacy("You can't possess "..ent.PrintName..": "..reason, NOTIFY_ERROR, 4)
 		surface.PlaySound("buttons/button10.wav")
 	end)
 

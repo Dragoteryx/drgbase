@@ -45,8 +45,20 @@ end
 function ENT:_InitWeapons()
   if CLIENT then return end
   self._DrGBaseWeaponDropClass = ""
-  if self.UseWeapons and #self.Weapons > 0 then
-    self:GiveWeapon(self.Weapons[math.random(#self.Weapons)])
+  if self.UseWeapons then
+    --[[local convarName = "gmod_npcweapon"
+    if ConVarExists(convarName) then
+      local weapon = GetConVar(convarName):GetString()
+      if weapon ~= "none" and weapon ~= "" and weapon == self.Equipment then
+        self:GiveWeapon(weapon)
+      elseif weapon == "" and #self.Weapons > 0 then
+        self:GiveWeapon(self.Weapons[math.random(#self.Weapons)])
+      end]]
+    if isstring(self.Equipment) then
+      self:GiveWeapon(self.Equipment)
+    elseif #self.Weapons > 0 then
+      self:GiveWeapon(self.Weapons[math.random(#self.Weapons)])
+    end
   end
 end
 
@@ -185,7 +197,7 @@ if SERVER then
     local wep = self:GetWeapon()
     if not isfunction(wep.PrimaryAttack) then return false end
     if CurTime() < wep:GetNextPrimaryFire() then return false end
-    self:PlayAnimation(anim)
+    self:PlayActivity(anim)
     wep:PrimaryAttack()
     return true
   end
@@ -196,7 +208,7 @@ if SERVER then
     local wep = self:GetWeapon()
     if not isfunction(wep.SecondaryAttack) then return false end
     if CurTime() < wep:GetNextSecondaryFire() then return false end
-    self:PlayAnimation(anim)
+    self:PlayActivity(anim)
     wep:SecondaryAttack()
     return true
   end
@@ -206,7 +218,7 @@ if SERVER then
     local wep = self:GetWeapon()
     if not isfunction(wep.Reload) then return false end
     self._DrGBaseReloadingWeapon = true
-    self:Timer(self:PlayAnimation(anim) or 0, function()
+    self:Timer(self:PlayActivity(anim) or 0, function()
       self._DrGBaseReloadingWeapon = false
       if not self:HasWeapon() then return end
       wep = self:GetWeapon()

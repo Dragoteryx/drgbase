@@ -27,7 +27,15 @@ function TOOL:RightClick(tr)
   if CLIENT then return true end
   for i, nextbot in ipairs(self.Selected) do
     if not IsValid(nextbot) then continue end
-		nextbot:AddPatrolPos(tr.HitPos, 1)
+		nextbot._DrGBaseMoverTool = true
+		nextbot:CallInCoroutine(function(nextbot, delay)
+			nextbot._DrGBaseMoverTool = false
+			nextbot:MoveToPos(tr.HitPos, {}, function()
+				if nextbot._DrGBaseMoverTool then
+					return "tool"
+				end
+			end)
+		end, true)
   end
   return true
 end

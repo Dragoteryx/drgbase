@@ -1,5 +1,6 @@
 if not DrGBase then return end -- return if DrGBase isn't installed
-ENT.Base = "drgbase_projectile"
+ENT.Base = "proj_drg_default"
+ENT.IsDrGMissile = true
 
 -- Misc --
 ENT.PrintName = "Missile"

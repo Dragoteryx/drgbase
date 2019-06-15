@@ -9,16 +9,16 @@ function RepeatUntil:New()
   return repeatUntil
 end
 
-function RepeatUntil:Decorate(child, nextbot, data, id)
-  while child:Run(nextbot, data, id) do
-    if self:ShouldUpdate(id) then return false end
+function RepeatUntil:Decorate(child, tree, nextbot, ...)
+  while true do
+    local res = child:Run(tree, nextbot, ...)
+    if res == "failure" then return "success" end
+    if res ~= "success" then return res end
     nextbot:YieldCoroutine(true)
   end
-  return true
 end
-
 function RepeatUntil:__tostring()
-  return "RepeatUntil"
+  return self:GetType()
 end
 
 BT_NODES["RepeatUntil"] = RepeatUntil

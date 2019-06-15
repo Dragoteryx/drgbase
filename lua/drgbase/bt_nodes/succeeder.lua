@@ -9,13 +9,13 @@ function Succeeder:New()
   return succeeder
 end
 
-function Succeeder:Decorate(child, nextbot, data, id)
-  child:Run(nextbot, data, id)
-  return true
+function Succeeder:Decorate(child, tree, nextbot, ...)
+  local res = child:Run(tree, nextbot, ...)
+  if res == "failure" then return "success"
+  else return res end
 end
-
 function Succeeder:__tostring()
-  return "Succeeder"
+  return self:GetType()
 end
 
 BT_NODES["Succeeder"] = Succeeder

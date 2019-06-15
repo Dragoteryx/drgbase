@@ -2,9 +2,16 @@ if not DrGBase then return end -- return if DrGBase isn't installed
 ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
 
 -- Misc --
-ENT.Name = "DrGBase Test Nextbot"
+ENT.PrintName = "Test Nextbot"
 ENT.Category = "DrGBase"
 ENT.Models = {"models/player/gman_high.mdl"}
+
+-- AI --
+ENT.RangeAttackRange = 150
+ENT.MeleeAttackRange = 0
+ENT.ReachEnemyRange = 100
+ENT.AvoidEnemyRange = 50
+ENT.FollowPlayers = true
 
 -- Movements/animations --
 ENT.WalkAnimation = ACT_HL2MP_WALK
@@ -37,12 +44,13 @@ ENT.PossessionViews = {
   }
 }
 ENT.PossessionBinds = {
-  {
-    bind = IN_JUMP,
-    coroutine = true,
-    onkeydown = function(self)
-      self:QuickJump(100)
-    end
+  [IN_JUMP] = {
+    {
+      coroutine = true,
+      onkeydown = function(self)
+        self:QuickJump(100)
+      end
+    }
   }
 }
 
@@ -58,7 +66,7 @@ if SERVER then
   function ENT:CustomInitialize()
     self:SetDefaultRelationship(D_HT)
     self:SetSelfClassRelationship(D_LI)
-    self:DefineSequenceCallback({
+    self:SequenceEvent({
       self:SelectRandomSequence(self.RunAnimation),
       self:SelectRandomSequence(self.WalkAnimation)
     }, {0.3, 0.8}, function()
@@ -66,9 +74,13 @@ if SERVER then
     end)
   end
 
-  function ENT:OnAttack(enemy)
+  function ENT:OnRangeAttack(enemy)
     self:FaceTowards(enemy)
     self:EmitSlotSound("riseandshine", 7, "DrGBaseRiseAndShine")
+  end
+  function ENT:OnAvoidEnemy(enemy)
+    self:MoveAwayFrom(enemy)
+    return true
   end
   function ENT:OnReachedPatrol()
     self:PlaySequenceAndWait("menu_gman")
@@ -92,7 +104,7 @@ if SERVER then
   function ENT:OnStopClimbing(ladder, down)
     if down then return end
     local footstep = false
-    self:PlayAnimationAndMoveAbsolute(ACT_ZOMBIE_CLIMB_END, self.ClimbAnimRate, function(cycle)
+    self:PlayActivityAndMoveAbsolute(ACT_ZOMBIE_CLIMB_END, self.ClimbAnimRate, function(cycle)
       if cycle >= 0.875 and not footstep then
         footstep = true
         self:EmitFootstep()
@@ -109,6 +121,12 @@ if SERVER then
       }
       self:PlaySequenceAndWait(deaths[math.random(#deaths)])
     end
+  end
+
+else
+
+  function ENT:CustomThink()
+    self:RenderOffset(Vector(0, 30, 20))
   end
 
 end

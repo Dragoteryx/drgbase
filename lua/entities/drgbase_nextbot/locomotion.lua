@@ -70,7 +70,7 @@ function ENT:ClearStuck()
   return self.loco:ClearStuck()
 end
 function ENT:IsStuckInWorld()
-  
+
 end
 
 -- Meta --

@@ -9,20 +9,15 @@ function Sequence:New(random)
   return sequence
 end
 
-function Sequence:Execute(nextbot, data, id)
+function Sequence:Handle(tree, nextbot, ...)
   for _, child in self:GetIterator() do
-    if self:ShouldUpdate(id) then return false end
-    self:RegisterNext(id, child)
-    if not child:Run(nextbot, data, id) then
-      self:RegisterNext(id, nil)
-      return false
-    else self:RegisterNext(id, nil) end
+    local res = child:Run(tree, nextbot, ...)
+    if res ~= "success" then return res end
   end
-  return true
+  return "success"
 end
-
 function Sequence:__tostring()
-  return self:GetType().."("..#self:GetChildren()..")"
+  return self:GetType().."("..#self._children..")"
 end
 
 BT_NODES["Sequence"] = Sequence

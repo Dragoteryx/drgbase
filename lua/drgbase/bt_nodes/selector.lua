@@ -9,20 +9,15 @@ function Selector:New(random)
   return selector
 end
 
-function Selector:Execute(nextbot, data, id)
+function Selector:Handle(tree, nextbot, ...)
   for _, child in self:GetIterator() do
-    if self:ShouldUpdate(id) then return false end
-    self:RegisterNext(id, child)
-    if child:Run(nextbot, data, id) then
-      self:RegisterNext(id, nil)
-      return true
-    else self:RegisterNext(id, nil) end
+    local res = child:Run(tree, nextbot, ...)
+    if res ~= "failure" then return res end
   end
-  return false
+  return "failure"
 end
-
 function Selector:__tostring()
-  return self:GetType().."("..#self:GetChildren()..")"
+  return self:GetType().."("..#self._children..")"
 end
 
 BT_NODES["Selector"] = Selector

@@ -2,7 +2,7 @@ if not DrGBase then return end -- return if DrGBase isn't installed
 ENT.Base = "drgbase_nextbot_human" -- DO NOT TOUCH (obviously)
 
 -- Misc --
-ENT.Name = "DrGBase Test Human Nextbot"
+ENT.PrintName = "Test Human"
 ENT.Category = "DrGBase"
 ENT.Models = {
   "models/player/kleiner.mdl",
@@ -14,31 +14,22 @@ ENT.Weapons = {"weapon_ar2"}
 ENT.WeaponAccuracy = 0.75
 
 if SERVER then
-
   function ENT:CustomInitialize()
     self:SetDefaultRelationship(D_HT)
+    self:SetSelfModelRelationship(D_LI)
     self:SetFactionRelationship(DRGBASE_FACTION_REBELS, D_LI)
-    self:SetModelRelationship(self:GetModel(), D_LI)
-  end
-  function ENT:Use(ply, ent)
-    if IsValid(ply:GetActiveWeapon()) then
-      if self:HasWeapon() and ply:GetActiveWeapon():GetClass() == self:GetWeapon():GetClass() then
-        self:DropWeapon()
-      else
-        self:RemoveWeapon()
-        self:GiveWeapon(ply:GetActiveWeapon():GetClass())
-      end
+    if self:GetModel() == "models/player/kleiner.mdl" then
+      self:SetModelRelationship("models/player/kleiner.mdl", D_LI)
+    elseif self:GetModel() == "models/player/magnusson.mdl" then
+      self:SetModelRelationship("models/player/magnusson.mdl", D_LI)
     end
   end
-
   function ENT:OnIdle()
     self:AddPatrolPos(self:RandomPos(1500))
   end
-
-  function ENT:CustomRelationship(ent)
-    if ent:GetModel() == "models/props_junk/watermelon01.mdl" then return D_HT end
+  function ENT:OnReachedPatrol()
+    self:Wait(math.random(3, 7))
   end
-
 end
 
 -- DO NOT TOUCH --
