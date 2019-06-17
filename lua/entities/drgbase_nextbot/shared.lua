@@ -1,5 +1,5 @@
-ENT.Type = "nextbot"
 ENT.Base = "base_nextbot"
+ENT.Type = "nextbot"
 ENT.IsDrGNextbot = true
 
 -- Misc --
@@ -221,6 +221,8 @@ ENT.AnimMatchDirection = true
 ENT.ClimbLedges = false
 ENT.ClimbLedgesMaxHeight = math.huge
 ENT.ClimbLedgesMinHeight = 0
+ENT.LedgeDetectionDistance = 20
+ENT.ClimbProps = false
 ENT.ClimbLadders = false
 ENT.ClimbLaddersUp = true
 ENT.LaddersUpDistance = 20
@@ -266,11 +268,11 @@ ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
 
 -- Other modules --
+DrGBase.IncludeFile("drgbase/entity_helpers.lua")
 DrGBase.IncludeFile("behaviours.lua")
 DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("meta.lua")
 DrGBase.IncludeFile("misc.lua")
-DrGBase.IncludeFile("projectiles.lua")
 
 -- Init --
 

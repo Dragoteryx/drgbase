@@ -1,14 +1,10 @@
 
 if SERVER then
 
-  function DrGBase.CreateProjectile(model, pos, angles, binds, class)
+  function DrGBase.CreateProjectile(model, binds, class)
     local proj = ents.Create(class or "proj_drg_default")
     if not IsValid(proj) then return NULL end
     if istable(model) and #model > 0 then model = model[math.random(#model)] end
-    pos = pos or Vector(0, 0, 0)
-    angles = angles or Angle(0, 0, 0)
-    proj:SetPos(pos)
-    proj:SetAngles(angles)
     proj.CustomInitialize = function(proj)
       if isstring(model) then proj:SetModel(model) end
       if isfunction(binds.Init) then binds.Init(proj) end

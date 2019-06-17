@@ -15,8 +15,9 @@ if SERVER then
   AddCSLuaFile()
 
   function ENT:OnDetonate()
+    ParticleEffect("drg_smokescreen", self:GetPos(), self:GetAngles())
     self:EmitSound("weapons/smokegrenade/sg_explode.wav")
-    self:Timer(60, self.Remove)
+    self:Timer(0.1, self.Remove)
     return true
   end
 

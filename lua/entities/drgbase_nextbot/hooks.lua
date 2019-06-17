@@ -8,7 +8,7 @@ if SERVER then
     if not IsValid(attacker) then return end
     self:SpotEntity(ent)
   end
-  function ENT:AfterTakeDamage() end
+  --function ENT:AfterTakeDamage() end
 
   function ENT:OnFatalDamage() end
   --function ENT:OnDeath() end
@@ -126,7 +126,7 @@ if SERVER then
           end)
         end
         return true
-      else
+      elseif isfunction(self.AfterTakeDamage) then
         self:CallInCoroutine(function(self, delay)
           dmg = util.DrG_LoadDmg(data)
           self:AfterTakeDamage(dmg, delay)

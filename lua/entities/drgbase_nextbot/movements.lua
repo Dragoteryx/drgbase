@@ -259,7 +259,9 @@ if SERVER then
     end
     options = options or {}
     options.tolerance = options.tolerance or 20
-    if navmesh.IsLoaded() then
+    local selfpos = self:GetPos()
+    if navmesh.IsLoaded() and (not self:IsOnGround() or
+    selfpos:DistToSqr(navmesh.GetNearestNavArea(selfpos):GetClosestPointOnArea(selfpos)) < options.tolerance^2) then
       pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
       options.lookahead = options.lookahead or 300
       local path = self:GetPath()
@@ -278,6 +280,7 @@ if SERVER then
       if options.draw then path:Draw() end
       local current = path:GetCurrentGoal()
       local ladder = current.ladder
+      local ledge = self:FindLedge()
       if current.type == 4 then
         if not self.ClimbLaddersUp then return "unreachable" end
         if self:GetHullRangeSquaredTo(ladder:GetBottom()) < self.LaddersUpDistance^2 then
@@ -303,6 +306,10 @@ if SERVER then
           self:MoveTowards(current.pos)
           return "moving", ladder
         else return "obstacle" end
+      elseif isvector(ledge) then
+        self:ClimbLedge(ledge)
+        path:Invalidate()
+        return "ledge", ledge
       elseif not self._DrGBaseLastComputeSuccess and
       path:GetCurrentGoal().distanceFromStart == path:LastSegment().distanceFromStart then
         return "unreachable"
@@ -312,7 +319,10 @@ if SERVER then
         else return "moving" end
       else return "obstacle" end
     else
-      if not self:ObstacleAvoidance(true) then
+      local ledge = self:FindLedge()
+      if isvector(ledge) then
+        self:ClimbLedge(ledge)
+      elseif not self:ObstacleAvoidance(true) then
         self:MoveTowards(pos)
         if self:GetHullRangeSquaredTo(pos) < options.tolerance^2 then
           return "reached"
@@ -353,48 +363,130 @@ if SERVER then
 
   -- Climbing --
 
+  -- Ladders
   function ENT:ClimbLadder(ladder, down)
     if self:IsClimbing() then return end
-    if self:OnStartClimbing(ladder, down) == false then return end
+    local height = math.abs(ladder:GetTop().z - ladder:GetBottom().z)
+    local res = self:OnStartClimbing(ladder, height, down)
+    if res == false then return end
     self:SetNW2Bool("DrGBaseClimbing", true)
     self:SetNW2Bool("DrGBaseClimbingDown", down)
     self._DrGBaseClimbLadder = ladder
-    local offset = self:GetForward()*self.ClimbOffset.x +
-    self:GetRight()*self.ClimbOffset.y +
-    self:GetUp()*self.ClimbOffset.z
-    local lastHeight = self:GetPos().z
-    local lastTime = CurTime()
-    while not self:IsDying() do
-      self:FaceTowards(self:GetPos() - ladder:GetNormal())
-      local pos
-      if down then
-        pos = ladder:GetPosAtHeight(lastHeight - self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
-        self:SetPos(pos + offset)
-        if ladder:GetBottom().z - pos.z <= 0 then break end
-        if self:WhileClimbing(ladder, ladder:GetBottom().z - pos.z, false) then break end
-      else
-        pos = ladder:GetPosAtHeight(lastHeight + self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
-        self:SetPos(pos + offset)
-        if ladder:GetTop().z - pos.z <= 0 then break end
-        if self:WhileClimbing(ladder, ladder:GetTop().z - pos.z, false) then break end
+    if res ~= true then
+      local offset = self:CalcOffset(self.ClimbOffset)
+      offset.z = 0
+      local lastHeight = self:GetPos().z
+      local lastTime = CurTime()
+      while not self:IsDying() do
+        self:FaceTowards(self:GetPos() - ladder:GetNormal())
+        local pos
+        if down then
+          pos = ladder:GetPosAtHeight(lastHeight - self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
+          self:SetPos(pos + offset)
+          if ladder:GetBottom().z - pos.z <= 0 then break end
+          if self:WhileClimbing(ladder, ladder:GetBottom().z - pos.z, true) then break end
+        else
+          pos = ladder:GetPosAtHeight(lastHeight + self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
+          self:SetPos(pos + offset)
+          if ladder:GetTop().z - pos.z <= 0 then break end
+          if self:WhileClimbing(ladder, ladder:GetTop().z - pos.z, false) then break end
+        end
+        lastHeight = pos.z
+        lastTime = CurTime()
+        self:YieldCoroutine(false)
       end
-      lastHeight = pos.z
-      lastTime = CurTime()
-      self:YieldCoroutine(false)
-    end
-    self:OnStopClimbing(ladder, down)
+      local pos = self:GetPos()
+      if down then
+        self:OnStopClimbing(ladder, ladder:GetBottom().z - pos.z, true)
+      else self:OnStopClimbing(ladder, ladder:GetTop().z - pos.z, false) end
+    else self:CustomClimbing(ladder, height, down) end
     self:SetNW2Bool("DrGBaseClimbing", false)
     self._DrGBaseClimbLadder = nil
-    if not self:IsDying() then
-      local pos = self:GetPos()
-      self:SetPos(navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos))
-    end
+    self:SetVelocity(Vector(0, 0, 0))
   end
   function ENT:ClimbLadderUp(ladder)
     return self:ClimbLadder(ladder, false)
   end
   function ENT:ClimbLadderDown(ladder)
     return self:ClimbLadder(ladder, true)
+  end
+
+  -- Ledges
+  local function IsEntityClimbable(self, ent)
+    if not IsValid(ent) then return false end
+    return ent:GetClass() == "func_lod" or (self.ClimbProps and ent:GetClass() == "prop_physics")
+  end
+  function ENT:FindLedge()
+    if not self.ClimbLedges then return end
+    if not self:IsMoving() then return end
+    local hull = self:TraceHull(self:GetVelocity():GetNormalized()*self.LedgeDetectionDistance, true)
+    if not hull.Hit then return end
+    --if IsValid(hull.Entity) then print(hull.Entity, hull.Entity:GetCollisionGroup(), IsValid(hull.Entity)) end
+    if hull.HitWorld or IsEntityClimbable(self, hull.Entity) then
+      local up = self:TraceHull(self:GetUp()*999999).HitPos
+      local height = up.z - self:GetPos().z
+      local i = 1
+      local tr = {Hit = true, HitNonWorld = true}
+      while true do
+        if i*10 > height then return end
+        tr = self:TraceHull(self:GetForward()*self.LedgeDetectionDistance*3, false, {
+          start = self:GetPos() + Vector(0, 0, i*10)
+        })
+        if not tr.Hit then break end
+        if IsValid(tr.Entity) and not IsEntityClimbable(self, tr.Entity) then return end
+        i = i+1
+      end
+      local tr2 = self:TraceHull(self:GetUp()*-999, false, {
+        start = tr.HitPos
+      })
+      if tr2.HitPos.z - self:GetPos().z > self.ClimbLedgesMaxHeight then return end
+      local trRad = self:TraceHullRadial(999, 360, true, {
+        collisiongroup = COLLISION_GROUP_DEBRIS,
+        maxs = Vector(0.5, 0.5, self:Height()),
+        mins = Vector(-0.5, -0.5, self:GetStepHeight())
+      })
+      local pos = self:GetPos()
+      local mins, maxs = self:GetCollisionBounds()
+      mins.z = maxs.z
+      local ledge = self:TraceLine(trRad[1].Normal*mins:Distance(maxs)/1.41, {
+        collisiongroup = COLLISION_GROUP_DEBRIS,
+        start = Vector(pos.x, pos.y, tr2.HitPos.z - 1)
+      }).HitPos
+      local height = ledge.z - self:GetPos().z
+      if math.Clamp(height, self.ClimbLedgesMinHeight, self.ClimbLedgesMaxHeight) == height then
+        return ledge
+      end
+    end
+  end
+  function ENT:ClimbLedge(ledge)
+    --debugoverlay.Sphere(ledge, 2, 60, nil, true)
+    if self:IsClimbing() then return end
+    local height = math.abs(ledge.z - self:GetPos().z)
+    local res = self:OnStartClimbing(ledge, height, false)
+    if res == false then return end
+    self:SetNW2Bool("DrGBaseClimbing", true)
+    self:SetNW2Bool("DrGBaseClimbingDown", false)
+    if res ~= true then
+      local offset = self:CalcOffset(self.ClimbOffset)
+      offset.z = 0
+      local lastPos = self:GetPos()
+      local lastTime = CurTime()
+      while not self:IsDying() do
+        self:FaceTowards(ledge)
+        local pos = lastPos + lastPos:DrG_Direction(ledge):GetNormalized()*self:GetSpeed()*self:GetScale()*(CurTime()-lastTime)
+        if pos.z > ledge.z then pos.z = ledge.z end
+        self:SetPos(pos + offset)
+        local remaining = math.abs(ledge.z - self:GetPos().z)
+        if remaining == 0 then break end
+        if self:WhileClimbing(ledge, remaining, false) then break end
+        lastPos = pos
+        lastTime = CurTime()
+        self:YieldCoroutine(false)
+      end
+      self:OnStopClimbing(ledge, math.abs(ledge.z - self:GetPos().z), false)
+    else self:CustomClimbing(ledge, height, false) end
+    self:SetNW2Bool("DrGBaseClimbing", false)
+    self:SetVelocity(Vector(0, 0, 0))
   end
 
   -- Hooks --
@@ -405,6 +497,7 @@ if SERVER then
   function ENT:OnStartClimbing() end
   function ENT:WhileClimbing() end
   function ENT:OnStopClimbing() end
+  function ENT:CustomClimbing() end
 
   function ENT:HandleStuck()
     self.loco:ClearStuck()

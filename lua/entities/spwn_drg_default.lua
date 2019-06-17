@@ -1,5 +1,5 @@
 ENT.Type = "point"
-ENT.Base = "base_entity"
+ENT.Base = "drgbase_entity"
 ENT.IsDrGSpawner = true
 
 -- Misc --

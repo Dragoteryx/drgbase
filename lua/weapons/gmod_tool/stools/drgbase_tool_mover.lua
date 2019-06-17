@@ -23,7 +23,6 @@ function TOOL:LeftClick(tr)
   return true
 end
 function TOOL:RightClick(tr)
-  if IsValid(tr.Entity) then return false end
   if CLIENT then return true end
   for i, nextbot in ipairs(self.Selected) do
     if not IsValid(nextbot) then continue end

@@ -127,8 +127,10 @@ if SERVER then
           ragdoll:Spawn()
         else
           ragdoll = old_BecomeRagdoll(self, dmg)
-          ragdoll:SetColor(color)
-          ragdoll:SetMaterial(material)
+          if IsValid(ragdoll) then
+            ragdoll:SetColor(color)
+            ragdoll:SetMaterial(material)
+          end
         end
         if IsValid(ragdoll) then
           if not self.OnRagdoll(ragdoll) and RagdollRemove:GetFloat() > 0 then

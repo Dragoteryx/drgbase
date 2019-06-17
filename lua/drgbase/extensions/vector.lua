@@ -151,3 +151,7 @@ function vecMETA:DrG_Degrees(vec2, origin)
   vec2 = vec2 - origin
   return math.deg(math.acos(vec1:GetNormalized():Dot(vec2:GetNormalized())))
 end
+
+function vecMETA:DrG_Equals(vec)
+  return self.x == vec.x and self.y == vec.y and self.z == vec.z
+end

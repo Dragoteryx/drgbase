@@ -67,19 +67,6 @@ end
 
 -- Functions --
 
-function ENT:Timer(delay, callback)
-  timer.Simple(delay, function()
-    if not IsValid(self) then return end
-    return callback(self)
-  end)
-end
-function ENT:LoopTimer(delay, callback)
-  timer.DrG_Loop(delay, function()
-    if not IsValid(self) then return false end
-    return callback(self)
-  end)
-end
-
 function ENT:IsInRange(pos, range)
   return self:GetHullRangeSquaredTo(pos) <= math.pow(range*self:GetScale(), 2)
 end
@@ -138,18 +125,25 @@ function ENT:HasPhysics()
   return IsValid(self:GetPhysicsObject())
 end
 
-function ENT:TraceLine(vec)
-  local data = {}
+local DebugTraces = CreateConVar("drgbase_debug_traces", "0")
+function ENT:TraceLine(vec, data)
+  local trdata = {}
+  data = data or {}
   local center = self:OBBCenter()
-  data.start = self:GetPos() + center
-  data.endpos = data.start + vec
-  data.mask = self:GetSolidMask()
-  data.collisiongroup = self:GetCollisionGroup()
-  data.filter = {self, self:GetWeapon()}
-  return util.TraceLine(data)
+  trdata.start = data.start or self:GetPos() + center
+  trdata.endpos = data.endpos or trdata.start + vec
+  trdata.mask = data.mask or self:GetSolidMask()
+  trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
+  trdata.filter = data.filter or {self, self:GetWeapon()}
+  local tr = util.TraceLine(trdata)
+  if DebugTraces:GetFloat() > 0 then
+    local clr = tr.Hit and DrGBase.CLR_RED or DrGBase.CLR_GREEN
+    debugoverlay.Line(trdata.start, tr.HitPos, DebugTraces:GetFloat(), clr, false)
+    debugoverlay.Line(tr.HitPos, trdata.endpos, DebugTraces:GetFloat(), DrGBase.CLR_WHITE, false)
+  end
+  return tr
 end
-
-function ENT:TraceHull(vec, steps)
+function ENT:TraceHull(vec, steps, data)
   local bound1, bound2 = self:GetCollisionBounds()
   if bound1.z < bound2.z then
     local temp = bound1
@@ -157,20 +151,61 @@ function ENT:TraceHull(vec, steps)
     bound2 = temp
   end
   if steps then bound2.z = self.loco:GetStepHeight() end
-  local data = {}
-  data.start = self:GetPos()
-  data.endpos = data.start + vec
-  data.mask = self:GetSolidMask()
-  data.collisiongroup = self:GetCollisionGroup()
-  data.filter = {self, self:GetWeapon()}
-  data.maxs = bound1
-  data.mins = bound2
-  return util.TraceHull(data)
+  local trdata = {}
+  data = data or {}
+  trdata.start = data.start or self:GetPos()
+  trdata.endpos = data.endpos or trdata.start + vec
+  trdata.mask = data.mask or self:GetSolidMask()
+  trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
+  trdata.filter = data.filter or {self, self:GetWeapon()}
+  trdata.maxs = data.maxs or bound1
+  trdata.mins = data.mins or bound2
+  local tr = util.TraceHull(trdata)
+  if DebugTraces:GetFloat() > 0 then
+    local clr = tr.Hit and DrGBase.CLR_RED or DrGBase.CLR_GREEN
+    clr = clr:ToVector():ToColor() clr.a = 0
+    debugoverlay.Line(trdata.start, tr.HitPos, DebugTraces:GetFloat(), DrGBase.CLR_WHITE, false)
+    debugoverlay.Box(tr.HitPos, trdata.mins, trdata.maxs, DebugTraces:GetFloat(), clr)
+  end
+  return tr
+end
+function ENT:TraceLineRadial(distance, precision, data)
+  local traces = {}
+  for i = 1, precision do
+    local normal = self:GetForward()*distance
+    normal:Rotate(Angle(0, i*(360/precision), 0))
+    table.insert(traces, self:TraceLine(normal, data))
+  end
+  table.sort(traces, function(tr1, tr2)
+    return self:GetRangeSquaredTo(tr1.HitPos) < self:GetRangeSquaredTo(tr2.HitPos)
+  end)
+  return traces
+end
+function ENT:TraceHullRadial(distance, precision, steps, data)
+  local traces = {}
+  for i = 1, precision do
+    local normal = self:GetForward()*distance
+    normal:Rotate(Angle(0, i*(360/precision), 0))
+    table.insert(traces, self:TraceHull(normal, steps, data))
+  end
+  table.sort(traces, function(tr1, tr2)
+    return self:GetRangeSquaredTo(tr1.HitPos) < self:GetRangeSquaredTo(tr2.HitPos)
+  end)
+  return traces
 end
 
 function ENT:CalcFlinchProbability(dmg)
   local perc = math.Clamp(dmg:GetDamage()/self:Health()*100, 0, 100)
   return math.random(100) < perc
+end
+
+function ENT:CalcOffset(vec)
+  return self:GetForward()*vec.x + self:GetRight()*vec.y + self:GetUp()*vec.z
+end
+
+function ENT:Height()
+  local bound1, bound2 = self:GetCollisionBounds()
+  return math.abs(bound1.z - bound2.z)
 end
 
 -- Hooks --
@@ -324,41 +359,22 @@ if SERVER then
   function ENT:CollisionHulls(distance, forwardOnly)
     distance = distance or 5
     if distance < 0 then distance = 0 end
-    local bound1, bound2 = self:GetCollisionBounds()
-    if bound1.z < bound2.z then
-      local temp = bound1
-      bound1 = bound2
-      bound2 = temp
-    end
-    bound2.z = self.loco:GetStepHeight() + 1
-    local center = self:GetPos() + (bound1 + bound2)/2
-    center.z = self:GetPos().z
-    local data = {
-      start = center,
-      mask = self:GetSolidMask(),
-      collisiongroup = self:GetCollisionGroup(),
-      filter = {self, self:GetWeapon(), self:GetEnemy()},
-      maxs = bound1, mins = bound2
-    }
-    data.endpos = center + self:GetForward()*distance + self:GetRight()*-distance
-    local trNW = util.TraceHull(data)
-    data.endpos = center + self:GetForward()*distance + self:GetRight()*distance
-    local trNE = util.TraceHull(data)
+    local data = {collisiongroup = COLLISION_GROUP_DEBRIS}
+    local NW = self:TraceHull((self:GetForward()-self:GetRight()):GetNormalized()*distance, true, data)
+    local NE = self:TraceHull((self:GetForward()+self:GetRight()):GetNormalized()*distance, true, data)
     if forwardOnly then
       return {
-        NorthWest = trNW,
-        NorthEast = trNE
+        NorthWest = NW,
+        NorthEast = NE
       }
     else
-      data.endpos = center + self:GetForward()*-distance + self:GetRight()*distance
-      local trSE = util.TraceHull(data)
-      data.endpos = center + self:GetForward()*-distance + self:GetRight()*-distance
-      local trSW = util.TraceHull(data)
+      local SW = self:TraceHull((-self:GetForward()-self:GetRight()):GetNormalized()*distance, true, data)
+      local SE = self:TraceHull((-self:GetForward()+self:GetRight()):GetNormalized()*distance, true, data)
       return {
-        NorthWest = trNW,
-        NorthEast = trNE,
-        SouthEast = trSE,
-        SouthWest = trSW
+        NorthWest = NW,
+        NorthEast = NE,
+        SouthWest = SW,
+        SouthEast = SE
       }
     end
   end
@@ -462,33 +478,10 @@ if SERVER then
     end)
   end
 
-  function ENT:DynamicLight(color, radius, brightness)
-    if color == nil then color = Color(255, 255, 255) end
-    if not isnumber(radius) then radius = 1000 end
-    radius = math.Clamp(radius, 0, math.huge)
-    if not isnumber(brightness) then brightness = 1 end
-    brightness = math.Clamp(brightness, 0, math.huge)
-    local light = ents.Create("light_dynamic")
-  	light:SetKeyValue("brightness", tostring(brightness))
-  	light:SetKeyValue("distance", tostring(radius))
-    light:Fire("Color", tostring(color.r).." "..tostring(color.g).." "..tostring(color.b))
-  	light:SetLocalPos(self:GetPos())
-  	light:SetParent(self)
-  	light:Spawn()
-  	light:Activate()
-  	light:Fire("TurnOn", "", 0)
-  	self:DeleteOnRemove(light)
-    return light
-  end
-
-  function ENT:ParticleEffect(name, follow, attachment)
-    if follow then
-      local pattach = attachment and PATTACH_POINT_FOLLOW or PATTACH_ABSORIGIN_FOLLOW
-      ParticleEffectAttach(name, pattach, self, attachment or 1)
-    else
-      local pattach = attachment and PATTACH_POINT or PATTACH_ABSORIGIN
-      ParticleEffectAttach(name, pattach, self, attachment or 1)
-    end
+  function ENT:CreateProjectile(model, binds, class)
+    local proj = DrGBase.CreateProjectile(model, binds, class)
+    proj:SetOwner(self)
+    return proj
   end
 
   -- Hooks --

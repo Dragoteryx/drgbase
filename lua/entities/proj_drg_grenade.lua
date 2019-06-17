@@ -39,6 +39,7 @@ if SERVER then
   function ENT:_BaseInitialize()
     self:FilterOwner(false)
     self:FilterAllies(false)
+    self:SetCollisionGroup(COLLISION_GROUP_WEAPON)
     self._DrGBaseBounceSoundDelay = 0
   end
   function ENT:OnContact(ent)
@@ -83,11 +84,7 @@ if SERVER then
     if not self:OnDetonate() then self:Remove() end
   end
   function ENT:OnDetonate()
-    self:Explosion(self:GetDamage(), self:GetRange(), function(ent)
-      local owner = self:GetOwner()
-      if not IsValid(owner) or not owner.IsDrGNextbot then return false end
-      return owner:IsAlly(ent)
-    end)
+    self:Explosion(self:GetDamage(), self:GetRange())
   end
 
 end

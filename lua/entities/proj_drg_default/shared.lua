@@ -1,35 +1,21 @@
+ENT.Base = "drgbase_entity"
 ENT.Type = "anim"
-ENT.Base = "base_entity"
 ENT.IsDrGProjectile = true
 
 -- Misc --
 ENT.PrintName = "Projectile"
 ENT.Category = "DrGBase"
 ENT.Models = {}
+ENT.ModelScale = 1
 
 -- Projectile --
 ENT.Gravity = true
+ENT.CollisionDamage = true
 ENT.Physgun = false
 ENT.Gravgun = false
 
 -- Misc --
 DrGBase.IncludeFile("meta.lua")
-
-function ENT:Timer(duration, callback)
-  timer.Simple(duration, function()
-    if IsValid(self) then callback(self) end
-  end)
-end
-function ENT:LoopTimer(delay, callback)
-  timer.DrG_Loop(delay, function()
-    if not IsValid(self) then return false end
-    return callback(self)
-  end)
-end
-
-function ENT:ScreenShake(amplitude, frequency, duration, radius)
-  return util.ScreenShake(self:GetPos(), amplitude, frequency, duration, radius)
-end
 
 hook.Add("PhysgunPickup", "DrGBaseProjectilePhysgun", function(ply, ent)
   if ent.IsDrGProjectile then return ent.Physgun or false end
@@ -53,6 +39,7 @@ if SERVER then
     if #self.Models > 0 then
       self:SetModel(self.Models[math.random(#self.Models)])
     else self:SetModel("models/props_junk/watermelon01.mdl") end
+    self:SetModelScale(self.ModelScale)
     self._DrGBaseFilterOwner = true
     self._DrGBaseFilterAllies = false
     self:SetUseType(SIMPLE_USE)
@@ -121,29 +108,32 @@ if SERVER then
 
   -- Helpers --
 
-  function ENT:AimAt(target, speed)
+  function ENT:AimAt(target, speed, feet)
     local phys = self:GetPhysicsObject()
     if not IsValid(phys) then return Vector(0, 0, 0) end
     if not phys:IsGravityEnabled() then
       if isentity(target) then
-        local aimAt = target:WorldSpaceCenter()
+        local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
         local dist = self:GetPos():Distance(aimAt)
-        return self:AimAt(aimAt + target:GetVelocity()*(dist/speed), speed)
+        return self:AimAt(aimAt + target:GetVelocity()*(dist/speed), speed, feet)
       else
         local vec = self:GetPos():DrG_Direction(target):GetNormalized()*speed
         phys:SetVelocity(vec)
         return vec
       end
-    else return self:ThrowAt(target, {
-      magnitude = speed, recursive = true
-    }) end
+    else
+      return self:ThrowAt(target, {
+        magnitude = speed, recursive = true, maxmagnitude = speed
+      }, feet)
+    end
   end
-  function ENT:ThrowAt(target, options)
+  function ENT:ThrowAt(target, options, feet)
     local phys = self:GetPhysicsObject()
     if not IsValid(phys) then return Vector(0, 0, 0) end
     if isentity(target) then
-      local vec, info = self:GetPos():DrG_CalcTrajectory(target:WorldSpaceCenter(), options)
-      return self:ThrowAt(target:WorldSpaceCenter() + target:GetVelocity()*info.duration, options)
+      local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
+      local vec, info = self:GetPos():DrG_CalcTrajectory(aimAt, options)
+      return self:ThrowAt(aimAt + target:GetVelocity()*info.duration, options, feet)
     else return phys:DrG_Trajectory(target, options) end
   end
 
@@ -159,9 +149,15 @@ if SERVER then
     ent:TakeDamageInfo(dmg)
   end
   function ENT:RadiusDamage(value, type, range, filter)
+    local owner = self:GetOwner()
+    if not isfunction(filter) then filter = function(ent)
+      if ent == owner then return true end
+      if not IsValid(owner) or not owner.IsDrGNextbot then return false end
+      return owner:IsAlly(ent)
+    end end
     for i, ent in ipairs(ents.FindInSphere(self:GetPos(), range)) do
       if not IsValid(ent) then continue end
-      if isfunction(filter) and filter(ent) then continue end
+      if filter(ent) then continue end
       self:DealDamage(ent, value*math.Clamp((range-self:GetPos():Distance(ent:GetPos()))/range, 0, 1), type)
     end
   end
@@ -182,39 +178,18 @@ if SERVER then
     self:RadiusDamage(damage, DMG_BLAST, range, filter)
   end
 
-  function ENT:DynamicLight(color, radius, brightness)
-    if color == nil then color = Color(255, 255, 255) end
-    if not isnumber(radius) then radius = 1000 end
-    radius = math.Clamp(radius, 0, math.huge)
-    if not isnumber(brightness) then brightness = 1 end
-    brightness = math.Clamp(brightness, 0, math.huge)
-    local light = ents.Create("light_dynamic")
-  	light:SetKeyValue("brightness", tostring(brightness))
-  	light:SetKeyValue("distance", tostring(radius))
-    light:Fire("Color", tostring(color.r).." "..tostring(color.g).." "..tostring(color.b))
-  	light:SetLocalPos(self:GetPos())
-  	light:SetParent(self)
-  	light:Spawn()
-  	light:Activate()
-  	light:Fire("TurnOn", "", 0)
-  	self:DeleteOnRemove(light)
-    return light
-  end
-
-  function ENT:ParticleEffect(name, follow, attachment)
-    if follow then
-      local pattach = attachment and PATTACH_POINT_FOLLOW or PATTACH_ABSORIGIN_FOLLOW
-      ParticleEffectAttach(name, pattach, self, attachment or 1)
-    else
-      local pattach = attachment and PATTACH_POINT or PATTACH_ABSORIGIN
-      ParticleEffectAttach(name, pattach, self, attachment or 1)
-    end
-  end
-
   -- Handlers --
 
   hook.Add("GravGunPickupAllowed", "DrGBaseProjectileGravgun", function(ply, ent)
     if ent.IsDrGProjectile then return ent.Gravgun or false end
+  end)
+
+  hook.Add("EntityTakeDamage", "DrGBaseProjCollisionDamage", function(ent, dmg)
+    local inflictor = dmg:GetInflictor()
+    if not inflictor.IsDrGProjectile then return end
+    if dmg:GetDamageType() == DMG_CRUSH and not inflictor.CollisionDamage then
+      return true
+    end
   end)
 
 else

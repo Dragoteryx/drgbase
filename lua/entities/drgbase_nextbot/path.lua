@@ -42,29 +42,19 @@ end
 
 -- Hooks --
 
-function ENT:OnComputePath(cost) return cost end
-function ENT:OnComputePathClimbLadderUp(cost, dist)
-  return cost + dist
+local function MultiplyCost(nextbot, callback, cost, dist, ...)
+  local res = callback(nextbot, ...)
+  local mult = math.Clamp(res, 0, math.huge)+1
+  return cost + dist*mult, res < 0
 end
-function ENT:OnComputePathClimbLadderDown(cost, dist)
-  return cost + dist
-end
-function ENT:OnComputePathClimbWall(cost, dist)
-  return cost + dist*2
-end
-function ENT:OnComputePathStep(cost, dist)
-  return cost
-end
-function ENT:OnComputePathJump(cost, dist)
-  return cost + dist
-end
-function ENT:OnComputePathDrop(cost, dist)
-  return cost + dist
-end
-function ENT:OnComputePathUnderwater(cost, dist)
-  return cost + dist
-  --return cost + dist*2
-end
+function ENT:OnComputePath(from, to) return 0 end
+function ENT:OnComputePathLadderUp(from, to, ladder) return 1 end
+function ENT:OnComputePathLadderDown(from, to, ladder) return 1 end
+function ENT:OnComputePathLedge(from, to, height) return 1 end
+function ENT:OnComputePathStep(from, to, height) return 0 end
+function ENT:OnComputePathJump(from, to, height) return 1 end
+function ENT:OnComputePathDrop(from, to, drop) return 1 end
+function ENT:OnComputePathUnderwater(cost, dist) return 1 end
 
 -- Meta --
 
@@ -109,6 +99,7 @@ if not DrGBase_pathMETA then
         			dist = ladder:GetLength()
         		elseif length > 0 then dist = length
         		else dist = fromArea:GetCenter():Distance(area:GetCenter()) end
+            local unreach = false
         		local cost = dist + fromArea:GetCostSoFar()
         		local height = fromArea:ComputeAdjacentConnectionHeightChange(area)
             if height > 0 then
@@ -118,15 +109,19 @@ if not DrGBase_pathMETA then
               height < nextbot.loco:GetStepHeight() or
               height < nextbot.loco:GetJumpHeight()) then return -1 end
               if IsValid(ladder) then
-                cost = nextbot:OnComputePathClimbLadderUp(cost, dist, self, area, fromArea, ladder, elevator, length)
+                cost, unreach = MultiplyCost(nextbot, nextbot.OnComputePathLadderUp, cost, dist, fromArea, area, ladder)
+                if unreach then return -1 end
               elseif height < nextbot.loco:GetStepHeight() then
-                cost = nextbot:OnComputePathStep(cost, dist, self, area, fromArea, ladder, elevator, length)
+                cost, unreach = MultiplyCost(nextbot, nextbot.OnComputePathStep, cost, dist, fromArea, area, height)
+                if unreach then return -1 end
               elseif height < nextbot.loco:GetJumpHeight() then
-                cost = nextbot:OnComputePathJump(cost, dist, self, area, fromArea, ladder, elevator, length)
-              elseif nextbot.ClimbWalls then
-                if height < nextbot.ClimbWallsMinHeight then return -1 end
-                if height > nextbot.ClimbWallsMaxHeight then return -1 end
-                cost = nextbot:OnComputePathClimbWall(cost, dist, self, area, fromArea, ladder, elevator, length)
+                cost, unreach = MultiplyCost(nextbot, nextbot.OnComputePathJump, cost, dist, fromArea, area, height)
+                if unreach then return -1 end
+              elseif nextbot.ClimbLedges then
+                if height < nextbot.ClimbLedgesMinHeight then return -1 end
+                if height > nextbot.ClimbLedgesMaxHeight then return -1 end
+                cost, unreach = MultiplyCost(nextbot, nextbot.OnComputePathLedge, cost, dist, fromArea, area, height)
+                if unreach then return -1 end
               else return -1 end
         		elseif height < 0 then
               local drop = -height
@@ -135,15 +130,20 @@ if not DrGBase_pathMETA then
               drop > nextbot.ClimbLaddersDownMaxHeight or
               drop < nextbot.loco:GetDeathDropHeight()) then return -1 end
               if IsValid(ladder) then
-                cost = nextbot:OnComputePathClimbLadderDown(cost, dist, self, area, fromArea, ladder, elevator, length)
+                cost, unreach = MultiplyCost(nextbot, nextbot.OnComputePathLadderDown, cost, dist, fromArea, area, ladder)
+                if unreach then return -1 end
               elseif drop < nextbot.loco:GetDeathDropHeight() then
-                cost = nextbot:OnComputePathDrop(cost, dist, self, area, fromArea, ladder, elevator, length)
+                cost, unreach = MultiplyCost(nextbot, nextbot.OnComputePathDrop, cost, dist, fromArea, area, drop)
+                if unreach then return -1 end
               else return -1 end
         		end
             if area:IsUnderwater() then
-              cost = nextbot:OnComputePathUnderwater(cost, dist, self, area, fromArea, ladder, elevator, length)
+              cost, unreach = MultiplyCost(nextbot, nextbot.OnComputePathUnderwater, cost, dist, fromArea, area)
+              if unreach then return -1 end
             end
-        		return nextbot:OnComputePath(cost, dist, self, area, fromArea, ladder, elevator, length)
+            cost, unreach = MultiplyCost(nextbot, nextbot.OnComputePath, cost, dist, fromArea, area)
+            if unreach then return -1 end
+            return cost
           end
         end
         nextbot._DrGBaseLastComputeSuccess = old_Compute(self, nextbot, pos, generator)

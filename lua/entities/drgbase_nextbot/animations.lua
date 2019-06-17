@@ -141,11 +141,16 @@ if SERVER then
     if isstring(seq) then seq = self:LookupSequence(seq)
     elseif not isnumber(seq) then return end
     if seq == -1 then return end
+    if isnumber(options) then options = {options}
+    elseif not istable(options) then options = {} end
     if callback == nil then callback = function() end end
     local previousCycle = 0
-    return self:PlaySequenceAndWait(seq, rate, function(cycle)
+    return self:PlaySequenceAndWait(seq, options.rate or 1, function(cycle)
       local success, vec, angles = self:GetSequenceMovement(seq, previousCycle, cycle)
       if success then
+        if isvector(options.multiply) then
+          vec = Vector(vec.x*options.multiply.x, vec.y*options.multiply.y, vec.z*options.multiply.z)
+        end
         vec:Rotate(self:GetAngles() + angles)
         if not self:TraceHull(vec, true).Hit then
           self:SetPos(self:GetPos() + vec*self:GetModelScale())
@@ -161,16 +166,21 @@ if SERVER then
     return self:PlaySequenceAndMove(anim, rate, callback)
   end
 
-  function ENT:PlaySequenceAndMoveAbsolute(seq, rate, callback)
+  function ENT:PlaySequenceAndMoveAbsolute(seq, options, callback)
     if isstring(seq) then seq = self:LookupSequence(seq)
     elseif not isnumber(seq) then return end
     if seq == -1 then return end
+    if isnumber(options) then options = {options}
+    elseif not istable(options) then options = {} end
     if callback == nil then callback = function() end end
     local startpos = self:GetPos()
     local lastpos = self:GetPos()
-    local res = self:PlaySequenceAndWait(seq, rate, function(cycle)
+    local res = self:PlaySequenceAndWait(seq, options.rate or 1, function(cycle)
       local success, vec, angles = self:GetSequenceMovement(seq, 0, cycle)
       if success then
+        if isvector(options.multiply) then
+          vec = Vector(vec.x*options.multiply.x, vec.y*options.multiply.y, vec.z*options.multiply.z)
+        end
         vec:Rotate(self:GetAngles() + angles)
         lastpos = startpos + vec*self:GetModelScale()
         self:SetPos(lastpos)
@@ -227,6 +237,28 @@ if SERVER then
   function ENT:PlayActivity(anim, rate, callback)
     if isnumber(anim) then anim = self:SelectRandomSequence(anim) end
     return self:PlaySequence(anim, rate, callback)
+  end
+
+  function ENT:PlayClimbSequence(seq, animheight, realheight, callback)
+    return self:PlaySequenceAndMoveAbsolute(seq, {
+      multiply = Vector(1, 1, realheight/animheight/self:GetModelScale())
+    }, callback)
+  end
+  function ENT:PlayAppropriateClimbSequence(height, climbs, callback)
+    height = height/self:GetModelScale()
+    for i, climb in ipairs(climbs) do
+      local prior = climbs[i-1]
+      if height < climb.height then
+        return self:PlayClimbSequence(climb.seq, climb.height, height*self:GetModelScale(), callback)
+      elseif prior ~= nil and math.Clamp(height, prior.height, climb.height) == height then
+        local avg = (prior.height + climb.height)/2
+        if height < avg then
+          return self:PlayClimbSequence(prior.seq, prior.height, height*self:GetModelScale(), callback)
+        else return self:PlayClimbSequence(climb.seq, climb.height, height*self:GetModelScale(), callback) end
+      elseif climbs[i+1] == nil then
+        return self:PlayClimbSequence(climb.seq, climb.height, height*self:GetModelScale(), callback)
+      end
+    end
   end
 
   function ENT:DirectPoseParametersAt(pos, pitch, yaw, center)

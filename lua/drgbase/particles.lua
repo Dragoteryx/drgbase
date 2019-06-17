@@ -14,5 +14,6 @@ end
 -- Premade particles --
 
 DrGBase.AddParticles("drgbase.pcf", {
-  "drg_plasma_ball"
+  "drg_plasma_ball",
+  "drg_smokescreen"
 })
