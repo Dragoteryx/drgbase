@@ -1,5 +1,5 @@
 ENT.Type = "point"
-ENT.Base = "drgbase_entity"
+ENT.Base = "base_entity"
 ENT.IsDrGSpawner = true
 
 -- Misc --
@@ -44,7 +44,11 @@ if SERVER then
       local ent = ents.Create(class)
       if not IsValid(ent) then return end
       ent:Spawn()
-      ent:SetPos(self:GetPos())
+      if navmesh.IsLoaded() then
+        local radius = self:GetRadius()
+        local pos = self:GetPos() + Vector(math.random(-1, 1)*radius, math.random(-1, 1)*radius, math.random(-1, 1)*radius)
+        ent:SetPos(navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or self:GetPos())
+      else ent:SetPos(self:GetPos()) end
       if self:AfterSpawn(ent) ~= false then
         self._DrGBaseLastSpawn = CurTime()
         table.insert(self._DrGBaseSpawnedEntities, ent)
@@ -105,7 +109,7 @@ if SERVER then
   end
 
   function ENT:EnableAutoRemove(autoremove)
-    if bool == nil then return self._DrGBaseAutoRemove
+    if bool == nil then return self._DrGBaseAutoRemove or false
     else self._DrGBaseAutoRemove = tobool(autoremove) end
   end
 

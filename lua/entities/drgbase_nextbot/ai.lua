@@ -1,4 +1,8 @@
 
+-- Convars --
+
+local EnemyRadius = CreateConVar("drgbase_enemy_radius", "5000", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+
 -- Getters/setters --
 
 function ENT:IsAIDisabled()
@@ -16,7 +20,8 @@ function ENT:HaveEnemy()
 end
 
 function ENT:GetNemesis()
-  if self:HasNemesis() then return self:GetEnemy()
+  if self:HasNemesis() then
+    return self:GetEnemy()
   else return NULL end
 end
 function ENT:HasNemesis()
@@ -24,13 +29,6 @@ function ENT:HasNemesis()
 end
 function ENT:HaveNemesis()
   return self:HasNemesis()
-end
-
-function ENT:IsFollower()
-  return IsValid(self:GetNW2Bool("DrGBaseFollowing"))
-end
-function ENT:GetFollowing()
-  return self:GetNW2Entity("DrGBaseFollowing"), self:GetNW2Float("DrGBaseFollowDist")
 end
 
 -- Functions --
@@ -49,10 +47,7 @@ function ENT:_InitAI()
     self._DrGBaseAllyDamageTolerance = {}
     self._DrGBaseAfraidOfDamageTolerance = {}
     self._DrGBaseNeutralDamageTolerance = {}
-    self:RefreshEnemy()
-    self:LoopTimer(0.5, function()
-      self:RefreshEnemy()
-    end)
+    self:LoopTimer(1, self.RefreshEnemy)
   end
   self:SetNWVarProxy("DrGBaseEnemy", function(self, name, old, new)
     if not self._DrGBaseHasEnemy and IsValid(new) then
@@ -71,13 +66,18 @@ function ENT:_InitAI()
 end
 
 if SERVER then
-  util.AddNetworkString("DrGBaseStartFollowPlayer")
-  util.AddNetworkString("DrGBaseStopFollowPlayer")
 
   -- Getters/setters --
 
   function ENT:SetAIDisabled(bool)
+    local disabled = self:GetNW2Bool("DrGBaseAIDisabled")
     self:SetNW2Bool("DrGBaseAIDisabled", bool)
+    if disabled and not bool then
+      self:RefreshEnemiesSight()
+      self:RefreshEnemy()
+    elseif bool then
+      self:BehaviourTreeEvent("AIDisabled")
+    end
   end
   function ENT:DisableAI()
     self:SetAIDisabled(true)
@@ -93,37 +93,6 @@ if SERVER then
   function ENT:SetNemesis(nemesis)
     self:SetNW2Entity("DrGBaseEnemy", nemesis)
     self:SetNW2Bool("DrGBaseNemesis", true)
-  end
-
-  function ENT:FollowEntity(ent, dist, notify)
-    local old = self:GetFollowing()
-    if IsValid(ent) then
-      if not self:IsAlly(ent) and not self:IsNeutral(ent) then return end
-      if old ~= ent then
-        self:SetNW2Entity("DrGBaseFollowing", ent)
-        if notify then
-          if old:IsPlayer() then
-            net.Start("DrGBaseStopFollowPlayer")
-            net.WriteEntity(self)
-            net.Send(old)
-          end
-          if ent:IsPlayer() then
-            net.Start("DrGBaseStartFollowPlayer")
-            net.WriteEntity(self)
-            net.Send(ent)
-          end
-        end
-      end
-      self:SetNW2Float("DrGBaseFollowDist", math.Clamp(dist, 0, math.huge))
-    else
-      self:SetNW2Entity("DrGBaseFollowing", nil)
-      if notify and old:IsPlayer() then
-        net.Start("DrGBaseStopFollowPlayer")
-        net.WriteEntity(self)
-        net.Send(old)
-      end
-    end
-    self:BehaviourTreeEvent("FollowEntity", ent, dist)
   end
 
   function ENT:AddPatrolPos(pos, i)
@@ -144,6 +113,28 @@ if SERVER then
     self:BehaviourTreeEvent("RemovedPatrolPos", pos)
     return pos
   end
+
+  -- Functions --
+
+  function ENT:FetchEnemy()
+    if self:IsPossessed() then return NULL end
+    local enemies = self:GetEnemies(true)
+    table.sort(enemies, function(ent1, ent2)
+      return self:OnFetchEnemy(ent1, ent2)
+    end)
+    local enemy = enemies[1]
+    if not IsValid(enemy) then return NULL
+    elseif self:GetRangeSquaredTo(enemy) > EnemyRadius:GetFloat()^2 then
+      return NULL
+    else return enemy end
+  end
+  function ENT:RefreshEnemy()
+    if self:HasNemesis() then return self:GetNemesis() end
+    local enemy = self:FetchEnemy()
+    self:SetEnemy(enemy)
+    return enemy
+  end
+
   function ENT:ClearPatrolPos()
     self._DrGBasePatrolPos = {}
     self:BehaviourTreeEvent("ClearedPatrolPos")
@@ -161,21 +152,6 @@ if SERVER then
     self:BehaviourTreeEvent("SortedPatrolPos")
   end
 
-  -- Functions --
-
-  function ENT:FetchEnemy()
-    if self:IsPossessed() then return NULL end
-    local enemy = self:GetClosestEnemy(true)
-    if IsValid(enemy) then return enemy
-    else return NULL end
-  end
-  function ENT:RefreshEnemy()
-    if self:HasNemesis() then return self:GetNemesis() end
-    local enemy = self:FetchEnemy()
-    self:SetEnemy(enemy)
-    return enemy
-  end
-
   -- Hooks --
 
   function ENT:OnRangeAttack() end
@@ -183,64 +159,35 @@ if SERVER then
   function ENT:OnChaseEnemy() end
   function ENT:OnAvoidEnemy() end
 
-  function ENT:OnReachedEntity(ent)
-    self:FaceTowards(ent)
-  end
-  function ENT:OnFollowEntity() end
-
   function ENT:OnReachedPatrol() end
   function ENT:OnPatrolUnreachable() end
   function ENT:WhilePatrolling() end
 
   function ENT:OnIdle() end
 
+  function ENT:OnFetchEnemy(ent1, ent2)
+    local disp1, prio1 = self:GetRelationship(ent1)
+    local disp2, prio2 = self:GetRelationship(ent2)
+    if prio1 > prio2 then return true
+    elseif prio2 > prio1 then return false
+    else
+      return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
+    end
+  end
+
   function ENT:ShouldRun()
-    if self:HasEnemy() then return true end
-    local ent, dist = self:GetFollowing()
-    if IsValid(ent) then
-      if not self:IsInRange(ent, dist*2) then return true end
-      if self:GroundDistance(ent) > dist*2 then return true end
-      return false
-    else return false end
+    return self:HasEnemy()
   end
 
   -- Handlers --
 
   cvars.AddChangeCallback("ai_disabled", function(name, old, new)
-    if not tobool(new) then return end
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
-      nextbot:BehaviourTreeEvent("AIDisabled")
+      if not new then
+        nextbot:RefreshEnemiesSight()
+        nextbot:RefreshEnemy()
+      else nextbot:BehaviourTreeEvent("AIDisabled") end
     end
   end, "DrGBaseDisableAIUpdateBT")
-
-  function ENT:_HandleAI()
-    local ent, dist = self:GetFollowing()
-    if IsValid(ent) and not self:IsAlly(ent) and not self:IsNeutral(ent) then
-      self:FollowEntity(nil, 0, true)
-    end
-  end
-
-else
-
-  -- Getters/setters --
-
-  -- Functions --
-
-  -- Hooks --
-
-  -- Handlers --
-
-  net.Receive("DrGBaseStartFollowPlayer", function()
-    local ent = net.ReadEntity()
-    if not IsValid(ent) then return end
-    notification.AddLegacy(ent.PrintName.." is now following you.", NOTIFY_HINT, 4)
-    surface.PlaySound("buttons/lightswitch2.wav")
-  end)
-  net.Receive("DrGBaseStopFollowPlayer", function()
-    local ent = net.ReadEntity()
-    if not IsValid(ent) then return end
-    notification.AddLegacy(ent.PrintName.." is no longer following you.", NOTIFY_HINT, 4)
-    surface.PlaySound("buttons/lightswitch2.wav")
-  end)
 
 end

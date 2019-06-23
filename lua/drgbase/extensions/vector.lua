@@ -14,7 +14,8 @@ local vecMETA = FindMetaTable("Vector")
   local s2 = math.atan((v*v - res)/(g*x))
   pitch = s1 > s2 and s2 or s1
   vec.z = math.tan(pitch)*x
-  return vec:GetNormalized()*v
+  local calc = magnitude*math.sin(pitch)
+  return vec:GetNormalized()*v, (calc+math.sqrt(calc^2-2*g*y))/g
 end]]
 
 function vecMETA:DrG_CalcTrajectory(endpos, options)
@@ -149,7 +150,7 @@ function vecMETA:DrG_Degrees(vec2, origin)
   origin = origin or Vector(0, 0, 0)
   vec1 = vec1 - origin
   vec2 = vec2 - origin
-  return math.deg(math.acos(vec1:GetNormalized():Dot(vec2:GetNormalized())))
+  return math.deg(math.acos(math.Round(vec1:GetNormalized():Dot(vec2:GetNormalized()), 2)))
 end
 
 function vecMETA:DrG_Equals(vec)

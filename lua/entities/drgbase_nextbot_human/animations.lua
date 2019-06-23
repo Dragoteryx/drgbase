@@ -157,7 +157,7 @@ if SERVER then
     ["knife"] = true,
     ["duel"] = true
   }
-  function ENT:UpdateAnimation()
+  function ENT:OnUpdateAnimation()
     if self:IsClimbingUp() then return self.ClimbUpAnimation, self.ClimbAnimRate end
     if self:IsClimbingDown() then return self.ClimbDownAnimation, self.ClimbAnimRate end
     local holdtype = self:HasWeapon() and self:GetWeapon():GetHoldType() or "normal"

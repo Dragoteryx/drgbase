@@ -242,7 +242,7 @@ else
     [NODE_TYPE_WATER] = DrGBase.CLR_BLUE
   }
 
-  hook.Add("PostDrawOpaqueRenderables", "DrGBaseDrawNodegraph", function()
+  hook.Add("PostDrawOpaqueRenderables", "DrGBaseDrawNodegraph", function(
     if not GetConVar("developer"):GetBool() then return end
     if not DisplayNodegraph:GetBool() then return end
     local ply = LocalPlayer()

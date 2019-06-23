@@ -153,7 +153,7 @@ function ENT:_HandlePossession(cor)
     local right = r and not l
     local left = l and not r
     if self.PossessionMovement == POSSESSION_MOVE_COMPASS then
-      self:FaceTowards(self:GetPos() + self:PossessorNormal())
+      self:PossessionFaceForward()
       if forward then self:Approach(self:GetPos() + self:PossessorForward())
       elseif backward then self:Approach(self:GetPos() - self:PossessorForward()) end
       if right then self:Approach(self:GetPos() + self:PossessorRight())
@@ -165,7 +165,7 @@ function ENT:_HandlePossession(cor)
       if right then direction = direction + self:PossessorRight()
       elseif left then direction = direction - self:PossessorRight() end
       if direction ~= self:GetPos() then self:MoveTowards(direction)
-      else self:FaceTowards(self:GetPos() + self:PossessorNormal()) end
+      else self:PossessionFaceForward() end
     else self:PossessionControls(forward, backward, right, left) end
     if self.ClimbLadders and navmesh.IsLoaded() then
       local ladders = navmesh.GetNearestNavArea(self:GetPos()):GetLadders()
@@ -247,15 +247,10 @@ if SERVER then
     return "ok"
   end
 
-  net.Receive("DrGBasePossessionCycleViewPresets", function()
-    local ent = net.ReadEntity()
-    if not IsValid(ent) then return end
-    local ply = net.ReadEntity()
-    if not IsValid(ply) or not ply:IsPlayer() then return end
-    if ent:IsPossessed() and ent:GetPossessor() == ply then
-      ent:CycleViewPresets()
-    end
-  end)
+  function ENT:PossessionFaceForward()
+    if not self:IsPossessed() then return end
+    return self:FaceTowards(self:GetPos() + self:PossessorNormal())
+  end
 
   -- Hooks --
 
@@ -280,6 +275,16 @@ if SERVER then
   hook.Add("PlayerSpawnedSENT", "DrGBasePlayerPossessingSpawnedSENT", MoveEnt)
   hook.Add("PlayerSpawnedSWEP", "DrGBasePlayerPossessingSpawnedSWEP", MoveEnt)
   hook.Add("PlayerSpawnedVehicle", "DrGBasePlayerPossessingSpawnedVehicle", MoveEnt)
+
+  net.Receive("DrGBasePossessionCycleViewPresets", function()
+    local ent = net.ReadEntity()
+    if not IsValid(ent) then return end
+    local ply = net.ReadEntity()
+    if not IsValid(ply) or not ply:IsPlayer() then return end
+    if ent:IsPossessed() and ent:GetPossessor() == ply then
+      ent:CycleViewPresets()
+    end
+  end)
 
 else
 

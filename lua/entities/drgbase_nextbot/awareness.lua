@@ -80,13 +80,13 @@ if SERVER then
       self:RefreshEnemy()
       self:BehaviourTreeEvent("SpottedEntity", ent)
     end
-    timer.Remove(self:_SpotTimerName(ent))
-    if self:GetSpotDuration() > 0 then
-      timer.Create(self:_SpotTimerName(ent), self:GetSpotDuration(), 1, function()
-        if not IsValid(self) or not IsValid(ent) then return end
-        self:LoseEntity(ent)
-      end)
-    end
+    local timerName = self:_SpotTimerName(ent)
+    timer.Remove(timerName)
+    if self:GetSpotDuration() <= 0 then return end
+    timer.Create(timerName, self:GetSpotDuration(), 1, function()
+      if not IsValid(self) or not IsValid(ent) then return end
+      self:LoseEntity(ent)
+    end)
   end
   function ENT:LoseEntity(ent)
     if not IsValid(ent) then return end

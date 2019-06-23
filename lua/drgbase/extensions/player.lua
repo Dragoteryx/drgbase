@@ -86,6 +86,16 @@ if SERVER then
     self:EnterVehicle(chair)
   end
 
+  function plyMETA:DrG_AddUndo(ent, type, text)
+    undo.Create(type)
+    undo.SetPlayer(self)
+    undo.AddEntity(ent)
+    if isstring(text) then
+      undo.SetCustomUndoText(text)
+    end
+    undo.Finish()
+  end
+
 else
 
   local lastLuminosityUpdate = 0

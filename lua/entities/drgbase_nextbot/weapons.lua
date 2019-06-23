@@ -7,6 +7,9 @@ end
 function ENT:HasWeapon()
   return IsValid(self:GetWeapon())
 end
+function ENT:HaveWeapon()
+  return self:HasWeapon()
+end
 function ENT:IsWeaponHolstered()
   if not self:HasWeapon() then return false end
   return self:GetNW2Bool("DrGBaseWeaponHolstered")
@@ -31,10 +34,8 @@ function ENT:GetAimVector()
     return self:GetShootPos():DrG_Direction(self:GetEnemy():WorldSpaceCenter())
   else normal = self:GetForward() end
   local cap = 10
-  local accuracy = (1 - self.WeaponAccuracy)*cap
-  if accuracy < 0 then accuracy = 0 end
-  if accuracy > cap then accuracy = cap end
-  normal:Rotate(Angle(math.random(-accuracy, accuracy), math.random(-accuracy, accuracy), 0))
+  local acc = math.Clamp((1 - self.WeaponAccuracy)*cap, 0, cap)
+  normal:Rotate(Angle(math.random(-acc, acc), math.random(-acc, acc), 0))
   return normal
 end
 
@@ -83,7 +84,7 @@ if SERVER then
     local wep = self:GetWeapon()
     if wep:GetMaxClip1() > 0 then return wep:Clip1()
     elseif wep:GetPrimaryAmmoType() > -1 then
-      return math.huge -- doesn't use ammo
+      return -1
     else return math.huge end
   end
   function ENT:GetWeaponSecondaryAmmo()
@@ -91,30 +92,34 @@ if SERVER then
     local wep = self:GetWeapon()
     if wep:GetMaxClip2() > 0 then return wep:Clip2()
     elseif wep:GetSecondaryAmmoType() > -1 then
-      return math.huge -- doesn't use ammo
+      return -1
     else return math.huge end
   end
 
   function ENT:IsWeaponPrimaryFull()
     if not self:HasWeapon() then return false end
     local ammo = self:GetWeaponPrimaryAmmo()
-    if ammo == math.huge then return true end
+    if ammo == math.huge or ammo == -1 then return true end
     return ammo >= self:GetWeapon():GetMaxClip1()
   end
   function ENT:IsWeaponPrimaryEmpty()
     if not self:HasWeapon() then return true end
-    return self:GetWeaponPrimaryAmmo() <= 0
+    local ammo = self:GetWeaponPrimaryAmmo()
+    if ammo == -1 then return false end
+    return ammo <= 0
   end
 
   function ENT:IsWeaponSecondaryFull()
     if not self:HasWeapon() then return false end
     local ammo = self:GetWeaponSecondaryAmmo()
-    if ammo == math.huge then return true end
+    if ammo == math.huge or ammo == -1 then return true end
     return ammo >= self:GetWeapon():GetMaxClip2()
   end
   function ENT:IsWeaponSecondaryEmpty()
     if not self:HasWeapon() then return true end
-    return self:GetWeaponSecondaryAmmo() <= 0
+    local ammo = self:GetWeaponSecondaryAmmo()
+    if ammo == -1 then return false end
+    return ammo <= 0
   end
 
   -- Functions --
@@ -197,7 +202,7 @@ if SERVER then
     local wep = self:GetWeapon()
     if not isfunction(wep.PrimaryAttack) then return false end
     if CurTime() < wep:GetNextPrimaryFire() then return false end
-    self:PlayActivity(anim)
+    self:PlayAnimation(anim)
     wep:PrimaryAttack()
     return true
   end
@@ -208,7 +213,7 @@ if SERVER then
     local wep = self:GetWeapon()
     if not isfunction(wep.SecondaryAttack) then return false end
     if CurTime() < wep:GetNextSecondaryFire() then return false end
-    self:PlayActivity(anim)
+    self:PlayAnimation(anim)
     wep:SecondaryAttack()
     return true
   end
@@ -218,7 +223,7 @@ if SERVER then
     local wep = self:GetWeapon()
     if not isfunction(wep.Reload) then return false end
     self._DrGBaseReloadingWeapon = true
-    self:Timer(self:PlayActivity(anim) or 0, function()
+    self:Timer(self:PlayAnimation(anim) or 0, function()
       self._DrGBaseReloadingWeapon = false
       if not self:HasWeapon() then return end
       wep = self:GetWeapon()

@@ -1,13 +1,20 @@
 
--- Getters/setters --
-
 function ENT:IsWaiting()
   return self:GetNW2Bool("DrGBaseWaiting")
+end
+function ENT:IsJumping()
+  return self:GetNW2Bool("DrGBaseJumping")
+end
+function ENT:IsLeaping()
+  return self:GetNW2Bool("DrGBaseLeaping")
+end
+function ENT:IsGliding()
+  return self:GetNW2Bool("DrGBaseGliding")
 end
 
 if SERVER then
 
-  -- Functions --
+  -- Misc --
 
   function ENT:Wait(duration, callback)
     if duration <= 0 then return end
@@ -25,41 +32,68 @@ if SERVER then
     self:SetNW2Bool("DrGBaseWaiting", false)
   end
 
-  function ENT:QuickJump(pos)
-    if not self:IsOnGround() then return end
-    if isvector(pos) then
-      self:FaceInstant(pos)
-      self.loco:JumpAcrossGap(pos, self:GetForward())
-    elseif isnumber(pos) then
-      local jumpheight = self.loco:GetMaxJumpHeight()
-      self.loco:SetJumpHeight(pos*self:GetScale())
-      self.loco:Jump()
-      self.loco:SetJumpHeight(jumpheight)
-    else self:QuickJump(self.loco:GetJumpHeight()) end
+  -- Jumps --
+
+  function ENT:LeaveGround()
+    local jumpHeight = self.loco:GetJumpHeight()
+    self.loco:SetJumpHeight(1)
+    self.loco:Jump()
+    self.loco:SetJumpHeight(jumpHeight)
   end
 
-  function ENT:Jump(pos, callback)
-    self:QuickJump(pos)
-    if callback == nil then callback = function() end end
-    while not self:IsOnGround() and not self:IsDying() do
-      if callback() then return end
+  function ENT:Jump(height, callback)
+    if isnumber(height) then
+      local jumpHeight = self.loco:GetJumpHeight()
+      self.loco:SetJumpHeight(height)
+      self.loco:Jump()
+      self.loco:SetJumpHeight(jumpHeight)
+    else self.loco:Jump() end
+    if not coroutine.running() then return end
+    self:SetNW2Bool("DrGBaseJumping", true)
+    local now = CurTime()
+    while not self:IsOnGround() do
+      if isfunction(callback) and
+      callback(self, CurTime()-now) then break end
       self:YieldCoroutine(true)
     end
+    self:SetNW2Bool("DrGBaseJumping", false)
   end
 
-  function ENT:Glide(pos, options, callback)
+  function ENT:Leap(pos, callback)
+    if isentity(pos) then pos = pos:WorldSpaceCenter() end
+    self:FaceInstant(pos)
+    self.loco:JumpAcrossGap(pos, self:GetForward())
+    if not coroutine.running() then return end
+    self:SetNW2Bool("DrGBaseLeaping", true)
+    local now = CurTime()
+    while not self:IsOnGround() do
+      if isfunction(callback) and
+      callback(self, CurTime()-now) then break end
+      self:YieldCoroutine(true)
+    end
+    self:SetNW2Bool("DrGBaseLeaping", false)
+  end
+
+  function ENT:Glide(dist, options, callback)
+    if not coroutine.running() then return end
     options = options or {}
-    if callback == nil then callback = function() end end
-    self:Jump(pos, function()
-      local velocity = self:GetVelocity()
-      if velocity.z < 0 and options.pitch ~= nil and options.speed ~= nil then
+    options.speed = options.speed or self:GetSpeed()
+    options.pitch = options.pitch or 15
+    self.loco:JumpAcrossGap(self:GetPos() + self:GetForward()*dist, self:GetForward())
+    self:SetNW2Bool("DrGBaseGliding", true)
+    local now = CurTime()
+    while not self:IsOnGround() do
+      if isfunction(callback) and
+      callback(self, CurTime()-now) then break
+      elseif self:GetVelocity().z <= 0 then
         local forward = self:GetForward()
         forward.z = -math.tan(math.rad(options.pitch))
         forward:Normalize()
-        self:SetVelocity(forward*options.speed*self:GetScale())
+        self.loco:SetVelocity(forward*options.speed*self:GetScale())      
       end
-      return callback(options)
-    end)
+      self:YieldCoroutine(true)
+    end
+    self:SetNW2Bool("DrGBaseGliding", false)
   end
 
 end

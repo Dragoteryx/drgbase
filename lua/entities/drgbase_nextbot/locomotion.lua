@@ -9,7 +9,6 @@ function ENT:_InitLocomotion()
   self:SetStepHeight(self.StepHeight)
   self:SetMaxYawRate(self.MaxYawRate)
   self:SetDeathDropHeight(self.DeathDropHeight)
-  self:SetAvoidObstacles(self.AvoidObstacles)
 end
 
 -- Getters/setters --
@@ -54,13 +53,6 @@ function ENT:GetDeathDropHeight()
 end
 function ENT:SetDeathDropHeight(height)
   return self.loco:SetDeathDropHeight(height)
-end
-
-function ENT:GetAvoidObstacles()
-  return self._DrGBaseAvoidObstacles
-end
-function ENT:SetAvoidObstacles(avoid)
-  self._DrGBaseAvoidObstacles = tobool(avoid)
 end
 
 function ENT:IsStuck()

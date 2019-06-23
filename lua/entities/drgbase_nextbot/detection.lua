@@ -1,4 +1,8 @@
 
+-- Convars --
+
+local EnableHearing = CreateConVar("drgbase_enable_hearing", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+
 -- Getters/setters --
 
 function ENT:GetSightFOV()
@@ -33,23 +37,7 @@ function ENT:_InitDetection()
   self:SetSightRange(self.SightRange)
   self:SetSightLuminosityRange(self.MinLuminosity, self.MaxLuminosity)
   self:SetHearingCoefficient(self.HearingCoefficient)
-  self._DrGBaseSight = {}
-  self:LoopTimer(0.25, function()
-    if self:IsAIDisabled() then return end
-    for i, ent in ipairs(self:ConsideredEntities()) do
-      local crea = ent:GetCreationID()
-      local res = self:IsInSight(ent)
-      if res and not self._DrGBaseSight[crea] then
-        self._DrGBaseSight[crea] = true
-        self:OnSight(ent, true)
-      elseif not res and self._DrGBaseSight[crea] then
-        self._DrGBaseSight[crea] = false
-        self:OnLostSight(ent)
-      elseif res and self._DrGBaseSight[crea] then
-        self:OnSight(ent, false)
-      end
-    end
-  end)
+  self:LoopTimer(1, self.RefreshEnemiesSight)
 end
 
 if SERVER then
@@ -84,17 +72,73 @@ if SERVER then
   -- Functions --
 
   function ENT:IsInSight(ent)
-    if self:EyePos():DistToSqr(ent:GetPos()) > self:GetSightRange()^2 then return false end
+    local eyepos = self:EyePos()
+    if eyepos:DistToSqr(ent:GetPos()) > self:GetSightRange()^2 then return false end
     if ent:IsPlayer() then
       local luminosity = ent:FlashlightIsOn() and 1 or ent:DrG_Luminosity()
       local min, max = self:GetSightLuminosityRange()
       if luminosity < min or luminosity > max then return false end
     end
-    local eyepos = self:EyePos()
     local angle = (eyepos + self:EyeAngles():Forward()):DrG_Degrees(ent:WorldSpaceCenter(), eyepos)
     if angle > self:GetSightFOV()/2 then return false end
     local los = self:Visible(ent)
     return los
+  end
+
+  -- Get entities in sight
+  function ENT:GetInSight(disp, spotted)
+    local inSight = {}
+    if isnumber(disp) then
+      for ent in self:EntityIterator(disp, spotted) do
+        if self:IsInSight(ent) then table.insert(inSight, ent) end
+      end
+    else
+      for i, ent in ipairs(ents.GetAll()) do
+        if not IsValid(ent) then continue end
+        if spotted and not self:HasSpotted(ent) then continue end
+        if self:IsInSight(ent) then table.insert(inSight, ent) end
+      end
+    end
+    return inSight
+  end
+  function ENT:GetAlliesInSight(spotted)
+    return self:GetInSight(D_LI, spotted)
+  end
+  function ENT:GetEnemiesInSight(spotted)
+    return self:GetInSight(D_HT, spotted)
+  end
+  function ENT:GetAfraidOfInSight(spotted)
+    return self:GetInSight(D_FR, spotted)
+  end
+  function ENT:GetNeutralInSight(spotted)
+    return self:GetInSight(D_NU, spotted)
+  end
+
+  -- Check if entities are in sight
+  function ENT:RefreshSight(disp, spotted)
+    if self:IsAIDisabled() then return end
+    if not isnumber(disp) then
+      for i, disp in ipairs({
+        D_LI, D_HT, D_FR, D_NU
+      }) do self:RefreshSight(disp) end
+    else
+      for ent in self:EntityIterator(disp, spotted) do
+        local res = self:IsInSight(ent)
+        if res then self:OnSight(ent) end
+      end
+    end
+  end
+  function ENT:RefreshAlliesSight(spotted)
+    return self:RefreshSight(D_LI, spotted)
+  end
+  function ENT:RefreshEnemiesSight(spotted)
+    return self:RefreshSight(D_HT, spotted)
+  end
+  function ENT:RefreshAfraidOfSight(spotted)
+    return self:RefreshSight(D_FR, spotted)
+  end
+  function ENT:RefreshNeutralSight(spotted)
+    return self:RefreshSight(D_NU, spotted)
   end
 
   -- Hooks --
@@ -102,8 +146,6 @@ if SERVER then
   function ENT:OnSight(ent)
     self:SpotEntity(ent)
   end
-  function ENT:WhileInSight(ent) end
-  function ENT:OnLostSight(ent) end
   function ENT:OnSound(ent, sound)
     self:SpotEntity(ent)
   end
@@ -114,6 +156,7 @@ if SERVER then
   -- Handlers --
 
   hook.Add("EntityEmitSound", "DrGBaseNextbotHearing", function(sound)
+    if not EnableHearing:GetBool() then return end
     if not IsValid(sound.Entity) then return end
     if #DrGBase.GetNextbots() == 0 then return end
     local pos = sound.Pos or sound.Entity:GetPos()

@@ -1,5 +1,4 @@
 ENT.Base = "drgbase_entity"
-ENT.Type = "anim"
 ENT.IsDrGProjectile = true
 
 -- Misc --

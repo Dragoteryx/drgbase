@@ -1,71 +1,9 @@
 
--- Print --
+-- Convars --
 
-function ENT:PrintPoseParameters()
-  for i = 0, self:GetNumPoseParameters() - 1 do
-  	local min, max = self:GetPoseParameterRange(i)
-  	print(self:GetPoseParameterName(i).." "..min.." / "..max)
-  end
-end
-function ENT:PrintAnimations()
-  for i, seq in pairs(self:GetSequenceList()) do
-    print(i.." - "..seq.." / "..self:GetSequenceActivityName(i))
-  end
-end
-function ENT:PrintBones()
-  for i = 0, self:GetBoneCount() - 1 do
-    local bonename = self:GetBoneName(i)
-    if bonename == nil then continue end
-    print(i.." => "..bonename)
-  end
-end
-function ENT:PrintAttachments()
-  for i, attach in ipairs(self:GetAttachments()) do
-    print(attach.id.." => "..attach.name)
-  end
-end
-function ENT:PrintBodygroups()
-  for i, group in ipairs(self:GetBodyGroups()) do
-    print(group.id.." => "..group.name.." ("..group.num.." subgroups)")
-  end
-end
+local RemoveRagdolls = CreateConVar("drgbase_remove_ragdolls", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Getters/setters --
-
-function ENT:GetHealthRegen()
-  return self:GetNW2Float("DrGBaseHealthRegen", 0)
-end
-
-function ENT:GetScale()
-  return self:GetNW2Float("DrGBaseScale", 1)
-end
-
-function ENT:GetEyeTrace()
-  return util.TraceLine({
-    start = self:EyePos(),
-    endpos = self:EyeAngles():Forward()*999999999,
-    filter = self
-  })
-end
-function ENT:GetEyeTraceNoCursor()
-  return self:GetEyeTrace()
-end
-
-function ENT:IsDown()
-  return self:GetNW2Bool("DrGBaseDown")
-end
-function ENT:IsDying()
-  return self:GetNW2Bool("DrGBaseDying")
-end
-function ENT:IsDead()
-  return self:GetNW2Bool("DrGBaseDead") or self:IsDying()
-end
-
-function ENT:LastTouchedEntity()
-  return self:GetNW2Entity("DrGBaseLastTouchedEntity")
-end
-
--- Functions --
 
 function ENT:IsInRange(pos, range)
   return self:GetHullRangeSquaredTo(pos) <= math.pow(range*self:GetScale(), 2)
@@ -79,6 +17,8 @@ function ENT:GetHullRangeSquaredTo(pos)
   return self:NearestPoint(pos):DistToSqr(pos)
 end
 
+-- Functions --
+
 function ENT:ScreenShake(amplitude, frequency, duration, radius)
   local res = util.ScreenShake(self:GetPos(), amplitude, frequency, duration, radius)
   if CLIENT then return res end
@@ -91,13 +31,28 @@ function ENT:ScreenShake(amplitude, frequency, duration, radius)
   return res
 end
 
-function ENT:RandomizeBodygroup(id)
-  self:SetBodygroup(id, math.random(0, self:GetBodygroupCount(id)-1))
-end
-function ENT:RandomizeBodygroups()
-  for i, bodygroup in ipairs(self:GetBodyGroups()) do
-    self:RandomizeBodygroup(bodygroup.id)
+function ENT:EmitSlotSound(slot, duration, soundName, soundLevel, pitchPercent, volume, channel)
+  local lastSlot = self._DrGBaseSlotSounds[slot]
+  if lastSlot == nil or CurTime() > lastSlot then
+    self._DrGBaseSlotSounds[slot] = CurTime() + duration
+    self:EmitSound(soundName, soundLevel, pitchPercent, volume, channel)
   end
+end
+
+function ENT:EmitStep(soundLevel, pitchPercent, volume, channel)
+  if not self:OnGround() then return end
+  local tr = util.TraceLine({
+    start = self:GetPos(),
+    endpos = self:GetPos() - self:GetUp()*999,
+    filter = self
+  })
+  local sounds = self.Footsteps[tr.MatType] or DrGBase.DefaultFootsteps[tr.MatType]
+  if not istable(sounds) or #sounds == 0 then sounds = self.Footsteps[MAT_DEFAULT] end
+  if not istable(sounds) or #sounds == 0 then return false end
+  self:EmitSound(sounds[math.random(#sounds)], soundLevel, pitchPercent, volume, channel or CHAN_BODY)
+end
+function ENT:EmitFootstep(...)
+  return self:EmitStep(...)
 end
 
 function ENT:CalcPosDirection(pos, subs)
@@ -119,10 +74,6 @@ function ENT:CalcPosDirection(pos, subs)
     elseif angle > 270 and angle <= 360 then direction = "W" end
     return direction, angle
   end
-end
-
-function ENT:HasPhysics()
-  return IsValid(self:GetPhysicsObject())
 end
 
 local DebugTraces = CreateConVar("drgbase_debug_traces", "0")
@@ -208,176 +159,68 @@ function ENT:Height()
   return math.abs(bound1.z - bound2.z)
 end
 
+function ENT:RandomizeBodygroup(id)
+  self:SetBodygroup(id, math.random(0, self:GetBodygroupCount(id)-1))
+end
+function ENT:RandomizeBodygroups()
+  for i, bodygroup in ipairs(self:GetBodyGroups()) do
+    self:RandomizeBodygroup(bodygroup.id)
+  end
+end
+
 -- Hooks --
 
-function ENT:OnExtinguish() end
-function ENT:OnWaterLevelChange() end
-function ENT:OnHealthChange() end
-function ENT:OnMaxHealthChange() end
-function ENT:OnLandInWater() end
 function ENT:OnAngleChange() end
 
 -- Handlers --
 
 function ENT:_InitMisc()
-  self._DrGBaseLoopingSounds = {}
   self._DrGBaseSlotSounds = {}
-  self._DrGBaseEmitSounds = {}
-  self._DrGBaseOnFire = self:IsOnFire()
-  self._DrGBaseWaterLevel = self:WaterLevel()
-  self._DrGBaseHealth = self:Health()
-  self._DrGBaseMaxHealth = self:GetMaxHealth()
   self:AddCallback("OnAngleChange", function(self, angles)
     if self:OnAngleChange(angles) then return end
     if CLIENT then return end
-    if self:HasPhysics() then return end
     self:SetAngles(Angle(0, angles.y, 0))
-  end)
-  if CLIENT then return end
-  self:SetNW2Bool("DrGBaseOnGround", self:IsOnGround())
-  self:SetHealthRegen(self.HealthRegen)
-  self:LoopTimer(1, function()
-    if self:IsDead() then return end
-    local regen = self:GetHealthRegen()
-    if regen > 0 then
-      local health = self:Health() + regen
-      if health > self:GetMaxHealth() then
-        self:SetHealth(self:GetMaxHealth())
-      else self:SetHealth(health) end
-    elseif regen < 0 then
-      local dmg = DamageInfo()
-      dmg:SetDamage(regen)
-      dmg:SetAttacker(self)
-      dmg:SetInflictor(self)
-      dmg:SetDamageType(DMG_DIRECT)
-      self:TakeDamageInfo(dmg)
-    end
-  end)
-  self._DrGBaseOnContactDelay = 0
-  self._DrGBaseDamageMultipliers = {}
-  for type, mult in pairs(self.DamageMultipliers) do
-    self:SetDamageMultiplier(type, mult)
-  end
-  self:SetNWVarProxy("DrGBaseOnGround", function(self, name, old, new)
-    if SERVER then return end
-    if old and not new then
-      self:OnLeaveGround()
-    elseif not old and new then
-      self:OnLandOnGround()
-    end
   end)
 end
 
-function ENT:_HandleMisc()
-  if self._DrGBaseWaterLevel ~= self:WaterLevel() then
-    self:OnWaterLevelChange(self._DrGBaseWaterLevel, self:WaterLevel())
-    if not self._DrGBaseOnGround and self._DrGBaseWaterLevel == 0 then
-      self:OnLandInWater()
+-- Meta --
+local entMETA = FindMetaTable("Entity")
+
+local old_EyePos = entMETA.EyePos
+function entMETA:EyePos()
+  if self.IsDrGNextbot then
+    local bound1, bound2 = self:GetCollisionBounds()
+    local eyepos = self:GetPos() + (bound1 + bound2)/2
+    if isstring(self.EyeBone) then
+      local boneid = self:LookupBone(self.EyeBone)
+      if boneid ~= nil then
+        eyepos = self:GetBonePosition(boneid)
+      end
     end
-    self._DrGBaseWaterLevel = self:WaterLevel()
-  end
-  if self._DrGBaseOnFire and not self:IsOnFire() then
-    self:OnExtinguish()
-  elseif not self._DrGBaseOnFire and self:IsOnFire() then
-    if CLIENT then self:OnIgnite() end
-  end
-  self._DrGBaseOnFire = self:IsOnFire()
-  if self._DrGBaseHealth ~= self:Health() then
-    if SERVER then self:SetNW2Int("DrGBaseHealth", self:Health()) end
-    self:OnHealthChange(self._DrGBaseHealth, self:Health())
-    self._DrGBaseHealth = self:Health()
-  end
-  if self._DrGBaseMaxHealth ~= self:GetMaxHealth() then
-    if SERVER then self:SetNW2Int("DrGBaseMaxHealth", self:GetMaxHealth()) end
-    self:OnMaxHealthChange(self._DrGBaseMaxHealth, self:GetMaxHealth())
-    self._DrGBaseMaxHealth = self:GetMaxHealth()
-  end
-  if #self.OnIdleSounds > 0 and
-  ((SERVER and not self.ClientIdleSounds) or (CLIENT and self.ClientIdleSounds)) then
-    local sound = self.OnIdleSounds[math.random(#self.OnIdleSounds)]
-    self:EmitSlotSound("DrGBaseIdle", SoundDuration(sound) + self.IdleSoundDelay, sound)
-  end
-  if SERVER then
-    if self:GetNW2Bool("DrGBaseOnGround") and not self:IsOnGround() then
-      self:SetNW2Bool("DrGBaseOnGround", false)
-    elseif not self:GetNW2Bool("DrGBaseOnGround") and self:IsOnGround() then
-      self:SetNW2Bool("DrGBaseOnGround", true)
-      self:InvalidatePath()
-    end
-  end
+    eyepos = eyepos + self:CalcOffset(self.EyeOffset)
+    return eyepos
+  else return old_EyePos(self) end
+end
+
+local old_EyeAngles = entMETA.EyeAngles
+function entMETA:EyeAngles()
+  if self.IsDrGNextbot then
+    --[[if isstring(self.EyeBone) then
+      local boneid = self:LookupBone(self.EyeBone)
+      if boneid ~= nil then
+        local pos, angles = self:GetBonePosition(boneid)
+        return self:GetAngles() + angles + self.EyeAngle
+      end
+    end]]
+    return self:GetAngles() + self.EyeAngle
+  else return old_EyeAngles(self) end
 end
 
 if SERVER then
 
   -- Getters/setters --
 
-  function ENT:SetHealthRegen(regen)
-    self:SetNW2Float("DrGBaseHealthRegen", regen)
-  end
-
-  function ENT:SetScale(scale, delta)
-    self:SetNW2Float("DrGBaseScale", scale)
-    self:SetModelScale(self.ModelScale*scale, delta)
-    self:_HandleSpeed()
-  end
-  function ENT:Scale(mult, delta)
-    self:SetScale(self:GetScale()*mult, delta)
-  end
-
-  function ENT:GetDamageMultiplier(type)
-    return self._DrGBaseDamageMultipliers[type] or 1
-  end
-  function ENT:SetDamageMultiplier(type, mult)
-    if not isnumber(mult) then return end
-    if mult < 0 then mult = 0 end
-    if mult == 1 then mult = nil end
-    self._DrGBaseDamageMultipliers[type] = mult
-  end
-
-  function ENT:GetNoTarget()
-    return self:IsFlagSet(FL_NOTARGET)
-  end
-  function ENT:SetNoTarget(bool)
-    if bool then self:AddFlags(FL_NOTARGET)
-    else self:RemoveFlags(FL_NOTARGET) end
-  end
-
   -- Functions --
-
-  function ENT:Kill(attacker, inflictor)
-    self:SetHealth(0)
-    local dmg = DamageInfo()
-    dmg:SetAttacker(attacker or game.GetWorld())
-    dmg:SetInflictor(inflictor or attacker or game.GetWorld())
-    dmg:SetDamageForce(Vector(0, 0, 1))
-    self:OnKilled(dmg)
-  end
-  function ENT:Suicide()
-    self:Kill(self)
-  end
-
-  function ENT:CollisionHulls(distance, forwardOnly)
-    distance = distance or 5
-    if distance < 0 then distance = 0 end
-    local data = {collisiongroup = COLLISION_GROUP_DEBRIS}
-    local NW = self:TraceHull((self:GetForward()-self:GetRight()):GetNormalized()*distance, true, data)
-    local NE = self:TraceHull((self:GetForward()+self:GetRight()):GetNormalized()*distance, true, data)
-    if forwardOnly then
-      return {
-        NorthWest = NW,
-        NorthEast = NE
-      }
-    else
-      local SW = self:TraceHull((-self:GetForward()-self:GetRight()):GetNormalized()*distance, true, data)
-      local SE = self:TraceHull((-self:GetForward()+self:GetRight()):GetNormalized()*distance, true, data)
-      return {
-        NorthWest = NW,
-        NorthEast = NE,
-        SouthWest = SW,
-        SouthEast = SE
-      }
-    end
-  end
 
   function ENT:GroundDistance(pos, generator)
     if isentity(pos) then pos = pos:GetPos() end
@@ -402,10 +245,6 @@ if SERVER then
     else return areas[math.random(#areas)]:GetRandomPoint() end
   end
 
-  function ENT:ClearLastTouchedEntity()
-    return self:SetNW2Entity("DrGBaseLastTouchedEntity", nil)
-  end
-
   function ENT:Attack(attack, callback)
     attack = attack or {}
     attack.damage = attack.damage or 0
@@ -418,26 +257,19 @@ if SERVER then
     attack.angle = attack.angle or 90
     self:Timer(math.Clamp(attack.delay, 0, math.huge), function(self)
       local hit = {}
-      for i, ent in ipairs(ents.GetAll()) do
+      for i, ent in ipairs(self:EnemiesInCone(attack.angle, attack.range)) do
         if ent == self then continue end
         if not IsValid(ent) then continue end
         if self:IsPossessor(ent) then continue end
         if not self:IsEnemy(ent) then continue end
         if not self:Visible(ent) then continue end
-        if not self:IsInRange(ent, attack.range) then continue end
-        local angle = (self:GetPos() + self:GetForward()):DrG_Degrees(ent:GetPos(), self:GetPos())
-        if angle > attack.angle/2 then continue end
         local dmg = DamageInfo()
         dmg:SetAttacker(self)
         dmg:SetDamage(isfunction(attack.damage) and attack.damage(ent) or attack.damage)
         dmg:SetDamageType(attack.type)
         dmg:SetDamagePosition(self:WorldSpaceCenter())
         dmg:SetReportedPosition(self:WorldSpaceCenter())
-        local force = self:GetForward()*attack.force.x +
-        self:GetRight()*attack.force.y +
-        self:GetUp()*attack.force.z
-        dmg:SetDamageForce(force)
-        ent:SetVelocity(ent:GetVelocity()+force)
+        dmg:SetDamageForce(self:PushEntity(ent, attack.force))
         ent:TakeDamageInfo(dmg)
         if attack.viewpunch and ent:IsPlayer() then
           ent:ViewPunch(attack.viewpunch)
@@ -480,17 +312,144 @@ if SERVER then
 
   function ENT:CreateProjectile(model, binds, class)
     local proj = DrGBase.CreateProjectile(model, binds, class)
+    if not IsValid(proj) then return NULL end
     proj:SetOwner(self)
     return proj
   end
 
-  -- Hooks --
-
-  function ENT:OnDoor(door, help)
-    help:Open(true)
+  function ENT:Kill(attacker, inflictor)
+    self:SetHealth(0)
+    local dmg = DamageInfo()
+    dmg:SetAttacker(attacker or game.GetWorld())
+    dmg:SetInflictor(inflictor or attacker or game.GetWorld())
+    dmg:SetDamageForce(Vector(0, 0, 1))
+    self:OnKilled(dmg)
+  end
+  function ENT:Suicide()
+    self:Kill(self)
   end
 
+  function ENT:CollisionHulls(distance, forwardOnly)
+    distance = distance or 5
+    if distance < 0 then distance = 0 end
+    local NW = self:TraceHull((self:GetForward()-self:GetRight()):GetNormalized()*distance, true)
+    local NE = self:TraceHull((self:GetForward()+self:GetRight()):GetNormalized()*distance, true)
+    if forwardOnly then
+      return {
+        NorthWest = NW,
+        NorthEast = NE
+      }
+    else
+      local SW = self:TraceHull((-self:GetForward()-self:GetRight()):GetNormalized()*distance, true)
+      local SE = self:TraceHull((-self:GetForward()+self:GetRight()):GetNormalized()*distance, true)
+      return {
+        NorthWest = NW,
+        NorthEast = NE,
+        SouthWest = SW,
+        SouthEast = SE
+      }
+    end
+  end
+
+  function ENT:EntitiesInCone(angle, distance, disp)
+    local entities = {}
+    local selfpos = self:GetPos()
+    local forward = self:GetForward()
+    for i, ent in ipairs(isnumber(disp) and self:GetEntities(disp) or ents.GetAll()) do
+      if ent == self then continue end
+      if not self:IsInRange(ent, distance) then continue end
+      if (selfpos + forward):DrG_Degrees(ent:GetPos(), selfpos) <= angle/2 then
+        table.insert(entities, ent)
+      end
+    end
+    return entities
+  end
+  function ENT:AlliesInCone(angle, distance)
+    return self:EntitiesInCone(angle, distance, D_LI)
+  end
+  function ENT:EnemiesInCone(angle, distance)
+    return self:EntitiesInCone(angle, distance, D_HT)
+  end
+  function ENT:AfraidOfInCone(angle, distance)
+    return self:EntitiesInCone(angle, distance, D_FR)
+  end
+  function ENT:NeutralInCone(angle, distance)
+    return self:EntitiesInCone(angle, distance, D_NU)
+  end
+
+  -- Hooks --
+
+  function ENT:OnRagdoll() end
+
   -- Handlers --
+
+  -- Meta --
+
+  local entMETA = FindMetaTable("Entity")
+
+  local old_GetVelocity = entMETA.GetVelocity
+  function entMETA:GetVelocity()
+    if self.IsDrGNextbot then
+      return self.loco:GetVelocity()
+    else return old_GetVelocity(self) end
+  end
+
+  local old_SetVelocity = entMETA.SetVelocity
+  function entMETA:SetVelocity(velocity)
+    if self.IsDrGNextbot then
+      return self.loco:SetVelocity(velocity)
+    else return old_SetVelocity(self, velocity) end
+  end
+
+  local nextbotMETA = FindMetaTable("NextBot")
+
+  local old_BecomeRagdoll = nextbotMETA.BecomeRagdoll
+  function nextbotMETA:BecomeRagdoll(dmg)
+    if self.IsDrGNextbot then
+      if RemoveRagdolls:GetFloat() ~= 0 then
+        local ragdoll = ents.Create("prop_ragdoll")
+        if not IsValid(ragdoll) then return NULL end
+        ragdoll:SetPos(self:GetPos())
+        ragdoll:SetAngles(self:GetAngles())
+        ragdoll:SetModel(self:GetModel())
+        ragdoll:SetSkin(self:GetSkin())
+        ragdoll:SetColor(self:GetColor())
+        ragdoll:SetModelScale(self:GetModelScale())
+        ragdoll:SetBloodColor(self:GetBloodColor())
+        for i = 1, #self:GetBodyGroups() do
+      		ragdoll:SetBodygroup(i-1, self:GetBodygroup(i-1))
+      	end
+        ragdoll:Spawn()
+        undo.ReplaceEntity(self, ragdoll)
+        cleanup.ReplaceEntity(self, ragdoll)
+        if not GetConVar("ai_serverragdolls"):GetBool() then
+          ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+        end
+        for i = 1, self:GetBoneCount() do
+      		local bone = ragdoll:GetPhysicsObjectNum(i-1)
+      		if not IsValid(bone) then continue end
+    			local pos, angles = self:GetBonePosition(self:TranslatePhysBoneToBone(i-1))
+    			bone:SetPos(pos)
+    			bone:SetAngles(angles)
+      	end
+        local phys = ragdoll:GetPhysicsObject()
+        phys:SetVelocity(self:GetVelocity())
+        local force = dmg:GetDamageForce()
+        local position = dmg:GetDamagePosition()
+        if IsValid(phys) and isvector(force) and isvector(position) then
+      		phys:ApplyForceOffset(force, position)
+      	end
+        if self:IsOnFire() or dmg:IsDamageType(DMG_BURN) then ragdoll:Ignite(10) end
+        if not self.OnRagdoll(ragdoll, dmg) and RemoveRagdolls:GetFloat() > 0 then
+          timer.Simple(RemoveRagdolls:GetFloat(), function()
+            if IsValid(ragdoll) then ragdoll:Remove() end
+          end)
+        end
+        self:Remove()
+        return ragdoll
+      else self:Remove() end
+    else return old_BecomeRagdoll(self, dmg) end
+  end
 
 else
 
@@ -508,21 +467,15 @@ else
 
   -- Functions --
 
-  function ENT:RenderOffset(offset, origin, writeZ)
+  function ENT:RenderOffset(offset, origin, color, writeZ)
     if not isvector(offset) then return end
     origin = isvector(origin) and origin or self:GetPos()
-    local vec = origin + self:GetForward()*offset.x + self:GetRight()*offset.y + self:GetUp()*offset.z
-    cam.Start3D()
-    render.DrawLine(origin, origin+vec, DrGBase.CLR_WHITE, writeZ)
-    render.DrawWireframeSphere(origin+vec, 2*self:GetScale(), 4, 4, DrGBase.CLR_ORANGE, writeZ)
-    cam.End3D()
+    local vec = self:CalcOffset(offset)
+    render.DrawLine(origin, origin+vec, color, writeZ)
+    render.DrawWireframeSphere(origin+vec, 2*self:GetScale(), 4, 4, color, writeZ)
   end
 
   -- Hooks --
-
-  function ENT:OnLandOnGround() end
-  function ENT:OnLeaveGround() end
-  function ENT:OnIgnite() end
 
   -- Handlers --
 

@@ -140,7 +140,7 @@ local DECORATORS = {
 local function CreateNode(tbl)
   if not istable(tbl) then return end
   if not isstring(tbl.type) then return end
-  if tbl.type == "Tree" then
+  if tbl.type == "Tree" or tbl.Type == "TreeTransition" then
     if not isstring(tbl.name) then return end
     return TreeTransition:New(tbl.name, tbl.args)
   elseif COMPOSITES[tbl.type] then

@@ -91,7 +91,7 @@ ENT.PossessionBinds = {
       onkeydown = function(self)
         if not self:IsOnGround() then return end
         self:EmitFootstep()
-        self:QuickJump()
+        self:Jump()
       end
     }
   },
@@ -114,12 +114,11 @@ if SERVER then
 
   function ENT:_BaseInitialize()
     self.loco:SetJumpHeight(100)
-    local walks = {
+    for i, walk in ipairs({
       self.RunAnimations,
       self.WalkAnimations,
       self.CrouchWalkAnimations
-    }
-    for i, walk in ipairs(walks) do
+    }) do
       for holdtype, act in pairs(walk) do
         self:SequenceEvent(self:SelectRandomSequence(act), {0.28, 0.78}, function(self)
           self:EmitFootstep()

@@ -13,10 +13,10 @@ function TreeTransition:New(name, args)
 end
 
 function TreeTransition:GetTree()
-  return self._tree
+  return DrGBase.GetBehaviourTree(self._tree)
 end
 function TreeTransition:SetTree(name)
-  self._tree = DrGBase.GetBehaviourTree(name)
+  self._tree = name
 end
 
 function TreeTransition:GetArgs()
