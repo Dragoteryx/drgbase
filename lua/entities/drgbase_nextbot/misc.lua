@@ -184,6 +184,7 @@ function ENT:_InitMisc()
 end
 
 -- Meta --
+
 local entMETA = FindMetaTable("Entity")
 
 local old_EyePos = entMETA.EyePos
@@ -478,5 +479,14 @@ else
   -- Hooks --
 
   -- Handlers --
+
+  local entMETA = FindMetaTable("Entity")
+
+  local old_tostring = entMETA.__tostring
+  function entMETA:__tostring()
+    if self.IsDrGNextbot then
+      return "NextBot ["..self:EntIndex().."]["..self:GetClass().."]"
+    else return old_tostring(self) end
+  end
 
 end

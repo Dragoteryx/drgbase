@@ -1,5 +1,5 @@
+ENT.Base = "drgbase_entity"
 ENT.Type = "point"
-ENT.Base = "base_entity"
 ENT.IsDrGSpawner = true
 
 -- Misc --
@@ -14,10 +14,12 @@ ENT.Quantity = 0
 ENT.Delay = 0
 
 if SERVER then
+  AddCSLuaFile()
 
   -- Init/Think --
 
   function ENT:Initialize()
+    print(self)
     self._DrGBaseToSpawn = {}
     self._DrGBaseRadius = 0
     self._DrGBaseQuantity = 0

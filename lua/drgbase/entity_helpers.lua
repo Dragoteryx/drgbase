@@ -74,6 +74,18 @@ function ENT:GetCooldown(name)
   else return 0 end
 end
 
+-- Effects --
+
+function ENT:ParticleEffect(name, follow, attachment)
+  if follow then
+    local pattach = attachment and PATTACH_POINT_FOLLOW or PATTACH_ABSORIGIN_FOLLOW
+    ParticleEffectAttach(name, pattach, self, attachment or 1)
+  else
+    local pattach = attachment and PATTACH_POINT or PATTACH_ABSORIGIN
+    ParticleEffectAttach(name, pattach, self, attachment or 1)
+  end
+end
+
 if SERVER then
   AddCSLuaFile()
 
@@ -144,16 +156,6 @@ if SERVER then
   	light:Fire("TurnOn", "", 0)
   	self:DeleteOnRemove(light)
     return light
-  end
-
-  function ENT:ParticleEffect(name, follow, attachment)
-    if follow then
-      local pattach = attachment and PATTACH_POINT_FOLLOW or PATTACH_ABSORIGIN_FOLLOW
-      ParticleEffectAttach(name, pattach, self, attachment or 1)
-    else
-      local pattach = attachment and PATTACH_POINT or PATTACH_ABSORIGIN
-      ParticleEffectAttach(name, pattach, self, attachment or 1)
-    end
   end
 
 end

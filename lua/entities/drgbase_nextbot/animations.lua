@@ -246,27 +246,54 @@ if SERVER then
     elseif isnumber(anim) then self:PlayActivity(anim, rate, callback) end
   end
 
-  function ENT:PlayClimbSequence(seq, animheight, realheight, callback)
+  function ENT:PlayClimbSequence(seq, height, rate, callback)
+    if isstring(seq) then seq = self:LookupSequence(seq)
+    elseif not isnumber(seq) then return end
+    if seq == -1 then return end
+    local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
+    if not success then return end
     return self:PlaySequenceAndMoveAbsolute(seq, {
-      multiply = Vector(1, 1, realheight/animheight/self:GetModelScale())
+      rate = rate,
+      multiply = Vector(1, 1, height/vec.z/self:GetModelScale())
     }, function(self, cycle)
       if not self:TraceHull(self:GetForward()*self.LedgeDetectionDistance*2).Hit then return true end
       if isfunction(callback) then return callback(self, cycle) end
     end)
   end
-  function ENT:PlayAppropriateClimbSequence(height, climbs, callback)
+  function ENT:PlayClimbActivity(act, height, rate, callback)
+    local seq = self:SelectRandomSequence(act)
+    return self:PlayClimbSequence(seq, options, callback)
+  end
+  function ENT:PlayClimbAnimation(anim, height, rate, callback)
+    if isstring(anim) then self:PlayClimbSequence(anim, height, rate, callback)
+    elseif isnumber(anim) then self:PlayClimbActivity(anim, height, rate, callback) end
+  end
+
+  function ENT:PlayClosestClimbSequence(height, seqs, rate, callback)    
+    local climbs = {}
+    for i, seq in ipairs(seqs) do
+      if isstring(seq) then seq = self:LookupSequence(seq)
+      elseif not isnumber(seq) then continue end
+      if seq == -1 then continue end
+      local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
+      if not success then continue end
+      table.insert(climbs, {seq = seq, height = vec.z})
+    end
+    table.sort(climbs, function(climb1, climb2)
+      return climb1.height < climb2.height
+    end)
     height = height/self:GetModelScale()
     for i, climb in ipairs(climbs) do
       local prior = climbs[i-1]
       if height < climb.height then
-        return self:PlayClimbSequence(climb.seq, climb.height, height*self:GetModelScale(), callback)
+        return self:PlayClimbSequence(climb.seq, height*self:GetModelScale(), rate, callback)
       elseif prior ~= nil and math.Clamp(height, prior.height, climb.height) == height then
         local avg = (prior.height + climb.height)/2
         if height < avg then
-          return self:PlayClimbSequence(prior.seq, prior.height, height*self:GetModelScale(), callback)
-        else return self:PlayClimbSequence(climb.seq, climb.height, height*self:GetModelScale(), callback) end
+          return self:PlayClimbSequence(prior.seq, height*self:GetModelScale(), rate, callback)
+        else return self:PlayClimbSequence(climb.seq, height*self:GetModelScale(), rate, callback) end
       elseif climbs[i+1] == nil then
-        return self:PlayClimbSequence(climb.seq, climb.height, height*self:GetModelScale(), callback)
+        return self:PlayClimbSequence(climb.seq, height*self:GetModelScale(), rate, callback)
       end
     end
   end

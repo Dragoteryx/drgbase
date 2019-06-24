@@ -31,7 +31,6 @@ ENT.RunSpeed = 50
 -- Detection --
 ENT.EyeBone = "ValveBiped.Bip01_Spine4"
 ENT.EyeOffset = Vector(7.5, 0, 5)
-ENT.EyeAngle = Angle(0, 0, 0)
 
 -- Possession --
 ENT.PossessionEnabled = true
