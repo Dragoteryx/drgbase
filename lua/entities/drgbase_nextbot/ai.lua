@@ -47,7 +47,7 @@ function ENT:_InitAI()
     self._DrGBaseAllyDamageTolerance = {}
     self._DrGBaseAfraidOfDamageTolerance = {}
     self._DrGBaseNeutralDamageTolerance = {}
-    self:LoopTimer(1, self.RefreshEnemy)
+    self:LoopTimer(1, self.RefreshAI)
   end
   self:SetNWVarProxy("DrGBaseEnemy", function(self, name, old, new)
     if not self._DrGBaseHasEnemy and IsValid(new) then
@@ -73,8 +73,7 @@ if SERVER then
     local disabled = self:GetNW2Bool("DrGBaseAIDisabled")
     self:SetNW2Bool("DrGBaseAIDisabled", bool)
     if disabled and not bool then
-      self:RefreshEnemiesSight()
-      self:RefreshEnemy()
+      nextbot:RefreshAI()
     elseif bool then
       self:BehaviourTreeEvent("AIDisabled")
     end
@@ -115,6 +114,11 @@ if SERVER then
   end
 
   -- Functions --
+
+  function ENT:RefreshAI()
+    self:RefreshEnemiesSight()
+    self:RefreshEnemy()
+  end
 
   function ENT:FetchEnemy()
     if self:IsPossessed() then return NULL end
@@ -183,9 +187,7 @@ if SERVER then
 
   cvars.AddChangeCallback("ai_disabled", function(name, old, new)
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
-      if not new then
-        nextbot:RefreshEnemiesSight()
-        nextbot:RefreshEnemy()
+      if not new then nextbot:RefreshAI()
       else nextbot:BehaviourTreeEvent("AIDisabled") end
     end
   end, "DrGBaseDisableAIUpdateBT")

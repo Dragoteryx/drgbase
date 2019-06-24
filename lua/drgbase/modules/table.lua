@@ -15,3 +15,12 @@ function table.DrG_Default(tbl, default)
   setmetatable(tbl, default_mt)
   return tbl
 end
+
+function table.DrG_Pack(...)
+  local args = {}
+  for i = 1, select("#", ...) do
+    local val = select(i, ...)
+    table.insert(args, val)
+  end
+  return args
+end

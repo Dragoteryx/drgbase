@@ -37,7 +37,6 @@ function ENT:_InitDetection()
   self:SetSightRange(self.SightRange)
   self:SetSightLuminosityRange(self.MinLuminosity, self.MaxLuminosity)
   self:SetHearingCoefficient(self.HearingCoefficient)
-  self:LoopTimer(1, self.RefreshEnemiesSight)
 end
 
 if SERVER then

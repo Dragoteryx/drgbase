@@ -38,16 +38,16 @@ end
 
 -- Timers --
 
-function ENT:Timer(duration, callback)
-  timer.Simple(duration, function()
-    if IsValid(self) then callback(self) end
-  end)
+function ENT:Timer(duration, callback, ...)
+  timer.DrG_Simple(duration, function(...)
+    if IsValid(self) then callback(self, ...) end
+  end, ...)
 end
-function ENT:LoopTimer(delay, callback)
-  timer.DrG_Loop(delay, function()
+function ENT:LoopTimer(delay, callback, ...)
+  timer.DrG_Loop(delay, function(...)
     if not IsValid(self) then return false end
-    return callback(self)
-  end)
+    return callback(self, ...)
+  end, ...)
 end
 
 -- Misc --
@@ -105,16 +105,19 @@ if SERVER then
       forward:Normalize()
       local right = Vector()
       right:Set(forward)
-      right:Rotate(Angle(0, 90, 0))
+      right:Rotate(Angle(0, -90, 0))
       local up = Vector(0, 0, 1)
       local vec = forward*force.x + right*force.y + up*force.z
       local phys = ent:GetPhysicsObject()
-      if ent.Type == "nextbot" then
+      if ent.IsDrGNextbot then
+        ent:LeaveGround()
+        ent:SetVelocity(ent:GetVelocity()+vec)
+      elseif ent.Type == "nextbot" then
         local jumpHeight = ent.loco:GetJumpHeight()
         ent.loco:SetJumpHeight(1)
         ent.loco:Jump()
         ent.loco:SetJumpHeight(jumpHeight)
-        ent:SetVelocity(ent:GetVelocity()+vec)
+        ent.loco:SetVelocity(ent.loco:GetVelocity()+vec)
       elseif IsValid(phys) and not ent:IsPlayer() then
         phys:AddVelocity(vec)
       else ent:SetVelocity(ent:GetVelocity()+vec) end

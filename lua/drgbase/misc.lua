@@ -37,6 +37,7 @@ if SERVER then
     if ent:IsPlayer() then return true end
     if ent:IsNPC() then return true end
     if ent.Type == "nextbot" then return true end
+    if ent.Base == "base_nextbot" then return true end
     if string.StartWith(ent:GetClass(), "npc_") then return true end
     return false
   end

@@ -1,6 +1,15 @@
 
-function timer.DrG_Loop(delay, callback)
+function timer.DrG_Simple(delay, callback, ...)
+  local args = table.DrG_Pack(...)
   timer.Simple(delay, function()
-    if callback() ~= false then timer.DrG_Loop(delay, callback) end
+    callback(unpack(args))
+  end)
+end
+function timer.DrG_Loop(delay, callback, ...)
+  local args = table.DrG_Pack(...)
+  timer.Simple(delay, function()
+    local unpacked = unpack(args)
+    if callback(unpacked) == false then return end
+    timer.DrG_Loop(delay, callback, unpacked)
   end)
 end

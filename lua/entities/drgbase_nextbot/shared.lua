@@ -174,8 +174,7 @@ function ENT:Initialize()
   self:CustomInitialize()
   if CLIENT then return end
   --print(#DrGBase.GetNextbots())
-  self:RefreshEnemiesSight()
-  self:RefreshEnemy()
+  self:RefreshAI()
 end
 function ENT:_BaseInitialize() end
 function ENT:CustomInitialize() end
