@@ -304,8 +304,7 @@ else
     if not IsValid(possessing) then return end
     local hookres = possessing:PossessionHUD()
     if hookres then return end
-    -- draw possession hud
-
+    DrGBase.DrawPossessionHUD(possessing)
   end)
 
   function ENT:PossessionRender() end

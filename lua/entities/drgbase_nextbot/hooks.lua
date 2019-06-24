@@ -67,8 +67,14 @@ if SERVER then
             self:CallInCoroutine(function(self, delay)
               self:SetNW2Bool("DrGBaseDying", false)
               self:SetNW2Bool("DrGBaseDead", true)
+              local now = CurTime()
               dmg = self:OnDeath(util.DrG_LoadDmg(data), delay)
-              if dmg == nil then dmg = util.DrG_LoadDmg(data) end
+              if dmg == nil then
+                dmg = util.DrG_LoadDmg(data)
+                if CurTime() > now then
+                  dmg:SetDamageForce(Vector(0, 0, 1))
+                end
+              end
               NextbotDeath(self, dmg)
             end, true)
           else

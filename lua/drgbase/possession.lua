@@ -69,6 +69,18 @@ else
 		surface.PlaySound("buttons/button10.wav")
 	end)
 
+	hook.Add("HUDShouldDraw", "DrGBaseHideZoomPosession", function(name)
+		if LocalPlayer():DrG_IsPossessing() and name == "CHudZoom" then return false end
+	end)
+
+	function DrGBase.DrawPossessionHUD(ent)
+		local ply = LocalPlayer()
+		-- I should put the rest of the HUD code here but
+		-- I don't have any inspiration for how the HUD should look
+		-- so right now there is no code here
+		-- I'll take care of it one day
+	end
+
 end
 
 DrGBase.IncludeFolder("drgbase/possession")

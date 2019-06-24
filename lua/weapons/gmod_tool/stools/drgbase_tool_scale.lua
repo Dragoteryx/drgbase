@@ -20,7 +20,7 @@ end
 function TOOL:Reload(tr)
 	if not IsValid(tr.Entity) then return false end
   if not tr.Entity.IsDrGNextbot then return false end
-  if SERVER then tr.Entity:SetScale(1) end
+  if SERVER then tr.Entity:SetScale(1, 0.1) end
   return true
 end
 

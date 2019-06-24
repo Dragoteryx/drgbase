@@ -34,10 +34,26 @@ if SERVER then
 
   -- Jumps --
 
+  local function LocoJump(self)
+    local seq = self:GetSequence()
+    local cycle = self:GetCycle()
+    self.loco:Jump()
+    self:ResetSequence(seq)
+    self:SetCycle(cycle)
+  end
+  local function LocoJumpGap(self, pos)
+    local seq = self:GetSequence()
+    local cycle = self:GetCycle()
+    self.loco:JumpAcrossGap(pos, self:GetForward())
+    self:ResetSequence(seq)
+    self:SetCycle(cycle)
+  end
+
   function ENT:LeaveGround()
+    if not self:IsOnGround() then return end
     local jumpHeight = self.loco:GetJumpHeight()
     self.loco:SetJumpHeight(1)
-    self.loco:Jump()
+    LocoJump(self)
     self.loco:SetJumpHeight(jumpHeight)
   end
 
@@ -45,9 +61,9 @@ if SERVER then
     if isnumber(height) then
       local jumpHeight = self.loco:GetJumpHeight()
       self.loco:SetJumpHeight(height)
-      self.loco:Jump()
+      LocoJump(self)
       self.loco:SetJumpHeight(jumpHeight)
-    else self.loco:Jump() end
+    else LocoJump(self) end
     if not coroutine.running() then return end
     self:SetNW2Bool("DrGBaseJumping", true)
     local now = CurTime()
@@ -62,7 +78,7 @@ if SERVER then
   function ENT:Leap(pos, callback)
     if isentity(pos) then pos = pos:WorldSpaceCenter() end
     self:FaceInstant(pos)
-    self.loco:JumpAcrossGap(pos, self:GetForward())
+    LocoJumpGap(self, pos)
     if not coroutine.running() then return end
     self:SetNW2Bool("DrGBaseLeaping", true)
     local now = CurTime()
@@ -79,7 +95,7 @@ if SERVER then
     options = options or {}
     options.speed = options.speed or self:GetSpeed()
     options.pitch = options.pitch or 15
-    self.loco:JumpAcrossGap(self:GetPos() + self:GetForward()*dist, self:GetForward())
+    LocoJumpGap(self, self:GetPos() + self:GetForward()*dist)
     self:SetNW2Bool("DrGBaseGliding", true)
     local now = CurTime()
     while not self:IsOnGround() do
@@ -89,7 +105,7 @@ if SERVER then
         local forward = self:GetForward()
         forward.z = -math.tan(math.rad(options.pitch))
         forward:Normalize()
-        self.loco:SetVelocity(forward*options.speed*self:GetScale())      
+        self.loco:SetVelocity(forward*options.speed*self:GetScale())
       end
       self:YieldCoroutine(true)
     end

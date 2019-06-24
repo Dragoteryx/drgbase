@@ -119,7 +119,7 @@ ENT.AcceptPlayerWeapons = false
 DrGBase.IncludeFile("possession.lua")
 ENT.PossessionEnabled = false
 ENT.PossessionPrompt = true
-ENT.PossessionMovement = POSSESSION_MOVE_NSEW
+ENT.PossessionMovement = POSSESSION_MOVE_FORWARD
 ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
 
