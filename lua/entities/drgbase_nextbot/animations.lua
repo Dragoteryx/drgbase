@@ -246,30 +246,7 @@ if SERVER then
     elseif isnumber(anim) then self:PlayActivity(anim, rate, callback) end
   end
 
-  function ENT:PlayClimbSequence(seq, height, rate, callback)
-    if isstring(seq) then seq = self:LookupSequence(seq)
-    elseif not isnumber(seq) then return end
-    if seq == -1 then return end
-    local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
-    if not success then return end
-    return self:PlaySequenceAndMoveAbsolute(seq, {
-      rate = rate,
-      multiply = Vector(1, 1, height/vec.z/self:GetModelScale())
-    }, function(self, cycle)
-      if not self:TraceHull(self:GetForward()*self.LedgeDetectionDistance*2).Hit then return true end
-      if isfunction(callback) then return callback(self, cycle) end
-    end)
-  end
-  function ENT:PlayClimbActivity(act, height, rate, callback)
-    local seq = self:SelectRandomSequence(act)
-    return self:PlayClimbSequence(seq, options, callback)
-  end
-  function ENT:PlayClimbAnimation(anim, height, rate, callback)
-    if isstring(anim) then self:PlayClimbSequence(anim, height, rate, callback)
-    elseif isnumber(anim) then self:PlayClimbActivity(anim, height, rate, callback) end
-  end
-
-  function ENT:PlayClosestClimbSequence(height, seqs, rate, callback)    
+  local function PlayClosestClimbSequence(self, seqs, height, rate, callback)
     local climbs = {}
     for i, seq in ipairs(seqs) do
       if isstring(seq) then seq = self:LookupSequence(seq)
@@ -296,6 +273,31 @@ if SERVER then
         return self:PlayClimbSequence(climb.seq, height*self:GetModelScale(), rate, callback)
       end
     end
+  end
+
+  function ENT:PlayClimbSequence(seq, height, rate, callback)
+    if not istable(seq) then
+      if isstring(seq) then seq = self:LookupSequence(seq)
+      elseif not isnumber(seq) then return end
+      if seq == -1 then return end
+      local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
+      if not success then return end
+      return self:PlaySequenceAndMoveAbsolute(seq, {
+        rate = rate,
+        multiply = Vector(1, 1, height/vec.z/self:GetModelScale())
+      }, function(self, cycle)
+        if not self:TraceHull(self:GetForward()*self.LedgeDetectionDistance*2).Hit then return true end
+        if isfunction(callback) then return callback(self, cycle) end
+      end)
+    else return PlayClosestClimbSequence(self, seq, height, rate, callback) end
+  end
+  function ENT:PlayClimbActivity(act, height, rate, callback)
+    local seq = self:SelectRandomSequence(act)
+    return self:PlayClimbSequence(seq, options, callback)
+  end
+  function ENT:PlayClimbAnimation(anim, height, rate, callback)
+    if isstring(anim) then self:PlayClimbSequence(anim, height, rate, callback)
+    elseif isnumber(anim) then self:PlayClimbActivity(anim, height, rate, callback) end
   end
 
   -- Update --
