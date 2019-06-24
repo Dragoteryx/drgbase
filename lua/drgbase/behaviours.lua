@@ -184,15 +184,14 @@ local BEHAVIOUR_TREES = {}
 function DrGBase.GetBehaviourTree(name)
   name = string.lower(name)
   if BEHAVIOUR_TREES[name] then return BEHAVIOUR_TREES[name] end
-  local tree = DrGBase.CreateBehaviourTree(name)
-  BEHAVIOUR_TREES[name] = tree
-  return tree
+  return DrGBase.RefreshBehaviourTree(name)
 end
 function DrGBase.GetBT(name)
   return DrGBase.GetBehaviourTree(name)
 end
 
 function DrGBase.CreateBehaviourTree(name)
+  name = string.lower(name)
   local default = tobool(DEFAULTS[name])
   local luaFolder = default and "default_behaviours/" or "behaviours/"
   if file.Exists("drgbase/"..luaFolder..name..".lua", "LUA") then
@@ -200,7 +199,7 @@ function DrGBase.CreateBehaviourTree(name)
     local tree = BehaviourTree:New(name)
     tree.Structure = {}
     BT = tree
-    DrGBase.IncludeFile(luaFolder..name..".lua")
+    DrGBase.IncludeFile("drgbase/"..luaFolder..name..".lua")
     BT = nil
     tree:SetRoot(CreateNode(tree.Structure))
     tree.Structure = nil
@@ -213,6 +212,17 @@ function DrGBase.CreateBehaviourTree(name)
 end
 function DrGBase.CreateBT(name)
   return DrGBase.CreateBehaviourTree(name)
+end
+
+function DrGBase.RefreshBehaviourTree(name)
+  name = string.lower(name)
+  local tree = DrGBase.CreateBehaviourTree(name)
+  if not tree then return end
+  BEHAVIOUR_TREES[name] = tree
+  return tree
+end
+function DrGBase.RefreshBT(name)
+  return DrGBase.RefreshBehaviourTree(name)
 end
 
 -- LOAD BEHAVIOURS --

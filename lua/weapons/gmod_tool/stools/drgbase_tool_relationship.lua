@@ -41,9 +41,9 @@ function TOOL:RightClick(tr)
 	local disp = self:GetClientNumber("disposition")
 	for i, nextbot in ipairs(self.Selected) do
     if not IsValid(nextbot) then continue end
-    nextbot:SetRelationship(tr.Entity, disp)
+    nextbot:_SetRelationship(tr.Entity, disp)
 		if tr.Entity.IsDrGNextbot and tobool(self:GetClientNumber("bothways")) then
-			tr.Entity:SetRelationship(nextbot, disp)
+			tr.Entity:_SetRelationship(nextbot, disp)
 		end
   end
   return true
