@@ -25,8 +25,7 @@ ENT.FollowPlayers = true
 ENT.Factions = {FACTION_ZOMBIES}
 
 -- Movements/animations --
-ENT.WalkSpeed = 50
-ENT.RunSpeed = 50
+ENT.UseWalkframes = true
 
 -- Detection --
 ENT.EyeBone = "ValveBiped.Bip01_Spine4"

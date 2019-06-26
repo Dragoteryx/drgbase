@@ -22,7 +22,7 @@ BT.Structure = {
             type = "Leaf",
             name = "HasEnemy?",
             run = function(self, nextbot)
-              return IsValid(nextbot:RefreshEnemy())
+              return IsValid(nextbot:UpdateEnemy())
             end
           }
         }
@@ -30,3 +30,8 @@ BT.Structure = {
     }
   }
 }
+
+function BT:OnInit()
+  self:IgnoreEvent("EnemyChange", true)
+  self:IgnoreEvent("LastEnemy", true)
+end

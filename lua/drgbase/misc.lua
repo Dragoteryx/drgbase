@@ -6,6 +6,7 @@ if SERVER then
     if not IsValid(proj) then return NULL end
     if istable(model) and #model > 0 then model = model[math.random(#model)] end
     if isstring(model) then proj:SetModel(model) end
+    binds = binds or {}
     if isfunction(binds.Init) then proj.CustomInitialize = binds.Init end
     if isfunction(binds.Think) then proj.CustomThink = binds.Think end
     if isfunction(binds.Filter) then proj.OnFilter = binds.Filter end
@@ -31,13 +32,15 @@ if SERVER then
   }
   function DrGBase.IsTarget(ent)
     if not IsValid(ent) then return false end
-    if TARGET_BLACKLIST[ent:GetClass()] then return false end
-    if TARGET_WHITELIST[ent:GetClass()] then return true end
+    local class = ent:GetClass()
+    if TARGET_BLACKLIST[class] then return false end
+    if TARGET_WHITELIST[class] then return true end
     if ent.DrGBase_Target then return true end
+    if string.StartWith(class, "point_") then return false end
     if ent:IsPlayer() then return true end
     if ent:IsNPC() then return true end
     if ent.Type == "nextbot" then return true end
-    if string.StartWith(ent:GetClass(), "npc_") then return true end
+    if string.StartWith(class, "npc_") then return true end
     return false
   end
 

@@ -4,8 +4,8 @@ ENT.Base = "proj_drg_grenade"
 -- Misc --
 ENT.PrintName = "Flash Grenade"
 ENT.Category = "DrGBase"
-ENT.Spawnable = true
 ENT.Models = {"models/weapons/w_eq_flashbang.mdl"}
+ENT.Spawnable = true
 
 -- Grenade --
 ENT.Bounce = 1

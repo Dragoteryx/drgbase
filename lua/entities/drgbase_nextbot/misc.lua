@@ -407,7 +407,7 @@ if SERVER then
   local old_BecomeRagdoll = nextbotMETA.BecomeRagdoll
   function nextbotMETA:BecomeRagdoll(dmg)
     if self.IsDrGNextbot then
-      if RemoveRagdolls:GetFloat() ~= 0 then
+      if RemoveRagdolls:GetFloat() ~= 0 and util.IsValidRagdoll(self:GetModel()) then
         local ragdoll = ents.Create("prop_ragdoll")
         if not IsValid(ragdoll) then return NULL end
         ragdoll:SetPos(self:GetPos())

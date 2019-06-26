@@ -7,14 +7,30 @@ ENT.Category = "DrGBase"
 ENT.Models = {}
 ENT.ModelScale = 1
 
--- Projectile --
+-- Physics --
 ENT.Gravity = true
-ENT.CollisionDamage = true
 ENT.Physgun = false
 ENT.Gravgun = false
+ENT.Collisions = true
+
+-- Contact --
+ENT.ContactDelay = 0
+ENT.ContactDelete = -1
+
+-- Sounds --
+ENT.LoopSounds = {}
+ENT.OnContactSounds = {}
+ENT.OnRemoveSounds = {}
+
+-- Effects --
+ENT.AttachEffects = {}
+ENT.OnContactEffects = {}
+ENT.OnRemoveEffects = {}
 
 -- Misc --
 DrGBase.IncludeFile("meta.lua")
+
+-- Handlers --
 
 hook.Add("PhysgunPickup", "DrGBaseProjectilePhysgun", function(ply, ent)
   if ent.IsDrGProjectile then return ent.Physgun or false end
@@ -37,17 +53,43 @@ if SERVER then
   function ENT:Initialize()
     if #self.Models > 0 then
       self:SetModel(self.Models[math.random(#self.Models)])
-    else self:SetModel("models/props_junk/watermelon01.mdl") end
+    else
+      self:SetModel("models/props_junk/watermelon01.mdl")
+      self:SetNoDraw(true)
+    end
     self:SetModelScale(self.ModelScale)
     self._DrGBaseFilterOwner = true
     self._DrGBaseFilterAllies = false
     self:SetUseType(SIMPLE_USE)
+    -- sounds/effects --
+    self:CallOnRemove("DrGBaseOnRemoveSoundsEffects", function(self)
+      if #self.OnRemoveSounds > 0 then
+        self:EmitSound(self.OnRemoveSounds[math.random(#self.OnRemoveSounds)])
+      end
+      if #self.OnRemoveEffects > 0 then
+        ParticleEffect(self.OnRemoveEffects[math.random(#self.OnRemoveEffects)], self:GetPos(), self:GetAngles(), self)
+      end
+    end)
+    if #self.LoopSounds > 0 then
+      self._DrGBaseLoopingSound = self:StartLoopingSound(self.LoopSounds[math.random(#self.LoopSounds)])
+      self:CallOnRemove("DrGBaseStopLoopingSound", function(self)
+        self:StopLoopingSound(self._DrGBaseLoopingSound)
+      end)
+    end
+    if #self.AttachEffects > 0 then
+      self:ParticleEffect(self.AttachEffects[math.random(#self.AttachEffects)], true)
+    end
+    -- physics --
     self:_BaseInitialize()
     self:CustomInitialize()
     self:PhysicsInit(SOLID_VPHYSICS)
     self:SetMoveType(MOVETYPE_VPHYSICS)
     self:SetSolid(SOLID_VPHYSICS)
     self:SetUseType(SIMPLE_USE)
+    self:SetTrigger(true)
+    if not self.Collisions then
+      self:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+    end
     local phys = self:GetPhysicsObject()
     if IsValid(phys) then
       phys:Wake()
@@ -67,18 +109,36 @@ if SERVER then
 
   -- Collisions --
 
+  local function Contact(self, ent)
+    if not isnumber(self._DrGBaseLastContact) or CurTime() > self._DrGBaseLastContact + self.ContactDelay then
+      self._DrGBaseLastContact = CurTime()
+      if #self.OnContactSounds > 0 then
+        self:EmitSound(self.OnContactSounds[math.random(#self.OnContactSounds)])
+      end
+      if #self.OnContactEffects > 0 then
+        ParticleEffect(self.OnContactEffects[math.random(#self.OnContactEffects)], self:GetPos(), self:GetAngles(), self)
+      end
+      self:OnContact(ent)
+      if self.ContactDelete == 0 then
+        self:Remove()
+      elseif self.ContactDelete > 0 then
+        self:Timer(self.ContactDelete, self.Remove)
+      end
+    end
+  end
+
   function ENT:PhysicsCollide(data)
     if not data.HitEntity:IsWorld() then return end
     if not self:Filter(data.HitEntity) then return end
-    self:OnContact(data.HitEntity)
+    Contact(self, data.HitEntity)
   end
   function ENT:Touch(ent)
     if ent:IsWeapon() and IsValid(ent:GetOwner()) then
       local owner = ent:GetOwner()
       if not self:Filter(owner) then return end
-      self:OnContact(owner)
+      Contact(self, owner)
     elseif self:Filter(ent) then
-      self:OnContact(ent)
+      Contact(self, ent)
     end
   end
   function ENT:OnContact() end
@@ -141,6 +201,9 @@ if SERVER then
     dmg:SetDamage(value)
     dmg:SetDamageForce(self:GetVelocity())
     dmg:SetDamageType(type or DMG_DIRECT)
+    if dmg:IsDamageType(DMG_CRUSH) then
+      dmg:SetAmmoType(12)
+    end
     if IsValid(self:GetOwner()) then
       dmg:SetAttacker(self:GetOwner())
     else dmg:SetAttacker(self) end
@@ -186,7 +249,7 @@ if SERVER then
   hook.Add("EntityTakeDamage", "DrGBaseProjCollisionDamage", function(ent, dmg)
     local inflictor = dmg:GetInflictor()
     if not inflictor.IsDrGProjectile then return end
-    if dmg:GetDamageType() == DMG_CRUSH and not inflictor.CollisionDamage then
+    if dmg:GetDamageType() == DMG_CRUSH and dmg:GetAmmoType() ~= 12 then
       return true
     end
   end)

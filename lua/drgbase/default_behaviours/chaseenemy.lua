@@ -137,3 +137,8 @@ BT.Structure = {
     }
   }
 }
+
+function BT:OnInit()
+  self:IgnoreEvent("EnemyChange", true)
+  self:IgnoreEvent("LastEnemy", true)
+end

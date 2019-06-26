@@ -5,12 +5,13 @@ ENT.IsDrGGrenade = true
 -- Misc --
 ENT.PrintName = "HE Grenade"
 ENT.Category = "DrGBase"
-ENT.Spawnable = true
 ENT.Models = {"models/weapons/w_eq_fraggrenade.mdl"}
+ENT.Spawnable = true
 
--- Projectile --
+-- Physics --
 ENT.Physgun = true
 ENT.Gravgun = true
+ENT.Collisions = true
 
 -- Grenade --
 ENT.Bounce = 0.75

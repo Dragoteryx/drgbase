@@ -77,8 +77,7 @@ if SERVER then
       net.WriteEntity(self)
       net.WriteEntity(ent)
       net.Broadcast()
-      self:RefreshEnemy()
-      self:BehaviourTreeEvent("SpottedEntity", ent)
+      self:UpdateEnemy()
     end
     local timerName = self:_SpotTimerName(ent)
     timer.Remove(timerName)
@@ -99,8 +98,7 @@ if SERVER then
     net.WriteEntity(self)
     net.WriteEntity(ent)
     net.Broadcast()
-    self:RefreshEnemy()
-    self:BehaviourTreeEvent("LostEntity", ent)
+    self:UpdateEnemy()
   end
   function ENT:_SpotTimerName(ent)
     return "DrGBaseNB"..self:GetCreationID().."SpotENT"..ent:GetCreationID()
@@ -115,14 +113,14 @@ if SERVER then
           nextbot:LoseEntity(ply)
         end
       end
-      nextbot:RefreshEnemy()
+      nextbot:UpdateEnemy()
     end
   end, "DrGBaseIgnorePlayers")
 
   hook.Add("PostPlayerDeath", "DrGBaseForgetPlayerDeath", function(ply)
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
       nextbot:LoseEntity(ply)
-      nextbot:RefreshEnemy()
+      nextbot:UpdateEnemy()
     end
   end)
 

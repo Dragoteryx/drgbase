@@ -38,7 +38,7 @@ function ENT:IsMoving()
   return self:IsSpeedMore(0)
 end
 function ENT:IsRunning()
-  return self:IsOnGround() and self:IsSpeedMoreEqual((self.WalkSpeed + self.RunSpeed)/2, true)
+  --return self:IsOnGround() and self:IsSpeedMoreEqual((self.WalkSpeed + self.RunSpeed)/2, true)
 end
 
 function ENT:IsClimbing()
@@ -66,8 +66,23 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:SetSpeed(speed)
-    self:SetNW2Float("DrGBaseSpeed", speed)
-    self.loco:SetDesiredSpeed(speed*self:GetScale())
+    if not self.UseWalkframes then
+      self:SetNW2Float("DrGBaseSpeed", speed)
+      self.loco:SetDesiredSpeed(speed*self:GetScale())
+    else
+      self:SetNW2Float("DrGBaseSpeed", speed/self:GetScale())
+      self.loco:SetDesiredSpeed(speed)
+    end
+  end
+
+  function ENT:IsRunning()
+    if self:IsMoving() then
+      local run
+      if self:IsPossessed() then
+        run = self:GetPossessor():KeyDown(IN_SPEED)
+      else run = self:ShouldRun() end
+      return run or false
+    else return false end
   end
 
   function ENT:IsClimbingLadder(ladder)
@@ -469,16 +484,18 @@ if SERVER then
   -- Update --
 
   function ENT:UpdateSpeed()
-    local run
-    if self:IsPossessed() then
-      run = self:GetPossessor():KeyDown(IN_SPEED)
-    else run = self:ShouldRun() end
-    local speed = self:OnUpdateSpeed(run)
-    if isnumber(speed) then self:SetSpeed(math.Clamp(speed, 0, math.huge)) end
+    if self.UseWalkframes and self:IsOnGround() and not self:IsClimbing() then
+      local speed = self:GetSequenceGroundSpeed(self:GetSequence())
+      if speed == 0 then self:SetSpeed(1)
+      else self:SetSpeed(speed) end
+    else
+      local speed = self:OnUpdateSpeed()
+      if isnumber(speed) then self:SetSpeed(math.Clamp(speed, 0, math.huge)) end
+    end
   end
-  function ENT:OnUpdateSpeed(run)
+  function ENT:OnUpdateSpeed()
     if self:IsClimbing() then return self.ClimbSpeed
-    elseif run then return self.RunSpeed
+    elseif self:IsRunning() then return self.RunSpeed
     else return self.WalkSpeed end
   end
 

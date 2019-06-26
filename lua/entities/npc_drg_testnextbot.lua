@@ -58,10 +58,6 @@ ENT.PossessionBinds = {
 
 if SERVER then
 
-  function ENT:SpawnedBy(ply)
-    self:SetModel(ply:GetModel())
-  end
-
   function ENT:CustomInitialize()
     self:SetPlayersRelationship(D_HT)
     for i, walk in ipairs({

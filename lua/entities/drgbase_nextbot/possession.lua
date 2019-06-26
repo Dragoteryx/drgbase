@@ -227,7 +227,7 @@ if SERVER then
     ply:SetNW2Entity("DrGBasePossessing", self)
     self:SetNW2Int("DrGBasePossessionView", 1)
     ply:SetNoTarget(true)
-    self:RefreshEnemy()
+    self:UpdateEnemy()
     self:BehaviourTreeEvent("Possessed", ply)
     self:OnPossess(ply)
     return "ok"
@@ -242,7 +242,7 @@ if SERVER then
     self:SetNW2Entity("DrGBasePossessor", nil)
     ply:SetNW2Entity("DrGBasePossessing", nil)
     ply:SetNoTarget(false)
-    self:RefreshEnemy()
+    self:UpdateEnemy()
     self:OnDispossess(ply)
     return "ok"
   end

@@ -361,7 +361,7 @@ if SERVER then
       (self:IsPlayingAnimation() or self:IsClimbing() or not self:IsOnGround() or not self:IsMoving()) then
         return self:FrameAdvance()
       end
-      if not options.rate or not options.direction or not options.frameadvance then
+      if not options.rate or not options.direction or not options.frameadvance or self.UseWalkframes then
         if options.rate and not self:IsPlayingAnimation() and
         not self:IsClimbing() and self:IsOnGround() and self:IsMoving() then
           local velocity = self:GetVelocity()
@@ -372,7 +372,10 @@ if SERVER then
             if seqspeed ~= 0 then self:SetPlaybackRate(speed/seqspeed) end
           end
         end
-        if options.direction then
+        if self.UseWalkframes then
+          self:SetPoseParameter("move_x", 1)
+          self:SetPoseParameter("move_y", 0)
+        elseif options.direction then
           local velocity = self.loco:GetGroundMotionVector()
           local moveX = (-(velocity:DrG_Degrees(self:GetForward())-90))/45
           if moveX > 1 then moveX = 1

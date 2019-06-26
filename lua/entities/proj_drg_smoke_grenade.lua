@@ -4,8 +4,8 @@ ENT.Base = "proj_drg_grenade"
 -- Misc --
 ENT.PrintName = "Smoke Grenade"
 ENT.Category = "DrGBase"
-ENT.Spawnable = true
 ENT.Models = {"models/weapons/w_eq_smokegrenade.mdl"}
+ENT.Spawnable = true
 
 -- Grenade --
 ENT.Bounce = 1

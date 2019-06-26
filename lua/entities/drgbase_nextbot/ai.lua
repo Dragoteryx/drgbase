@@ -47,7 +47,7 @@ function ENT:_InitAI()
     self._DrGBaseAllyDamageTolerance = {}
     self._DrGBaseAfraidOfDamageTolerance = {}
     self._DrGBaseNeutralDamageTolerance = {}
-    self:LoopTimer(1, self.RefreshAI)
+    self:LoopTimer(1, self.UpdateAI)
   end
   self:SetNWVarProxy("DrGBaseEnemy", function(self, name, old, new)
     if not self._DrGBaseHasEnemy and IsValid(new) then
@@ -73,9 +73,7 @@ if SERVER then
     local disabled = self:GetNW2Bool("DrGBaseAIDisabled")
     self:SetNW2Bool("DrGBaseAIDisabled", bool)
     if disabled and not bool then
-      nextbot:RefreshAI()
-    elseif bool then
-      self:BehaviourTreeEvent("AIDisabled")
+      nextbot:UpdateAI()
     end
   end
   function ENT:DisableAI()
@@ -98,10 +96,10 @@ if SERVER then
     if not isvector(pos) then return end
     if isnumber(i) then
       table.insert(self._DrGBasePatrolPos, i, pos)
-      self:BehaviourTreeEvent("AddedPatrolPos", pos, i)
+      self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
     else
       table.insert(self._DrGBasePatrolPos, pos)
-      self:BehaviourTreeEvent("AddedPatrolPos", pos, #self._DrGBasePatrolPos)
+      self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
     end
   end
   function ENT:GetPatrolPos(i)
@@ -109,17 +107,30 @@ if SERVER then
   end
   function ENT:RemovePatrolPos(i)
     local pos = table.remove(self._DrGBasePatrolPos, i)
-    self:BehaviourTreeEvent("RemovedPatrolPos", pos)
+    self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
     return pos
   end
 
   -- Functions --
 
-  function ENT:RefreshAI()
-    self:RefreshEnemiesSight()
-    self:RefreshEnemy()
+  function ENT:UpdateAI()
+    self:UpdateEnemiesSight()
+    self:UpdateEnemy()
   end
 
+  function ENT:UpdateEnemy()
+    local enemy
+    if not self:IsPossessed() then
+      if self:HasNemesis() then return self:GetNemesis() end
+      enemy = self:OnUpdateEnemy()
+      if not IsValid(enemy) or
+      self:GetRangeSquaredTo(enemy) > EnemyRadius:GetFloat()^2 then
+        enemy = NULL
+      end
+    else enemy = NULL end
+    self:SetEnemy(enemy)
+    return enemy
+  end
   function ENT:FetchEnemy()
     if self:IsPossessed() then return NULL end
     local enemies = self:GetEnemies(true)
@@ -128,32 +139,24 @@ if SERVER then
     end)
     local enemy = enemies[1]
     if not IsValid(enemy) then return NULL
-    elseif self:GetRangeSquaredTo(enemy) > EnemyRadius:GetFloat()^2 then
-      return NULL
     else return enemy end
-  end
-  function ENT:RefreshEnemy()
-    if self:HasNemesis() then return self:GetNemesis() end
-    local enemy = self:FetchEnemy()
-    self:SetEnemy(enemy)
-    return enemy
   end
 
   function ENT:ClearPatrolPos()
     self._DrGBasePatrolPos = {}
-    self:BehaviourTreeEvent("ClearedPatrolPos")
+    self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
   end
   function ENT:ShufflePatrolPos()
     table.sort(self._DrGBasePatrolPos, function()
       return math.random(2) == 1
     end)
-    self:BehaviourTreeEvent("ShuffledPatrolPos")
+    self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
   end
   function ENT:SortPatrolPos()
     table.sort(self._DrGBasePatrolPos, function(pos1, pos2)
       return self:GroundDistance(pos1) < self:GroundDistance(pos2)
     end)
-    self:BehaviourTreeEvent("SortedPatrolPos")
+    self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
   end
 
   -- Hooks --
@@ -169,6 +172,9 @@ if SERVER then
 
   function ENT:OnIdle() end
 
+  function ENT:OnUpdateEnemy()
+    return self:FetchEnemy()
+  end
   function ENT:OnFetchEnemy(ent1, ent2)
     local disp1, prio1 = self:GetRelationship(ent1)
     local disp2, prio2 = self:GetRelationship(ent2)
@@ -187,8 +193,7 @@ if SERVER then
 
   cvars.AddChangeCallback("ai_disabled", function(name, old, new)
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
-      if not new then nextbot:RefreshAI()
-      else nextbot:BehaviourTreeEvent("AIDisabled") end
+      if not new then nextbot:UpdateAI() end
     end
   end, "DrGBaseDisableAIUpdateBT")
 

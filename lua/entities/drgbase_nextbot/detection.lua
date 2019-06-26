@@ -114,12 +114,12 @@ if SERVER then
   end
 
   -- Check if entities are in sight
-  function ENT:RefreshSight(disp, spotted)
+  function ENT:UpdateSight(disp, spotted)
     if self:IsAIDisabled() then return end
     if not isnumber(disp) then
       for i, disp in ipairs({
         D_LI, D_HT, D_FR, D_NU
-      }) do self:RefreshSight(disp) end
+      }) do self:UpdateSight(disp) end
     else
       for ent in self:EntityIterator(disp, spotted) do
         local res = self:IsInSight(ent)
@@ -127,17 +127,17 @@ if SERVER then
       end
     end
   end
-  function ENT:RefreshAlliesSight(spotted)
-    return self:RefreshSight(D_LI, spotted)
+  function ENT:UpdateAlliesSight(spotted)
+    return self:UpdateSight(D_LI, spotted)
   end
-  function ENT:RefreshEnemiesSight(spotted)
-    return self:RefreshSight(D_HT, spotted)
+  function ENT:UpdateEnemiesSight(spotted)
+    return self:UpdateSight(D_HT, spotted)
   end
-  function ENT:RefreshAfraidOfSight(spotted)
-    return self:RefreshSight(D_FR, spotted)
+  function ENT:UpdateAfraidOfSight(spotted)
+    return self:UpdateSight(D_FR, spotted)
   end
-  function ENT:RefreshNeutralSight(spotted)
-    return self:RefreshSight(D_NU, spotted)
+  function ENT:UpdateNeutralSight(spotted)
+    return self:UpdateSight(D_NU, spotted)
   end
 
   -- Hooks --

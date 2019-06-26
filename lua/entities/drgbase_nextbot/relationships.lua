@@ -159,13 +159,11 @@ if SERVER then
       if disp ~= cdisp then continue end
       self._DrGBaseRelationships[ent] = disp
       table.insert(self._DrGBaseRelationshipCaches[cdisp], ent)
-      --self:BehaviourTreeEvent("OnRelationshipChange", ent, curr, disp)
       if ent:IsNPC() then self:_UpdateNPCRelationship(ent, disp) end
       return
     end
     if curr ~= DEFAULT_DISP then
       self._DrGBaseRelationships[ent] = DEFAULT_DISP
-      --self:BehaviourTreeEvent("OnRelationshipChange", ent, curr, DEFAULT_DISP)
       if ent:IsNPC() then self:_UpdateNPCRelationship(ent, DEFAULT_DISP) end
     end
   end

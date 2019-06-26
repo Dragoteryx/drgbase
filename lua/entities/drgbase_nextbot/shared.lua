@@ -50,9 +50,9 @@ ENT.NeutralDamageTolerance = 0.33
 -- Locomotion --
 DrGBase.IncludeFile("locomotion.lua")
 DrGBase.IncludeFile("path.lua")
-ENT.Acceleration = 400
-ENT.Deceleration = 400
-ENT.JumpHeight = 58
+ENT.Acceleration = 1000
+ENT.Deceleration = 1000
+ENT.JumpHeight = 50
 ENT.StepHeight = 20
 ENT.MaxYawRate = 250
 ENT.DeathDropHeight = 200
@@ -72,6 +72,7 @@ ENT.JumpAnimation = ACT_JUMP
 ENT.JumpAnimRate = 1
 ENT.AnimMatchSpeed = true
 ENT.AnimMatchDirection = true
+ENT.UseWalkframes = false
 
 -- Climbing --
 ENT.ClimbLedges = false
@@ -174,7 +175,7 @@ function ENT:Initialize()
   self:CustomInitialize()
   if CLIENT then return end
   --print(#DrGBase.GetNextbots())
-  self:RefreshAI()
+  self:UpdateAI()
 end
 function ENT:_BaseInitialize() end
 function ENT:CustomInitialize() end
@@ -304,11 +305,16 @@ if SERVER then
     end
   end
   function ENT:YieldCoroutine(interrompt)
-    if interrompt and #self._DrGBaseCorCalls > 0 and not self._DrGBaseRunningCorCall then
-      local cor = table.remove(self._DrGBaseCorCalls, 1)
-      self._DrGBaseRunningCorCall = true
-      cor.callback(self, CurTime() - cor.now)
-      self._DrGBaseRunningCorCall = false
+    if interrompt then
+      repeat
+        if #self._DrGBaseCorCalls > 0 and not self._DrGBaseRunningCorCall then
+          local cor = table.remove(self._DrGBaseCorCalls, 1)
+          self._DrGBaseRunningCorCall = true
+          cor.callback(self, CurTime() - cor.now)
+          self._DrGBaseRunningCorCall = false
+        end
+        coroutine.yield()
+      until not self:IsAIDisabled() or self:IsPossessed()
     else coroutine.yield() end
   end
   function ENT:PauseCoroutine(duration, interrompt)
