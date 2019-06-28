@@ -174,7 +174,7 @@ function ENT:Initialize()
   self:_BaseInitialize()
   self:CustomInitialize()
   if CLIENT then return end
-  print(#DrGBase.GetNextbots())
+  --print(#DrGBase.GetNextbots())
   self:UpdateAI()
 end
 function ENT:_BaseInitialize() end
