@@ -19,12 +19,12 @@ if SERVER then
 
   -- Handlers --
 
-  function ENT:OnUpdateSpeed(run)
+  function ENT:OnUpdateSpeed()
     if self:IsClimbing() then return self.ClimbSpeed
     elseif self:IsCrouching() then
-      if run then return self.WalkSpeed
+      if self:IsRunning() then return self.WalkSpeed
       else return self.CrouchSpeed end
-    elseif run then return self.RunSpeed
+    elseif self:IsRunning() then return self.RunSpeed
     else return self.WalkSpeed end
   end
 

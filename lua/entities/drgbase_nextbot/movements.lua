@@ -66,12 +66,12 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:SetSpeed(speed)
-    if not self.UseWalkframes then
-      self:SetNW2Float("DrGBaseSpeed", speed)
-      self.loco:SetDesiredSpeed(speed*self:GetScale())
-    else
+    if self.UseWalkframes and self:IsOnGround() and not self:IsClimbing() then
       self:SetNW2Float("DrGBaseSpeed", speed/self:GetScale())
       self.loco:SetDesiredSpeed(speed)
+    else
+      self:SetNW2Float("DrGBaseSpeed", speed)
+      self.loco:SetDesiredSpeed(speed*self:GetScale())
     end
   end
 
@@ -162,8 +162,9 @@ if SERVER then
     if isentity(pos) then pos = pos:GetPos() end
     tolerance = isnumber(tolerance) and tolerance or 20
     local selfpos = self:GetPos()
-    if navmesh.IsLoaded() and (not self:IsOnGround() or
-    selfpos:DistToSqr(navmesh.GetNearestNavArea(selfpos):GetClosestPointOnArea(selfpos)) < tolerance^2) then
+    if navmesh.IsLoaded() then
+    --[[if navmesh.IsLoaded() and (not self:IsOnGround() or
+    selfpos:DistToSqr(navmesh.GetNearestNavArea(selfpos):GetClosestPointOnArea(selfpos)) < tolerance^2) then]]
       pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
       local path = self:GetPath()
       path:SetMinLookAheadDistance(300)

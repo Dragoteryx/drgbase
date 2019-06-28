@@ -37,7 +37,7 @@ if SERVER then
     end
     local res = self:OnTakeDamage(dmg)
     local attacker = dmg:GetAttacker()
-    if IsValid(attacker) then
+    if IsValid(attacker) and DrGBase.IsTarget(attacker) then
       if self:IsAlly(attacker) then
         self._DrGBaseAllyDamageTolerance[attacker] = self._DrGBaseAllyDamageTolerance[attacker] or 0
         self._DrGBaseAllyDamageTolerance[attacker] = self._DrGBaseAllyDamageTolerance[attacker] + self.AllyDamageTolerance

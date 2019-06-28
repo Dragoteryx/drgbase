@@ -14,8 +14,9 @@ ENT.Gravgun = false
 ENT.Collisions = true
 
 -- Contact --
-ENT.ContactDelay = 0
-ENT.ContactDelete = -1
+ENT.OnContactDelay = 0
+ENT.OnContactDelete = -1
+ENT.OnContactDecals = {}
 
 -- Sounds --
 ENT.LoopSounds = {}
@@ -67,7 +68,7 @@ if SERVER then
         self:EmitSound(self.OnRemoveSounds[math.random(#self.OnRemoveSounds)])
       end
       if #self.OnRemoveEffects > 0 then
-        ParticleEffect(self.OnRemoveEffects[math.random(#self.OnRemoveEffects)], self:GetPos(), self:GetAngles(), self)
+        ParticleEffect(self.OnRemoveEffects[math.random(#self.OnRemoveEffects)], self:GetPos(), self:GetAngles())
       end
     end)
     if #self.LoopSounds > 0 then
@@ -110,19 +111,19 @@ if SERVER then
   -- Collisions --
 
   local function Contact(self, ent)
-    if not isnumber(self._DrGBaseLastContact) or CurTime() > self._DrGBaseLastContact + self.ContactDelay then
+    if not isnumber(self._DrGBaseLastContact) or CurTime() > self._DrGBaseLastContact + self.OnContactDelay then
       self._DrGBaseLastContact = CurTime()
       if #self.OnContactSounds > 0 then
         self:EmitSound(self.OnContactSounds[math.random(#self.OnContactSounds)])
       end
       if #self.OnContactEffects > 0 then
-        ParticleEffect(self.OnContactEffects[math.random(#self.OnContactEffects)], self:GetPos(), self:GetAngles(), self)
+        ParticleEffect(self.OnContactEffects[math.random(#self.OnContactEffects)], self:GetPos(), self:GetAngles())
       end
       self:OnContact(ent)
-      if self.ContactDelete == 0 then
+      if self.OnContactDelete == 0 then
         self:Remove()
-      elseif self.ContactDelete > 0 then
-        self:Timer(self.ContactDelete, self.Remove)
+      elseif self.OnContactDelete > 0 then
+        self:Timer(self.OnContactDelete, self.Remove)
       end
     end
   end
@@ -130,6 +131,9 @@ if SERVER then
   function ENT:PhysicsCollide(data)
     if not data.HitEntity:IsWorld() then return end
     if not self:Filter(data.HitEntity) then return end
+    if #self.OnContactDecals > 0 then
+      util.Decal(self.OnContactDecals[math.random(#self.OnContactDecals)], data.HitPos+data.HitNormal, data.HitPos-data.HitNormal)
+    end
     Contact(self, data.HitEntity)
   end
   function ENT:Touch(ent)

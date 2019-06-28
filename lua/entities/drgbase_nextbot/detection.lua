@@ -1,7 +1,7 @@
 
 -- Convars --
 
-local EnableHearing = CreateConVar("drgbase_enable_hearing", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local EnableHearing = CreateConVar("drgbase_enable_hearing", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Getters/setters --
 
@@ -53,14 +53,10 @@ if SERVER then
     self:SetNW2Int("DrGBaseSightRange", range)
   end
   function ENT:SetSightLuminosityRange(min, max)
-    if isnumber(min) then
-      min = math.Clamp(min, 0, 1)
-      self:SetNW2Float("DrGBaseMinLuminosity", min)
-    end
     if isnumber(max) then
-      max = math.Clamp(max, 0, 1)
-      self:SetNW2Float("DrGBaseMaxLuminosity", max)
-    end
+      self:SetNW2Float("DrGBaseMinLuminosity", math.Clamp(min, 0, 1))
+      self:SetNW2Float("DrGBaseMaxLuminosity", math.Clamp(max, 0, 1))
+    else self:SetSightLuminosityRange(0, min) end
   end
 
   function ENT:SetHearingCoefficient(coeff)
@@ -157,6 +153,7 @@ if SERVER then
   hook.Add("EntityEmitSound", "DrGBaseNextbotHearing", function(sound)
     if not EnableHearing:GetBool() then return end
     if not IsValid(sound.Entity) then return end
+    if not sound.Entity:IsPlayer() then return end
     if #DrGBase.GetNextbots() == 0 then return end
     local pos = sound.Pos or sound.Entity:GetPos()
     local distance = math.pow(sound.SoundLevel/2, 2)*sound.Volume

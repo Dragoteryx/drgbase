@@ -174,7 +174,7 @@ function ENT:Initialize()
   self:_BaseInitialize()
   self:CustomInitialize()
   if CLIENT then return end
-  --print(#DrGBase.GetNextbots())
+  print(#DrGBase.GetNextbots())
   self:UpdateAI()
 end
 function ENT:_BaseInitialize() end
@@ -379,6 +379,8 @@ if SERVER then
   function ENT:OnSpawn() end
   function ENT:OnError() end
   function ENT:AIBehaviour() end
+
+  function ENT:OnExtinguish() end
 
   -- SLVBase compatibility --
   if file.Exists("autorun/slvbase", "LUA") then

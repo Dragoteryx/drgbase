@@ -193,7 +193,7 @@ if SERVER then
 
   cvars.AddChangeCallback("ai_disabled", function(name, old, new)
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
-      if not new then nextbot:UpdateAI() end
+      if not tobool(new) then nextbot:UpdateAI() end
     end
   end, "DrGBaseDisableAIUpdateBT")
 

@@ -113,7 +113,7 @@ if SERVER then
           nextbot:LoseEntity(ply)
         end
       end
-      nextbot:UpdateEnemy()
+      nextbot:UpdateAI()
     end
   end, "DrGBaseIgnorePlayers")
 

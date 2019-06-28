@@ -76,75 +76,6 @@ function ENT:CalcPosDirection(pos, subs)
   end
 end
 
-local DebugTraces = CreateConVar("drgbase_debug_traces", "0")
-function ENT:TraceLine(vec, data)
-  local trdata = {}
-  data = data or {}
-  local center = self:OBBCenter()
-  trdata.start = data.start or self:GetPos() + center
-  trdata.endpos = data.endpos or trdata.start + vec
-  trdata.mask = data.mask or self:GetSolidMask()
-  trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
-  trdata.filter = data.filter or {self, self:GetWeapon()}
-  local tr = util.TraceLine(trdata)
-  if DebugTraces:GetFloat() > 0 then
-    local clr = tr.Hit and DrGBase.CLR_RED or DrGBase.CLR_GREEN
-    debugoverlay.Line(trdata.start, tr.HitPos, DebugTraces:GetFloat(), clr, false)
-    debugoverlay.Line(tr.HitPos, trdata.endpos, DebugTraces:GetFloat(), DrGBase.CLR_WHITE, false)
-  end
-  return tr
-end
-function ENT:TraceHull(vec, steps, data)
-  local bound1, bound2 = self:GetCollisionBounds()
-  if bound1.z < bound2.z then
-    local temp = bound1
-    bound1 = bound2
-    bound2 = temp
-  end
-  if steps then bound2.z = self.loco:GetStepHeight() end
-  local trdata = {}
-  data = data or {}
-  trdata.start = data.start or self:GetPos()
-  trdata.endpos = data.endpos or trdata.start + vec
-  trdata.mask = data.mask or self:GetSolidMask()
-  trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
-  trdata.filter = data.filter or {self, self:GetWeapon()}
-  trdata.maxs = data.maxs or bound1
-  trdata.mins = data.mins or bound2
-  local tr = util.TraceHull(trdata)
-  if DebugTraces:GetFloat() > 0 then
-    local clr = tr.Hit and DrGBase.CLR_RED or DrGBase.CLR_GREEN
-    clr = clr:ToVector():ToColor() clr.a = 0
-    debugoverlay.Line(trdata.start, tr.HitPos, DebugTraces:GetFloat(), DrGBase.CLR_WHITE, false)
-    debugoverlay.Box(tr.HitPos, trdata.mins, trdata.maxs, DebugTraces:GetFloat(), clr)
-  end
-  return tr
-end
-function ENT:TraceLineRadial(distance, precision, data)
-  local traces = {}
-  for i = 1, precision do
-    local normal = self:GetForward()*distance
-    normal:Rotate(Angle(0, i*(360/precision), 0))
-    table.insert(traces, self:TraceLine(normal, data))
-  end
-  table.sort(traces, function(tr1, tr2)
-    return self:GetRangeSquaredTo(tr1.HitPos) < self:GetRangeSquaredTo(tr2.HitPos)
-  end)
-  return traces
-end
-function ENT:TraceHullRadial(distance, precision, steps, data)
-  local traces = {}
-  for i = 1, precision do
-    local normal = self:GetForward()*distance
-    normal:Rotate(Angle(0, i*(360/precision), 0))
-    table.insert(traces, self:TraceHull(normal, steps, data))
-  end
-  table.sort(traces, function(tr1, tr2)
-    return self:GetRangeSquaredTo(tr1.HitPos) < self:GetRangeSquaredTo(tr2.HitPos)
-  end)
-  return traces
-end
-
 function ENT:CalcFlinchProbability(dmg)
   local perc = math.Clamp(dmg:GetDamage()/self:Health()*100, 0, 100)
   return math.random(100) < perc
@@ -252,7 +183,6 @@ if SERVER then
     attack.delay = attack.delay or 0
     attack.type = attack.type or DMG_GENERIC
     attack.force = attack.force or Vector(0, 0, 0)
-    attack.delay = attack.delay or 0
     attack.viewpunch = attack.viewpunch or Angle(10, 0, 0)
     attack.range = attack.range or self.MeleeAttackRange
     attack.angle = attack.angle or 90
@@ -270,7 +200,9 @@ if SERVER then
         dmg:SetDamageType(attack.type)
         dmg:SetDamagePosition(self:WorldSpaceCenter())
         dmg:SetReportedPosition(self:WorldSpaceCenter())
-        dmg:SetDamageForce(self:PushEntity(ent, attack.force))
+        if not attack.groundforce or ent:IsOnGround() then
+          dmg:SetDamageForce(self:PushEntity(ent, attack.force))
+        end        
         ent:TakeDamageInfo(dmg)
         if attack.viewpunch and ent:IsPlayer() then
           ent:ViewPunch(attack.viewpunch)
@@ -279,6 +211,19 @@ if SERVER then
       end
       if isfunction(callback) then callback(self, hit) end
     end)
+  end
+
+  function ENT:BlastAttack(attack, callback)
+    attack = attack or {}
+    attack.angle = attack.angle or 360
+    attack.range = attack.range or self.MeleeAttackRange
+    if isnumber(attack.damage) then
+      local damage = attack.damage
+      attack.damage = function(ent)
+        return damage*math.Clamp((attack.range-self:GetRangeTo(ent))/attack.range, 0, 1)
+      end
+    end
+    return self:Attack(attack, callback)
   end
 
   function ENT:IsAttacking()

@@ -69,8 +69,10 @@ else
 		surface.PlaySound("buttons/button10.wav")
 	end)
 
-	hook.Add("HUDShouldDraw", "DrGBaseHideZoomPosession", function(name)
-		if LocalPlayer():DrG_IsPossessing() and name == "CHudZoom" then return false end
+	hook.Add("HUDShouldDraw", "DrGBaseHideZoomPossession", function(name)
+		local ply = LocalPlayer()
+		if not isfunction(ply.DrG_IsPossessing) then return end
+		if ply:DrG_IsPossessing() and name == "CHudZoom" then return false end
 	end)
 
 	function DrGBase.DrawPossessionHUD(ent)

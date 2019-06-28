@@ -50,6 +50,81 @@ function ENT:LoopTimer(delay, callback, ...)
   end, ...)
 end
 
+-- Traces --
+
+local DebugTraces = CreateConVar("drgbase_debug_traces", "0")
+function ENT:TraceLine(vec, data)
+  local trdata = {}
+  data = data or {}
+  local center = self:OBBCenter()
+  trdata.start = data.start or self:GetPos() + center
+  trdata.endpos = data.endpos or trdata.start + vec
+  trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
+  if self.IsDrGNextbot then
+    trdata.mask = data.mask or self:GetSolidMask()
+    trdata.filter = data.filter or {self, self:GetWeapon()}
+  else trdata.filter = data.filter or self end
+  local tr = util.TraceLine(trdata)
+  if DebugTraces:GetFloat() > 0 then
+    local clr = tr.Hit and DrGBase.CLR_RED or DrGBase.CLR_GREEN
+    debugoverlay.Line(trdata.start, tr.HitPos, DebugTraces:GetFloat(), clr, false)
+    debugoverlay.Line(tr.HitPos, trdata.endpos, DebugTraces:GetFloat(), DrGBase.CLR_WHITE, false)
+  end
+  return tr
+end
+function ENT:TraceHull(vec, steps, data)
+  local bound1, bound2 = self:GetCollisionBounds()
+  if bound1.z < bound2.z then
+    local temp = bound1
+    bound1 = bound2
+    bound2 = temp
+  end
+  if steps then bound2.z = self.loco:GetStepHeight() end
+  local trdata = {}
+  data = data or {}
+  trdata.start = data.start or self:GetPos()
+  trdata.endpos = data.endpos or trdata.start + vec
+  trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
+  if self.IsDrGNextbot then
+    trdata.mask = data.mask or self:GetSolidMask()
+    trdata.filter = data.filter or {self, self:GetWeapon()}
+  else trdata.filter = data.filter or self end
+  trdata.maxs = data.maxs or bound1
+  trdata.mins = data.mins or bound2
+  local tr = util.TraceHull(trdata)
+  if DebugTraces:GetFloat() > 0 then
+    local clr = tr.Hit and DrGBase.CLR_RED or DrGBase.CLR_GREEN
+    clr = clr:ToVector():ToColor() clr.a = 0
+    debugoverlay.Line(trdata.start, tr.HitPos, DebugTraces:GetFloat(), DrGBase.CLR_WHITE, false)
+    debugoverlay.Box(tr.HitPos, trdata.mins, trdata.maxs, DebugTraces:GetFloat(), clr)
+  end
+  return tr
+end
+function ENT:TraceLineRadial(distance, precision, data)
+  local traces = {}
+  for i = 1, precision do
+    local normal = self:GetForward()*distance
+    normal:Rotate(Angle(0, i*(360/precision), 0))
+    table.insert(traces, self:TraceLine(normal, data))
+  end
+  table.sort(traces, function(tr1, tr2)
+    return self:GetRangeSquaredTo(tr1.HitPos) < self:GetRangeSquaredTo(tr2.HitPos)
+  end)
+  return traces
+end
+function ENT:TraceHullRadial(distance, precision, steps, data)
+  local traces = {}
+  for i = 1, precision do
+    local normal = self:GetForward()*distance
+    normal:Rotate(Angle(0, i*(360/precision), 0))
+    table.insert(traces, self:TraceHull(normal, steps, data))
+  end
+  table.sort(traces, function(tr1, tr2)
+    return self:GetRangeSquaredTo(tr1.HitPos) < self:GetRangeSquaredTo(tr2.HitPos)
+  end)
+  return traces
+end
+
 -- Misc --
 
 function ENT:ScreenShake(amplitude, frequency, duration, radius)
@@ -107,7 +182,8 @@ if SERVER then
     if istable(ent) then
       local vecs = {}
       for i, en in ipairs(ent) do
-        vec[ent:EntIndex()] = self:PushEntity(en, force)
+        if not IsValid(en) then continue end
+        vecs[en:EntIndex()] = self:PushEntity(en, force)
       end
       return vecs
     elseif isentity(ent) and IsValid(ent) then
