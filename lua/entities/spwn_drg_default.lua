@@ -19,7 +19,6 @@ if SERVER then
   -- Init/Think --
 
   function ENT:Initialize()
-    print(self)
     self._DrGBaseToSpawn = {}
     self._DrGBaseRadius = 0
     self._DrGBaseQuantity = 0
@@ -44,13 +43,13 @@ if SERVER then
       local class = self._DrGBaseToSpawn[math.random(#self._DrGBaseToSpawn)]
       if self:BeforeSpawn(class) == false then return end
       local ent = ents.Create(class)
-      if not IsValid(ent) then return end
-      ent:Spawn()
+      if not IsValid(ent) then return end    
       if navmesh.IsLoaded() then
         local radius = self:GetRadius()
         local pos = self:GetPos() + Vector(math.random(-1, 1)*radius, math.random(-1, 1)*radius, math.random(-1, 1)*radius)
         ent:SetPos(navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or self:GetPos())
       else ent:SetPos(self:GetPos()) end
+      ent:Spawn()
       if self:AfterSpawn(ent) ~= false then
         self._DrGBaseLastSpawn = CurTime()
         table.insert(self._DrGBaseSpawnedEntities, ent)

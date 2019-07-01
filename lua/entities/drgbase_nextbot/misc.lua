@@ -267,18 +267,6 @@ if SERVER then
     return proj
   end
 
-  function ENT:Kill(attacker, inflictor)
-    self:SetHealth(0)
-    local dmg = DamageInfo()
-    dmg:SetAttacker(attacker or game.GetWorld())
-    dmg:SetInflictor(inflictor or attacker or game.GetWorld())
-    dmg:SetDamageForce(Vector(0, 0, 1))
-    self:OnKilled(dmg)
-  end
-  function ENT:Suicide()
-    self:Kill(self)
-  end
-
   function ENT:CollisionHulls(distance, forwardOnly)
     distance = distance or 5
     if distance < 0 then distance = 0 end
@@ -356,7 +344,7 @@ if SERVER then
   local old_BecomeRagdoll = nextbotMETA.BecomeRagdoll
   function nextbotMETA:BecomeRagdoll(dmg)
     if self.IsDrGNextbot then
-      if RemoveRagdolls:GetFloat() ~= 0 and util.IsValidRagdoll(self:GetModel()) then
+      if util.IsValidRagdoll(self:GetModel()) then
         local ragdoll = ents.Create("prop_ragdoll")
         if not IsValid(ragdoll) then return NULL end
         ragdoll:SetPos(self:GetPos())
@@ -390,7 +378,7 @@ if SERVER then
       		phys:ApplyForceOffset(force, position)
       	end
         if self:IsOnFire() or dmg:IsDamageType(DMG_BURN) then ragdoll:Ignite(10) end
-        if not self.OnRagdoll(ragdoll, dmg) and RemoveRagdolls:GetFloat() > 0 then
+        if not self.OnRagdoll(ragdoll, dmg) and RemoveRagdolls:GetFloat() >= 0 then
           ragdoll:Fire("fadeandremove", math.Clamp(RagdollFadeOut:GetFloat(), 0, math.huge), RemoveRagdolls:GetFloat())
         end
         self:Remove()
