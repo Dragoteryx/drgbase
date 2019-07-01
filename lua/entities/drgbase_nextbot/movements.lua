@@ -273,7 +273,7 @@ if SERVER then
   -- Climbing --
 
   -- Ladders
-  function ENT:ClimbLadder(ladder, down)
+  function ENT:ClimbLadder(ladder, down, callback)
     if self:IsClimbing() then return end
     local height = math.abs(ladder:GetTop().z - ladder:GetBottom().z)
     local res = self:OnStartClimbing(ladder, height, down)
@@ -294,11 +294,13 @@ if SERVER then
           self:SetPos(pos + offset)
           if ladder:GetBottom().z - pos.z <= 0 then break end
           if self:WhileClimbing(ladder, ladder:GetBottom().z - pos.z, true) then break end
+          if isfunction(callback) and callback(self, ladder, ladder:GetBottom().z - pos.z, true) then break end
         else
           pos = ladder:GetPosAtHeight(lastHeight + self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
           self:SetPos(pos + offset)
           if ladder:GetTop().z - pos.z <= 0 then break end
           if self:WhileClimbing(ladder, ladder:GetTop().z - pos.z, false) then break end
+          if isfunction(callback) and callback(self, ladder, ladder:GetTop().z - pos.z, false) then break end
         end
         lastHeight = pos.z
         lastTime = CurTime()
@@ -369,7 +371,7 @@ if SERVER then
       end
     end
   end
-  function ENT:ClimbLedge(ledge)
+  function ENT:ClimbLedge(ledge, callback)
     --debugoverlay.Sphere(ledge, 2, 60, nil, true)
     if self:IsClimbing() then return end
     local height = math.abs(ledge.z - self:GetPos().z)
@@ -395,6 +397,7 @@ if SERVER then
         local remaining = math.abs(ledge.z - self:GetPos().z)
         if remaining == 0 then break end
         if self:WhileClimbing(ledge, remaining, false) then break end
+        if isfunction(callback) and callback(self, ledge, remaining, false) then break end
         lastPos = pos
         lastTime = CurTime()
         self:YieldCoroutine(false)
@@ -503,6 +506,9 @@ if SERVER then
   -- Hooks --
 
   function ENT:OnStartClimbing() end
+  function ENT:OnClimbing()
+    return self:WhileClimbing()
+  end
   function ENT:WhileClimbing() end
   function ENT:OnStopClimbing() end
   function ENT:CustomClimbing() end

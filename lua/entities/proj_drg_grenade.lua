@@ -38,9 +38,7 @@ if SERVER then
   AddCSLuaFile()
 
   function ENT:_BaseInitialize()
-    self:FilterOwner(false)
     self:FilterAllies(false)
-    self:SetCollisionGroup(COLLISION_GROUP_WEAPON)
     self._DrGBaseBounceSoundDelay = 0
   end
   function ENT:OnContact(ent)

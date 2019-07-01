@@ -4,6 +4,9 @@
 function ENT:GetWeapon()
   return self:GetNW2Entity("DrGBaseWeapon")
 end
+function ENT:GetActiveWeapon()
+  return self:GetWeapon()
+end
 function ENT:HasWeapon()
   return IsValid(self:GetWeapon())
 end

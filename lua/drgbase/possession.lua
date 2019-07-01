@@ -6,10 +6,11 @@ properties.Add("drgbasepossess", {
 	Order = 1000,
 	MenuIcon = "drgbase/icon16.png",
 	Filter = function(self, ent, ply)
-    return ent.IsDrGNextbot and
-		PossessionEnabled:GetBool() and
-		ent.PossessionPrompt and
-		ent:IsPossessionEnabled()
+		if not ent.IsDrGNextbot then return false end
+		if not PossessionEnabled:GetBool() then return false end
+		if not ent.PossessionPrompt then return false end
+		if not ent:IsPossessionEnabled() then return false end
+		return true
 	end,
 	Action = function(self, ent)
     self:MsgStart()
@@ -31,6 +32,25 @@ properties.Add("drgbasepossess", {
 	end
 })
 
+hook.Add("StartCommand", "DrGBasePossessionStartCommand", function(ply, cmd)
+	if not isfunction(ply.DrG_IsPossessing) then return end
+	if ply:DrG_IsPossessing() then
+		cmd:ClearMovement()
+		if ply:HasWeapon("drgbase_possession") then
+			cmd:SelectWeapon(ply:GetWeapon("drgbase_possession"))
+		elseif SERVER then
+			ply:Give("drgbase_possession")
+		end
+	elseif SERVER then
+		ply:StripWeapon("drgbase_possession")
+	end
+end)
+
+hook.Add("PlayerFootstep", "DrGBasePossessionMuteFootsteps", function(ply)
+	if not isfunction(ply.DrG_IsPossessing) then return end
+	if ply:DrG_IsPossessing() then return true end
+end)
+
 if SERVER then
 	util.AddNetworkString("DrGBaseNextbotCanPossess")
 	util.AddNetworkString("DrGBaseNextbotCantPossess")
@@ -42,6 +62,12 @@ if SERVER then
 	hook.Add("EntityTakeDamage", "DrGBaseNextbotProtectPossessingPlayer", function(ent, dmg)
 		if ent:IsPlayer() and ent:DrG_IsPossessing() then return true end
 	end)
+
+	local function PlayerDeath(ply)
+		if ply:DrG_IsPossessing() then ply:DrG_Possessing():Dispossess() end
+	end
+	hook.Add("PlayerDeath", "DrGBasePossessionPlayerDeath", PlayerDeath)
+	hook.Add("PlayerSilentDeath", "DrGBasePossessionPlayerSilentDeath", PlayerDeath)
 
 else
 
@@ -64,15 +90,35 @@ else
 		elseif enum == "already possessing" then reason = "you are already possessing a nextbot."
 		elseif enum == "disabled" then reason = "possession is not available for this nextbot."
 		elseif enum == "no views" then reason = "no defined camera views."
+		elseif enum == "in vehicle" then reason = "you are in a vehicle."
 		end
 		notification.AddLegacy("You can't possess "..ent.PrintName..": "..reason, NOTIFY_ERROR, 4)
 		surface.PlaySound("buttons/button10.wav")
 	end)
 
-	hook.Add("HUDShouldDraw", "DrGBaseHideZoomPossession", function(name)
+	local HUD_HIDE = {
+		["CHudWeaponSelection"] = true,
+		["CHudAmmo"] = true,
+		["CHudSecondaryAmmo"] = true,
+		["CHudZoom"] = true
+	}
+	hook.Add("HUDShouldDraw", "DrGBasePossessionHideHUD", function(name)
 		local ply = LocalPlayer()
 		if not isfunction(ply.DrG_IsPossessing) then return end
-		if ply:DrG_IsPossessing() and name == "CHudZoom" then return false end
+		if not ply:DrG_IsPossessing() then return end
+		if HUD_HIDE[name] then return false end
+		if name == "CHudCrosshair" and not ply:DrG_Possessing().PossessionCrosshair then return false end
+	end)
+
+	hook.Add("CalcView", "DrGBasePossessionCalcView", function(ply, origin, angles, fov, znear, zfar)
+		if not isfunction(ply.DrG_IsPossessing) then return end
+		if not ply:DrG_IsPossessing() then return end
+		local possessing = ply:DrG_Possessing()
+		local view = {}
+		view.origin, view.angles = possessing:PossessorView()
+		view.fov, view.znear, view.zfar = fov, znear, zfar
+		view.drawviewer = true
+		return view
 	end)
 
 	function DrGBase.DrawPossessionHUD(ent)
@@ -84,5 +130,3 @@ else
 	end
 
 end
-
-DrGBase.IncludeFolder("drgbase/possession")

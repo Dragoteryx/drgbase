@@ -228,9 +228,9 @@ end
 -- LOAD BEHAVIOURS --
 
 for name, default in pairs(DEFAULTS) do
-  DrGBase.GetBehaviourTree(name)
+  DrGBase.RefreshBehaviourTree(name)
 end
 for i, name in ipairs(file.Find("drgbase/behaviours/*.lua", "LUA")) do
   name = string.Replace(name, ".lua", "")
-  DrGBase.GetBehaviourTree(name)
+  DrGBase.RefreshBehaviourTree(name)
 end

@@ -27,7 +27,7 @@ BT.Structure = {
                     name = "MoveToPos",
                     args = function(self, nextbot)
                       return nextbot:GetPatrolPos(1),
-                      nextbot.WhilePatrolling
+                      nextbot.OnPatrolling
                     end
                   },
                   {

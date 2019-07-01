@@ -2,7 +2,7 @@
 -- Getters/setters --
 
 function ENT:IsPossessionEnabled()
-  return self:GetNW2Bool("DrGBasePossessionEnabled")
+  return self:GetNWBool("DrGBasePossessionEnabled")
 end
 
 function ENT:GetPossessor()
@@ -124,25 +124,37 @@ end
 
 -- Hooks --
 
-function ENT:OnPossess() end
-function ENT:OnDispossess() end
+function ENT:OnPossessed() end
+function ENT:OnDispossessed() end
 
 -- Handlers --
 
 function ENT:_InitPossession()
   if SERVER then
     self:SetPossessionEnabled(self.PossessionEnabled)
+  else
+    self:SetNWVarProxy("DrGBasePossessor", function(self, name, old, new)
+      if not IsValid(old) and IsValid(new) then self:OnPossessed(new)
+      elseif IsValid(old) and not IsValid(new) then self:OnDispossessed(old) end
+    end)
   end
-  self:SetNWVarProxy("DrGBasePossessor", function(self, name, old, new)
-    if SERVER then return end
-    if not IsValid(old) and IsValid(new) then self:OnPossess(new)
-    elseif IsValid(old) and not IsValid(new) then self:OnDispossess(old) end
-  end)
 end
 
 function ENT:_HandlePossession(cor)
   if not self:IsPossessed() then return end
   local possessor = self:GetPossessor()
+  if cor and self:OnPossession() then return end
+  if SERVER and not cor then
+    if possessor:KeyPressed(IN_USE) then
+      self:Dispossess(true)
+      return true
+    elseif possessor:KeyPressed(IN_ZOOM) then
+      self:CycleViewPresets()
+      return true
+    elseif possessor:KeyDown(IN_ZOOM) then
+      possessor:StopZooming()
+    end
+  end
   if cor then
     local f = possessor:KeyDown(IN_FORWARD)
     local b = possessor:KeyDown(IN_BACK)
@@ -207,7 +219,7 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:SetPossessionEnabled(bool)
-    self:SetNW2Bool("DrGBasePossessionEnabled", bool)
+    self:SetNWBool("DrGBasePossessionEnabled", bool)
     if not bool and self:IsPossessed() then self:Dispossess() end
   end
 
@@ -219,17 +231,21 @@ if SERVER then
     if not IsValid(ply) then return "invalid" end
     if not ply:IsPlayer() then return "not player" end
     if not ply:Alive() then return "not alive" end
+    if ply:InVehicle() then return "in vehicle" end
     if ply:DrG_IsPossessing() then return "already possessing" end
     if not self:CanPossess(ply) then return "not allowed" end
-    drive.PlayerStartDriving(ply, self, "drive_drgbase_nextbot")
-    if not ply:IsDrivingEntity(self) then return "error" end
     self:SetNW2Entity("DrGBasePossessor", ply)
     ply:SetNW2Entity("DrGBasePossessing", self)
-    self:SetNW2Int("DrGBasePossessionView", 1)
+    ply:SetNW2Vector("DrGBasePrePossessPos", ply:GetPos())
+    ply:SetNW2Angle("DrGBasePrePossessAngle", ply:GetAngles())
+    ply:SetNW2Angle("DrGBasePrePossessEyes", ply:EyeAngles())
+    ply:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
     ply:SetNoTarget(true)
+    ply:SetNoDraw(true)
     self:UpdateEnemy()
+    self:SetNW2Int("DrGBasePossessionView", 1)
     self:BehaviourTreeEvent("Possessed", ply)
-    self:OnPossess(ply)
+    self:OnPossessed(ply)
     return "ok"
   end
 
@@ -237,13 +253,16 @@ if SERVER then
     if not self:IsPossessed() then return "not possessed" end
     local ply = self:GetPossessor()
     if not self:CanDispossess(ply) then return "not allowed" end
-    drive.PlayerStopDriving(ply)
-    if ply:IsDrivingEntity(self) then return "error" end
     self:SetNW2Entity("DrGBasePossessor", nil)
     ply:SetNW2Entity("DrGBasePossessing", nil)
+    ply:SetPos(ply:GetNW2Vector("DrGBasePrePossessPos"))
+    ply:SetAngles(ply:GetNW2Angle("DrGBasePrePossessAngle"))
+    ply:SetEyeAngles(ply:GetNW2Angle("DrGBasePrePossessEyes"))
+    ply:SetCollisionGroup(COLLISION_GROUP_PLAYER)
     ply:SetNoTarget(false)
+    ply:SetNoDraw(true)
     self:UpdateEnemy()
-    self:OnDispossess(ply)
+    self:OnDispossessed(ply)
     return "ok"
   end
 
@@ -256,6 +275,7 @@ if SERVER then
 
   function ENT:CanPossess() return true end
   function ENT:CanDispossess() return true end
+  function ENT:OnPossession() end
   function ENT:PossessionControls(forward, backward, right, left) end
 
   -- Handlers --

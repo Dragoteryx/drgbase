@@ -1,7 +1,7 @@
 
 if SERVER then
 
-  -- Hooks --
+  -- Damage --
 
   function ENT:OnTakeDamage(dmg)
     self:SpotEntity(dmg:GetAttacker())
@@ -12,7 +12,7 @@ if SERVER then
   --function ENT:OnDeath() end
   function ENT:OnDowned() end
 
-  -- Handlers --
+  function ENT:OnDealtDamage() end
 
   local function NextbotDeath(self, dmg)
     hook.Run("OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor())
@@ -29,14 +29,18 @@ if SERVER then
     DrGBase.Error("OnKilled has been called. This should never happen!")
   end
 
-  hook.Add("EntityTakeDamage", "DrGBaseHandleNextbotDamage2", function(self, dmg)
+  hook.Add("EntityTakeDamage", "DrGBaseNextbotHandleDamage", function(self, dmg)
+    local attacker = dmg:GetAttacker()
+    if IsValid(attacker) and attacker.IsDrGNextbot then
+      if attacker:OnDealtDamage(self, dmg) then return true end
+    end
     if not self.IsDrGNextbot then return end
+    if self:IsDown() or self:IsDead() then return true end
     for type, mult in pairs(self._DrGBaseDamageMultipliers) do
       if type == DMG_DIRECT then continue end
       if dmg:IsDamageType(type) then dmg:ScaleDamage(mult) end
     end
     local res = self:OnTakeDamage(dmg)
-    local attacker = dmg:GetAttacker()
     if IsValid(attacker) and DrGBase.IsTarget(attacker) then
       if self:IsAlly(attacker) then
         self._DrGBaseAllyDamageTolerance[attacker] = self._DrGBaseAllyDamageTolerance[attacker] or 0
@@ -55,7 +59,6 @@ if SERVER then
     if res ~= true then
       if isnumber(res) then dmg:ScaleDamage(res) end
       local data = util.DrG_SaveDmg(dmg)
-      if self:IsDown() or self:IsDead() then return true end
       if dmg:GetDamage() >= self:Health() then
         self:SetHealth(0)
         if #self.OnDeathSounds > 0 then
@@ -104,7 +107,9 @@ if SERVER then
     else return true end
   end)
 
-  hook.Add("vFireEntityStartedBurning", "DrGBaseOnIgniteVFire", function(ent)
+  -- Misc --
+
+  hook.Add("vFireEntityStartedBurning", "DrGBaseNextbotOnIgniteVFire", function(ent)
     if ent.IsDrGNextbot then ent:OnIgnite() end
   end)
 

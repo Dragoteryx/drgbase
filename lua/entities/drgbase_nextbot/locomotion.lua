@@ -68,3 +68,12 @@ end
 -- Meta --
 
 local locoMETA = FindMetaTable("CLuaLocomotion")
+
+--[[local old_SetDesiredSpeed = locoMETA.SetDesiredSpeed
+function locoMETA:SetDesiredSpeed(speed)
+  local nextbot = self:GetNextBot()
+  if nextbot.IsDrGNextbot then
+    -- do stuff
+    return old_SetDesiredSpeed(self, speed)
+  else return old_SetDesiredSpeed(self, speed) end
+end]]

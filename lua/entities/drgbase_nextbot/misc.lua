@@ -2,6 +2,7 @@
 -- Convars --
 
 local RemoveRagdolls = CreateConVar("drgbase_remove_ragdolls", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local RagdollFadeOut = CreateConVar("drgbase_ragdoll_fadeout", "3", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Getters/setters --
 
@@ -186,28 +187,31 @@ if SERVER then
     attack.viewpunch = attack.viewpunch or Angle(10, 0, 0)
     attack.range = attack.range or self.MeleeAttackRange
     attack.angle = attack.angle or 90
+    attack.relationships = attack.relationships or {D_HT}
+    if not istable(attack.relationships) then attack.relationships = {attack.relationships} end
     self:Timer(math.Clamp(attack.delay, 0, math.huge), function(self)
       local hit = {}
-      for i, ent in ipairs(self:EnemiesInCone(attack.angle, attack.range)) do
-        if ent == self then continue end
-        if not IsValid(ent) then continue end
-        if self:IsPossessor(ent) then continue end
-        if not self:IsEnemy(ent) then continue end
-        if not self:Visible(ent) then continue end
-        local dmg = DamageInfo()
-        dmg:SetAttacker(self)
-        dmg:SetDamage(isfunction(attack.damage) and attack.damage(ent) or attack.damage)
-        dmg:SetDamageType(attack.type)
-        dmg:SetDamagePosition(self:WorldSpaceCenter())
-        dmg:SetReportedPosition(self:WorldSpaceCenter())
-        if not attack.groundforce or ent:IsOnGround() then
-          dmg:SetDamageForce(self:PushEntity(ent, attack.force))
-        end        
-        ent:TakeDamageInfo(dmg)
-        if attack.viewpunch and ent:IsPlayer() then
-          ent:ViewPunch(attack.viewpunch)
+      for h, rel in ipairs(attack.relationships) do
+        for i, ent in ipairs(self:EntitiesInCone(attack.angle, attack.range, rel)) do
+          if ent == self then continue end
+          if not IsValid(ent) then continue end
+          if self:IsPossessor(ent) then continue end
+          if not self:Visible(ent) then continue end
+          local dmg = DamageInfo()
+          dmg:SetAttacker(self)
+          dmg:SetDamage(isfunction(attack.damage) and attack.damage(ent) or attack.damage)
+          dmg:SetDamageType(attack.type)
+          dmg:SetDamagePosition(self:WorldSpaceCenter())
+          dmg:SetReportedPosition(self:WorldSpaceCenter())
+          if not attack.groundforce or ent:IsOnGround() then
+            dmg:SetDamageForce(self:PushEntity(ent, attack.force))
+          end
+          ent:TakeDamageInfo(dmg)
+          if attack.viewpunch and ent:IsPlayer() then
+            ent:ViewPunch(attack.viewpunch)
+          end
+          table.insert(hit, ent)
         end
-        table.insert(hit, ent)
       end
       if isfunction(callback) then callback(self, hit) end
     end)
@@ -387,9 +391,7 @@ if SERVER then
       	end
         if self:IsOnFire() or dmg:IsDamageType(DMG_BURN) then ragdoll:Ignite(10) end
         if not self.OnRagdoll(ragdoll, dmg) and RemoveRagdolls:GetFloat() > 0 then
-          timer.Simple(RemoveRagdolls:GetFloat(), function()
-            if IsValid(ragdoll) then ragdoll:Remove() end
-          end)
+          ragdoll:Fire("fadeandremove", math.Clamp(RagdollFadeOut:GetFloat(), 0, math.huge), RemoveRagdolls:GetFloat())
         end
         self:Remove()
         return ragdoll

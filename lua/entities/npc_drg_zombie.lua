@@ -108,15 +108,6 @@ if SERVER then
     else self:EmitSound("Zombie.FootstepRight") end
   end
 
-  -- Misc --
-
-  function ENT:OnContact(ent)
-    if ent:GetClass() == "prop_physics" and
-    ent:GetModel() == "models/props_junk/sawblade001a.mdl" then
-      self:Suicide()
-    end
-  end
-
 end
 
 -- DO NOT TOUCH --

@@ -168,6 +168,9 @@ if SERVER then
 
   function ENT:OnReachedPatrol() end
   function ENT:OnPatrolUnreachable() end
+  function ENT:OnPatrolling()
+    self:WhilePatrolling()
+  end
   function ENT:WhilePatrolling() end
 
   function ENT:OnIdle() end

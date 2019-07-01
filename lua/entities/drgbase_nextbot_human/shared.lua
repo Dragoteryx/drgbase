@@ -179,7 +179,7 @@ if SERVER then
   function ENT:OnLandOnGround()
     self:EmitFootstep()
   end
-  function ENT:WhileClimbing(ladder, left, down)
+  function ENT:OnClimbing(ladder, left, down)
     if IsValid(ladder) then
       self:EmitSlotSound("DrGBaseLadderClimbing", 0.3, "player/footsteps/ladder"..math.random(4)..".wav")
     end

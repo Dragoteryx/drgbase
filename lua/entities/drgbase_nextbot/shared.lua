@@ -99,7 +99,7 @@ ENT.ClimbOffset = Vector(0, 0, 0)
 DrGBase.IncludeFile("awareness.lua")
 DrGBase.IncludeFile("detection.lua")
 ENT.SightFOV = 150
-ENT.SightRange = math.huge
+ENT.SightRange = 15000
 ENT.MinLuminosity = 0
 ENT.MaxLuminosity = 1
 ENT.EyeBone = ""
@@ -120,6 +120,7 @@ ENT.AcceptPlayerWeapons = false
 DrGBase.IncludeFile("possession.lua")
 ENT.PossessionEnabled = false
 ENT.PossessionPrompt = true
+ENT.PossessionCrosshair = false
 ENT.PossessionMovement = POSSESSION_MOVE_FORWARD
 ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
@@ -160,6 +161,7 @@ function ENT:Initialize()
     self.VJ_AddEntityToSNPCAttackList = true
     self.vFireIsCharacter = true
     self._DrGBaseCorCalls = {}
+    self._DrGBaseWaterLevel = self:WaterLevel()
   else self:SetIK(true) end
   self._DrGBaseBaseThinkDelay = 0
   self._DrGBaseCustomThinkDelay = 0
@@ -199,6 +201,12 @@ end
 function ENT:Think()
   self:_HandleAnimations()
   if SERVER then
+    -- water level
+    local waterLevel = self:WaterLevel()
+    if self._DrGBaseWaterLevel ~= waterLevel then
+      self:OnWaterLevelChange(self._DrGBaseWaterLevel, waterLevel)
+      self._DrGBaseWaterLevel = waterLevel
+    end
     -- on fire
     if self._DrGBaseIsOnFire and not self:IsOnFire() then
       self:OnExtinguish()
@@ -245,7 +253,8 @@ function ENT:Think()
     self._DrGBaseCustomThinkDelay = CurTime() + delay
   end
   if self:IsPossessed() then
-    self:_HandlePossession(false)
+    if self:_HandlePossession(false) then return end
+    if SERVER then self:GetPossessor():SetPos(self:GetPos()) end
     if CLIENT and not self:IsPossessedByLocalPlayer() then return end
     if CurTime() > self._DrGBasePossessionThinkDelay then
       local delay = self:PossessionThink() or 0
@@ -381,6 +390,7 @@ if SERVER then
   function ENT:AIBehaviour() end
 
   function ENT:OnExtinguish() end
+  function ENT:OnWaterLevelChange() end
 
   -- SLVBase compatibility --
   if file.Exists("autorun/slvbase", "LUA") then

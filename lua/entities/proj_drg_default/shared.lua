@@ -60,7 +60,7 @@ if SERVER then
     end
     self:SetModelScale(self.ModelScale)
     self._DrGBaseFilterOwner = true
-    self._DrGBaseFilterAllies = false
+    self._DrGBaseFilterAllies = true
     self:SetUseType(SIMPLE_USE)
     -- sounds/effects --
     self:CallOnRemove("DrGBaseOnRemoveSoundsEffects", function(self)
@@ -205,9 +205,6 @@ if SERVER then
     dmg:SetDamage(value)
     dmg:SetDamageForce(self:GetVelocity())
     dmg:SetDamageType(type or DMG_DIRECT)
-    if dmg:IsDamageType(DMG_CRUSH) then
-      dmg:SetAmmoType(12)
-    end
     if IsValid(self:GetOwner()) then
       dmg:SetAttacker(self:GetOwner())
     else dmg:SetAttacker(self) end
@@ -217,13 +214,13 @@ if SERVER then
   function ENT:RadiusDamage(value, type, range, filter)
     local owner = self:GetOwner()
     if not isfunction(filter) then filter = function(ent)
-      if ent == owner then return true end
-      if not IsValid(owner) or not owner.IsDrGNextbot then return false end
-      return owner:IsAlly(ent)
+      if ent == owner then return false end
+      if not IsValid(owner) or not owner.IsDrGNextbot then return true end
+      return not owner:IsAlly(ent)
     end end
     for i, ent in ipairs(ents.FindInSphere(self:GetPos(), range)) do
       if not IsValid(ent) then continue end
-      if filter(ent) then continue end
+      if not filter(ent) then continue end
       self:DealDamage(ent, value*math.Clamp((range-self:GetPos():Distance(ent:GetPos()))/range, 0, 1), type)
     end
   end
@@ -248,14 +245,6 @@ if SERVER then
 
   hook.Add("GravGunPickupAllowed", "DrGBaseProjectileGravgun", function(ply, ent)
     if ent.IsDrGProjectile then return ent.Gravgun or false end
-  end)
-
-  hook.Add("EntityTakeDamage", "DrGBaseProjCollisionDamage", function(ent, dmg)
-    local inflictor = dmg:GetInflictor()
-    if not inflictor.IsDrGProjectile then return end
-    if dmg:GetDamageType() == DMG_CRUSH and dmg:GetAmmoType() ~= 12 then
-      return true
-    end
   end)
 
 else
