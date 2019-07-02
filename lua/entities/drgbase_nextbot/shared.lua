@@ -252,12 +252,12 @@ function ENT:Think()
     local delay = self:CustomThink() or 0
     self._DrGBaseCustomThinkDelay = CurTime() + delay
   end
-  if self:IsPossessed() then
-    if self:_HandlePossession(false) then return end
-    if SERVER then self:GetPossessor():SetPos(self:GetPos()) end
-    if CLIENT and not self:IsPossessedByLocalPlayer() then return end
+  if self:IsPossessed() and (SERVER or self:IsPossessedByLocalPlayer()) then
+    local possessor = self:GetPossessor()
+    if SERVER then possessor:SetPos(self:GetPos()) end
+    self:_HandlePossession(false)
     if CurTime() > self._DrGBasePossessionThinkDelay then
-      local delay = self:PossessionThink() or 0
+      local delay = self:PossessionThink(possessor) or 0
       self._DrGBasePossessionThinkDelay = CurTime() + delay
     end
   end
@@ -352,25 +352,25 @@ if SERVER then
   end
   function ENT:BehaveUpdate(interval)
   	if not self.BehaveThread then return end
-  	if coroutine.status(self.BehaveThread) == "dead" then
-  		self.BehaveThread = nil
-  		Msg(self, " Warning: ENT:RunBehaviour() has finished executing\n")
-  	else
+  	if coroutine.status(self.BehaveThread) ~= "dead" then
       local ok, args = coroutine.resume(self.BehaveThread)
     	if not ok then
     		self.BehaveThread = nil
         if not self:OnError(args) then
           ErrorNoHalt(self, " Error: ", args, "\n")
-        end
+        else self:BehaveStart() end
     	end
-  	end
+  	else self.BehaveThread = nil end
   end
 
   function ENT:RunBehaviour()
-    if #self.OnSpawnSounds > 0 then
-      self:EmitSound(self.OnSpawnSounds[math.random(#self.OnSpawnSounds)])
+    if not self._DrGBaseSpawned then
+      self._DrGBaseSpawned = true
+      if #self.OnSpawnSounds > 0 then
+        self:EmitSound(self.OnSpawnSounds[math.random(#self.OnSpawnSounds)])
+      end
+      self:OnSpawn()
     end
-    self:OnSpawn()
     while true do
       if self:IsPossessed() then
         self:_HandlePossession(true)

@@ -215,7 +215,7 @@ if SERVER then
 
   -- Effects --
 
-  function ENT:DynamicLight(color, radius, brightness)
+  function ENT:DynamicLight(color, radius, brightness, style, attachment)
     if color == nil then color = Color(255, 255, 255) end
     if not isnumber(radius) then radius = 1000 end
     radius = math.Clamp(radius, 0, math.huge)
@@ -224,9 +224,15 @@ if SERVER then
     local light = ents.Create("light_dynamic")
   	light:SetKeyValue("brightness", tostring(brightness))
   	light:SetKeyValue("distance", tostring(radius))
+    if isstring(style) then
+      light:SetKeyValue("style", tostring(style))
+    end
     light:Fire("Color", tostring(color.r).." "..tostring(color.g).." "..tostring(color.b))
   	light:SetLocalPos(self:GetPos())
   	light:SetParent(self)
+    if isstring(attachment) then
+      light:Fire("setparentattachment", attachment)
+    end
   	light:Spawn()
   	light:Activate()
   	light:Fire("TurnOn", "", 0)

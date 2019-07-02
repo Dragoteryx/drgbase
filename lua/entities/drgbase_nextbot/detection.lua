@@ -1,7 +1,7 @@
 
 -- Convars --
 
-local EnableHearing = CreateConVar("drgbase_enable_hearing", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local EnableHearing = CreateConVar("drgbase_ai_hearing", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Getters/setters --
 

@@ -1,7 +1,7 @@
 
 -- Convars --
 
-local EnemyRadius = CreateConVar("drgbase_enemy_radius", "5000", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local EnemyRadius = CreateConVar("drgbase_ai_radius", "5000", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Getters/setters --
 
@@ -49,7 +49,7 @@ function ENT:_InitAI()
     self._DrGBaseNeutralDamageTolerance = {}
     self:LoopTimer(1, self.UpdateAI)
   end
-  self:SetNWVarProxy("DrGBaseEnemy", function(self, name, old, new)
+  self:SetNW2VarProxy("DrGBaseEnemy", function(self, name, old, new)
     if not self._DrGBaseHasEnemy and IsValid(new) then
       self._DrGBaseHasEnemy = true
       self:OnNewEnemy(new)

@@ -11,9 +11,6 @@ function DrGBase.AddNextbot(ENT)
   for i, sounds in ipairs({
     ENT.OnSpawnSounds,
     ENT.OnIdleSounds,
-    ENT.OnAttackSounds,
-    ENT.OnHitSounds,
-    ENT.OnMissSounds,
     ENT.OnDamageSounds,
     ENT.OnDeathSounds
   }) do

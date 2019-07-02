@@ -65,15 +65,40 @@ function ENT:IsStuckInWorld()
 
 end
 
+function ENT:GetDesiredSpeed()
+  return self:GetNW2Float("DrGBaseDesiredSpeed")
+end
+function ENT:SetDesiredSpeed(speed)
+  return self.loco:SetDesiredSpeed(speed)
+end
+
 -- Meta --
 
 local locoMETA = FindMetaTable("CLuaLocomotion")
 
---[[local old_SetDesiredSpeed = locoMETA.SetDesiredSpeed
+local old_IsClimbingOrJumping = locoMETA.IsClimbingOrJumping
+function locoMETA:IsClimbingOrJumping()
+  local nextbot = self:GetNextBot()
+  if nextbot.IsDrGNextbot then
+    return nextbot:IsClimbing() or old_IsClimbingOrJumping(self)
+  else return old_IsClimbingOrJumping(self) end
+end
+
+local old_IsUsingLadder = locoMETA.IsUsingLadder
+function locoMETA:IsUsingLadder()
+  local nextbot = self:GetNextBot()
+  if nextbot.IsDrGNextbot then
+    local bool, ladder = nextbot:IsClimbingLadder()
+    return bool
+  else return old_IsUsingLadder(self) end
+end
+
+local old_SetDesiredSpeed = locoMETA.SetDesiredSpeed
 function locoMETA:SetDesiredSpeed(speed)
   local nextbot = self:GetNextBot()
   if nextbot.IsDrGNextbot then
-    -- do stuff
+    nextbot:SetNW2Float("DrGBaseDesiredSpeed", speed)
+    nextbot:SetNW2Float("DrGBaseSpeed", speed/nextbot:GetScale())
     return old_SetDesiredSpeed(self, speed)
   else return old_SetDesiredSpeed(self, speed) end
-end]]
+end

@@ -1,8 +1,12 @@
 
+-- Convars --
+
+local AllOmniscient = CreateConVar("drgbase_ai_omniscient", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+
 -- Getters/setters --
 
 function ENT:IsOmniscient()
-  return self:GetNW2Bool("DrGBaseOmniscient")
+  return AllOmniscient:GetBool() or self:GetNW2Bool("DrGBaseOmniscient")
 end
 
 function ENT:GetSpotDuration()

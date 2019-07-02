@@ -8,6 +8,8 @@ function DrGBase.SetIcon(name, icon)
 end
 DrGBase.SetIcon("DrGBase", DrGBase.Icon)
 
+-- Creation Tab --
+
 spawnmenu.AddCreationTab("DrGBase", function()
   local ctrl = vgui.Create("SpawnmenuContentPanel")
   ctrl:EnableSearch("drgbase", "PopulateDrGBaseSpawnmenu")
@@ -54,55 +56,53 @@ search.AddProvider(function(str)
 	return results
 end, "drgbase")
 
---[[
+-- Tool Tab --
 
-spawnmenu.AddContentType( "npc", function( container, obj )
+hook.Add("PopulateToolMenu", "DrGBaseToolMenu", function()
+  spawnmenu.AddToolTab("DrGBase", "DrGBase", DrGBase.Icon)
+  -- Main Menu --
+  --[[spawnmenu.AddToolMenuOption("DrGBase", "Main Menu", "drgbase_mm_about", "About", "", "", function(panel)
+    panel:ClearControls()
 
-	if ( !obj.material ) then return end
-	if ( !obj.nicename ) then return end
-	if ( !obj.spawnname ) then return end
+  end)
+  spawnmenu.AddToolMenuOption("DrGBase", "Main Menu", "drgbase_mm_list_nextbot", "Nextbot List", "", "", function(panel)
+    panel:ClearControls()
 
-	if ( !obj.weapon ) then obj.weapon = { "" } end
-
-	local icon = vgui.Create( "ContentIcon", container )
-	icon:SetContentType( "npc" )
-	icon:SetSpawnName( obj.spawnname )
-	icon:SetName( obj.nicename )
-	icon:SetMaterial( obj.material )
-	icon:SetAdminOnly( obj.admin )
-	icon:SetNPCWeapon( obj.weapon )
-	icon:SetColor( Color( 244, 164, 96, 255 ) )
-
-	icon.DoClick = function()
-
-		local weapon = table.Random( obj.weapon )
-		if ( gmod_npcweapon:GetString() != "" ) then weapon = gmod_npcweapon:GetString() end
-
-		RunConsoleCommand( "gmod_spawnnpc", obj.spawnname, weapon )
-		surface.PlaySound( "ui/buttonclickrelease.wav" )
-	end
-
-	icon.OpenMenu = function( icon )
-
-		local menu = DermaMenu()
-
-			local weapon = table.Random( obj.weapon )
-			if ( gmod_npcweapon:GetString() != "" ) then weapon = gmod_npcweapon:GetString() end
-
-			menu:AddOption( "Copy to Clipboard", function() SetClipboardText( obj.spawnname ) end )
-			menu:AddOption( "Spawn Using Toolgun", function() RunConsoleCommand( "gmod_tool", "creator" ) RunConsoleCommand( "creator_type", "2" ) RunConsoleCommand( "creator_name", obj.spawnname ) RunConsoleCommand( "creator_arg", weapon ) end )
-			menu:AddSpacer()
-			menu:AddOption( "Delete", function() icon:Remove() hook.Run( "SpawnlistContentChanged", icon ) end )
-		menu:Open()
-
-	end
-
-	if ( IsValid( container ) ) then
-		container:Add( icon )
-	end
-
-	return icon
-
-end )
-
-]]
+  end)]]
+  -- Nextbot Settings --
+  spawnmenu.AddToolMenuOption("DrGBase", "Nextbot Settings", "drgbase_nb_settings_ai", "AI Settings", "", "", function(panel)
+    panel:ClearControls()
+    panel:ControlHelp("\nDetection")
+    panel:NumSlider("Target distance", "drgbase_ai_radius", 0, 50000, 0)
+    panel:CheckBox("Enable omniscience", "drgbase_ai_omniscient")
+    panel:CheckBox("Enable hearing", "drgbase_ai_hearing")
+    panel:ControlHelp("\nWeapons")
+    panel:CheckBox("Players can give weapons", "drgbase_give_weapons")
+  end)
+  spawnmenu.AddToolMenuOption("DrGBase", "Nextbot Settings", "drgbase_nb_settings_possession", "Possession", "", "", function(panel)
+    panel:ClearControls()
+    panel:ControlHelp("\nServer Settings")
+    panel:CheckBox("Enable possession", "drgbase_possession_enable")
+    panel:ControlHelp("\nClient Settings")
+    panel:AddControl("numpad", {
+      label = "Exit possession",
+      command = "drgbase_possession_exit",
+      label2 = "Cycle views",
+      command2 = "drgbase_possession_view"
+    })
+    panel:AddControl("numpad", {
+      label = "Climb",
+      command = "drgbase_possession_climb"
+    })
+  end)
+  spawnmenu.AddToolMenuOption("DrGBase", "Nextbot Settings", "drgbase_nb_settings_misc", "Misc", "", "", function(panel)
+    panel:ClearControls()
+    panel:ControlHelp("\nRagdolls")
+    panel:NumSlider("Remove ragdolls", "drgbase_remove_ragdolls", -1, 180, 0)
+    panel:NumSlider("Ragdoll fadeout", "drgbase_ragdoll_fadeout", 0, 10, 1)
+    panel:ControlHelp("\nPathfinding")
+    panel:NumSlider("Compute optimisation", "drgbase_compute_optimisation", 1, 10, 1)
+    panel:NumSlider("Compute delay", "drgbase_compute_delay", 0.01, 3, 2)
+    panel:CheckBox("Avoid obstacles", "drgbase_avoid_obstacles")
+  end)
+end)

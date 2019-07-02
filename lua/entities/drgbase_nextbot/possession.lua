@@ -133,7 +133,7 @@ function ENT:_InitPossession()
   if SERVER then
     self:SetPossessionEnabled(self.PossessionEnabled)
   else
-    self:SetNWVarProxy("DrGBasePossessor", function(self, name, old, new)
+    self:SetNW2VarProxy("DrGBasePossessor", function(self, name, old, new)
       if not IsValid(old) and IsValid(new) then self:OnPossessed(new)
       elseif IsValid(old) and not IsValid(new) then self:OnDispossessed(old) end
     end)
@@ -144,17 +144,6 @@ function ENT:_HandlePossession(cor)
   if not self:IsPossessed() then return end
   local possessor = self:GetPossessor()
   if cor and self:OnPossession() then return end
-  if SERVER and not cor then
-    if possessor:KeyPressed(IN_USE) then
-      self:Dispossess(true)
-      return true
-    elseif possessor:KeyPressed(IN_ZOOM) then
-      self:CycleViewPresets()
-      return true
-    elseif possessor:KeyDown(IN_ZOOM) then
-      possessor:StopZooming()
-    end
-  end
   if cor then
     local f = possessor:KeyDown(IN_FORWARD)
     local b = possessor:KeyDown(IN_BACK)
@@ -179,36 +168,55 @@ function ENT:_HandlePossession(cor)
       if direction ~= self:GetPos() then self:MoveTowards(direction)
       else self:PossessionFaceForward() end
     else self:PossessionControls(forward, backward, right, left) end
-    if self.ClimbLadders and navmesh.IsLoaded() then
-      local ladders = navmesh.GetNearestNavArea(self:GetPos()):GetLadders()
-      for i, ladder in ipairs(ladders) do
-        if self.ClimbLadderUp then
-          if self:GetHullRangeSquaredTo(ladder:GetBottom()) < self.LaddersUpDistance^2 then
-            self:ClimbLadderUp(ladder)
-            break
-          end
-        elseif self.ClimbLaddersDown then
-          if self:GetHullRangeSquaredTo(ladder:GetTop()) < self.LaddersDownDistance^2 then
-            self:ClimbLadderDown(ladder)
-            break
+    if possessor:DrG_ButtonDown(possessor:GetInfoNum("drgbase_possession_climb", KEY_C)) then
+      if self.ClimbLadders and navmesh.IsLoaded() then
+        local ladders = navmesh.GetNearestNavArea(self:GetPos()):GetLadders()
+        for i, ladder in ipairs(ladders) do
+          if self.ClimbLadderUp then
+            if self:GetHullRangeSquaredTo(ladder:GetBottom()) < self.LaddersUpDistance^2 then
+              self:ClimbLadderUp(ladder)
+              return
+            end
+          elseif self.ClimbLaddersDown then
+            if self:GetHullRangeSquaredTo(ladder:GetTop()) < self.LaddersDownDistance^2 then
+              self:ClimbLadderDown(ladder)
+              return
+            end
           end
         end
       end
+      local ledge = self:FindLedge()
+      if isvector(ledge) then self:ClimbLedge(ledge) end
     end
   end
   for key, binds in pairs(self.PossessionBinds) do
+    if isstring(key) then
+      if CLIENT then
+        local convar = GetConVar(key)
+        if not convar then continue
+        else key = convar:GetInt() end
+      else key = possessor:GetInfoNum(key, BUTTON_CODE_INVALID) end
+    end
     for i, bind in ipairs(binds) do
       if CLIENT and not bind.client then continue end
       if SERVER and ((not cor and bind.coroutine) or (cor and not bind.coroutine)) then continue end
-      if bind.onkeypressed == nil then bind.onkeypressed = function() end end
-      if bind.onkeydown == nil then bind.onkeydown = function() end end
-      if bind.onkeyup == nil then bind.onkeyup = function() end end
-      if bind.onkeydownlast == nil then bind.onkeydownlast = function() end end
-      if bind.onkeyreleased == nil then bind.onkeyreleased = function() end end
+      if not isfunction(bind.onkeyup) then bind.onkeyup = function() end end
+      if not isfunction(bind.onkeypressed) then bind.onkeypressed = function() end end
+      if not isfunction(bind.onkeydown) then bind.onkeydown = function() end end
+      if not isfunction(bind.onkeydownlast) then bind.onkeydownlast = function() end end
+      if not isfunction(bind.onkeyreleased) then bind.onkeyreleased = function() end end
       if possessor:KeyPressed(key) then bind.onkeypressed(self, possessor) end
       if possessor:KeyDown(key) then bind.onkeydown(self, possessor) else bind.onkeyup(self, possessor) end
       if possessor:KeyDownLast(key) then bind.onkeydownlast(self, possessor) end
       if possessor:KeyReleased(key) then bind.onkeyreleased(self, possessor) end
+      if not isfunction(bind.onbuttonup) then bind.onbuttonup = function() end end
+      if not isfunction(bind.onbuttonpressed) then bind.onbuttonpressed = function() end end
+      if not isfunction(bind.onbuttondown) then bind.onbuttondown = function() end end
+      if not isfunction(bind.onbuttonreleased) then bind.onbuttonreleased = function() end end
+      if possessor:DrG_ButtonUp(key) then bind.onbuttonup(self, possessor) end
+      if possessor:DrG_ButtonPressed(key) then bind.onbuttonpressed(self, possessor) end
+      if possessor:DrG_ButtonDown(key) then bind.onbuttondown(self, possessor) end
+      if possessor:DrG_ButtonReleased(key) then bind.onbuttonreleased(self, possessor) end
     end
   end
 end
@@ -242,6 +250,7 @@ if SERVER then
     ply:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
     ply:SetNoTarget(true)
     ply:SetNoDraw(true)
+    ply:SetEyeAngles(self:EyeAngles())
     self:UpdateEnemy()
     self:SetNW2Int("DrGBasePossessionView", 1)
     self:BehaviourTreeEvent("Possessed", ply)

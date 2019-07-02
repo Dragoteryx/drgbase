@@ -1,5 +1,5 @@
 
-local PossessionEnabled = CreateConVar("drgbase_enable_possession", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local PossessionEnabled = CreateConVar("drgbase_possession_enable", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 properties.Add("drgbasepossess", {
 	MenuLabel = "Possess",
@@ -69,7 +69,24 @@ if SERVER then
 	hook.Add("PlayerDeath", "DrGBasePossessionPlayerDeath", PlayerDeath)
 	hook.Add("PlayerSilentDeath", "DrGBasePossessionPlayerSilentDeath", PlayerDeath)
 
+	hook.Add("PlayerButtonDown", "DrGBasePossessionButtons", function(ply, button)
+		if not isfunction(ply.DrG_IsPossessing) then return end
+		if not ply:DrG_IsPossessing() then return end
+		local possessing = ply:DrG_Possessing()
+		if SERVER then
+			if button == ply:GetInfoNum("drgbase_possession_view", KEY_V) then
+				possessing:CycleViewPresets()
+			elseif button == ply:GetInfoNum("drgbase_possession_exit", KEY_E) then
+				possessing:Dispossess(true)
+			end
+		end
+	end)
+
 else
+
+	CreateClientConVar("drgbase_possession_exit", tostring(KEY_E), true, true)
+	CreateClientConVar("drgbase_possession_view", tostring(KEY_V), true, true)
+	CreateClientConVar("drgbase_possession_climb", tostring(KEY_C), true, true)
 
 	net.Receive("DrGBaseNextbotCanPossess", function()
 		local ent = net.ReadEntity()
@@ -119,6 +136,12 @@ else
 		view.fov, view.znear, view.zfar = fov, znear, zfar
 		view.drawviewer = true
 		return view
+	end)
+
+	hook.Add("ContextMenuOpen", "DrGBasePossessionDisableCMenu", function()
+		local ply = LocalPlayer()
+		if not isfunction(ply.DrG_IsPossessing) then return end
+		if ply:DrG_IsPossessing() then return false end
 	end)
 
 	function DrGBase.DrawPossessionHUD(ent)

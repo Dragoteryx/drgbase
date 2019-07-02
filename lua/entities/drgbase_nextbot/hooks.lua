@@ -26,11 +26,12 @@ if SERVER then
 
   local function NextbotFatalDamage(self, dmg)
     if self:IsDown() or self:IsDead() then return end
+    self._DrGBaseDisableKill = true
     self:SetHealth(0)
     if #self.OnDeathSounds > 0 then
       self:EmitSound(self.OnDeathSounds[math.random(#self.OnDeathSounds)])
     end
-    local data = util.DrG_SaveDmg(dmg)
+    local data = util.DrG_SaveDmg(dmg)    
     if not self:OnFatalDamage(dmg) then
       if self:IsDead() then return end
       if isfunction(self.OnDeath) then
@@ -62,6 +63,7 @@ if SERVER then
         self:SetNW2Bool("DrGBaseDown", false)
       end)
     end
+    self._DrGBaseDisableKill = false
   end
 
   hook.Add("EntityTakeDamage", "DrGBaseNextbotHandleDamage", function(self, dmg)
@@ -114,6 +116,7 @@ if SERVER then
   end)
 
   function ENT:Kill(attacker, inflictor, type)
+    if self._DrGBaseDisableKill then return end
     local dmg = DamageInfo()
     dmg:SetDamage(math.huge)
     dmg:SetDamageType(type or DMG_DIRECT)

@@ -66,13 +66,7 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:SetSpeed(speed)
-    if self.UseWalkframes and self:IsOnGround() and not self:IsClimbing() then
-      self:SetNW2Float("DrGBaseSpeed", speed/self:GetScale())
-      self.loco:SetDesiredSpeed(speed)
-    else
-      self:SetNW2Float("DrGBaseSpeed", speed)
-      self.loco:SetDesiredSpeed(speed*self:GetScale())
-    end
+    self.loco:SetDesiredSpeed(speed*self:GetScale())
   end
 
   function ENT:IsRunning()
@@ -330,8 +324,8 @@ if SERVER then
   end
   function ENT:FindLedge()
     if not self.ClimbLedges then return end
-    if not self:IsMoving() then return end
-    local hull = self:TraceHull(self:GetVelocity():GetNormalized()*self.LedgeDetectionDistance, true)
+    local normal = self:IsMoving() and self:GetVelocity() or self:GetForward()
+    local hull = self:TraceHull(normal:GetNormalized()*self.LedgeDetectionDistance, true)
     if not hull.Hit then return end
     --if IsValid(hull.Entity) then print(hull.Entity, hull.Entity:GetCollisionGroup(), IsValid(hull.Entity)) end
     if hull.HitWorld or IsEntityClimbable(self, hull.Entity) then
@@ -372,7 +366,6 @@ if SERVER then
     end
   end
   function ENT:ClimbLedge(ledge, callback)
-    --debugoverlay.Sphere(ledge, 2, 60, nil, true)
     if self:IsClimbing() then return end
     local height = math.abs(ledge.z - self:GetPos().z)
     local res = self:OnStartClimbing(ledge, height, false)
@@ -490,8 +483,8 @@ if SERVER then
   function ENT:UpdateSpeed()
     if self.UseWalkframes and self:IsOnGround() and not self:IsClimbing() then
       local speed = self:GetSequenceGroundSpeed(self:GetSequence())
-      if speed == 0 then self:SetSpeed(1)
-      else self:SetSpeed(speed) end
+      if speed <= 0 then self.loco:SetDesiredSpeed(1)
+      else self.loco:SetDesiredSpeed(speed) end
     else
       local speed = self:OnUpdateSpeed()
       if isnumber(speed) then self:SetSpeed(math.Clamp(speed, 0, math.huge)) end

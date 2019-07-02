@@ -12,8 +12,11 @@ hook.Add("Think", "DrGBaseCoroutines", function()
   end
 end)
 
-function coroutine.DrG_Create(callback)
-  local co = coroutine.create(callback)
+function coroutine.DrG_Create(callback, ...)
+  local args = table.DrG_Pack(...)
+  local co = coroutine.create(function()
+    callback(unpack(args))
+  end)
   local curr = id
   id = id+1
   coroutines[curr] = co
