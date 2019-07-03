@@ -250,6 +250,8 @@ if SERVER then
     ply:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
     ply:SetNoTarget(true)
     ply:SetNoDraw(true)
+    ply:Flashlight(false)
+    ply:AllowFlashlight(false)
     ply:SetEyeAngles(self:EyeAngles())
     self:UpdateEnemy()
     self:SetNW2Int("DrGBasePossessionView", 1)
@@ -269,7 +271,8 @@ if SERVER then
     ply:SetEyeAngles(ply:GetNW2Angle("DrGBasePrePossessEyes"))
     ply:SetCollisionGroup(COLLISION_GROUP_PLAYER)
     ply:SetNoTarget(false)
-    ply:SetNoDraw(true)
+    ply:SetNoDraw(false)
+    ply:AllowFlashlight(true)
     self:UpdateEnemy()
     self:OnDispossessed(ply)
     return "ok"

@@ -82,6 +82,10 @@ if SERVER then
 		end
 	end)
 
+	hook.Add("PlayerSwitchFlashlight", "DrGBasePossessionDisableFlashlight", function(ply, state)
+		--if ply:DrG_IsPossessing() and state then return false end
+	end)
+
 else
 
 	CreateClientConVar("drgbase_possession_exit", tostring(KEY_E), true, true)

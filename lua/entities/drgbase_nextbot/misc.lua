@@ -3,6 +3,7 @@
 
 local RemoveRagdolls = CreateConVar("drgbase_remove_ragdolls", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local RagdollFadeOut = CreateConVar("drgbase_ragdoll_fadeout", "3", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local PossessTargetAll = CreateConVar("drgbase_possession_targetall", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Getters/setters --
 
@@ -187,7 +188,11 @@ if SERVER then
     attack.viewpunch = attack.viewpunch or Angle(10, 0, 0)
     attack.range = attack.range or self.MeleeAttackRange
     attack.angle = attack.angle or 90
-    attack.relationships = attack.relationships or {D_HT}
+    if attack.relationships == nil then
+      if self:IsPossessed() and PossessTargetAll:GetBool() then
+        attack.relationships = {D_LI, D_HT, D_FR}
+      else attack.relationships = {D_HT} end
+    end
     if not istable(attack.relationships) then attack.relationships = {attack.relationships} end
     self:Timer(math.Clamp(attack.delay, 0, math.huge), function(self)
       local hit = {}
@@ -195,7 +200,7 @@ if SERVER then
         for i, ent in ipairs(self:EntitiesInCone(attack.angle, attack.range, rel)) do
           if ent == self then continue end
           if not IsValid(ent) then continue end
-          if self:IsPossessor(ent) then continue end
+          if ent:IsPlayer() and ent:DrG_IsPossessing() then continue end
           if not self:Visible(ent) then continue end
           local dmg = DamageInfo()
           dmg:SetAttacker(self)
