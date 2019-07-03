@@ -26,6 +26,7 @@ ENT.Factions = {FACTION_ZOMBIES}
 
 -- Movements/animations --
 ENT.UseWalkframes = true
+ENT.RunAnimation = ACT_WALK
 
 -- Detection --
 ENT.EyeBone = "ValveBiped.Bip01_Spine4"

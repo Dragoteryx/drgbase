@@ -7,10 +7,10 @@ ENT.Category = "DrGBase"
 ENT.Models = {"models/player/gman_high.mdl"}
 
 -- AI --
-ENT.RangeAttackRange = 200
+ENT.RangeAttackRange = 100
 ENT.MeleeAttackRange = 0
-ENT.ReachEnemyRange = 150
-ENT.AvoidEnemyRange = 100
+ENT.ReachEnemyRange = 100
+ENT.AvoidEnemyRange = 25
 
 -- Movements/animations --
 ENT.WalkAnimation = ACT_HL2MP_WALK
@@ -32,7 +32,7 @@ ENT.PossessionViews = {
     distance = 100
   },
   {
-    offset = Vector(7.5, 0, 2.5),
+    offset = Vector(7.5, 0, 0),
     distance = 0,
     eyepos = true
   }
@@ -53,13 +53,30 @@ ENT.PossessionBinds = {
         self:PlaySequence("gesture_wave")
       end
     }
+  },
+  [IN_ATTACK2] = {
+    {
+      coroutine = false,
+      onkeydown = function(self)
+        self:EmitSlotSound("riseandshine", 7, "DrGBase.RiseAndShine")
+      end
+    }
   }
 }
 
 if SERVER then
 
+  sound.Add({
+    name = "DrGBase.RiseAndShine",
+    sound = "vo/gman_misc/gman_riseshine.wav",
+    channel = CHAN_VOICE,
+    level = 60
+  })
+
   function ENT:CustomInitialize()
-    self:SetPlayersRelationship(D_HT)
+    self:SetDefaultRelationship(D_HT)
+    self:SetSelfClassRelationship(D_LI)
+    self:SetPlayersRelationship(D_HT, 2)
     for i, walk in ipairs({
       self.RunAnimation,
       self.WalkAnimation
@@ -74,8 +91,12 @@ if SERVER then
     if self:IsMoving() then return end
     self:FaceTowards(enemy)
     self:PlaySequence("gesture_wave")
+    self:EmitSlotSound("riseandshine", 7, "DrGBase.RiseAndShine")
   end
 
+  function ENT:OnReachedPatrol()
+    self:PlaySequenceAndWait("menu_gman")
+  end
   function ENT:OnIdle()
     self:AddPatrolPos(self:RandomPos(1500))
   end
@@ -86,6 +107,10 @@ if SERVER then
       "death_01", "death_02", "death_03", "death_04"
     }
     self:PlaySequenceAndWait(deaths[math.random(#deaths)])
+  end
+
+  function ENT:OnRemove()
+    self:StopSound("DrGBase.RiseAndShine")
   end
 
 end
