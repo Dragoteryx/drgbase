@@ -153,13 +153,29 @@ function ENT:_HandlePossession(cor)
     local backward = b and not f
     local right = r and not l
     local left = l and not r
-    if self.PossessionMovement == POSSESSION_MOVE_COMPASS then
+    if self.PossessionMovement == POSSESSION_MOVE_8DIR then
       self:PossessionFaceForward()
       if forward then self:Approach(self:GetPos() + self:PossessorForward())
       elseif backward then self:Approach(self:GetPos() - self:PossessorForward()) end
       if right then self:Approach(self:GetPos() + self:PossessorRight())
       elseif left then self:Approach(self:GetPos() - self:PossessorRight()) end
-    elseif self.PossessionMovement == POSSESSION_MOVE_FORWARD then
+    elseif self.PossessionMovement == POSSESSION_MOVE_4DIR then
+      self:PossessionFaceForward()
+      local dir = self._DrGBasePossLast4DIR or ""
+      if forward and (dir == "" or dir == "N") then
+        self:MoveForward()
+        self._DrGBasePossLast4DIR = "N"
+      elseif backward and (dir == "" or dir == "S") then
+        self:MoveBackward()
+        self._DrGBasePossLast4DIR = "S"
+      elseif right and (dir == "" or dir == "E") then
+        self:MoveRight()
+        self._DrGBasePossLast4DIR = "E"
+      elseif left and (dir == "" or dir == "W") then
+        self:MoveLeft()
+        self._DrGBasePossLast4DIR = "W"
+      else self._DrGBasePossLast4DIR = "" end
+    elseif self.PossessionMovement == POSSESSION_MOVE_1DIR then
       local direction = self:GetPos()
       if forward then direction = direction + self:PossessorForward()
       elseif backward then direction = direction - self:PossessorForward() end

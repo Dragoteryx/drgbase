@@ -1,6 +1,8 @@
 
 -- NODES TABLE --
+
 local DRG_NODES = {}
+local DRG_NODES_POS = {}
 
 -- NODE CLASS --
 
@@ -30,12 +32,10 @@ function Node:__tostring()
 end
 
 function Node:Link(node)
-  if self:GetType() ~= node:GetType() then return end
   self._links[node:GetID()] = true
   node._links[self:GetID()] = true
 end
 function Node:Unlink(node)
-  if self:GetType() ~= node:GetType() then return end
   self._links[node:GetID()] = false
   node._links[self:GetID()] = false
 end
@@ -46,7 +46,7 @@ function Node:GetLinked()
   local nodes = {}
   for id, linked in pairs(self._links) do
     if not linked then continue end
-    nodes[id] = DRG_NODES[id]
+    table.insert(nodes, DRG_NODES[id])
   end
   return nodes
 end
@@ -60,99 +60,69 @@ function Node:DistToSqr(pos)
   return self:GetPos():DistToSqr(pos)
 end
 
--- ASTAR --
-
-local Pile = {}
-Pile.__index = Pile
-function Pile:New()
-  local pile = {}
-  pile._nodes = {}
-  pile._order = {}
-  setmetatable(pile, self)
-  return pile
-end
-function Pile:Push(node)
-  if self:Has(node) then return end
-  self._nodes[node:GetID()] = true
-  table.insert(self._order, node:GetID())
-  return this
-end
-function Pile:Pop()
-  if self:Empty() then return end
-  local id = table.remove(self._order, 1)
-  local node = DRG_NODES[id]
-  self._nodes[id] = false
-  return node
-end
-function Pile:Has(node)
-  return pile._nodes[node:GetID()] or false
-end
-function Pile:Empty()
-  return #self._order == 0
-end
-function Pile:Sort(callback)
-  table.sort(self._order, function(id1, id2)
-    return callback(DRG_NODES[id1], DRG_NODES[id2])
-  end)
-end
-
-local function IsNode(obj)
-  return getmetatable(obj) == Node
-end
-function Node:ComputePath(goal, options)
-  if isentity(goal) then goal = goal:GetPos() end
-  if isvector(goal) then
-    local pos = goal
-    local distSqr = math.huge
-    for id, node in ipairs(DRG_NODES) do
-      if node:DistToSqr(pos) >= distSqr then continue end
-      distSqr = node:DistToSqr(pos)
-      goal = node
-    end
+function Node:__tostring()
+  local start = "Node"
+  local type = self:GetType()
+  if type == NODE_TYPE_GROUND then
+    start = "Ground Node"
+  elseif type == NODE_TYPE_AIR then
+    start = "Air Node"
+  elseif type == NODE_TYPE_CLIMB then
+    start = "Climb Node"
+  elseif type == NODE_TYPE_WATER then
+    start = "Water Node"
   end
-  if not IsNode(goal) then return {}, false end
-  if self:GetType() ~= node:GetType() then return {}, false end
-  if self:GetID() == node:GetID() then return {self:GetPos()}, true end
-  local open = Pile:New():Push(self)
-  local closed = Pile:New()
-  while not open:Empty() do
-    local current = open:Pop()
-    if current:GetID() == goal:GetID() then
+  local linked = self:GetLinked()
+  local ids = {}
+  for id, node in pairs(linked) do
+    table.insert(ids, id)
+  end
+  return start.."["..self:GetID().."]=>["..table.concat(ids, ",").."]"
+end
 
-    else
-      for id, next in ipairs(current:GetLinked()) do
-        if not (closed:Has(next) or (open:Has(next) and true)) then
+-- ACCESS NODEGRAPH --
 
+function DrGBase.GetNodegraph()
+  return DRG_NODES
+end
+function DrGBase.ClosestNode(pos)
+  local goal
+  local distSqr = math.huge
+  for id, node in ipairs(DRG_NODES) do
+    if node:DistToSqr(pos) >= distSqr then continue end
+    distSqr = node:DistToSqr(pos)
+    goal = node
+  end
+  return goal
+end
+function DrGBase.NodegraphAstar(pos, goal, callback)
+  local closest = DrGBase.ClosestNode(pos)
+  local toreach = DrGBase.ClosestNode(goal)
+  local path, success = DrGBase.Astar(closest:GetPos(), toreach:GetPos(), {
+    neighbours = function(pos)
+      local node = DRG_NODES_POS[tostring(pos)]
+      if node then
+        local i = 1
+        local linked = node:GetLinked()
+        return function()
+          local next = linked[i]
+          i = i+1
+          if next then return next:GetPos() end
         end
-        closed:Push(next)
-      end
+      else return function() end end
     end
-  end
-  return {}, false
+  }, isfunction(callback) and function(pos1, pos2, ...)
+    return callback(DRG_NODES_POS[tostring(pos1)], DRG_NODES_POS[tostring(pos2)], ...)
+  end)
+  table.remove(path, #path)
+  table.insert(path, goal)
+  return path, success
 end
 
 -- INIT NODEGRAPH --
 
 if SERVER then
   util.AddNetworkString("DrGBaseNodegraph")
-
-  local PARSED = false
-
-  local function NetNodegraph()
-    net.Start("DrGBaseNodegraph")
-    local compressed = util.Compress(util.TableToJSON(DRG_NODES))
-    net.WriteData(compressed, #compressed)
-  end
-  function DrGBase.BroadcastNodegraph()
-    if not PARSED then return end
-    NetNodegraph()
-    net.Broadcast()
-  end
-  function DrGBase.SendNodegraph(ply)
-    if not PARSED then return end
-    NetNodegraph()
-    net.Send(ply)
-  end
 
   -- thx Silverlan!
   local NUM_HULLS = 10
@@ -175,6 +145,7 @@ if SERVER then
     f = file.Open("maps/graphs/"..game.GetMap()..".ain", "rb", "GAME")
     if not f then return false end
     DRG_NODES = {}
+    DRG_NODES_POS = {}
     local ainet_ver = ReadInt(f)
     if ainet_ver ~= AINET_VERSION_NUMBER then return false end
     local map_ver = ReadInt(f)
@@ -189,7 +160,9 @@ if SERVER then
     	local type = f:ReadByte()
     	local info = ReadUShort(f)
     	local zone = f:ReadShort()
-    	table.insert(DRG_NODES, Node:New(i, type, pos))
+      local node = Node:New(i, type, pos)
+    	table.insert(DRG_NODES, node)
+      DRG_NODES_POS[tostring(pos)] = node
     end
     local nblinks = ReadInt(f)
 		for i = 1, nblinks do
@@ -207,7 +180,28 @@ if SERVER then
     return true
   end
 
-  --PARSED = InitNodegraph()
+  local PARSED = false
+  function DrGBase.RefreshNodegraph()
+    PARSED = InitNodegraph()
+  end
+
+  local function NetNodegraph()
+    net.Start("DrGBaseNodegraph")
+    local compressed = util.Compress(util.TableToJSON(DRG_NODES))
+    net.WriteData(compressed, #compressed)
+  end
+  function DrGBase.BroadcastNodegraph()
+    if not PARSED then return end
+    --NetNodegraph()
+    --net.Broadcast()
+  end
+  function DrGBase.SendNodegraph(ply)
+    if not PARSED then return end
+    --NetNodegraph()
+    --net.Send(ply)
+  end
+
+  DrGBase.RefreshNodegraph()
   DrGBase.BroadcastNodegraph()
   hook.Add("PlayerInitialSpawn", "DrGBaseSendNodegraph", function(ply)
     DrGBase.SendNodegraph(ply)
@@ -256,10 +250,5 @@ else
       end
     end
   end)
-end
 
--- ACCESS NODEGRAPH --
-
-function DrGBase.GetNodegraph()
-  return DRG_NODES
 end

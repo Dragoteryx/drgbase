@@ -39,7 +39,7 @@ if SERVER then
   function ENT:OnContact(ent)
     if ent:GetClass() == self:GetClass() then
       -- nice explosion
-    else self:DealDamage(ent, ent:Health(), DMG_SHOCK) end
+    else self:DealDamage(ent, ent:Health(), DMG_SHOCK + DMG_DISSOLVE) end
   end
 
 end

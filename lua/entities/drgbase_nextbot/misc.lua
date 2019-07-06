@@ -125,12 +125,9 @@ function entMETA:EyePos()
   if self.IsDrGNextbot then
     local bound1, bound2 = self:GetCollisionBounds()
     local eyepos = self:GetPos() + (bound1 + bound2)/2
-    if isstring(self.EyeBone) then
-      local boneid = self:LookupBone(self.EyeBone)
-      if boneid ~= nil then
-        eyepos = self:GetBonePosition(boneid)
-      end
-    end
+    local boneid
+    if isstring(self.EyeBone) then boneid = self:LookupBone(self.EyeBone) end
+    if boneid ~= nil then eyepos = self:GetBonePosition(boneid) end
     eyepos = eyepos + self:CalcOffset(self.EyeOffset)
     return eyepos
   else return old_EyePos(self) end
@@ -320,6 +317,19 @@ if SERVER then
     return self:EntitiesInCone(angle, distance, D_NU)
   end
 
+  function ENT:Kill(attacker, inflictor, type)
+    local dmg = DamageInfo()
+    dmg:SetDamage(math.huge)
+    dmg:SetDamageType(type or DMG_DIRECT)
+    dmg:SetDamageForce(Vector(0, 0, 1))
+    dmg:SetAttacker(attacker or game.GetWorld())
+    dmg:SetInflictor(inflictor or attacker or game.GetWorld())
+    self:OnKilled(dmg)
+  end
+  function ENT:Suicide(type)
+    self:Kill(self, self, type)
+  end
+
   -- Hooks --
 
   function ENT:OnRagdoll() end
@@ -349,46 +359,56 @@ if SERVER then
   local old_BecomeRagdoll = nextbotMETA.BecomeRagdoll
   function nextbotMETA:BecomeRagdoll(dmg)
     if self.IsDrGNextbot then
-      if util.IsValidRagdoll(self:GetModel()) then
+      if util.IsValidRagdoll(self:GetModel()) and
+      not dmg:IsDamageType(DMG_REMOVENORAGDOLL) and
+      not self:IsDissolving() then
         local ragdoll = ents.Create("prop_ragdoll")
-        if not IsValid(ragdoll) then return NULL end
-        ragdoll:SetPos(self:GetPos())
-        ragdoll:SetAngles(self:GetAngles())
-        ragdoll:SetModel(self:GetModel())
-        ragdoll:SetSkin(self:GetSkin())
-        ragdoll:SetColor(self:GetColor())
-        ragdoll:SetModelScale(self:GetModelScale())
-        ragdoll:SetBloodColor(self:GetBloodColor())
-        for i = 1, #self:GetBodyGroups() do
-      		ragdoll:SetBodygroup(i-1, self:GetBodygroup(i-1))
-      	end
-        ragdoll:Spawn()
-        undo.ReplaceEntity(self, ragdoll)
-        cleanup.ReplaceEntity(self, ragdoll)
-        if not GetConVar("ai_serverragdolls"):GetBool() then
-          ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+        if IsValid(ragdoll) then
+          ragdoll:SetPos(self:GetPos())
+          ragdoll:SetAngles(self:GetAngles())
+          ragdoll:SetModel(self:GetModel())
+          ragdoll:SetSkin(self:GetSkin())
+          ragdoll:SetColor(self:GetColor())
+          ragdoll:SetModelScale(self:GetModelScale())
+          ragdoll:SetBloodColor(self:GetBloodColor())
+          for i = 1, #self:GetBodyGroups() do
+        		ragdoll:SetBodygroup(i-1, self:GetBodygroup(i-1))
+        	end
+          ragdoll:Spawn()
+          undo.ReplaceEntity(self, ragdoll)
+          cleanup.ReplaceEntity(self, ragdoll)
+          if not GetConVar("ai_serverragdolls"):GetBool() then
+            ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+          end
+          for i = 1, self:GetBoneCount() do
+        		local bone = ragdoll:GetPhysicsObjectNum(i-1)
+        		if not IsValid(bone) then continue end
+      			local pos, angles = self:GetBonePosition(self:TranslatePhysBoneToBone(i-1))
+      			bone:SetPos(pos)
+      			bone:SetAngles(angles)
+        	end
+          local phys = ragdoll:GetPhysicsObject()
+          phys:SetVelocity(self:GetVelocity())
+          local force = dmg:GetDamageForce()
+          local position = dmg:GetDamagePosition()
+          if IsValid(phys) and isvector(force) and isvector(position) then
+        		phys:ApplyForceOffset(force, position)
+        	end
+          if dmg:IsDamageType(DMG_DISSOLVE) then ragdoll:DrG_Dissolve()
+          elseif self:IsOnFire() or dmg:IsDamageType(DMG_BURN) then ragdoll:Ignite(10) end
+          if not self.OnRagdoll(ragdoll, dmg) and RemoveRagdolls:GetFloat() >= 0 then
+            ragdoll:Fire("fadeandremove", math.Clamp(RagdollFadeOut:GetFloat(), 0, math.huge), RemoveRagdolls:GetFloat())
+          end
+          self:Remove()
+          return ragdoll
+        else
+          self:Remove()
+          return NULL
         end
-        for i = 1, self:GetBoneCount() do
-      		local bone = ragdoll:GetPhysicsObjectNum(i-1)
-      		if not IsValid(bone) then continue end
-    			local pos, angles = self:GetBonePosition(self:TranslatePhysBoneToBone(i-1))
-    			bone:SetPos(pos)
-    			bone:SetAngles(angles)
-      	end
-        local phys = ragdoll:GetPhysicsObject()
-        phys:SetVelocity(self:GetVelocity())
-        local force = dmg:GetDamageForce()
-        local position = dmg:GetDamagePosition()
-        if IsValid(phys) and isvector(force) and isvector(position) then
-      		phys:ApplyForceOffset(force, position)
-      	end
-        if self:IsOnFire() or dmg:IsDamageType(DMG_BURN) then ragdoll:Ignite(10) end
-        if not self.OnRagdoll(ragdoll, dmg) and RemoveRagdolls:GetFloat() >= 0 then
-          ragdoll:Fire("fadeandremove", math.Clamp(RagdollFadeOut:GetFloat(), 0, math.huge), RemoveRagdolls:GetFloat())
-        end
+      else
         self:Remove()
-        return ragdoll
-      else self:Remove() end
+        return NULL
+      end
     else return old_BecomeRagdoll(self, dmg) end
   end
 

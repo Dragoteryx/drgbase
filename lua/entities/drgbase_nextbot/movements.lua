@@ -35,10 +35,47 @@ function ENT:IsSpeedLessEqual(speed, scale)
 end
 
 function ENT:IsMoving()
-  return self:IsSpeedMore(0)
+  return not self:GetVelocity():IsZero()
 end
-function ENT:IsRunning()
-  --return self:IsOnGround() and self:IsSpeedMoreEqual((self.WalkSpeed + self.RunSpeed)/2, true)
+function ENT:IsMovingForward()
+  if not self:IsMoving() then return false end
+  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
+  return direction == "NW" or direction == "N" or direction == "NE"
+end
+function ENT:IsMovingBackward()
+  if not self:IsMoving() then return false end
+  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
+  return direction == "SW" or direction == "S" or direction == "SE"
+end
+function ENT:IsMovingRight()
+  if not self:IsMoving() then return false end
+  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
+  return direction == "NE" or direction == "E" or direction == "SE"
+end
+function ENT:IsMovingLeft()
+  if not self:IsMoving() then return false end
+  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
+  return direction == "NW" or direction == "W" or direction == "SW"
+end
+function ENT:IsMovingForwardLeft()
+  if not self:IsMoving() then return false end
+  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
+  return direction == "NW"
+end
+function ENT:IsMovingForwardRight()
+  if not self:IsMoving() then return false end
+  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
+  return direction == "NE"
+end
+function ENT:IsMovingBackwardLeft()
+  if not self:IsMoving() then return false end
+  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
+  return direction == "SW"
+end
+function ENT:IsMovingBackwardRight()
+  if not self:IsMoving() then return false end
+  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
+  return direction == "SE"
 end
 
 function ENT:IsClimbing()

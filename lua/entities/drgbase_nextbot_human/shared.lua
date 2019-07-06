@@ -42,7 +42,7 @@ ENT.EyeOffset = Vector(5, 0, 2.5)
 
 -- Possession --
 ENT.PossessionEnabled = true
-ENT.PossessionMovement = POSSESSION_MOVE_NSEW
+ENT.PossessionMovement = POSSESSION_MOVE_8DIR
 ENT.PossessionViews = {
   {
     offset = Vector(0, 30, 20),

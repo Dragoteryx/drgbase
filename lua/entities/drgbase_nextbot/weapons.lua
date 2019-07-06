@@ -13,6 +13,11 @@ end
 function ENT:HaveWeapon()
   return self:HasWeapon()
 end
+
+function ENT:IsReloadingWeapon()
+  if not self:HasWeapon() then return false end
+  return self:GetNW2Bool("DrGBaseReloadWeapon")
+end
 function ENT:IsWeaponHolstered()
   if not self:HasWeapon() then return false end
   return self:GetNW2Bool("DrGBaseWeaponHolstered")
@@ -77,10 +82,6 @@ if SERVER then
   }
 
   -- Getters/setters --
-
-  function ENT:IsReloading()
-    return self._DrGBaseReloadingWeapon or false
-  end
 
   function ENT:GetWeaponPrimaryAmmo()
     if not self:HasWeapon() then return 0 end
@@ -169,15 +170,13 @@ if SERVER then
     	wep:SetParent(self, self.WeaponAttachmentRH)
     	wep:AddEffects(EF_BONEMERGE)
       wep:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
-      wep:SetClip1(wep:GetMaxClip1())
-      wep:SetClip2(wep:GetMaxClip2())
       self:SetNW2Entity("DrGBaseWeapon", wep)
       self:UnholsterWeapon()
       self:OnPickupWeapon(wep)
       return true, wep
     else
       wep:Remove()
-      return self:GiveWeapon(REPLACE_WEAPONS[wep:GetClass()])
+      return self:GiveWeapon(wep:GetClass())
     end
   end
   function ENT:DropWeapon()
@@ -201,7 +200,7 @@ if SERVER then
   function ENT:WeaponPrimaryFire(anim)
     if not self:HasWeapon() then return false end
     if self:IsWeaponHolstered() then return false end
-    if self:IsReloading() then return false end
+    if self:IsReloadingWeapon() then return false end
     local wep = self:GetWeapon()
     if not isfunction(wep.PrimaryAttack) then return false end
     if CurTime() < wep:GetNextPrimaryFire() then return false end
@@ -212,7 +211,7 @@ if SERVER then
   function ENT:WeaponSecondaryFire(anim)
     if not self:HasWeapon() then return false end
     if self:IsWeaponHolstered() then return false end
-    if self:IsReloading() then return false end
+    if self:IsReloadingWeapon() then return false end
     local wep = self:GetWeapon()
     if not isfunction(wep.SecondaryAttack) then return false end
     if CurTime() < wep:GetNextSecondaryFire() then return false end
@@ -222,16 +221,20 @@ if SERVER then
   end
   function ENT:WeaponReload(anim)
     if not self:HasWeapon() then return false end
-    if self:IsReloading() then return false end
+    if self:IsReloadingWeapon() then return false end
     local wep = self:GetWeapon()
     if not isfunction(wep.Reload) then return false end
-    self._DrGBaseReloadingWeapon = true
+    self:SetNW2Bool("DrGBaseReloadWeapon", true)
     self:Timer(self:PlayAnimation(anim) or 0, function()
-      self._DrGBaseReloadingWeapon = false
+      self:SetNW2Bool("DrGBaseReloadWeapon", false)
       if not self:HasWeapon() then return end
       wep = self:GetWeapon()
-      wep:SetClip1(wep:GetMaxClip1())
-      wep:SetClip2(wep:GetMaxClip2())
+      if not self:IsWeaponPrimaryFull() then
+        wep:SetClip1(wep:GetMaxClip1())
+      end
+      if not self:IsWeaponSecondaryFull() then
+        wep:SetClip2(wep:GetMaxClip2())
+      end
     end)
     return true
   end

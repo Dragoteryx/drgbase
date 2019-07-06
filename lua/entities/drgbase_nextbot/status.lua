@@ -19,6 +19,10 @@ function ENT:IsDead()
   return self:GetNW2Bool("DrGBaseDead") or self:IsDying()
 end
 
+function ENT:IsDissolving()
+  return self:GetNW2Bool("DrGBaseDissolving")
+end
+
 -- Functions --
 
 -- Hooks --

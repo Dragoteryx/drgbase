@@ -121,7 +121,7 @@ DrGBase.IncludeFile("possession.lua")
 ENT.PossessionEnabled = false
 ENT.PossessionPrompt = true
 ENT.PossessionCrosshair = false
-ENT.PossessionMovement = POSSESSION_MOVE_FORWARD
+ENT.PossessionMovement = POSSESSION_MOVE_1DIR
 ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
 
