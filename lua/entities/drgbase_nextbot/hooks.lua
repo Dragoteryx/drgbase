@@ -79,12 +79,14 @@ if SERVER then
   end
   function ENT:OnKilled(dmg)
     if self:IsDead() then return end
+    self:SetHealth(0)
     hook.Run("OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor())
     if isfunction(self.OnDeath) then
       local data = util.DrG_SaveDmg(dmg)
       self:SetNW2Bool("DrGBaseDying", true)
       self:CallInCoroutine(function(self, delay)
         self:SetNW2Bool("DrGBaseDying", false)
+        self:SetHealth(0)
         self:SetNW2Bool("DrGBaseDead", true)
         local now = CurTime()
         dmg = util.DrG_LoadDmg(data)
@@ -104,7 +106,7 @@ if SERVER then
     end
   end
 
-  hook.Add("EntityTakeDamage", "DrGBaseNextbotHandleDamage", function(ent, dmg)
+  hook.Add("EntityTakeDamage", "DrGBaseNextbotDealtDamage", function(ent, dmg)
     local attacker = dmg:GetAttacker()
     if IsValid(attacker) and attacker.IsDrGNextbot then
       local res = attacker:OnDealtDamage(ent, dmg)

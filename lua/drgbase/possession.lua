@@ -86,6 +86,10 @@ if SERVER then
 		--if ply:DrG_IsPossessing() and state then return false end
 	end)
 
+	hook.Add("GetFallDamage", "DrGBasePossessionPlayerFallDamage", function(ply)
+		if ply:DrG_IsPossessing() then return 0 end
+	end)
+
 else
 
 	CreateClientConVar("drgbase_possession_exit", tostring(KEY_E), true, true)

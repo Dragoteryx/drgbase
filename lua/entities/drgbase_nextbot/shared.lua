@@ -157,12 +157,12 @@ function ENT:Initialize()
       Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0)
     )
     self:SetUseType(SIMPLE_USE)
-    self:AddFlags(FL_OBJECT + FL_CLIENT)
     self.VJ_AddEntityToSNPCAttackList = true
     self.vFireIsCharacter = true
     self._DrGBaseCorCalls = {}
     self._DrGBaseWaterLevel = self:WaterLevel()
   else self:SetIK(true) end
+  self:AddFlags(FL_OBJECT + FL_NPC)
   self._DrGBaseBaseThinkDelay = 0
   self._DrGBaseCustomThinkDelay = 0
   self._DrGBasePossessionThinkDelay = 0

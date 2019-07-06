@@ -19,10 +19,6 @@ function ENT:IsDead()
   return self:GetNW2Bool("DrGBaseDead") or self:IsDying()
 end
 
-function ENT:IsDissolving()
-  return self:GetNW2Bool("DrGBaseDissolving")
-end
-
 -- Functions --
 
 -- Hooks --
@@ -86,6 +82,16 @@ if SERVER then
       dmg:SetDamageType(DMG_DIRECT)
       self:TakeDamageInfo(dmg)
     end
+  end
+
+  -- Meta --
+
+  local entMETA = FindMetaTable("Entity")
+
+  local old_SetHealth = entMETA.SetHealth
+  function entMETA:SetHealth(health)
+    if self.IsDrGNextbot and self:IsDead() then return end
+    return old_SetHealth(self, health)
   end
 
 else

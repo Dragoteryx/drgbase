@@ -98,10 +98,9 @@ if SERVER then
   -- Misc --
 
   function entMETA:DrG_Dissolve(type)
-    if self:GetNW2Bool("DrGBaseDissolving") then return end
+    if self:IsFlagSet(FL_DISSOLVING) then return end
     local dissolver = ents.Create("env_entity_dissolver")
     if not IsValid(dissolver) then return false end
-    self:SetNW2Bool("DrGBaseDissolving", true)
     if self:GetName() == "" then
       self:SetName("ent_"..self:GetClass().."_"..self:EntIndex().."_dissolved")
     end

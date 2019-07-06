@@ -361,7 +361,9 @@ if SERVER then
     if self.IsDrGNextbot then
       if util.IsValidRagdoll(self:GetModel()) and
       not dmg:IsDamageType(DMG_REMOVENORAGDOLL) and
-      not self:IsDissolving() then
+      not self:IsFlagSet(FL_DISSOLVING) and
+      not self:IsFlagSet(FL_TRANSRAGDOLL) then
+        self:AddFlags(FL_TRANSRAGDOLL)
         local ragdoll = ents.Create("prop_ragdoll")
         if IsValid(ragdoll) then
           ragdoll:SetPos(self:GetPos())
