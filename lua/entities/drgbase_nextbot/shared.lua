@@ -266,6 +266,14 @@ function ENT:_BaseThink() end
 function ENT:CustomThink() end
 function ENT:PossessionThink() end
 
+-- Use --
+function ENT:Use(...)
+  self:_BaseUse(...)
+  self:CustomUse(...)
+end
+function ENT:_BaseUse() end
+function ENT:CustomUse() end
+
 if SERVER then
   AddCSLuaFile()
 

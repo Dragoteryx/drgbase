@@ -109,7 +109,7 @@ if SERVER then
     if IsValid(attacker) and attacker.IsDrGNextbot then
       local res = attacker:OnDealtDamage(ent, dmg)
       if isnumber(res) then dmg:ScaleDamage(res)
-      elseif res == true then return true
+      elseif res == true then return true end
     end
   end)
 
