@@ -17,10 +17,5 @@ function table.DrG_Default(tbl, default)
 end
 
 function table.DrG_Pack(...)
-  local args = {}
-  for i = 1, select("#", ...) do
-    local val = select(i, ...)
-    table.insert(args, val)
-  end
-  return args
+  return {...}, select("#", ...)
 end

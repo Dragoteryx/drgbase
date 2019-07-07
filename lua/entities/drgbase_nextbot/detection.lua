@@ -144,9 +144,6 @@ if SERVER then
   function ENT:OnSound(ent, sound)
     self:SpotEntity(ent)
   end
-  function ENT:OnShake(ent)
-    self:SpotEntity(ent)
-  end
 
   -- Handlers --
 

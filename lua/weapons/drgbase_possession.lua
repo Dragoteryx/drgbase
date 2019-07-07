@@ -7,6 +7,7 @@ SWEP.DisableDuplicator = true
 SWEP.Primary.Ammo = ""
 SWEP.Secondary.Ammo = ""
 SWEP.WorldModel = ""
+SWEP.Slot = 5
 function SWEP:PrimaryAttack() end
 function SWEP:SecondaryAttack() end
 function SWEP:Reload() end

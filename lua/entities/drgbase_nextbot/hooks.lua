@@ -115,6 +115,41 @@ if SERVER then
     end
   end)
 
+  -- Collisions --
+
+  function ENT:OnCombineBall() end
+
+  local COLLIDES_WITH = {
+    ["prop_combine_ball"] = true,
+    ["replicator_melon"] = true
+  }
+  local function OnCollide(self, ent)
+    if self:GetNoDraw() then return end
+    local class = ent:GetClass()
+    if not COLLIDES_WITH[class] then return end
+    if self:GetHullRangeSquaredTo(ent) > 0 then return end
+    if class == "prop_combine_ball" then
+      if self:IsFlagSet(FL_DISSOLVING) then return end
+      if not self:OnCombineBall(ent) then
+        local dmg = DamageInfo()
+        local owner = ent:GetOwner()
+        dmg:SetAttacker(IsValid(owner) and owner or ent)
+        dmg:SetInflictor(ent)
+        dmg:SetDamage(self:Health())
+        dmg:SetDamageType(DMG_DISSOLVE)
+        self:TakeDamageInfo(dmg)
+        ent:EmitSound("NPC_CombineBall.KillImpact")
+      end
+    elseif class == "replicator_melon" then
+      ent:Replicate(self)
+      self:Remove()
+    end
+  end
+  hook.Add("ShouldCollide", "DrGBaseShouldCollide", function(ent1, ent2)
+    if ent1.IsDrGNextbot then OnCollide(ent1, ent2) end
+    if ent2.IsDrGNextbot then OnCollide(ent2, ent1) end
+  end)
+
   -- Misc --
 
   hook.Add("vFireEntityStartedBurning", "DrGBaseNextbotOnIgniteVFire", function(ent)

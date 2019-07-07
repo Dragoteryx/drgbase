@@ -1,8 +1,8 @@
 
-local id = 0
-local coroutines = {}
+local INCR_ID = 0
+local COROUTINES = {}
 hook.Add("Think", "DrGBaseCoroutines", function()
-  for id, todo in pairs(coroutines) do
+  for id, todo in pairs(COROUTINES) do
     local status = coroutine.status(todo.cor)
     if status == "suspended" then
 			local ok, args = coroutine.resume(todo.cor)
@@ -17,13 +17,13 @@ end)
 
 function coroutine.DrG_Create(todo, call)
   local cor = coroutine.create(todo)
-  local curr = id
-  id = id+1
-  coroutines[curr] = {
+  local id = INCR_ID
+  INCR_ID = INCR_ID+1
+  COROUTINES[id] = {
     cor = cor, call = call
   }
-  return cor, curr
+  return cor, id
 end
 function coroutine.DrG_Remove(id)
-  coroutines[id] = nil
+  COROUTINES[id] = nil
 end

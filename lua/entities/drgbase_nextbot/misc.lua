@@ -21,18 +21,6 @@ end
 
 -- Functions --
 
-function ENT:ScreenShake(amplitude, frequency, duration, radius)
-  local res = util.ScreenShake(self:GetPos(), amplitude, frequency, duration, radius)
-  if CLIENT then return res end
-  for i, ent in ipairs(DrGBase.GetNextbots()) do
-    if ent == self then continue end
-    if self:IsAIDisabled() then continue end
-    if self:GetRangeSquaredTo(ent) > radius^2 then continue end
-    ent:OnShake(self, amplitude, frequency, duration, radius)
-  end
-  return res
-end
-
 function ENT:EmitSlotSound(slot, duration, soundName, soundLevel, pitchPercent, volume, channel)
   local lastSlot = self._DrGBaseSlotSounds[slot]
   if lastSlot == nil or CurTime() > lastSlot then

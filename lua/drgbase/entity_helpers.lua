@@ -131,17 +131,6 @@ function ENT:ScreenShake(amplitude, frequency, duration, radius)
   return util.ScreenShake(self:GetPos(), amplitude, frequency, duration, radius)
 end
 
-function ENT:AddListener(name, callback)
-  if not isfunction(callback) then return false end
-  self[name] = function(...)
-    callback(...)
-    if isfunction(self[name]) then
-      self[name](...)
-    end
-  end
-  return true
-end
-
 function ENT:GetCooldown(name)
   local delay = self:GetNW2Float("DrGBaseCooldowns-"..tostring(name), false)
   if delay ~= false then

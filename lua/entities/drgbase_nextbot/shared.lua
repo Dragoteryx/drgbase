@@ -157,6 +157,7 @@ function ENT:Initialize()
       Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0)
     )
     self:SetUseType(SIMPLE_USE)
+    self:SetCustomCollisionCheck(true)
     self.VJ_AddEntityToSNPCAttackList = true
     self.vFireIsCharacter = true
     self._DrGBaseCorCalls = {}

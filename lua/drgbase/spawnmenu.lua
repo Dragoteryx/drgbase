@@ -21,6 +21,7 @@ search.AddProvider(function(str)
 	str = str:PatternSafe()
 	local results = {}
 	for class, ent in pairs(list.Get("DrGBaseNextbots")) do
+    if #results >= 128 then break end
 		if string.find(string.lower(ent.Name), string.lower(str)) ~= nil or
 		string.find(string.lower(class), string.lower(str)) ~= nil then
 			table.insert(results, {
@@ -33,10 +34,10 @@ search.AddProvider(function(str)
 				}),
 				words = {ent}
 			})
-		end
-		if #results >= 128 then break end
+		end		
 	end
 	for class, ent in pairs(list.Get("DrGBaseSpawners")) do
+    if #results >= 128 then break end
 		if string.find(string.lower(ent.Name), string.lower(str)) ~= nil or
 		string.find(string.lower(class), string.lower(str)) ~= nil then
 			table.insert(results, {
@@ -50,7 +51,6 @@ search.AddProvider(function(str)
 				words = {ent}
 			})
 		end
-		if #results >= 128 then break end
 	end
 	table.SortByMember(results, "text", true)
 	return results
