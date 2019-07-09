@@ -86,9 +86,6 @@ if SERVER then
       end)
     end
   end
-  function ENT:Use()
-    self:DrG_Dissolve()
-  end
 
   function ENT:OnRangeAttack(enemy)
     if self:IsMoving() then return end

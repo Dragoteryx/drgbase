@@ -1,4 +1,4 @@
-ENT.Base = "drgbase_entity"
+ENT.Base = "base_entity"
 ENT.Type = "point"
 ENT.IsDrGSpawner = true
 
@@ -32,37 +32,57 @@ if SERVER then
       if not isnumber(nb) or nb <= 0 then continue end
       self:AddToSpawn(class, nb)
     end
+    self.Spawning = coroutine.create(function()
+      self:SpawningCoroutine()
+    end)
   end
   function ENT:_BaseInitialize() end
   function ENT:CustomInitialize() end
 
   function ENT:Think()
-    if #self._DrGBaseToSpawn == 0 then return end
-    if #self._DrGBaseSpawnedEntities >= self:GetQuantity() then return end
-    if not isnumber(self._DrGBaseLastSpawn) or CurTime() > self._DrGBaseLastSpawn + self:GetDelay() then
-      local class = self._DrGBaseToSpawn[math.random(#self._DrGBaseToSpawn)]
-      if self:BeforeSpawn(class) == false then return end
-      local ent = ents.Create(class)
-      if not IsValid(ent) then return end    
-      if navmesh.IsLoaded() then
-        local radius = self:GetRadius()
-        local pos = self:GetPos() + Vector(math.random(-1, 1)*radius, math.random(-1, 1)*radius, math.random(-1, 1)*radius)
-        ent:SetPos(navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or self:GetPos())
-      else ent:SetPos(self:GetPos()) end
-      ent:Spawn()
-      if self:AfterSpawn(ent) ~= false then
-        self._DrGBaseLastSpawn = CurTime()
-        table.insert(self._DrGBaseSpawnedEntities, ent)
-        if self:EnableAutoRemove() then self:DeleteOnRemove(ent) end
-        ent:CallOnRemove("DrGBaseSpawnerRemove", function(ent)
-          if not IsValid(self) then return end
-          table.RemoveByValue(self._DrGBaseSpawnedEntities, ent)
-        end)
-      else ent:Remove() end
+    if not self.Spawning then return end
+    local ok, args = coroutine.resume(self.Spawning)
+    if not ok then
+      self.Spawning = nil
+      ErrorNoHalt(self, " Error: ", args, "\n")
     end
+    self:_BaseThink()
+    self:CustomThink()
   end
   function ENT:_BaseThink() end
   function ENT:CustomThink() end
+
+  function ENT:SpawningCoroutine()
+    while true do
+      if #self._DrGBaseToSpawn > 0 and
+      #self._DrGBaseSpawnedEntities < self:GetQuantity() then
+        local class = self._DrGBaseToSpawn[math.random(#self._DrGBaseToSpawn)]
+        if self:BeforeSpawn(class) ~= false then
+          local ent = ents.Create(class)
+          if IsValid(ent) then
+            if navmesh.IsLoaded() then
+              local radius = self:GetRadius()
+              local pos = self:GetPos() + Vector(math.random(-radius, radius), math.random(-radius, radius), math.random(-radius, radius))
+              ent:SetPos(navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or self:GetPos())
+            else ent:SetPos(self:GetPos()) end
+            ent:Spawn()
+            if self:AfterSpawn(ent) ~= false then
+              table.insert(self._DrGBaseSpawnedEntities, ent)
+              if self:EnableAutoRemove() then self:DeleteOnRemove(ent) end
+              ent:CallOnRemove("DrGBaseSpawnerRemove", function(ent)
+                if not IsValid(self) then return end
+                table.RemoveByValue(self._DrGBaseSpawnedEntities, ent)
+              end)
+              coroutine.wait(self:GetDelay())
+            else
+              ent:Remove()
+              coroutine.yield()
+            end
+          else coroutine.yield() end
+        else coroutine.yield() end
+      else coroutine.yield() end
+    end
+  end
 
   -- Spawner functions --
 
@@ -83,6 +103,10 @@ if SERVER then
     elseif isstring(class) then
       table.RemoveByValue(self._DrGBaseToSpawn, string.lower(class))
     end
+  end
+
+  function ENT:GetSpawned()
+    return self._DrGBaseSpawnedEntities
   end
 
   function ENT:GetRadius()
@@ -110,7 +134,7 @@ if SERVER then
   end
 
   function ENT:EnableAutoRemove(autoremove)
-    if bool == nil then return self._DrGBaseAutoRemove or false
+    if autoremove == nil then return self._DrGBaseAutoRemove or false
     else self._DrGBaseAutoRemove = tobool(autoremove) end
   end
 

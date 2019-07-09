@@ -20,9 +20,10 @@ function entMETA:DrG_AddListener(name, callback)
   if not isfunction(callback) then return false end
   local old_function = self[name]
   self[name] = function(...)
-    callback(...)
+    local res = callback(...)
+    if res ~= nil then return res end
     if isfunction(old_function) then
-      old_function(...)
+      return old_function(...)
     end
   end
   return true

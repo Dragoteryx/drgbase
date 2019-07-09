@@ -1,4 +1,9 @@
 
+function ENT:_InitHooks()
+  if CLIENT then return end
+  self:DrG_AddListener("OnContact", self._HandleContact)
+end
+
 if SERVER then
 
   -- Damage --
@@ -6,9 +11,11 @@ if SERVER then
   function ENT:OnTakeDamage(dmg)
     self:SpotEntity(dmg:GetAttacker())
   end
+  --function ENT:AfterTakeDamage() end
 
   function ENT:OnFatalDamage() end
   function ENT:OnDowned() end
+  --function ENT:OnDeath() end
 
   function ENT:OnDealtDamage() end
 
@@ -118,16 +125,10 @@ if SERVER then
   -- Collisions --
 
   function ENT:OnCombineBall() end
+  --function ENT:AfterCombineBall() end
 
-  local COLLIDES_WITH = {
-    ["prop_combine_ball"] = true,
-    ["replicator_melon"] = true
-  }
-  local function OnCollide(self, ent)
-    if self:GetNoDraw() then return end
+  function ENT:_HandleContact(ent)
     local class = ent:GetClass()
-    if not COLLIDES_WITH[class] then return end
-    if self:GetHullRangeSquaredTo(ent) > 0 then return end
     if class == "prop_combine_ball" then
       if self:IsFlagSet(FL_DISSOLVING) then return end
       if not self:OnCombineBall(ent) then
@@ -139,16 +140,16 @@ if SERVER then
         dmg:SetDamageType(DMG_DISSOLVE)
         self:TakeDamageInfo(dmg)
         ent:EmitSound("NPC_CombineBall.KillImpact")
+      elseif isfunction(self.AfterCombineBall) then
+        self:CallInCoroutine(function(self, delay)
+          self:AfterCombineBall(ent, delay)
+        end)
       end
     elseif class == "replicator_melon" then
       ent:Replicate(self)
       self:Remove()
     end
   end
-  hook.Add("ShouldCollide", "DrGBaseShouldCollide", function(ent1, ent2)
-    if ent1.IsDrGNextbot then OnCollide(ent1, ent2) end
-    if ent2.IsDrGNextbot then OnCollide(ent2, ent1) end
-  end)
 
   -- Misc --
 

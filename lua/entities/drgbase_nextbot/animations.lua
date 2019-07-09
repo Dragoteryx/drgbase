@@ -27,17 +27,17 @@ function ENT:SequenceEvent(seq, cycles, callback)
 end
 
 function ENT:DirectPoseParametersAt(pos, pitch, yaw, center)
-    if isentity(pos) then pos = pos:WorldSpaceCenter() end
-    if isvector(pos) then
-      center = center or self:WorldSpaceCenter()
-      local angle = (pos - center):Angle()
-      self:SetPoseParameter(pitch, math.AngleDifference(angle.p, self:GetAngles().p))
-      self:SetPoseParameter(yaw, math.AngleDifference(angle.y, self:GetAngles().y))
-    else
-      self:SetPoseParameter(pitch, 0)
-      self:SetPoseParameter(yaw, 0)
-    end
+  if isentity(pos) then pos = pos:WorldSpaceCenter() end
+  if isvector(pos) then
+    center = center or self:WorldSpaceCenter()
+    local angle = (pos - center):Angle()
+    self:SetPoseParameter(pitch, math.AngleDifference(angle.p, self:GetAngles().p))
+    self:SetPoseParameter(yaw, math.AngleDifference(angle.y, self:GetAngles().y))
+  else
+    self:SetPoseParameter(pitch, 0)
+    self:SetPoseParameter(yaw, 0)
   end
+end
 
 
 -- Hooks --

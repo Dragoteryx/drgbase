@@ -1,5 +1,30 @@
 if SERVER then return end
 
+-- Sprites --
+
+local MATERIALS = {}
+function render.DrG_DrawSprite(sprite, pos, size, color)
+  size = isnumber(size) and math.Clamp(size, 0, math.huge) or 100
+  local half = size/2
+  local dir = EyePos():DrG_Direction(pos + Vector(0, 0, half))
+  cam.Start3D2D(pos + Vector(0, 0, half), dir:Angle() + Angle(90, 0, 0), 1)
+  surface.SetDrawColor(color or Color(255, 255, 255))
+  --[[if not MATERIALS[sprite] then
+    local material = Material(sprite)
+    MATERIALS[sprite] = material
+    surface.SetMaterial(material)
+  else surface.SetMaterial(MATERIALS[sprite]) end]]
+  surface.DrawPoly({
+    {x = -half, y = -half, u = 0, v = 0},
+    {x = half, y = -half, u = 1, v = 0},
+    {x = half, y = half, u = 1, v = 1},
+    {x = -half, y = half, u = 0, v = 1},
+  })
+  cam.End3D2D()
+end
+
+-- Misc --
+
 function render.DrG_Trajectory(start, velocity, color, writeZ, options)
   local info = start:DrG_TrajectoryInfo(velocity)
   options = options or {}
