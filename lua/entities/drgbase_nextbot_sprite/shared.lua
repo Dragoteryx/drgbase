@@ -1,25 +1,30 @@
 ENT.Base = "drgbase_nextbot"
 ENT.IsDrGNextbotSprite = true
 
--- Sprite --
-ENT.Size = 100
+-- Misc --
+ENT.Models = {"models/props_lab/blastdoor001a.mdl"}
+ENT.RenderGroup = RENDERGROUP_TRANSLUCENT
 
 -- Animations --
 DrGBase.IncludeFile("animations.lua")
+ENT.SpritesFolder = ""
+ENT.FramesPerSecond = 10
+ENT.WalkAnimation = "walk"
+ENT.RunAnimation = "run"
+ENT.IdleAnimation = "idle"
+ENT.JumpAnimation = "jump"
 
--- Misc --
+-- Movements --
+ENT.WalkSpeed = 100
+ENT.RunSpeed = 200
 
-function ENT:GetSize()
-  local min, max = self:GetCollisionBounds()
-  return math.abs(max - min)
-end
+-- Climbing --
+ENT.ClimbUpAnimation = "climb"
+ENT.ClimbDownAnimation = "climb"
+ENT.ClimbOffset = Vector(-10, 0, 0)
 
 if SERVER then
   AddCSLuaFile()
-
-  function ENT:_BaseInitialize()
-    self:SetSize(self.Size)
-  end
 
   -- Movements --
 
@@ -29,11 +34,6 @@ if SERVER then
   end
 
   -- Misc --
-
-  function ENT:SetSize(size)
-    local half = size/2
-    self:SetCollisionBounds(Vector(-half, -half, 0), Vector(half, half, size))
-  end
 
   function ENT:IsAttacking()
     return self:IsAttack(self:GetSpriteAnim())
@@ -46,18 +46,37 @@ if SERVER then
   end
 
   function ENT:SequenceAttack() end
-  function ENT:SpriteAnimAttack(anim, cycle, attack, callback)
+  function ENT:SpriteAnimAttack(anim, frame, attack, callback)
     if istable(anim) then
       for i, anim in ipairs(anim) do self:SetAttack(anim, true) end
     else self:SetAttack(anim, true) end
-    self:SequenceEvent(seq, cycle, function(self)
+    self:SpriteAnimEvent(anim, frame, function(self)
       self:Attack(attack, callback)
     end)
   end
 
 else
 
-  function ENT:Draw()
+  local function DrawSprite(self, anim)
+    local height = self:Height()
+    local pos = self:GetPos() + Vector(0, 0, height/2)
+    local sprite = self:GetSpriteFolder()..anim..self:GetSpriteFrame()..".png"
+    render.DrG_DrawSprite(sprite, pos, height, {
+      origin = self:IsPossessedByLocalPlayer() and self:GetPos()-self:PossessorForward(),
+      color = self:GetColor(), lighting = true
+    })
+  end
+
+  function ENT:DrawTranslucent()
+    local anim = self:GetSpriteAnim()
+    if anim ~= "" then
+      if self:SpriteAnim8Dir(anim) then
+        DrawSprite(self, anim..self:CalcPosDirection(EyePos(), true))
+      elseif self:SpriteAnim4Dir(anim) then
+        DrawSprite(self, anim..self:CalcPosDirection(EyePos(), false))
+      else DrawSprite(self, anim) end
+    end
+    self:_DrawDebug()
     self:_BaseDraw()
     self:CustomDraw()
     if self:IsPossessedByLocalPlayer() then

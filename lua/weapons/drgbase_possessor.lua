@@ -49,7 +49,7 @@ hook.Add("PreDrawHalos", "DrGBasePossessorSWEPHalos", function()
     local tr = ply:GetEyeTraceNoCursor()
     local ent = tr.Entity
     if not IsValid(ent) then return end
-    if CanPossess(ent) not ent:IsPossessed() then
+    if CanPossess(ent) and not ent:IsPossessed() then
       halo.Add({ent}, DrGBase.CLR_GREEN)
     else halo.Add({ent}, DrGBase.CLR_RED) end
   end

@@ -49,7 +49,6 @@ function ENT:OnSequenceEvent() end
 function ENT:_InitAnimations()
   if SERVER then
     self._DrGBaseCurrentGestures = {}
-    self._DrGBaseAnimAttacks = {}
     self:LoopTimer(0.1, self.UpdateAnimation)
   end
   self._DrGBaseLastAnimCycle = 0
@@ -78,7 +77,7 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:IsPlayingAnimation()
-    return isnumber(self._DrGBasePlayingAnimation) or false
+    return isnumber(self._DrGBasePlayingAnimation)
   end
 
   function ENT:IsPlayingSequence(seq)
@@ -103,30 +102,33 @@ if SERVER then
     if seq == -1 then return end
     rate = isnumber(rate) and rate or 1
     if callback == nil then callback = function() end end
+    local oldPlayingAnim = self._DrGBasePlayingAnimation
     self._DrGBasePlayingAnimation = seq
     local len = self:SetSequence(seq)
     self:ResetSequenceInfo()
     self:SetCycle(0)
     self:SetPlaybackRate(rate)
-    local delay = CurTime() + len/rate
-    while CurTime() < delay do
-      if seq == self._DrGBasePlayingAnimation then
-        local cycle = self:GetCycle()
-        if callback(self, cycle) then break end
-        self:YieldCoroutine(false)
-      else break end
+    local now = CurTime()
+    local lastCycle = -1
+    while seq == self:GetSequence() do
+      local cycle = self:GetCycle()
+      if lastCycle > cycle then break end
+      if lastCycle == cycle and cycle == 1 then break end
+      lastCycle = cycle
+      if callback(self, self:GetCycle()) then break end
+      self:YieldCoroutine(false)
     end
-    self._DrGBasePlayingAnimation = nil
+    self._DrGBasePlayingAnimation = oldPlayingAnim
     self:Timer(0, self.UpdateAnimation)
-    return len/rate
+    return CurTime() - now
   end
   function ENT:PlayActivityAndWait(act, rate, callback)
     local seq = self:SelectRandomSequence(act)
     return self:PlaySequenceAndWait(seq, rate, callback)
   end
   function ENT:PlayAnimationAndWait(anim, rate, callback)
-    if isstring(anim) then self:PlaySequenceAndWait(anim, rate, callback)
-    elseif isnumber(anim) then self:PlayActivityAndWait(anim, rate, callback) end
+    if isstring(anim) then return self:PlaySequenceAndWait(anim, rate, callback)
+    elseif isnumber(anim) then return self:PlayActivityAndWait(anim, rate, callback) end
   end
 
   function ENT:PlaySequenceAndMove(seq, options, callback)
@@ -158,8 +160,8 @@ if SERVER then
     return self:PlaySequenceAndMove(seq, options, callback)
   end
   function ENT:PlayAnimationAndMove(anim, rate, callback)
-    if isstring(anim) then self:PlaySequenceAndMove(anim, rate, callback)
-    elseif isnumber(anim) then self:PlayActivityAndMove(anim, rate, callback) end
+    if isstring(anim) then return self:PlaySequenceAndMove(anim, rate, callback)
+    elseif isnumber(anim) then return self:PlayActivityAndMove(anim, rate, callback) end
   end
 
   function ENT:PlaySequenceAndMoveAbsolute(seq, options, callback)
@@ -193,8 +195,8 @@ if SERVER then
     return self:PlaySequenceAndMoveAbsolute(seq, options, callback)
   end
   function ENT:PlayAnimationAndMoveAbsolute(anim, rate, callback)
-    if isstring(anim) then self:PlaySequenceAndMoveAbsolute(anim, rate, callback)
-    elseif isnumber(anim) then self:PlayActivityAndMoveAbsolute(anim, rate, callback) end
+    if isstring(anim) then return self:PlaySequenceAndMoveAbsolute(anim, rate, callback)
+    elseif isnumber(anim) then return self:PlayActivityAndMoveAbsolute(anim, rate, callback) end
   end
 
   function ENT:PlaySequence(seq, rate, callback)
@@ -242,8 +244,8 @@ if SERVER then
     return self:PlaySequence(seq, options, callback)
   end
   function ENT:PlayAnimation(anim, rate, callback)
-    if isstring(anim) then self:PlaySequence(anim, rate, callback)
-    elseif isnumber(anim) then self:PlayActivity(anim, rate, callback) end
+    if isstring(anim) then return self:PlaySequence(anim, rate, callback)
+    elseif isnumber(anim) then return self:PlayActivity(anim, rate, callback) end
   end
 
   local function PlayClosestClimbSequence(self, seqs, height, rate, callback)
@@ -353,6 +355,7 @@ if SERVER then
   local old_BodyMoveXY = nextbotMETA.BodyMoveXY
   function nextbotMETA:BodyMoveXY(options)
     if self.IsDrGNextbot then
+      if self.IsDrGNextbotSprite then return end
       options = options or {}
       if options.rate == nil then options.rate = true end
       if options.direction == nil then options.direction = true end

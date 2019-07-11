@@ -154,7 +154,8 @@ else
   end)
   function plyMETA:DrG_Luminosity()
     local ply = LocalPlayer()
-    return math.Clamp(render.GetLightColor(LocalPlayer():EyePos()):Length()^(1/3), 0, 1)
+    local light = (render.GetLightColor(LocalPlayer():EyePos())*255):ToColor()
+    return ((light.r + light.g + light.b)/3)/255
   end
 
 end

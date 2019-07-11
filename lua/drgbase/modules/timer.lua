@@ -9,7 +9,10 @@ function timer.DrG_Loop(delay, callback, ...)
   local args = table.DrG_Pack(...)
   timer.Simple(delay, function()
     local unpacked = unpack(args)
-    if callback(unpacked) == false then return end
-    timer.DrG_Loop(delay, callback, unpacked)
+    local res = callback(unpacked)
+    if res == false then return end
+    if isnumber(res) then
+      timer.DrG_Loop(math.Clamp(res, 0, math.huge), callback, unpacked)
+    else timer.DrG_Loop(delay, callback, unpacked) end
   end)
 end

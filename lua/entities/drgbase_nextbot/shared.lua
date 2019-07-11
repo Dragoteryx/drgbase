@@ -60,10 +60,8 @@ ENT.DeathDropHeight = 200
 -- Movements/animations --
 DrGBase.IncludeFile("movements.lua")
 DrGBase.IncludeFile("animations.lua")
-ENT.WalkSpeed = 100
 ENT.WalkAnimation = ACT_WALK
 ENT.WalkAnimRate = 1
-ENT.RunSpeed = 200
 ENT.RunAnimation = ACT_RUN
 ENT.RunAnimRate = 1
 ENT.IdleAnimation = ACT_IDLE
@@ -72,7 +70,11 @@ ENT.JumpAnimation = ACT_JUMP
 ENT.JumpAnimRate = 1
 ENT.AnimMatchSpeed = true
 ENT.AnimMatchDirection = true
+
+-- Movements --
 ENT.UseWalkframes = false
+ENT.WalkSpeed = 100
+ENT.RunSpeed = 200
 
 -- Climbing --
 ENT.ClimbLedges = false
@@ -301,8 +303,8 @@ if SERVER then
     if not tree then return end
     tree:Event(self, event, ...)
   end
-  function ENT:BTEvent(event, ...)
-    return self:BehaviourTreeEvent(event, ...)
+  function ENT:BTEvent(...)
+    return self:BehaviourTreeEvent(...)
   end
 
   -- Coroutine --
@@ -415,6 +417,18 @@ else
 
   function ENT:Draw()
     self:DrawModel()
+    self:_DrawDebug()
+    self:_BaseDraw()
+    self:CustomDraw()
+    if self:IsPossessedByLocalPlayer() then
+      self:PossessionDraw()
+    end
+  end
+  function ENT:_BaseDraw() end
+  function ENT:CustomDraw() end
+  function ENT:PossessionDraw() end
+
+  function ENT:_DrawDebug()
     if GetConVar("developer"):GetBool() then
       if DisplayCollisions:GetBool() then
         local bound1, bound2 = self:GetCollisionBounds()
@@ -429,14 +443,6 @@ else
          render.DrawLine(eyepos, eyepos + self:EyeAngles():Forward()*15, DrGBase.CLR_GREEN, false)
       end
     end
-    self:_BaseDraw()
-    self:CustomDraw()
-    if self:IsPossessedByLocalPlayer() then
-      self:PossessionDraw()
-    end
   end
-  function ENT:_BaseDraw() end
-  function ENT:CustomDraw() end
-  function ENT:PossessionDraw() end
 
 end

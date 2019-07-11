@@ -6,8 +6,65 @@ function ENT:DirectPoseParametersAt() end
 
 -- Getters/setters --
 
-function ENT:GetSpriteAnim()
+function ENT:GetSpriteFolder()
+  local folder = self:GetNW2String("DrGBaseSpriteFolder", self.SpritesFolder)
+  folder = string.Replace(folder, "\\", "/")
+  if string.EndsWith(folder, "/") then return folder
+  else return folder.."/" end
+end
 
+function ENT:GetSpriteAnim()
+  return self:GetNWString("DrGBaseSpriteAnim")
+end
+function ENT:GetSpriteFrame()
+  return self:GetNW2Int("DrGBaseSpriteFrame", 1)
+end
+function ENT:GetFrameDuration()
+  return (1/self:GetPlaybackRate())/self.FramesPerSecond
+end
+
+function ENT:SpriteAnimExists(anim)
+  if self._DrGBaseSpriteAnimInfo[anim] == nil then
+    self._DrGBaseSpriteAnimInfo[anim] = {
+      ["8dir"] = file.Exists("materials/"..self:GetSpriteFolder()..anim.."NE1.png", "GAME"),
+      ["4dir"] = file.Exists("materials/"..self:GetSpriteFolder()..anim.."N1.png", "GAME"),
+      ["1dir"] = file.Exists("materials/"..self:GetSpriteFolder()..anim.."1.png", "GAME")
+    }
+    local info = self._DrGBaseSpriteAnimInfo[anim]
+    if not info["4dir"] and not info["1dir"] then
+      self._DrGBaseSpriteAnimInfo[anim] = false
+      return false
+    else return true end
+  else return istable(self._DrGBaseSpriteAnimInfo[anim]) end
+end
+function ENT:SpriteAnim8Dir(anim)
+  if not self:SpriteAnimExists(anim) then return false end
+  return self._DrGBaseSpriteAnimInfo[anim]["8dir"]
+end
+function ENT:SpriteAnim4Dir(anim)
+  if not self:SpriteAnimExists(anim) then return false end
+  return self._DrGBaseSpriteAnimInfo[anim]["4dir"]
+end
+function ENT:SpriteAnim1Dir(anim)
+  if not self:SpriteAnimExists(anim) then return false end
+  return self._DrGBaseSpriteAnimInfo[anim]["1dir"]
+end
+function ENT:GetNumberOfFrames(anim)
+  if not self:SpriteAnimExists(anim) then return 0 end
+  if not isnumber(self._DrGBaseSpriteAnimInfo[anim].nb) then
+    local i = 0
+    if self._DrGBaseSpriteAnimInfo[anim]["4dir"] then
+      while file.Exists("materials/"..self:GetSpriteFolder()..anim.."N"..tostring(i+1)..".png", "GAME") do
+        i = i+1
+      end
+    else
+      while file.Exists("materials/"..self:GetSpriteFolder()..anim..tostring(i+1)..".png", "GAME") do
+        i = i+1
+      end
+    end
+    self._DrGBaseSpriteAnimInfo[anim].nb = i
+    return i
+  else return self._DrGBaseSpriteAnimInfo[anim].nb end
 end
 
 -- Functions --
@@ -35,15 +92,27 @@ function ENT:OnSpriteAnimEvent() end
 -- Handlers --
 
 function ENT:_InitAnimations()
-  self._DrGBaseSpriteAnims = {}
+  self._DrGBaseSpriteAnimInfo = {}
   self._DrGBaseSpriteAnimEvents = {}
+  self:SetNW2VarProxy("DrGBaseSpriteFrame", function(self, name, prior, frame)
+    if frame == 0 then return end
+    local anim = self:GetSpriteAnim()
+    local event = self._DrGBaseSpriteAnimEvents[anim]
+    if not event then return end
+    for i, callback in ipairs(istable(event[frame]) and event[frame] or {}) do
+      callback(self, frame, false)
+    end
+  end)
+  if SERVER then
+    self._DrGBaseLastFrameChange = CurTime()
+    self:LoopTimer(0.1, self.UpdateAnimation)
+  end
 end
 
 function ENT:_HandleAnimations()
-  local anim = self:GetSpriteAnim()
-  local event = self._DrGBaseSpriteAnimEvents[anim]
-  if event then
-    
+  if CLIENT then return end
+  if CurTime() > self._DrGBaseLastFrameChange + self:GetFrameDuration() then
+    self:NextSpriteFrame()
   end
 end
 
@@ -72,27 +141,65 @@ if SERVER then
 
   -- Getters/setters --
 
-  function ENT:IsPlayingSpriteAnim()
-    return self._DrGBasePlayingSpriteAnim or false
-  end
   function ENT:IsPlayingAnimation()
-    return self:IsPlayingSpriteAnim()
+    return isstring(self._DrGBasePlayingSpriteAnim)
+  end
+  function ENT:IsPlayingSpriteAnim(anim)
+    if not isstring(anim) then return false end
+    return self._DrGBasePlayingSpriteAnim == anim
   end
 
-  function ENT:DefineSpriteAnim(name, tbl)
-
+  function ENT:SetSpriteFolder(folder)
+    self:SetNW2String("DrGBaseSpriteFolder", folder)
   end
+
   function ENT:SetSpriteAnim(anim)
-
+    if self:GetSpriteAnim() ~= anim then self:ResetSpriteAnim(anim) end
   end
   function ENT:ResetSpriteAnim(anim)
+    if not self:SpriteAnimExists(anim) then return end
+    self:SetNW2Int("DrGBaseSpriteFrame", 0)
+    self:SetSpriteFrame(1)
+    self:SetNWString("DrGBaseSpriteAnim", anim)
+  end
 
+  function ENT:SetSpriteFrame(frame)
+    if not isnumber(frame) then return -1 end
+    local nb = self:GetNumberOfFrames(self:GetSpriteAnim())
+    if frame > nb then
+      self:SetNW2Int("DrGBaseSpriteFrame", 1)
+      self._DrGBaseLastFrameChange = CurTime()
+      return 1
+    elseif frame > 0 then
+      self:SetNW2Int("DrGBaseSpriteFrame", frame)
+      self._DrGBaseLastFrameChange = CurTime()
+      return frame
+    end
+  end
+  function ENT:NextSpriteFrame()
+    return self:SetSpriteFrame(self:GetSpriteFrame()+1)
   end
 
   -- Functions --
 
   function ENT:PlaySpriteAnimAndWait(anim, rate, callback)
-
+    if not self:SpriteAnimExists(anim) then return -1 end
+    local oldPlayingAnim = self._DrGBasePlayingSpriteAnim
+    self._DrGBasePlayingSpriteAnim = anim
+    self:ResetSpriteAnim(anim)
+    self:SetPlaybackRate(rate or 1)
+    local now = CurTime()
+    local lastFrame = -1
+    while anim == self:GetSpriteAnim() do
+      local frame = self:GetSpriteFrame()
+      if lastFrame > frame then break end
+      lastFrame = frame
+      if isfunction(callback) and callback(self, frame) then break end
+      self:YieldCoroutine(false)
+    end
+    self._DrGBasePlayingSpriteAnim = oldPlayingAnim
+    self:Timer(0, self.UpdateAnimation)
+    return CurTime() - now
   end
   function ENT:PlayAnimationAndWait(anim, rate, callback)
     return self:PlaySpriteAnimAndWait(anim, rate, callback)
@@ -108,7 +215,11 @@ if SERVER then
   end
 
   function ENT:PlaySpriteAnim(anim, rate, callback)
-
+    if not self:SpriteAnimExists(anim) then return -1 end
+    coroutine.DrG_Create(function()
+      self:PlaySpriteAnimAndWait(anim, rate, callback)
+    end)
+    return self:GetNumberOfFrames(anim)*self:GetFrameDuration()
   end
   function ENT:PlayAnimation(anim, rate, callback)
     return self:PlaySpriteAnim(anim, rate, callback)
@@ -117,11 +228,12 @@ if SERVER then
   -- Update --
 
   function ENT:UpdateAnimation()
-    if self:IsPlayingSpriteAnim() then return end
+    if self:IsPlayingAnimation() then return end
     local anim, rate = self:OnUpdateAnimation()
-    if anim == self:GetSpriteAnim() then return end
-    self:SetSpriteAnim(anim)
-    self:SetPlaybackRate(rate or 1)
+    if anim ~= self:GetSpriteAnim() then self:SetSpriteAnim(anim) end
+    if rate ~= self:GetPlaybackRate() then
+      self:SetPlaybackRate(rate or 1)
+    end
   end
 
   -- Hooks --

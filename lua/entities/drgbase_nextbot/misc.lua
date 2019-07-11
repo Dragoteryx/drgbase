@@ -96,6 +96,9 @@ function ENT:OnAngleChange() end
 -- Handlers --
 
 function ENT:_InitMisc()
+  if SERVER then
+    self._DrGBaseAnimAttacks = {}
+  end
   self._DrGBaseSlotSounds = {}
   self:AddCallback("OnAngleChange", function(self, angles)
     if self:OnAngleChange(angles) then return end
@@ -175,7 +178,7 @@ if SERVER then
     attack.angle = attack.angle or 90
     if attack.relationships == nil then
       if self:IsPossessed() and PossessTargetAll:GetBool() then
-        attack.relationships = {D_LI, D_HT, D_FR}
+        attack.relationships = {D_LI, D_HT, D_FR, D_NU}
       else attack.relationships = {D_HT} end
     end
     if not istable(attack.relationships) then attack.relationships = {attack.relationships} end
@@ -184,8 +187,7 @@ if SERVER then
       for h, rel in ipairs(attack.relationships) do
         for i, ent in ipairs(self:EntitiesInCone(attack.angle, attack.range, rel)) do
           if ent == self then continue end
-          if not IsValid(ent) then continue end
-          if ent:IsPlayer() and ent:DrG_IsPossessing() then continue end
+          if not DrGBase.CanAttack(ent) then continue end
           if not self:Visible(ent) then continue end
           local dmg = DamageInfo()
           dmg:SetAttacker(self)
