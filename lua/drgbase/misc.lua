@@ -177,7 +177,7 @@ if SERVER then
 
   function DrGBase.CanAttack(ent)
     if not IsValid(ent) then return false end
-    if ent:IsPlayer() and ent:DrG_IsPossessing() then false end
+    if ent:IsPlayer() and ent:DrG_IsPossessing() then return false end
     if DrGBase.IsTarget(ent) then return true end
     local phys = ent:GetPhysicsObject()
     return IsValid(phys)
