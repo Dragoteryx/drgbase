@@ -6,7 +6,7 @@ function ENT:IsPossessionEnabled()
 end
 
 function ENT:GetPossessor()
-  return self:GetNW2Entity("DrGBasePossessor")
+  return self:GetNWEntity("DrGBasePossessor")
 end
 function ENT:IsPossessed()
   return IsValid(self:GetPossessor())
@@ -258,7 +258,7 @@ if SERVER then
     if ply:InVehicle() then return "in vehicle" end
     if ply:DrG_IsPossessing() then return "already possessing" end
     if not self:CanPossess(ply) then return "not allowed" end
-    self:SetNW2Entity("DrGBasePossessor", ply)
+    self:SetNWEntity("DrGBasePossessor", ply)
     ply:SetNW2Entity("DrGBasePossessing", self)
     ply:SetNW2Vector("DrGBasePrePossessPos", ply:GetPos())
     ply:SetNW2Angle("DrGBasePrePossessAngle", ply:GetAngles())
@@ -280,7 +280,7 @@ if SERVER then
     if not self:IsPossessed() then return "not possessed" end
     local ply = self:GetPossessor()
     if not self:CanDispossess(ply) then return "not allowed" end
-    self:SetNW2Entity("DrGBasePossessor", nil)
+    self:SetNWEntity("DrGBasePossessor", nil)
     ply:SetNW2Entity("DrGBasePossessing", nil)
     ply:SetPos(ply:GetNW2Vector("DrGBasePrePossessPos"))
     ply:SetAngles(ply:GetNW2Angle("DrGBasePrePossessAngle"))

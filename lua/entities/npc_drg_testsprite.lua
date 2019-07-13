@@ -22,7 +22,7 @@ ENT.IdleAnimation = "idle"
 ENT.JumpAnimation = "jump"
 
 -- Climbing --
-ENT.ClimbLedges = false
+ENT.ClimbLedges = true
 ENT.ClimbProps = true
 ENT.ClimbLadders = true
 ENT.ClimbLaddersUp = true

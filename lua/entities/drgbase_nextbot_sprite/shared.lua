@@ -71,9 +71,9 @@ else
     local anim = self:GetSpriteAnim()
     if anim ~= "" then
       if self:SpriteAnim8Dir(anim) then
-        DrawSprite(self, anim..self:CalcPosDirection(EyePos(), true))
+        DrawSprite(self, string.lower(self:CalcPosDirection(EyePos(), true)).."_"..anim)
       elseif self:SpriteAnim4Dir(anim) then
-        DrawSprite(self, anim..self:CalcPosDirection(EyePos(), false))
+        DrawSprite(self, string.lower(self:CalcPosDirection(EyePos(), false)).."_"..anim)
       else DrawSprite(self, anim) end
     end
     self:_DrawDebug()

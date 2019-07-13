@@ -26,8 +26,8 @@ end
 function ENT:SpriteAnimExists(anim)
   if self._DrGBaseSpriteAnimInfo[anim] == nil then
     self._DrGBaseSpriteAnimInfo[anim] = {
-      ["8dir"] = file.Exists("materials/"..self:GetSpriteFolder()..anim.."NE1.png", "GAME"),
-      ["4dir"] = file.Exists("materials/"..self:GetSpriteFolder()..anim.."N1.png", "GAME"),
+      ["8dir"] = file.Exists("materials/"..self:GetSpriteFolder().."ne_"..anim.."1.png", "GAME"),
+      ["4dir"] = file.Exists("materials/"..self:GetSpriteFolder().."n_"..anim.."1.png", "GAME"),
       ["1dir"] = file.Exists("materials/"..self:GetSpriteFolder()..anim.."1.png", "GAME")
     }
     local info = self._DrGBaseSpriteAnimInfo[anim]
@@ -54,7 +54,7 @@ function ENT:GetNumberOfFrames(anim)
   if not isnumber(self._DrGBaseSpriteAnimInfo[anim].nb) then
     local i = 0
     if self._DrGBaseSpriteAnimInfo[anim]["4dir"] then
-      while file.Exists("materials/"..self:GetSpriteFolder()..anim.."N"..tostring(i+1)..".png", "GAME") do
+      while file.Exists("materials/"..self:GetSpriteFolder().."n_"..anim..tostring(i+1)..".png", "GAME") do
         i = i+1
       end
     else

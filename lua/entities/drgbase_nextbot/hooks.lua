@@ -132,13 +132,15 @@ if SERVER then
     if class == "prop_combine_ball" then
       if self:IsFlagSet(FL_DISSOLVING) then return end
       if not self:OnCombineBall(ent) then
-        local dmg = DamageInfo()
-        local owner = ent:GetOwner()
-        dmg:SetAttacker(IsValid(owner) and owner or ent)
-        dmg:SetInflictor(ent)
-        dmg:SetDamage(self:Health())
-        dmg:SetDamageType(DMG_DISSOLVE)
-        self:TakeDamageInfo(dmg)
+        if not self:IsDead() then
+          local dmg = DamageInfo()
+          local owner = ent:GetOwner()
+          dmg:SetAttacker(IsValid(owner) and owner or ent)
+          dmg:SetInflictor(ent)
+          dmg:SetDamage(self:Health())
+          dmg:SetDamageType(DMG_DISSOLVE)
+          self:TakeDamageInfo(dmg)
+        else self:DrG_Dissolve() end        
         ent:EmitSound("NPC_CombineBall.KillImpact")
       elseif isfunction(self.AfterCombineBall) then
         self:CallInCoroutine(function(self, delay)
