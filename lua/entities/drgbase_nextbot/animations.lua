@@ -42,7 +42,7 @@ end
 
 -- Hooks --
 
-function ENT:OnSequenceEvent() end
+function ENT:OnAnimEvent() end
 
 -- Handlers --
 
@@ -63,7 +63,6 @@ function ENT:_HandleAnimations()
       local trCycle = cycle
       if trCycle == 0 then trCycle = 0.0000001 end
       if self._DrGBaseLastAnimCycle < trCycle and self:GetCycle() >= trCycle then
-        if self:OnSequenceEvent(self:GetSequenceName(current), cycle, false) then break end
         for i, callback in ipairs(callbacks) do callback(self, cycle, false) end
         break
       end
@@ -224,7 +223,6 @@ if SERVER then
             local trCycle = eventCycle
             if trCycle == 0 then trCycle = 0.0000001 end
             if lastCycle < trCycle and cycle >= trCycle then
-              if self:OnSequenceEvent(self:GetSequenceName(seq), eventCycle, true) then break end
               for i, callback in ipairs(callbacks) do callback(self, eventCycle, true) end
               break
             end
@@ -346,6 +344,10 @@ if SERVER then
     })
   end
 
+  function ENT:HandleAnimEvent(event, time, cycle, type, options)
+    self:OnAnimEvent(options, event, self:GetPos(), self:GetAngles())
+  end
+
   -- Handlers --
 
   -- Meta --
@@ -403,6 +405,10 @@ else
   -- Functions --
 
   -- Hooks --
+
+  function ENT:FireAnimationEvent(pos, angle, event, name)
+    self:OnAnimEvent(name, event, pos, angle)
+  end
 
   -- Handlers --
 

@@ -97,8 +97,7 @@ if SERVER then
       self:Attack({
         damage = 10,
         type = DMG_SLASH,
-        viewpunch = Angle(20, math.random(-10, 10), 0),
-        force = Vector(500, 0, 0)
+        viewpunch = Angle(20, math.random(-10, 10), 0)
       }, function(self, hit)
         if #hit > 0 then
           self:EmitSound("Zombie.AttackHit")

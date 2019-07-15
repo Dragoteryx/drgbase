@@ -19,6 +19,10 @@ function ENT:IsDead()
   return self:GetNW2Bool("DrGBaseDead") or self:IsDying()
 end
 
+function ENT:GetDowned()
+  return self:GetNW2Int("DrGBaseDowned")
+end
+
 -- Functions --
 
 -- Hooks --
@@ -61,6 +65,20 @@ if SERVER then
   end
 
   -- Functions --
+
+  function ENT:RegenHealth(health, duration, callback)
+    if self:Health() >= health then return end
+    if duration > 0 then
+      local regen = (health - self:Health())/duration
+      local oldRegen = self:GetHealthRegen()
+      self:SetHealthRegen(regen)
+      while math.Round(self:Health()) < math.Round(health) do
+        if isfunction(callback) and callback(self) then break end
+        self:YieldCoroutine()
+      end
+      self:SetHealthRegen(oldRegen)
+    else self:SetHealth(health) end
+  end
 
   -- Hooks --
 

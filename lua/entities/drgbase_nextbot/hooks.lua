@@ -61,11 +61,15 @@ if SERVER then
         end
         if self:OnFatalDamage(dmg) then
           self:SetNW2Bool("DrGBaseDown", true)
+          self:SetNW2Int("DrGBaseDowned", self:GetNW2Int("DrGBaseDowned")+1)
           self:SetHealth(1)
+          local noTarget = self:GetNoTarget()
+          self:SetNoTarget(true)
           local data = util.DrG_SaveDmg(dmg)
           self:CallInCoroutine(function(self, delay)
             self:OnDowned(util.DrG_LoadDmg(data), delay)
             if self:Health() <= 0 then self:SetHealth(1) end
+            self:SetNoTarget(noTarget)
             self:SetNW2Bool("DrGBaseDown", false)
           end)
           return dmg:ScaleDamage(0)
@@ -140,7 +144,7 @@ if SERVER then
           dmg:SetDamage(self:Health())
           dmg:SetDamageType(DMG_DISSOLVE)
           self:TakeDamageInfo(dmg)
-        else self:DrG_Dissolve() end        
+        else self:DrG_Dissolve() end
         ent:EmitSound("NPC_CombineBall.KillImpact")
       elseif isfunction(self.AfterCombineBall) then
         self:CallInCoroutine(function(self, delay)

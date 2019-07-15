@@ -203,6 +203,7 @@ end
 -- Think --
 function ENT:Think()
   self:_HandleAnimations()
+  self:_HandleMovements()
   if SERVER then
     -- water level
     local waterLevel = self:WaterLevel()

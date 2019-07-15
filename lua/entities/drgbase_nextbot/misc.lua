@@ -172,7 +172,7 @@ if SERVER then
     attack.damage = attack.damage or 0
     attack.delay = attack.delay or 0
     attack.type = attack.type or DMG_GENERIC
-    attack.force = attack.force or Vector(0, 0, 0)
+    attack.force = attack.force or Vector(100, 0, 0)
     attack.viewpunch = attack.viewpunch or Angle(10, 0, 0)
     attack.range = attack.range or self.MeleeAttackRange
     attack.angle = attack.angle or 90
@@ -195,9 +195,9 @@ if SERVER then
           dmg:SetDamageType(attack.type)
           dmg:SetDamagePosition(self:WorldSpaceCenter())
           dmg:SetReportedPosition(self:WorldSpaceCenter())
-          if not attack.groundforce or ent:IsOnGround() then
+          if attack.push and (not attack.groundforce or ent:IsOnGround()) then
             dmg:SetDamageForce(self:PushEntity(ent, attack.force))
-          end
+          else dmg:SetDamageForce(self:CalcOffset(attack.force)) end
           ent:TakeDamageInfo(dmg)
           if attack.viewpunch and ent:IsPlayer() then
             ent:ViewPunch(attack.viewpunch)

@@ -78,6 +78,18 @@ function ENT:IsMovingBackwardRight()
   return direction == "SE"
 end
 
+function ENT:IsTurning()
+  return self:GetAngles().y ~= self._DrGBaseLastAngle.y
+end
+function ENT:IsTurningLeft()
+  if not self:IsTurning() then return false end
+  return math.AngleDifference(self:GetAngles().y, self._DrGBaseLastAngle.y) > 0
+end
+function ENT:IsTurningRight()
+  if not self:IsTurning() then return false end
+  return math.AngleDifference(self:GetAngles().y, self._DrGBaseLastAngle.y) < 0
+end
+
 function ENT:IsClimbing()
   return self:GetNW2Bool("DrGBaseClimbing")
 end
@@ -96,6 +108,14 @@ end
 
 function ENT:_InitMovements()
   if SERVER then self:LoopTimer(0.1, self.UpdateSpeed) end
+  self._DrGBaseLastAngle = self:GetAngles()
+end
+
+function ENT:_HandleMovements()
+  local angles = self:GetAngles()
+  self:Timer(0.1, function()
+    self._DrGBaseLastAngle = angles
+  end)
 end
 
 if SERVER then

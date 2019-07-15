@@ -87,8 +87,6 @@ end
 
 -- Hooks --
 
-function ENT:OnSpriteAnimEvent() end
-
 -- Handlers --
 
 function ENT:_InitAnimations()
