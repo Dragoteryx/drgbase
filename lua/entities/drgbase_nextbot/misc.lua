@@ -253,7 +253,12 @@ if SERVER then
   end
 
   function ENT:CreateProjectile(model, binds, class)
-    local proj = DrGBase.CreateProjectile(model, binds, class)
+    local proj
+    if istable(binds) or isstring(class) then
+      proj = DrGBase.CreateProjectile(model, binds, class)
+    elseif isstring(model) then
+      proj = ents.Create(model)
+    else return NULL end
     if not IsValid(proj) then return NULL end
     proj:SetOwner(self)
     return proj
@@ -262,16 +267,16 @@ if SERVER then
   function ENT:CollisionHulls(distance, forwardOnly)
     distance = distance or 5
     if distance < 0 then distance = 0 end
-    local NW = self:TraceHull((self:GetForward()-self:GetRight()):GetNormalized()*distance, true)
-    local NE = self:TraceHull((self:GetForward()+self:GetRight()):GetNormalized()*distance, true)
+    local NW = self:TraceHull((self:GetForward()-self:GetRight()):GetNormalized()*distance, {step = true})
+    local NE = self:TraceHull((self:GetForward()+self:GetRight()):GetNormalized()*distance, {step = true})
     if forwardOnly then
       return {
         NorthWest = NW,
         NorthEast = NE
       }
     else
-      local SW = self:TraceHull((-self:GetForward()-self:GetRight()):GetNormalized()*distance, true)
-      local SE = self:TraceHull((-self:GetForward()+self:GetRight()):GetNormalized()*distance, true)
+      local SW = self:TraceHull((-self:GetForward()-self:GetRight()):GetNormalized()*distance, {step = true})
+      local SE = self:TraceHull((-self:GetForward()+self:GetRight()):GetNormalized()*distance, {step = true})
       return {
         NorthWest = NW,
         NorthEast = NE,

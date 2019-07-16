@@ -145,7 +145,7 @@ if SERVER then
           vec = Vector(vec.x*options.multiply.x, vec.y*options.multiply.y, vec.z*options.multiply.z)
         end
         vec:Rotate(self:GetAngles() + angles)
-        if not self:TraceHull(vec, true).Hit then
+        if not self:TraceHull(vec, {step = true}).Hit then
           self:SetPos(self:GetPos() + vec*self:GetModelScale())
           self:SetAngles(self:LocalToWorldAngles(angles))
         end

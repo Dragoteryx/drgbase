@@ -382,7 +382,7 @@ if SERVER then
   function ENT:FindLedge()
     if not self.ClimbLedges then return end
     local normal = self:IsMoving() and self:GetVelocity() or self:GetForward()
-    local hull = self:TraceHull(normal:GetNormalized()*self.LedgeDetectionDistance, true)
+    local hull = self:TraceHull(normal:GetNormalized()*self.LedgeDetectionDistance, {step = true})
     if not hull.Hit then return end
     --if IsValid(hull.Entity) then print(hull.Entity, hull.Entity:GetCollisionGroup(), IsValid(hull.Entity)) end
     if hull.HitWorld or IsEntityClimbable(self, hull.Entity) then
@@ -393,18 +393,18 @@ if SERVER then
       local precision = 5
       while true do
         if i*precision > height then return end
-        tr = self:TraceHull(self:GetForward()*self.LedgeDetectionDistance*3, false, {
+        tr = self:TraceHull(self:GetForward()*self.LedgeDetectionDistance*3, {
           start = self:GetPos() + Vector(0, 0, i*precision)
         })
         if not tr.Hit then break end
         if IsValid(tr.Entity) and not IsEntityClimbable(self, tr.Entity) then return end
         i = i+1
       end
-      local tr2 = self:TraceHull(self:GetUp()*-999, false, {
+      local tr2 = self:TraceHull(self:GetUp()*-999, {
         start = tr.HitPos
       })
       if tr2.HitPos.z - self:GetPos().z > self.ClimbLedgesMaxHeight then return end
-      local trRad = self:TraceHullRadial(999, 360, true, {
+      local trRad = self:TraceHullRadial(999, 360, {
         collisiongroup = COLLISION_GROUP_DEBRIS,
         maxs = Vector(0.5, 0.5, self:Height()),
         mins = Vector(-0.5, -0.5, self:GetStepHeight())

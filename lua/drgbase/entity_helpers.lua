@@ -72,16 +72,18 @@ function ENT:TraceLine(vec, data)
   end
   return tr
 end
-function ENT:TraceHull(vec, steps, data)
+function ENT:TraceHull(vec, data)
   local bound1, bound2 = self:GetCollisionBounds()
   if bound1.z < bound2.z then
     local temp = bound1
     bound1 = bound2
     bound2 = temp
   end
-  if steps then bound2.z = self.loco:GetStepHeight() end
   local trdata = {}
   data = data or {}
+  if self.IsDrGNextbot and data.step then
+    bound2.z = self.loco:GetStepHeight()
+  end  
   trdata.start = data.start or self:GetPos()
   trdata.endpos = data.endpos or trdata.start + vec
   trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
@@ -112,7 +114,7 @@ function ENT:TraceLineRadial(distance, precision, data)
   end)
   return traces
 end
-function ENT:TraceHullRadial(distance, precision, steps, data)
+function ENT:TraceHullRadial(distance, precision, data)
   local traces = {}
   for i = 1, precision do
     local normal = self:GetForward()*distance

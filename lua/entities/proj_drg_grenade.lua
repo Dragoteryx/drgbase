@@ -11,7 +11,6 @@ ENT.Spawnable = true
 -- Physics --
 ENT.Physgun = true
 ENT.Gravgun = true
-ENT.Collisions = true
 
 -- Grenade --
 ENT.Bounce = 0.75
@@ -38,12 +37,13 @@ if SERVER then
   AddCSLuaFile()
 
   function ENT:_BaseInitialize()
-    self:FilterAllies(false)
     self._DrGBaseBounceSoundDelay = 0
   end
   function ENT:OnContact(ent)
     if self:GetVelocity():IsZero() then return end
-    self:SetVelocity(self:GetVelocity()*self.Bounce)
+    self:Timer(0, function()
+      self:SetVelocity(self:GetVelocity()*self.Bounce)
+    end)
     if CurTime() < self._DrGBaseBounceSoundDelay then return end
     if istable(self.OnBounceSounds) and #self.OnBounceSounds > 0 then
       self._DrGBaseBounceSoundDelay = CurTime() + 0.25

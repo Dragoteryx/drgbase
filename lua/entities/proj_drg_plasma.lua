@@ -11,7 +11,9 @@ ENT.Spawnable = true
 ENT.Gravity = false
 ENT.Physgun = false
 ENT.Gravgun = true
-ENT.Collisions = true
+
+-- Contact --
+ENT.OnContactDecals = {"Scorch"}
 
 -- Sounds --
 ENT.LoopSounds = {}
@@ -28,7 +30,6 @@ if SERVER then
 
   function ENT:CustomInitialize()
     self:DynamicLight(Color(150, 255, 0), 300, 0.1)
-    self:FilterOwner(false)
   end
 
   function ENT:CustomThink()
@@ -38,7 +39,8 @@ if SERVER then
 
   function ENT:OnContact(ent)
     if ent:GetClass() == self:GetClass() then
-      -- nice explosion
+      self:Remove()
+      ent:Remove()
     else self:DealDamage(ent, ent:Health(), DMG_SHOCK + DMG_DISSOLVE) end
   end
 

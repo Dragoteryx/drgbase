@@ -154,6 +154,8 @@ if SERVER then
     elseif class == "replicator_melon" then
       ent:Replicate(self)
       self:Remove()
+    elseif ent.IsDrGProjectile then
+      ent:Contact(self)
     end
   end
 

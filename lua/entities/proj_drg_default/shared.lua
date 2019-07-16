@@ -11,10 +11,9 @@ ENT.ModelScale = 1
 ENT.Gravity = true
 ENT.Physgun = false
 ENT.Gravgun = false
-ENT.Collisions = true
 
 -- Contact --
-ENT.OnContactDelay = 0
+ENT.OnContactDelay = 0.1
 ENT.OnContactDelete = -1
 ENT.OnContactDecals = {}
 
@@ -40,6 +39,8 @@ end)
 if SERVER then
   AddCSLuaFile()
 
+  -- Init/Think --
+
   function ENT:SpawnFunction(ply, tr, class)
     if not tr.Hit then return end
     local pos = tr.HitPos + tr.HitNormal*16
@@ -59,9 +60,8 @@ if SERVER then
       self:SetNoDraw(true)
     end
     self:SetModelScale(self.ModelScale)
-    self._DrGBaseFilterOwner = true
-    self._DrGBaseFilterAllies = true
     self:SetUseType(SIMPLE_USE)
+    self:SetTrigger(true)
     -- sounds/effects --
     self:CallOnRemove("DrGBaseOnRemoveSoundsEffects", function(self)
       if #self.OnRemoveSounds > 0 then
@@ -80,17 +80,13 @@ if SERVER then
     if #self.AttachEffects > 0 then
       self:ParticleEffect(self.AttachEffects[math.random(#self.AttachEffects)], true)
     end
-    -- physics --
+    -- custom code --
     self:_BaseInitialize()
     self:CustomInitialize()
+    -- physics --
     self:PhysicsInit(SOLID_VPHYSICS)
     self:SetMoveType(MOVETYPE_VPHYSICS)
     self:SetSolid(SOLID_VPHYSICS)
-    self:SetUseType(SIMPLE_USE)
-    self:SetTrigger(true)
-    if not self.Collisions then
-      self:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-    end
     local phys = self:GetPhysicsObject()
     if IsValid(phys) then
       phys:Wake()
@@ -102,15 +98,45 @@ if SERVER then
   function ENT:CustomInitialize() end
 
   function ENT:Think()
+    self:_HandleContact()
     self:_BaseThink()
     self:CustomThink()
+    self:NextThink(CurTime() + engine.TickInterval())
+    return true
   end
   function ENT:_BaseThink() end
   function ENT:CustomThink() end
 
   -- Collisions --
 
-  local function Contact(self, ent)
+  function ENT:PhysicsCollide(data)
+    local ent = data.HitEntity
+    if not IsValid(ent) and not ent:IsWorld() then return end
+    if ent:IsWorld() then
+      if #self.OnContactDecals > 0 then
+        util.Decal(self.OnContactDecals[math.random(#self.OnContactDecals)], data.HitPos+data.HitNormal, data.HitPos-data.HitNormal)
+      end
+    end
+    self:Contact(ent)
+  end
+  function ENT:Touch(ent)
+    self:Contact(ent)
+  end
+  function ENT:_HandleContact()
+    local dir
+    if self:GetVelocity():IsZero() then
+      dir = Vector(0, 0, 0)
+    else dir = self:GetVelocity():GetNormalized() end
+    local mins, maxs = self:GetModelBounds()
+    local tr = self:TraceHull(dir, {
+      mins = mins*self:GetModelScale(), maxs = maxs*self:GetModelScale(),
+      collisiongroup = COLLISION_GROUP_NPC
+    })
+    if IsValid(tr.Entity) then self:Contact(tr.Entity) end
+  end
+
+  function ENT:Contact(ent)
+    if not IsValid(ent) and not ent:IsWorld() then return end
     if not isnumber(self._DrGBaseLastContact) or CurTime() > self._DrGBaseLastContact + self.OnContactDelay then
       self._DrGBaseLastContact = CurTime()
       if #self.OnContactSounds > 0 then
@@ -127,46 +153,12 @@ if SERVER then
       end
     end
   end
-
-  function ENT:PhysicsCollide(data)
-    if not data.HitEntity:IsWorld() then return end
-    if not self:Filter(data.HitEntity) then return end
-    if #self.OnContactDecals > 0 then
-      util.Decal(self.OnContactDecals[math.random(#self.OnContactDecals)], data.HitPos+data.HitNormal, data.HitPos-data.HitNormal)
-    end
-    Contact(self, data.HitEntity)
-  end
-  function ENT:Touch(ent)
-    if ent:IsWeapon() and IsValid(ent:GetOwner()) then
-      local owner = ent:GetOwner()
-      if not self:Filter(owner) then return end
-      Contact(self, owner)
-    elseif self:Filter(ent) then
-      Contact(self, ent)
-    end
-  end
   function ENT:OnContact() end
 
-  -- Filter --
+  -- Misc --
 
-  function ENT:Filter(ent)
-    if not ent:IsWorld() and not IsValid(ent) then return false end
-    local owner = self:GetOwner()
-    if IsValid(owner) then
-      if self:FilterOwner() and owner == ent then return false end
-      if owner.IsDrGNextbot and self:FilterAllies() and owner:IsAlly(ent) then return false end
-    end
-    return self:OnFilter(ent) or false
-  end
-  function ENT:OnFilter(ent) return true end
-
-  function ENT:FilterOwner(bool)
-    if bool == nil then return self._DrGBaseFilterOwner
-    else self._DrGBaseFilterOwner = tobool(bool) end
-  end
-  function ENT:FilterAllies(bool)
-    if bool == nil then return self._DrGBaseFilterAllies
-    else self._DrGBaseFilterAllies = tobool(bool) end
+  function ENT:OnDealtDamage(ent, dmg)
+    if dmg:IsDamageType(DMG_CRUSH) then return true end
   end
 
   -- Helpers --
@@ -174,7 +166,11 @@ if SERVER then
   function ENT:AimAt(target, speed, feet)
     local phys = self:GetPhysicsObject()
     if not IsValid(phys) then return Vector(0, 0, 0) end
-    if not phys:IsGravityEnabled() then
+    if phys:IsGravityEnabled() then
+      return self:ThrowAt(target, {
+        magnitude = speed, recursive = true, maxmagnitude = speed
+      }, feet)
+    else
       if isentity(target) then
         local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
         local dist = self:GetPos():Distance(aimAt)
@@ -184,10 +180,6 @@ if SERVER then
         phys:SetVelocity(vec)
         return vec
       end
-    else
-      return self:ThrowAt(target, {
-        magnitude = speed, recursive = true, maxmagnitude = speed
-      }, feet)
     end
   end
   function ENT:ThrowAt(target, options, feet)
@@ -201,6 +193,7 @@ if SERVER then
   end
 
   function ENT:DealDamage(ent, value, type)
+    if ent == self then return end
     local dmg = DamageInfo()
     dmg:SetDamage(value)
     dmg:SetDamageForce(self:GetVelocity())
@@ -247,11 +240,16 @@ if SERVER then
     if ent.IsDrGProjectile then return ent.Gravgun or false end
   end)
 
+  hook.Add("EntityTakeDamage", "DrGBaseProjectilePhysicsDamage", function(ent, dmg)
+    local inflictor = dmg:GetInflictor()
+    if IsValid(inflictor) and inflictor.IsDrGProjectile then
+      return inflictor:OnDealtDamage(ent, dmg)
+    end
+  end)
+
 else
 
   function ENT:Initialize()
-    if self._DrGBaseInitialized then return end
-    self._DrGBaseInitialized = true
     self:_BaseInitialize()
     self:CustomInitialize()
   end

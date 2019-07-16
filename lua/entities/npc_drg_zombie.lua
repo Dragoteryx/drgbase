@@ -19,7 +19,6 @@ ENT.RangeAttackRange = 0
 ENT.MeleeAttackRange = 30
 ENT.ReachEnemyRange = 30
 ENT.AvoidEnemyRange = 0
-ENT.FollowPlayers = true
 
 -- Relationships --
 ENT.Factions = {FACTION_ZOMBIES}
