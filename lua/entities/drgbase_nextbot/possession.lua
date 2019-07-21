@@ -348,7 +348,9 @@ else
 
   function ENT:PossessionHUD() end
   hook.Add("HUDPaint", "DrGBasePossessionHUD", function()
-    local possessing = LocalPlayer():DrG_Possessing()
+    local ply = LocalPlayer()
+    if not isfunction(ply.DrG_Possessing) then return end
+    local possessing = ply:DrG_Possessing()
     if not IsValid(possessing) then return end
     local hookres = possessing:PossessionHUD()
     if hookres then return end
@@ -357,14 +359,18 @@ else
 
   function ENT:PossessionRender() end
   hook.Add("RenderScreenspaceEffects", "DrGBasePossessionDraw", function()
-    local possessing = LocalPlayer():DrG_Possessing()
+    local ply = LocalPlayer()
+    if not isfunction(ply.DrG_Possessing) then return end
+    local possessing = ply:DrG_Possessing()
     if not IsValid(possessing) then return end
     possessing:PossessionRender()
   end)
 
   function ENT:PossessionHalos() end
   hook.Add("PreDrawHalos", "DrGBasePossessionHalos", function()
-    local possessing = LocalPlayer():DrG_Possessing()
+    local ply = LocalPlayer()
+    if not isfunction(ply.DrG_Possessing) then return end
+    local possessing = ply:DrG_Possessing()
     if not IsValid(possessing) then return end
     possessing:PossessionHalos()
   end)

@@ -25,6 +25,15 @@ function ENT:SequenceEvent(seq, cycles, callback)
     end
   end
 end
+function ENT:ClearSequenceEvents(seq)
+  if istable(seq) then
+    for i, se in ipairs(seq) do self:ClearSequenceEvents(se) end
+  elseif isstring(seq) or isnumber(seq) then
+    if isstring(seq) then seq = self:LookupSequence(seq)
+    elseif not isnumber(seq) then return end
+    self._DrGBaseSequenceEvents[seq] = nil
+  else self._DrGBaseSequenceEvents = {} end
+end
 
 function ENT:DirectPoseParametersAt(pos, pitch, yaw, center)
   if isentity(pos) then pos = pos:WorldSpaceCenter() end
@@ -100,7 +109,6 @@ if SERVER then
     elseif not isnumber(seq) then return end
     if seq == -1 then return end
     rate = isnumber(rate) and rate or 1
-    if callback == nil then callback = function() end end
     local oldPlayingAnim = self._DrGBasePlayingAnimation
     self._DrGBasePlayingAnimation = seq
     local len = self:SetSequence(seq)
@@ -114,7 +122,7 @@ if SERVER then
       if lastCycle > cycle then break end
       if lastCycle == cycle and cycle == 1 then break end
       lastCycle = cycle
-      if callback(self, self:GetCycle()) then break end
+      if isfunction(callback) and callback(self, self:GetCycle()) then break end
       self:YieldCoroutine(false)
     end
     self._DrGBasePlayingAnimation = oldPlayingAnim
@@ -136,66 +144,65 @@ if SERVER then
     if seq == -1 then return end
     if isnumber(options) then options = {rate = options}
     elseif not istable(options) then options = {} end
-    if callback == nil then callback = function() end end
+    if options.gravity == nil then options.gravity = true end
+    if options.collisions == nil then options.collisions = true end
     local previousCycle = 0
-    return self:PlaySequenceAndWait(seq, options.rate or 1, function(self, cycle)
+    local previousPos = self:GetPos()
+    local res = self:PlaySequenceAndWait(seq, options.rate or 1, function(self, cycle)
       local success, vec, angles = self:GetSequenceMovement(seq, previousCycle, cycle)
       if success then
         if isvector(options.multiply) then
           vec = Vector(vec.x*options.multiply.x, vec.y*options.multiply.y, vec.z*options.multiply.z)
         end
         vec:Rotate(self:GetAngles() + angles)
-        if not self:TraceHull(vec, {step = true}).Hit then
-          self:SetPos(self:GetPos() + vec*self:GetModelScale())
-          self:SetAngles(self:LocalToWorldAngles(angles))
+        self:SetAngles(self:LocalToWorldAngles(angles))
+        if not options.collisions or not self:TraceHull(vec, {step = true}).Hit then
+          if not options.gravity then
+            previousPos = previousPos + vec*self:GetModelScale()
+          else previousPos = self:GetPos() + vec*self:GetModelScale() end
+          self:SetPos(previousPos)
+        elseif options.stoponcollide then return true
+        elseif not options.gravity then
+          self:SetPos(previousPos)
         end
       end
       previousCycle = cycle
-      return callback(self, cycle)
+      if isfunction(callback) then return callback(self, cycle) end
     end)
+    if not options.gravity then
+      self:SetPos(previousPos)
+      self:SetVelocity(Vector(0, 0, 0))
+    end
+    return res
   end
   function ENT:PlayActivityAndMove(act, options, callback)
     local seq = self:SelectRandomSequence(act)
     return self:PlaySequenceAndMove(seq, options, callback)
   end
-  function ENT:PlayAnimationAndMove(anim, rate, callback)
-    if isstring(anim) then return self:PlaySequenceAndMove(anim, rate, callback)
-    elseif isnumber(anim) then return self:PlayActivityAndMove(anim, rate, callback) end
+  function ENT:PlayAnimationAndMove(anim, options, callback)
+    if isstring(anim) then return self:PlaySequenceAndMove(anim, options, callback)
+    elseif isnumber(anim) then return self:PlayActivityAndMove(anim, options, callback) end
   end
 
   function ENT:PlaySequenceAndMoveAbsolute(seq, options, callback)
-    if isstring(seq) then seq = self:LookupSequence(seq)
-    elseif not isnumber(seq) then return end
-    if seq == -1 then return end
-    if isnumber(options) then options = {rate = options}
-    elseif not istable(options) then options = {} end
-    if callback == nil then callback = function() end end
-    local startpos = self:GetPos()
-    local lastpos = self:GetPos()
-    local res = self:PlaySequenceAndWait(seq, options.rate or 1, function(self, cycle)
-      local success, vec, angles = self:GetSequenceMovement(seq, 0, cycle)
-      if success then
-        if isvector(options.multiply) then
-          vec = Vector(vec.x*options.multiply.x, vec.y*options.multiply.y, vec.z*options.multiply.z)
-        end
-        vec:Rotate(self:GetAngles() + angles)
-        lastpos = startpos + vec*self:GetModelScale()
-        self:SetPos(lastpos)
-        self:SetAngles(self:LocalToWorldAngles(angles))
-      else self:SetPos(lastpos) end
-      return callback(self, cycle)
-    end)
-    self:SetPos(lastpos)
-    self:SetVelocity(Vector(0, 0, 0))
-    return res
+    if isnumber(options) then
+      return self:PlaySequenceAndMove(seq, {
+        rate = options, gravity = false, collisions = false
+      }, callback)
+    else
+      options = options or {}
+      options.gravity = false
+      options.collisions = false
+      return self:PlaySequenceAndMove(seq, options, callback)
+    end
   end
   function ENT:PlayActivityAndMoveAbsolute(act, options, callback)
     local seq = self:SelectRandomSequence(act)
     return self:PlaySequenceAndMoveAbsolute(seq, options, callback)
   end
-  function ENT:PlayAnimationAndMoveAbsolute(anim, rate, callback)
-    if isstring(anim) then return self:PlaySequenceAndMoveAbsolute(anim, rate, callback)
-    elseif isnumber(anim) then return self:PlayActivityAndMoveAbsolute(anim, rate, callback) end
+  function ENT:PlayAnimationAndMoveAbsolute(anim, options, callback)
+    if isstring(anim) then return self:PlaySequenceAndMoveAbsolute(anim, options, callback)
+    elseif isnumber(anim) then return self:PlayActivityAndMoveAbsolute(anim, options, callback) end
   end
 
   function ENT:PlaySequence(seq, rate, callback)
@@ -282,9 +289,10 @@ if SERVER then
       if seq == -1 then return end
       local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
       if not success then return end
-      return self:PlaySequenceAndMoveAbsolute(seq, {
+      return self:PlaySequenceAndMove(seq, {
         rate = rate,
-        multiply = Vector(1, 1, height/vec.z/self:GetModelScale())
+        multiply = Vector(1, 1, height/vec.z/self:GetModelScale()),
+        gravity = false
       }, function(self, cycle)
         if not self:TraceHull(self:GetForward()*self.LedgeDetectionDistance*2).Hit then return true end
         if isfunction(callback) then return callback(self, cycle) end
@@ -321,7 +329,8 @@ if SERVER then
         self:ResetSequence(seq)
       end
     end
-    if validAnim and not self.AnimMatchSpeed then
+    if validAnim and
+    (not self.AnimMatchSpeed or self:GetSequenceGroundSpeed(self:GetSequence()) == 0) then
       self:SetPlaybackRate(rate or 1)
     end
   end
@@ -362,13 +371,21 @@ if SERVER then
       if options.rate == nil then options.rate = true end
       if options.direction == nil then options.direction = true end
       if options.frameadvance == nil then options.frameadvance = true end
-      if options.frameadvance and
-      (self:IsPlayingAnimation() or self:IsClimbing() or not self:IsOnGround() or not self:IsMoving()) then
-        return self:FrameAdvance()
-      end
-      if not options.rate or not options.direction or not options.frameadvance or self.UseWalkframes then
+      if options.frameadvance then self:FrameAdvance() end
+      if self:IsMoving() and not self:IsPlayingAnimation() then
+        if options.direction then
+          local movement = self:GetMovement()
+          self:SetPoseParameter("move_z", movement.z)
+          if self:OnWalkframes(self:GetSequenceName(self:GetSequence())) then
+            self:SetPoseParameter("move_x", 1)
+            self:SetPoseParameter("move_y", 0)
+          else
+            self:SetPoseParameter("move_x", movement.x)
+            self:SetPoseParameter("move_y", movement.y)
+          end
+        end
         if options.rate and not self:IsPlayingAnimation() and
-        not self:IsClimbing() and self:IsOnGround() and self:IsMoving() then
+        self:IsOnGround() and self:IsMoving() and not self:IsClimbing() then
           local velocity = self:GetVelocity()
           velocity.z = 0
           if not velocity:IsZero() then
@@ -377,26 +394,26 @@ if SERVER then
             if seqspeed ~= 0 then self:SetPlaybackRate(speed/seqspeed) end
           end
         end
-        if self.UseWalkframes then
-          self:SetPoseParameter("move_x", 1)
-          self:SetPoseParameter("move_y", 0)
-        elseif options.direction then
-          local velocity = self.loco:GetGroundMotionVector()
-          local moveX = (-(velocity:DrG_Degrees(self:GetForward())-90))/45
-          if moveX > 1 then moveX = 1
-          elseif moveX < -1 then moveX = -1 end
-          if moveX == moveX then self:SetPoseParameter("move_x", moveX) end
-          local moveY = (-(velocity:DrG_Degrees(self:GetRight())-90))/45
-          if moveY > 1 then moveY = 1
-          elseif moveY < -1 then moveY = -1 end
-          if moveY == moveY then self:SetPoseParameter("move_y", moveY) end
-        end
-        if options.frameadvance then
-          self:FrameAdvance()
-        end
-      else return old_BodyMoveXY(self) end
+      end
     else return old_BodyMoveXY(self) end
   end
+
+  --[[local old_GetActivity = nextbotMETA.GetActivity
+  function nextbotMETA:GetActivity()
+    if self.IsDrGNextbot then
+      return self:GetSequenceActivity(self:GetSequence())
+    else return old_GetActivity(self) end
+  end
+
+  local old_StartActivity = nextbotMETA.StartActivity
+  function nextbotMETA:StartActivity(act)
+    if self.IsDrGNextbot then
+      local seq = self:SelectRandomSequence(act)
+      if seq == -1 then return false end
+      self:ResetSequence(seq)
+      return true
+    else return old_StartActivity(self, act) end
+  end]]
 
 else
 

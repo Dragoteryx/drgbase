@@ -7,7 +7,7 @@ ENT.RenderGroup = RENDERGROUP_TRANSLUCENT
 
 -- Animations --
 DrGBase.IncludeFile("animations.lua")
-ENT.SpritesFolder = ""
+ENT.SpriteFolder = ""
 ENT.FramesPerSecond = 10
 ENT.WalkAnimation = "walk"
 ENT.RunAnimation = "run"
@@ -22,6 +22,9 @@ ENT.RunSpeed = 200
 ENT.ClimbUpAnimation = "climb"
 ENT.ClimbDownAnimation = "climb"
 ENT.ClimbOffset = Vector(-10, 0, 0)
+
+-- Detection --
+ENT.SightFOV = 360
 
 if SERVER then
   AddCSLuaFile()
@@ -39,7 +42,9 @@ if SERVER then
     return self:IsAttack(self:GetSpriteAnim())
   end
   function ENT:IsAttack(anim)
-    return self._DrGBaseAnimAttacks[anim] or false
+    if self._DrGBaseAnimAttacks[anim] then return true
+    elseif self._DrGBaseAnimAttacks[anim] == false then return false
+    else return string.find(string.lower(anim), "attack") ~= nil end
   end
   function ENT:SetAttack(anim, attack)
     self._DrGBaseAnimAttacks[anim] = tobool(attack)

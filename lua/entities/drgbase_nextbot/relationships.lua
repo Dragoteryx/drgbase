@@ -10,7 +10,7 @@ function ENT:_InitRelationships()
   self._DrGBaseRelPriorities = table.DrG_Default({}, DEFAULT_PRIO)
   self._DrGBaseRelationshipCaches = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
   self._DrGBaseIgnoredEntities = {}
-  self._DrGBaseDefaultRelationship = DEFAULT_DISP
+  self._DrGBaseDefaultRelationship = self.DefaultRelationship
   self._DrGBaseRelationshipDefiners = {
     ["entity"] = table.DrG_Default({}, DEFAULT_REL),
     ["class"] = table.DrG_Default({}, DEFAULT_REL),
@@ -127,13 +127,9 @@ if SERVER then
     if self == ent then return D_ER, -1 end
     local disp = self._DrGBaseRelationships[ent]
     local prio = self._DrGBaseRelPriorities[ent]
-    if not absolute then
-      if self:IsIgnored(ent) then return D_NU, prio end
-      if ent:IsFlagSet(FL_NOTARGET) then return D_NU, prio end
-      if (ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot") and ent:Health() <= 0 then return D_NU, prio end
-      if ent.IsDrGNextbot and (ent:IsDown() or ent:IsDead()) then return D_NU, prio end
-    end
-    return disp, prio
+    if not absolute and self:IsIgnored(ent) then
+      return D_NU, prio
+    else return disp, prio end
   end
   function ENT:IsAlly(ent)
     return self:GetRelationship(ent) == D_LI
@@ -168,9 +164,17 @@ if SERVER then
     end
   end
 
+  net.DrG_DefineCallback("DrGBaseGetRelationship", function(nextbot, ent)
+    if not IsValid(nextbot) or not IsValid(ent) then return D_ER, -1
+    else return nextbot:GetRelationship(ent) end
+  end)
+
   function ENT:IsIgnored(ent)
     if ent:IsPlayer() and not ent:Alive() then return true end
     if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return true end
+    if ent:IsFlagSet(FL_NOTARGET) then return true end
+    if (ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot") and ent:Health() <= 0 then return true end
+    if ent.IsDrGNextbot and (ent:IsDown() or ent:IsDead()) then return true end
     return self._DrGBaseIgnoredEntities[ent] or false
   end
   function ENT:SetIgnored(ent, bool)
@@ -588,6 +592,30 @@ if SERVER then
 else
 
   -- Getters/setters --
+
+  function ENT:GetRelationship(ent, callback)
+    return self:NetCallback("DrGBaseGetRelationship", callback, ent)
+  end
+  function ENT:IsAlly(ent, callback)
+    return self:GetRelationship(ent, function(disp)
+      callback(disp == D_LI)
+    end)
+  end
+  function ENT:IsEnemy(ent, callback)
+    return self:GetRelationship(ent, function(disp)
+      callback(disp == D_HT)
+    end)
+  end
+  function ENT:IsAfraidOf(ent, callback)
+    return self:GetRelationship(ent, function(disp)
+      callback(disp == D_FR)
+    end)
+  end
+  function ENT:IsNeutral(ent, callback)
+    return self:GetRelationship(ent, function(disp)
+      callback(disp == D_NU)
+    end)
+  end
 
   -- Functions --
 

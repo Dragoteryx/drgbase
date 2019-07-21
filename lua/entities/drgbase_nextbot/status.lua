@@ -74,10 +74,23 @@ if SERVER then
       self:SetHealthRegen(regen)
       while math.Round(self:Health()) < math.Round(health) do
         if isfunction(callback) and callback(self) then break end
-        self:YieldCoroutine()
+        self:YieldCoroutine(false)
       end
       self:SetHealthRegen(oldRegen)
     else self:SetHealth(health) end
+  end
+
+  function ENT:AddHealth(health)
+    self:SetHealth(self:Health()+math.Clamp(health, 0, self:GetMaxHealth()))
+  end
+  function ENT:RemoveHealth(health)
+    self:SetHealth(self:Health()-math.Clamp(health, 0, self:GetMaxHealth()))
+  end
+
+  function ENT:ScaleHealth(scale)
+    scale = math.Clamp(scale, 0.01, math.huge)
+    self:SetHealth(self:Health()*scale)
+    self:SetMaxHealth(self:GetMaxHealth()*scale)
   end
 
   -- Hooks --
@@ -88,10 +101,7 @@ if SERVER then
     if self:IsDead() then return end
     local regen = self:GetHealthRegen()
     if regen > 0 then
-      local health = self:Health() + regen
-      if health > self:GetMaxHealth() then
-        self:SetHealth(self:GetMaxHealth())
-      else self:SetHealth(health) end
+      self:AddHealth(regen)
     elseif regen < 0 then
       local dmg = DamageInfo()
       dmg:SetDamage(regen)

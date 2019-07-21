@@ -34,7 +34,7 @@ search.AddProvider(function(str)
 				}),
 				words = {ent}
 			})
-		end		
+		end
 	end
 	for class, ent in pairs(list.Get("DrGBaseSpawners")) do
     if #results >= 128 then break end
@@ -97,6 +97,11 @@ hook.Add("PopulateToolMenu", "DrGBaseToolMenu", function()
   end)
   spawnmenu.AddToolMenuOption("DrGBase", "Nextbot Settings", "drgbase_nb_settings_misc", "Misc", "", "", function(panel)
     panel:ClearControls()
+    panel:ControlHelp("\nStats")
+    panel:NumSlider("Health multiplier", "drgbase_multiplier_health", 0.1, 10, 1)
+    panel:NumSlider("Player damage multiplier", "drgbase_multiplier_damage_players", 0.1, 10, 1)
+    panel:NumSlider("NPC damage multiplier", "drgbase_multiplier_damage_npc", 0.1, 10, 1)
+    panel:NumSlider("Speed multiplier", "drgbase_multiplier_speed", 0.1, 10, 1)
     panel:ControlHelp("\nRagdolls")
     panel:NumSlider("Remove ragdolls", "drgbase_remove_ragdolls", -1, 180, 0)
     panel:NumSlider("Ragdoll fadeout", "drgbase_ragdoll_fadeout", 0, 10, 1)

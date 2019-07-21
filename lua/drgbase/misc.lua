@@ -170,8 +170,6 @@ if SERVER then
     if ent:IsPlayer() then return true end
     if ent:IsNPC() then return true end
     if ent.Type == "nextbot" then return true end
-    if ent:IsFlagSet(FL_OBJECT) then return true end
-    if string.StartWith(class, "npc_") then return true end
     return false
   end
 

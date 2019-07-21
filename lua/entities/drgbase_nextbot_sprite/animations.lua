@@ -7,7 +7,9 @@ function ENT:DirectPoseParametersAt() end
 -- Getters/setters --
 
 function ENT:GetSpriteFolder()
-  local folder = self:GetNW2String("DrGBaseSpriteFolder", self.SpritesFolder)
+  local str = self.SpriteFolder
+  if #str == 0 then str = self.SpritesFolder or "" end
+  local folder = self:GetNW2String("DrGBaseSpriteFolder", str)
   folder = string.Replace(folder, "\\", "/")
   if string.EndsWith(folder, "/") then return folder
   else return folder.."/" end
@@ -83,6 +85,13 @@ function ENT:SpriteAnimEvent(anim, frames, callback)
       table.insert(event[frame], callback)
     end
   end
+end
+function ENT:ClearSpriteAnimEvents(anim)
+  if istable(anim) then
+    for i, se in ipairs(anim) do self:ClearSpriteAnimEvents(ani) end
+  elseif isstring(anim) then
+    self._DrGBaseSpriteAnimEvents[anim] = nil
+  else self._DrGBaseSpriteAnimEvents = {} end
 end
 
 -- Hooks --

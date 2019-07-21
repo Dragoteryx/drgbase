@@ -42,6 +42,7 @@ ENT.AvoidEnemyRange = 0
 -- Relationships --
 DrGBase.IncludeFile("relationships.lua")
 ENT.Factions = {}
+ENT.DefaultRelationship = D_NU
 ENT.Frightening = false
 ENT.AllyDamageTolerance = 0.33
 ENT.AfraidDamageTolerance = 0.33
@@ -57,7 +58,7 @@ ENT.StepHeight = 20
 ENT.MaxYawRate = 250
 ENT.DeathDropHeight = 200
 
--- Movements/animations --
+-- Animations --
 DrGBase.IncludeFile("movements.lua")
 DrGBase.IncludeFile("animations.lua")
 ENT.WalkAnimation = ACT_WALK
@@ -133,6 +134,9 @@ DrGBase.IncludeFile("behaviours.lua")
 DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("misc.lua")
 
+-- Convars --
+local MultHealth = CreateConVar("drgbase_multiplier_health", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+
 -- Initialize --
 function ENT:Initialize()
   if SERVER then
@@ -151,6 +155,7 @@ function ENT:Initialize()
     end
     self:SetMaxHealth(self.SpawnHealth)
     self:SetHealth(self.SpawnHealth)
+    self:ScaleHealth(MultHealth:GetFloat())
     self:SetHealthRegen(self.HealthRegen)
     self:SetBloodColor(self.BloodColor)
     self:SetCollisionGroup(COLLISION_GROUP_NPC)
@@ -226,10 +231,13 @@ function ENT:Think()
 
       end
       self:UpdateAnimation()
+      self:UpdateSpeed()
     end
     -- health
     local health = self:Health()
-    if self:GetNW2Int("DrGBaseHealth") ~= health then
+    local oldHealth = self:GetNW2Int("DrGBaseHealth")
+    if oldHealth ~= health then
+      self:OnHealthChange(oldHealth, health)
       self:SetNW2Int("DrGBaseHealth", health)
     end
     -- max health
@@ -286,7 +294,11 @@ if SERVER then
   hook.Add("PlayerSpawnedNPC", "DrGBasePlayerSpawnedNPC", function(ply, ent)
     if not ent.IsDrGNextbot then return end
     ent:SetCreator(ply)
-    if ent:SpawnedBy(ply) == false then ent:Remove() end
+    if ent:SpawnedBy(ply) ~= false then
+      if not navmesh.IsLoaded() and tobool(ply:GetInfoNum("drgbase_navmesh_error", 1)) then
+        DrGBase.ChatPrint("Nextbots need a navmesh to navigate around the map. You can generate a navmesh using the command 'nav_generate' in the console.", ply, true)
+      end
+    else ent:Remove() end
   end)
   function ENT:SpawnedBy() end
 
@@ -335,7 +347,7 @@ if SERVER then
           self._DrGBaseRunningCorCall = false
         end
         coroutine.yield()
-      until not self:IsAIDisabled() or self:IsPossessed()
+      until not self:IsAIDisabled() or self:IsPossessed() or self._DrGBaseRunningCorCall
     else coroutine.yield() end
   end
   function ENT:PauseCoroutine(duration, interrompt)
@@ -395,12 +407,17 @@ if SERVER then
     end
   end
 
+  -- Net --
+
+  function ENT:_HandleNetMessage(name, ply, ...) end
+
   -- Hooks --
 
   function ENT:OnSpawn() end
   function ENT:OnError() end
   function ENT:AIBehaviour() end
 
+  function ENT:OnHealthChange() end
   function ENT:OnExtinguish() end
   function ENT:OnWaterLevelChange() end
 
@@ -410,6 +427,25 @@ if SERVER then
   end
 
 else
+
+  local NavmeshMessage = CreateClientConVar("drgbase_navmesh_error", "1", true, true)
+
+  -- Net --
+
+  function ENT:_HandleNetMessage(name, ...)
+    local args, n = table.DrG_Pack(...)
+    if name == "DrGBaseHasSpotted" then
+      local ent = args[1]
+      self._DrGBaseSpotted[ent] = true
+      self:HasSpotted(ent)
+      return true
+    elseif name == "DrGBaseHasLost" then
+      local ent = args[1]
+      self._DrGBaseSpotted[ent] = false
+      self:HasLost(ent)
+      return true
+    end
+  end
 
   -- Draw --
 
@@ -430,19 +466,23 @@ else
   function ENT:PossessionDraw() end
 
   function ENT:_DrawDebug()
-    if GetConVar("developer"):GetBool() then
-      if DisplayCollisions:GetBool() then
-        local bound1, bound2 = self:GetCollisionBounds()
-        local center = self:GetPos() + self:OBBCenter()
-        render.DrawWireframeBox(self:GetPos(), Angle(0, 0, 0), bound1, bound2, DrGBase.CLR_WHITE, false)
-        render.DrawLine(center, center + self:GetVelocity(), DrGBase.CLR_ORANGE, false)
-        render.DrawWireframeSphere(center, 2*self:GetScale(), 4, 4, DrGBase.CLR_ORANGE, false)
-      end
-      if DisplaySight:GetBool() then
-         local eyepos = self:EyePos()
-         render.DrawWireframeSphere(eyepos, 2*self:GetScale(), 4, 4, DrGBase.CLR_GREEN, false)
-         render.DrawLine(eyepos, eyepos + self:EyeAngles():Forward()*15, DrGBase.CLR_GREEN, false)
-      end
+    if not GetConVar("developer"):GetBool() then return end
+    if DisplayCollisions:GetBool() then
+      local bound1, bound2 = self:GetCollisionBounds()
+      local center = self:GetPos() + self:OBBCenter()
+      render.DrawWireframeBox(self:GetPos(), Angle(0, 0, 0), bound1, bound2, DrGBase.CLR_WHITE, false)
+      render.DrawLine(center, center + self:GetVelocity(), DrGBase.CLR_ORANGE, false)
+      render.DrawWireframeSphere(center, 2*self:GetScale(), 4, 4, DrGBase.CLR_ORANGE, false)
+    end
+    if DisplaySight:GetBool() then
+       local eyepos = self:EyePos()
+       local color = self._DrGBaseCanSeeLocalPlayer and DrGBase.CLR_GREEN or DrGBase.CLR_RED
+       if self:IsPossessedByLocalPlayer() then color = DrGBase.CLR_ORANGE end
+       render.DrawWireframeSphere(eyepos, 2*self:GetScale(), 4, 4, color, false)
+       render.DrawLine(eyepos, eyepos + self:EyeAngles():Forward()*15, color, false)
+       self:IsInSight(LocalPlayer(), function(insight)
+         self._DrGBaseCanSeeLocalPlayer = insight
+       end)
     end
   end
 

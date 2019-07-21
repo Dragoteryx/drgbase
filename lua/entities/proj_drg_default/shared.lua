@@ -138,18 +138,19 @@ if SERVER then
   function ENT:Contact(ent)
     if not IsValid(ent) and not ent:IsWorld() then return end
     if not isnumber(self._DrGBaseLastContact) or CurTime() > self._DrGBaseLastContact + self.OnContactDelay then
-      self._DrGBaseLastContact = CurTime()
-      if #self.OnContactSounds > 0 then
-        self:EmitSound(self.OnContactSounds[math.random(#self.OnContactSounds)])
-      end
-      if #self.OnContactEffects > 0 then
-        ParticleEffect(self.OnContactEffects[math.random(#self.OnContactEffects)], self:GetPos(), self:GetAngles())
-      end
-      self:OnContact(ent)
-      if self.OnContactDelete == 0 then
-        self:Remove()
-      elseif self.OnContactDelete > 0 then
-        self:Timer(self.OnContactDelete, self.Remove)
+      if self:OnContact(ent) ~= false then
+        self._DrGBaseLastContact = CurTime()
+        if #self.OnContactSounds > 0 then
+          self:EmitSound(self.OnContactSounds[math.random(#self.OnContactSounds)])
+        end
+        if #self.OnContactEffects > 0 then
+          ParticleEffect(self.OnContactEffects[math.random(#self.OnContactEffects)], self:GetPos(), self:GetAngles())
+        end
+        if self.OnContactDelete == 0 then
+          self:Remove()
+        elseif self.OnContactDelete > 0 then
+          self:Timer(self.OnContactDelete, self.Remove)
+        end
       end
     end
   end

@@ -107,6 +107,10 @@ function ENT:_InitMisc()
   end)
 end
 
+hook.Add("PhysgunDrop", "DrGBaseNextbotPhysgunDrop", function(ply, ent)
+  if ent.IsDrGNextbot then ent:Timer(0, ent.SetVelocity, Vector(0, 0, 0)) end
+end)
+
 -- Meta --
 
 local entMETA = FindMetaTable("Entity")
@@ -233,7 +237,13 @@ if SERVER then
     if isstring(seq) then seq = self:LookupSequence(seq)
     elseif not isnumber(seq) then return false end
     if seq == -1 then return false end
-    return self._DrGBaseAnimAttacks[seq] or false
+    if self._DrGBaseAnimAttacks[seq] then return true
+    elseif self._DrGBaseAnimAttacks[seq] == false then return false
+    elseif string.find(string.lower(self:GetSequenceName(seq)), "attack") ~= nil then
+      return true
+    elseif string.find(self:GetSequenceActivityName(seq), "ATTACK") ~= nil then
+      return true
+    else return  false end
   end
   function ENT:SetAttack(seq, attack)
     if isstring(seq) then seq = self:LookupSequence(seq)
@@ -258,10 +268,20 @@ if SERVER then
       proj = DrGBase.CreateProjectile(model, binds, class)
     elseif isstring(model) then
       proj = ents.Create(model)
+      proj:Spawn()
     else return NULL end
     if not IsValid(proj) then return NULL end
     proj:SetOwner(self)
     return proj
+  end
+  function ENT:CreateGrenade()
+    return self:CreateProjectile("proj_drg_grenade")
+  end
+  function ENT:CreateFlashGrenade()
+    return self:CreateProjectile("proj_drg_flashbang")
+  end
+  function ENT:CreateSmokeGrenade()
+    return self:CreateProjectile("proj_drg_smoke_grenade")
   end
 
   function ENT:CollisionHulls(distance, forwardOnly)
@@ -347,6 +367,15 @@ if SERVER then
     if self.IsDrGNextbot then
       return self.loco:SetVelocity(velocity)
     else return old_SetVelocity(self, velocity) end
+  end
+
+  local old_DropToFloor = entMETA.DropToFloor
+  function entMETA:DropToFloor()
+    if self.IsDrGNextbot then
+      if self:IsOnGround() then return end
+      local tr = self:TraceHull(Vector(0, 0, -9999999))
+      self:SetPos(tr.HitPos)
+    else return old_DropToFloor(self) end
   end
 
   local nextbotMETA = FindMetaTable("NextBot")

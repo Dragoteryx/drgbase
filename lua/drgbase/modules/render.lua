@@ -1,7 +1,5 @@
 if SERVER then return end
 
--- Sprites --
-
 local MATERIALS = {}
 function render.DrG_DrawSprite(sprite, pos, size, options)
   options = options or {}
@@ -23,8 +21,6 @@ function render.DrG_DrawSprite(sprite, pos, size, options)
   end
   render.DrawQuadEasy(pos, normal, size, size, color, (options.rotation or 0) + 180)
 end
-
--- Misc --
 
 function render.DrG_DrawTrajectory(start, velocity, color, writeZ, options)
   local info = start:DrG_TrajectoryInfo(velocity)

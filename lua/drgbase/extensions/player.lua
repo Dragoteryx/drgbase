@@ -141,13 +141,17 @@ if SERVER then
     undo.Finish()
   end
 
+  function plyMETA:DrG_NetCallback(name, callback, ...)
+    return net.DrG_UseCallback(name, callback, self, ...)
+  end
+
 else
 
-  local lastLuminosityUpdate = 0
+  local LAST_LUX_UPDATE = 0
   hook.Add("Think", "DrGBasePlayerLuminosity", function()
     --print(LocalPlayer():DrG_Luminosity())
-    if CurTime() <= lastLuminosityUpdate + 0.1 then return end
-    lastLuminosityUpdate = CurTime()
+    if CurTime() <= LAST_LUX_UPDATE + 0.1 then return end
+    LAST_LUX_UPDATE = CurTime()
     net.Start("DrGBasePlayerLuminosity")
     net.WriteFloat(LocalPlayer():DrG_Luminosity())
     net.SendToServer()

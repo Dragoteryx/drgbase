@@ -13,6 +13,14 @@ function ENT:GetSpotDuration()
   return self:GetNW2Float("DrGBaseSpotDuration")
 end
 
+function ENT:GetSpotted()
+  local entities = {}
+  for i, ent in ipairs(ents.GetAll()) do
+    if self:HasSpotted(ent) then table.insert(entities, ent) end
+  end
+  return entities
+end
+
 function ENT:HasSpotted(ent)
   if not IsValid(ent) then return false end
   if self:IsOmniscient() then return true end
@@ -41,8 +49,6 @@ function ENT:_InitAwareness()
 end
 
 if SERVER then
-  util.AddNetworkString("DrGBaseSpottedEntity")
-  util.AddNetworkString("DrGBaseLostEntity")
 
   -- Getters/setters --
 
@@ -77,11 +83,7 @@ if SERVER then
     self:UpdateKnownPosition(ent)
     if not spotted then
       self:OnSpotted(ent)
-      net.Start("DrGBaseSpottedEntity")
-      net.WriteEntity(self)
-      net.WriteEntity(ent)
-      net.Broadcast()
-      self:UpdateEnemy()
+      self:NetMessage("DrGBaseHasSpotted", ent)
     end
     local timerName = self:_SpotTimerName(ent)
     timer.Remove(timerName)
@@ -95,17 +97,21 @@ if SERVER then
     if not IsValid(ent) then return end
     if not self:HasSpotted(ent) then return end
     if self:HasLost(ent) then return end
+    self:NetMessage("DrGBaseHasLost", ent)
     timer.Remove(self:_SpotTimerName(ent))
     self._DrGBaseSpotted[ent] = false
     self:OnLost(ent)
-    net.Start("DrGBaseLostEntity")
-    net.WriteEntity(self)
-    net.WriteEntity(ent)
-    net.Broadcast()
-    self:UpdateEnemy()
   end
   function ENT:_SpotTimerName(ent)
     return "DrGBaseNB"..self:GetCreationID().."SpotENT"..ent:GetCreationID()
+  end
+
+  function ENT:AlertAllies(ent, spotted)
+    if not self:HasSpotted(ent) then return end
+    for ally in self:AllyIterator(spotted) do
+      if not ally.IsDrGNextbot then continue end
+      ally:SpotEntity(ent)
+    end
   end
 
   -- Handlers --
@@ -130,25 +136,13 @@ if SERVER then
 
 else
 
-  -- Handlers --
+  -- Getters/setters --
 
-  net.Receive("DrGBaseSpottedEntity", function()
-    local nextbot = net.ReadEntity()
-    local ent = net.ReadEntity()
-    if not IsValid(nextbot) then return end
-    if not istable(nextbot._DrGBaseSpotted) then return end
-    if not IsValid(ent) then return end
-    nextbot._DrGBaseSpotted[ent] = true
-    nextbot:OnSpotted(ent)
-  end)
-  net.Receive("DrGBaseLostEntity", function()
-    local nextbot = net.ReadEntity()
-    local ent = net.ReadEntity()
-    if not IsValid(nextbot) then return end
-    if not istable(nextbot._DrGBaseSpotted) then return end
-    if not IsValid(ent) then return end
-    nextbot._DrGBaseSpotted[ent] = false
-    nextbot:OnLost(ent)
-  end)
+  function ENT:HasSpottedLocalPlayer()
+    return self:HasSpotted(LocalPlayer())
+  end
+  function ENT:HasLostLocalPlayer()
+    return self:HasLost(LocalPlayer())
+  end
 
 end

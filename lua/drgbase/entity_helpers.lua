@@ -83,7 +83,7 @@ function ENT:TraceHull(vec, data)
   data = data or {}
   if self.IsDrGNextbot and data.step then
     bound2.z = self.loco:GetStepHeight()
-  end  
+  end
   trdata.start = data.start or self:GetPos()
   trdata.endpos = data.endpos or trdata.start + vec
   trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
@@ -139,6 +139,14 @@ function ENT:GetCooldown(name)
     return math.Clamp(delay - CurTime(), 0, math.huge)
   else return 0 end
 end
+
+-- Net --
+
+function ENT:NetMessage(name, ...)
+  return net.DrG_Send("DrGBaseEntMessage", name, self, ...)
+end
+function ENT:_HandleNetMessage() end
+function ENT:OnNetMessage() end
 
 -- Effects --
 
@@ -204,6 +212,22 @@ if SERVER then
     end
   end
 
+  -- Net --
+
+  net.DrG_Receive("DrGBaseEntMessage", function(ply, name, self, ...)
+    if not IsValid(self) then return end
+    if isfunction(self._HandleNetMessage) and
+    self:_HandleNetMessage(name, ply, ...) then return end
+    if isfunction(self.OnNetMessage) then self:OnNetMessage(name, ply, ...) end
+  end)
+
+  function ENT:NetCallback(name, callback, ply, ...)
+    if not ply:IsPlayer() then return end
+    return ply:DrG_NetCallback(name, function(...)
+      if IsValid(self) and isfunction(callback) then callback(...) end
+    end, self, ...)
+  end
+
   -- Effects --
 
   function ENT:DynamicLight(color, radius, brightness, style, attachment)
@@ -228,6 +252,54 @@ if SERVER then
   	light:Activate()
   	light:Fire("TurnOn", "", 0)
   	self:DeleteOnRemove(light)
+    return light
+  end
+
+else
+
+  -- Net --
+
+  local function ReceiveMessage(name, self, ...)
+    if not IsValid(self) then return end
+    if isfunction(self._HandleNetMessage) then
+      if self:_HandleNetMessage(name, ...) then return end
+      if isfunction(self.OnNetMessage) then
+        self:OnNetMessage(name, ...)
+      end
+    else timer.DrG_Simple(engine.TickInterval(), ReceiveMessage, name, self, ...) end
+  end
+  net.DrG_Receive("DrGBaseEntMessage", ReceiveMessage)
+  function ENT:NetCallback(name, callback, ...)
+    return net.DrG_UseCallback(name, function(...)
+      if IsValid(self) and isfunction(callback) then callback(...) end
+    end, self, ...)
+  end
+
+  -- Effects --
+
+  function ENT:DynamicLight(color, radius, brightness, style, attachment)
+    if color == nil then color = Color(255, 255, 255) end
+    if not isnumber(radius) then radius = 1000 end
+    radius = math.Clamp(radius, 0, math.huge)
+    if not isnumber(brightness) then brightness = 1 end
+    brightness = math.Clamp(brightness, 0, math.huge)
+    local light = DynamicLight(self:EntIndex())
+    light.r = color.r
+    light.g = color.g
+    light.b = color.b
+    light.size = radius
+    light.brightness = brightness
+    light.style = style
+    light.dieTime = CurTime() + 1
+    light.decay = 100000
+    if attachment then
+      if isstring(attachment) then
+        attachment = self:LookupAttachment(attachment)
+      end
+      if isnumber(attachment) and attachment > 0 then
+        light.pos = self:GetAttachment(attachment).Pos
+      else light.pos = self:GetPos() end
+    else light.pos = self:GetPos() end
     return light
   end
 

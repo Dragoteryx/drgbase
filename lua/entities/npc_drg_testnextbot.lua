@@ -12,12 +12,23 @@ ENT.MeleeAttackRange = 0
 ENT.ReachEnemyRange = 100
 ENT.AvoidEnemyRange = 25
 
--- Movements/animations --
+-- Animations --
 ENT.WalkAnimation = ACT_HL2MP_WALK
 ENT.RunAnimation = ACT_HL2MP_RUN_FAST
-ENT.RunSpeed = 300
 ENT.IdleAnimation = ACT_HL2MP_IDLE
 ENT.JumpAnimation = ACT_HL2MP_JUMP_KNIFE
+
+-- Movements --
+ENT.RunSpeed = 300
+
+-- Climbing --
+ENT.ClimbLedges = true
+ENT.ClimbProps = true
+ENT.ClimbLedgesMaxHeight = 300
+ENT.ClimbLadders = true
+ENT.ClimbSpeed = 60
+ENT.ClimbUpAnimation = ACT_ZOMBIE_CLIMB_UP
+ENT.ClimbOffset = Vector(-14, 0, 0)
 
 -- Detection --
 ENT.EyeBone = "ValveBiped.Bip01_Head1"
@@ -25,7 +36,7 @@ ENT.EyeOffset = Vector(5, 0, 2.5)
 
 -- Possession --
 ENT.PossessionEnabled = true
-ENT.PossessionMovement = POSSESSION_MOVE_8DIR
+ENT.PossessionMovement = POSSESSION_MOVE_4DIR
 ENT.PossessionViews = {
   {
     offset = Vector(0, 30, 20),
@@ -111,6 +122,25 @@ if SERVER then
 
   function ENT:OnRemove()
     self:StopSound("DrGBase.RiseAndShine")
+  end
+
+  function ENT:OnClimbing(ladder, left, down)
+    if IsValid(ladder) then
+      self:EmitSlotSound("DrGBaseLadderClimbing", 0.3, "player/footsteps/ladder"..math.random(4)..".wav")
+    end
+    return not down and left < 112.5
+  end
+  function ENT:OnStopClimbing(ladder, height, down)
+    if down then return end
+    local footstep = false
+    self:PlayActivityAndMoveAbsolute(ACT_ZOMBIE_CLIMB_END, self.ClimbAnimRate, function(self, cycle)
+      if cycle >= 0.875 and not footstep then
+        footstep = true
+        self:EmitFootstep()
+      end
+      if cycle > 0.5 or not IsValid(ladder) then return end
+      self:EmitSlotSound("DrGBaseLadderClimbing", 0.3, "player/footsteps/ladder"..math.random(4)..".wav")
+    end)
   end
 
 end

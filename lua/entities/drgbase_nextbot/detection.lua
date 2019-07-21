@@ -80,6 +80,11 @@ if SERVER then
     return los
   end
 
+  net.DrG_DefineCallback("DrGBaseIsInSight", function(nextbot, ent)
+    if not IsValid(nextbot) or not IsValid(ent) then return false
+    else return nextbot:IsInSight(ent) end
+  end)
+
   -- Get entities in sight
   function ENT:GetInSight(disp, spotted)
     local inSight = {}
@@ -170,10 +175,8 @@ else
 
   -- Getters/setters --
 
-  -- Functions --
-
-  -- Hooks --
-
-  -- Handlers --
+  function ENT:IsInSight(ent, callback)
+    return self:NetCallback("DrGBaseIsInSight", callback, ent)
+  end
 
 end

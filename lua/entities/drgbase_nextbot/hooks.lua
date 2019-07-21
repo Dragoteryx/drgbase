@@ -1,4 +1,11 @@
 
+-- Convars --
+
+local MultDamagePlayer = CreateConVar("drgbase_multiplier_damage_players", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local MultDamageNPC = CreateConVar("drgbase_multiplier_damage_npc", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+
+-- Handlers --
+
 function ENT:_InitHooks()
   if CLIENT then return end
   self:DrG_AddListener("OnContact", self._HandleContact)
@@ -120,6 +127,8 @@ if SERVER then
   hook.Add("EntityTakeDamage", "DrGBaseNextbotDealtDamage", function(ent, dmg)
     local attacker = dmg:GetAttacker()
     if IsValid(attacker) and attacker.IsDrGNextbot then
+      if ent:IsPlayer() then dmg:ScaleDamage(MultDamagePlayer:GetFloat())
+      else dmg:ScaleDamage(MultDamageNPC:GetFloat()) end
       local res = attacker:OnDealtDamage(ent, dmg)
       if isnumber(res) then dmg:ScaleDamage(res)
       elseif res == true then return true end
@@ -143,6 +152,7 @@ if SERVER then
           dmg:SetInflictor(ent)
           dmg:SetDamage(self:Health())
           dmg:SetDamageType(DMG_DISSOLVE)
+          dmg:SetDamageForce(ent:GetVelocity())
           self:TakeDamageInfo(dmg)
         else self:DrG_Dissolve() end
         ent:EmitSound("NPC_CombineBall.KillImpact")

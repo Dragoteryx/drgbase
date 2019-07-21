@@ -2,6 +2,7 @@
 -- Convars --
 
 local AvoidObstacles = CreateConVar("drgbase_avoid_obstacles", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local MultSpeed = CreateConVar("drgbase_multiplier_speed", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Getters/setters --
 
@@ -34,48 +35,45 @@ function ENT:IsSpeedLessEqual(speed, scale)
   return self:IsSpeedEqual(speed, scale) or self:IsSpeedLess(speed, scale)
 end
 
+function ENT:GetMovement()
+  if not self:IsMoving() then return Vector(0, 0, 0) end
+  local dir = self:GetVelocity():Angle()
+  local mv = (self:GetAngles()-dir):Forward()
+  return Vector(math.Round(mv.x, 2), math.Round(mv.y, 2), -math.Round(mv.z, 2))
+end
+
 function ENT:IsMoving()
   return not self:GetVelocity():IsZero()
 end
+function ENT:IsMovingUp()
+  return self:GetMovement().z > 0
+end
+function ENT:IsMovingDown()
+  return self:GetMovement().z < 0
+end
 function ENT:IsMovingForward()
-  if not self:IsMoving() then return false end
-  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
-  return direction == "NW" or direction == "N" or direction == "NE"
+  return self:GetMovement().x > 0
 end
 function ENT:IsMovingBackward()
-  if not self:IsMoving() then return false end
-  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
-  return direction == "SW" or direction == "S" or direction == "SE"
+  return self:GetMovement().x < 0
 end
 function ENT:IsMovingRight()
-  if not self:IsMoving() then return false end
-  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
-  return direction == "NE" or direction == "E" or direction == "SE"
+  return self:GetMovement().y > 0
 end
 function ENT:IsMovingLeft()
-  if not self:IsMoving() then return false end
-  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
-  return direction == "NW" or direction == "W" or direction == "SW"
+  return self:GetMovement().y < 0
 end
 function ENT:IsMovingForwardLeft()
-  if not self:IsMoving() then return false end
-  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
-  return direction == "NW"
+  return self:IsMovingForward() and self:IsMovingLeft()
 end
 function ENT:IsMovingForwardRight()
-  if not self:IsMoving() then return false end
-  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
-  return direction == "NE"
+  return self:IsMovingForward() and self:IsMovingRight()
 end
 function ENT:IsMovingBackwardLeft()
-  if not self:IsMoving() then return false end
-  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
-  return direction == "SW"
+  return self:IsMovingBackward() and self:IsMovingLeft()
 end
 function ENT:IsMovingBackwardRight()
-  if not self:IsMoving() then return false end
-  local direction = self:CalcPosDirection(self:GetPos()+self:GetVelocity(), true)
-  return direction == "SE"
+  return self:IsMovingBackward() and self:IsMovingRight()
 end
 
 function ENT:IsTurning()
@@ -107,7 +105,7 @@ end
 -- Handlers --
 
 function ENT:_InitMovements()
-  if SERVER then self:LoopTimer(0.1, self.UpdateSpeed) end
+  if SERVER then self:LoopTimer(engine.TickInterval(), self.UpdateSpeed) end
   self._DrGBaseLastAngle = self:GetAngles()
 end
 
@@ -128,11 +126,11 @@ if SERVER then
 
   function ENT:IsRunning()
     if self:IsMoving() then
-      local run
+      local run = false
       if self:IsPossessed() then
         run = self:GetPossessor():KeyDown(IN_SPEED)
       else run = self:ShouldRun() end
-      return run or false
+      return run
     else return false end
   end
 
@@ -213,22 +211,19 @@ if SERVER then
     if isentity(pos) then pos = pos:GetPos() end
     tolerance = isnumber(tolerance) and tolerance or 20
     local selfpos = self:GetPos()
-    if navmesh.IsLoaded() then
-    --[[if navmesh.IsLoaded() and (not self:IsOnGround() or
-    selfpos:DistToSqr(navmesh.GetNearestNavArea(selfpos):GetClosestPointOnArea(selfpos)) < tolerance^2) then]]
+    if navmesh.IsLoaded() and self:GetGroundEntity():IsWorld() and
+    navmesh.GetNearestNavArea(self:GetPos()):Contains(self:GetPos()) then
       pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
       local path = self:GetPath()
       path:SetMinLookAheadDistance(300)
       path:SetGoalTolerance(tolerance)
-      if not IsValid(path) then
-        path:Compute(self, pos, generator)
-      else
+      if IsValid(path) then
         local tol = (tolerance*(path:LastSegment().distanceFromStart-path:GetCurrentGoal().distanceFromStart))/100
         if tol < tolerance then tol = tolerance end
         if path:GetEnd():DistToSqr(pos) > tol^2 then
           path:Compute(self, pos, generator)
         end
-      end
+      else path:Compute(self, pos, generator) end
       if not IsValid(path) then return "unreachable" end
       local ledge = self:FindLedge()
       local current = path:GetCurrentGoal()
@@ -344,13 +339,13 @@ if SERVER then
           pos = ladder:GetPosAtHeight(lastHeight - self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
           self:SetPos(pos + offset)
           if ladder:GetBottom().z - pos.z <= 0 then break end
-          if self:WhileClimbing(ladder, ladder:GetBottom().z - pos.z, true) then break end
+          if self:OnClimbing(ladder, ladder:GetBottom().z - pos.z, true) then break end
           if isfunction(callback) and callback(self, ladder, ladder:GetBottom().z - pos.z, true) then break end
         else
           pos = ladder:GetPosAtHeight(lastHeight + self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
           self:SetPos(pos + offset)
           if ladder:GetTop().z - pos.z <= 0 then break end
-          if self:WhileClimbing(ladder, ladder:GetTop().z - pos.z, false) then break end
+          if self:OnClimbing(ladder, ladder:GetTop().z - pos.z, false) then break end
           if isfunction(callback) and callback(self, ladder, ladder:GetTop().z - pos.z, false) then break end
         end
         lastHeight = pos.z
@@ -446,7 +441,7 @@ if SERVER then
         self:SetPos(pos + offset)
         local remaining = math.abs(ledge.z - self:GetPos().z)
         if remaining == 0 then break end
-        if self:WhileClimbing(ledge, remaining, false) then break end
+        if self:OnClimbing(ledge, remaining, false) then break end
         if isfunction(callback) and callback(self, ledge, remaining, false) then break end
         lastPos = pos
         lastTime = CurTime()
@@ -537,14 +532,29 @@ if SERVER then
 
   -- Update --
 
+  function ENT:OnWalkframes()
+    return self.UseWalkframes
+  end
+
   function ENT:UpdateSpeed()
-    if self.UseWalkframes and self:IsOnGround() and not self:IsClimbing() then
-      local speed = self:GetSequenceGroundSpeed(self:GetSequence())
-      if speed <= 0 then self.loco:SetDesiredSpeed(1)
-      else self.loco:SetDesiredSpeed(speed) end
+    if self:OnWalkframes(self:GetSequenceName(self:GetSequence())) then
+      local speed = 0
+      local seq = self:GetSequence()
+      if self:IsClimbing() then
+        local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
+        if success then
+          local height = vec.z
+          local duration = self:SequenceDuration(seq)
+          speed = height/duration
+        end
+      else speed = self:GetSequenceGroundSpeed(seq) end
+      if speed ~= 0 then self.loco:SetDesiredSpeed(speed*MultSpeed:GetFloat())
+      else self.loco:SetDesiredSpeed(1) end
     else
       local speed = self:OnUpdateSpeed()
-      if isnumber(speed) then self:SetSpeed(math.Clamp(speed, 0, math.huge)) end
+      if isnumber(speed) then
+        self:SetSpeed(math.Clamp(speed*MultSpeed:GetFloat(), 0, math.huge))
+      end
     end
   end
   function ENT:OnUpdateSpeed()

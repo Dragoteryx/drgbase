@@ -58,6 +58,7 @@ if SERVER then
   end
 
   function ENT:Jump(height, callback)
+    if not self:IsOnGround() then return end
     if isnumber(height) then
       local jumpHeight = self.loco:GetJumpHeight()
       self.loco:SetJumpHeight(height)
@@ -75,19 +76,59 @@ if SERVER then
     self:SetNW2Bool("DrGBaseJumping", false)
   end
 
-  function ENT:Leap(pos, callback)
-    if isentity(pos) then pos = pos:WorldSpaceCenter() end
-    self:FaceInstant(pos)
-    LocoJumpGap(self, pos)
-    if not coroutine.running() then return end
-    self:SetNW2Bool("DrGBaseLeaping", true)
-    local now = CurTime()
-    while not self:IsOnGround() do
-      if isfunction(callback) and
-      callback(self, CurTime()-now) then break end
-      self:YieldCoroutine(true)
+  local function CalcTrajectory(self, pos, speed)
+    local options = {recursive = true}
+    if istable(speed) then
+      options.magnitude = speed[1]
+      options.maxmagnitude = speed[2]
+    else
+      options.magnitude = speed
+      options.maxmagnitude = speed
     end
-    self:SetNW2Bool("DrGBaseLeaping", false)
+    local vec, info = self:GetPos():DrG_CalcTrajectory(pos, options)
+    if vec.z <= 0 then
+      options.highest = true
+      vec, info = self:GetPos():DrG_CalcTrajectory(pos, options)
+    end
+    return vec, info
+  end
+
+  function ENT:Leap(pos, speed, callback)
+    if not self:IsOnGround() then return end
+    if not coroutine.running() then return end
+    if isentity(pos) then
+      local vec, info = CalcTrajectory(self, pos:GetPos(), speed)
+      return self:Leap(pos:GetPos()+pos:GetVelocity()*info.duration, speed, callback)
+    elseif isvector(pos) then
+      if not isfunction(callback) then callback = function()
+        self:FaceTowards(self:GetPos()+self:GetVelocity())
+      end end
+      local vec, info = CalcTrajectory(self, pos, speed)
+      if self:TraceHull(vec:GetNormalized()).Hit then return false end
+      local collided = NULL
+      local now = CurTime()
+      self:LeaveGround()
+      if self:IsOnGround() then return false end
+      self:SetNW2Bool("DrGBaseLeaping", true)
+      while not self:IsOnGround() do
+        local time = CurTime() - now
+        local left = info.duration - time
+        local hasCollided = IsValid(collided) or collided:IsWorld()
+        if callback(self, left, hasCollided, collided) then break end
+        if not hasCollided then
+          local pos, vec = info.Predict(time)
+          collided = self:TraceHull(info.Predict(time+engine.TickInterval())-self:GetPos()).Entity
+          hasCollided = IsValid(collided) or collided:IsWorld()
+          if not hasCollided then
+            self:SetPos(pos)
+            self:SetVelocity(vec)
+          end
+        end
+        self:YieldCoroutine(true)
+      end
+      self:SetNW2Bool("DrGBaseLeaping", false)
+      return not collided
+    end
   end
 
   function ENT:Glide(dist, options, callback)

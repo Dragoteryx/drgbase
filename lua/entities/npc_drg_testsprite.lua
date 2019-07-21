@@ -12,8 +12,8 @@ ENT.MeleeAttackRange = 0
 ENT.ReachEnemyRange = 200
 ENT.AvoidEnemyRange = 0
 
--- Movements/animations --
-ENT.SpritesFolder = "drgbase/stick_boi"
+-- Animations --
+ENT.SpriteFolder = "drgbase/stick_boi"
 ENT.FramesPerSecond = 6
 ENT.WalkAnimation = "walk"
 ENT.WalkAnimRate = 0.5
