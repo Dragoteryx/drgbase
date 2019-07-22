@@ -1,5 +1,6 @@
 ENT.Base = "base_nextbot"
 ENT.Type = "nextbot"
+ENT.IsDrGEntity = true
 ENT.IsDrGNextbot = true
 
 -- Misc --
@@ -437,12 +438,12 @@ else
     if name == "DrGBaseHasSpotted" then
       local ent = args[1]
       self._DrGBaseSpotted[ent] = true
-      self:HasSpotted(ent)
+      self:OnSpotted(ent)
       return true
     elseif name == "DrGBaseHasLost" then
       local ent = args[1]
       self._DrGBaseSpotted[ent] = false
-      self:HasLost(ent)
+      self:OnLost(ent)
       return true
     end
   end

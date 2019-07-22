@@ -289,10 +289,9 @@ if SERVER then
       if seq == -1 then return end
       local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
       if not success then return end
-      return self:PlaySequenceAndMove(seq, {
+      return self:PlaySequenceAndMoveAbsolute(seq, {
         rate = rate,
         multiply = Vector(1, 1, height/vec.z/self:GetModelScale()),
-        gravity = false
       }, function(self, cycle)
         if not self:TraceHull(self:GetForward()*self.LedgeDetectionDistance*2).Hit then return true end
         if isfunction(callback) then return callback(self, cycle) end

@@ -383,7 +383,8 @@ if SERVER then
   local old_BecomeRagdoll = nextbotMETA.BecomeRagdoll
   function nextbotMETA:BecomeRagdoll(dmg)
     if self.IsDrGNextbot then
-      if not self.IsDrGNextbotSprite and
+      if not dmg then dmg = DamageInfo() end
+      if not self.IsDrGNextbotSprite and    
       util.IsValidRagdoll(self:GetModel()) and
       not dmg:IsDamageType(DMG_REMOVENORAGDOLL) and
       not self:IsFlagSet(FL_DISSOLVING) and

@@ -216,9 +216,10 @@ if SERVER then
 
   net.DrG_Receive("DrGBaseEntMessage", function(ply, name, self, ...)
     if not IsValid(self) then return end
-    if isfunction(self._HandleNetMessage) and
-    self:_HandleNetMessage(name, ply, ...) then return end
-    if isfunction(self.OnNetMessage) then self:OnNetMessage(name, ply, ...) end
+    if not self.IsDrGEntity then return end
+    if not self:_HandleNetMessage(name, ply, ...) then
+      self:OnNetMessage(name, ply, ...)
+    end    
   end)
 
   function ENT:NetCallback(name, callback, ply, ...)
@@ -261,6 +262,7 @@ else
 
   local function ReceiveMessage(name, self, ...)
     if not IsValid(self) then return end
+    if not self.IsDrGEntity then return end
     if isfunction(self._HandleNetMessage) then
       if self:_HandleNetMessage(name, ...) then return end
       if isfunction(self.OnNetMessage) then
