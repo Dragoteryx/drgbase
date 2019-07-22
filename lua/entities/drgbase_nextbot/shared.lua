@@ -297,7 +297,12 @@ if SERVER then
     ent:SetCreator(ply)
     if ent:SpawnedBy(ply) ~= false then
       if not navmesh.IsLoaded() and tobool(ply:GetInfoNum("drgbase_navmesh_error", 1)) then
-        DrGBase.ChatPrint("Nextbots need a navmesh to navigate around the map. You can generate a navmesh using the command 'nav_generate' in the console.", ply, true)
+        local msg = "Nextbots need a navmesh to navigate around the map. "
+        if game.SinglePlayer() then msg = msg.."You can generate a navmesh using the command 'nav_generate' in the console."
+        else msg = msg.."If you are the server owner you can generate a navmesh using the command 'nav_generate' in the server console." end
+        DrGBase.Error(msg.."\nSet 'drgbase_navmesh_error' to 0 to disable this message.", {
+          player = ply, color = DrGBase.CLR_GREEN, chat = true
+        })
       end
     else ent:Remove() end
   end)

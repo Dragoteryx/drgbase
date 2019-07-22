@@ -81,14 +81,14 @@ if SERVER then
   end
 
   function ENT:AddHealth(health)
-    self:SetHealth(self:Health()+math.Clamp(health, 0, self:GetMaxHealth()))
+    self:SetHealth(self:Health()+health, true)
   end
   function ENT:RemoveHealth(health)
-    self:SetHealth(self:Health()-math.Clamp(health, 0, self:GetMaxHealth()))
+    self:SetHealth(self:Health()-health, true)
   end
 
   function ENT:ScaleHealth(scale)
-    scale = math.Clamp(scale, 0.01, math.huge)
+    scale = math.Clamp(scale, 0, math.huge)
     self:SetHealth(self:Health()*scale)
     self:SetMaxHealth(self:GetMaxHealth()*scale)
   end
@@ -117,9 +117,13 @@ if SERVER then
   local entMETA = FindMetaTable("Entity")
 
   local old_SetHealth = entMETA.SetHealth
-  function entMETA:SetHealth(health)
-    if self.IsDrGNextbot and self:IsDead() then return end
-    return old_SetHealth(self, health)
+  function entMETA:SetHealth(health, clamp)
+    if self.IsDrGNextbot then
+      if self:IsDead() then return end
+      if clamp then
+        return old_SetHealth(self, math.Clamp(health, 0, self:GetMaxHealth()))
+      else return old_SetHealth(self, health) end
+    else return old_SetHealth(self, health) end
   end
 
 else
