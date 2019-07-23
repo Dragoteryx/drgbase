@@ -17,3 +17,12 @@ DrGBase.AddParticles("drgbase.pcf", {
   "drg_plasma_ball",
   "drg_smokescreen"
 })
+
+-- Vanilla particles --
+
+PrecacheParticleSystem("blood_impact_red_01_goop")
+PrecacheParticleSystem("blood_impact_yellow_01")
+PrecacheParticleSystem("blood_impact_green_01")
+PrecacheParticleSystem("blood_impact_antlion_01")
+PrecacheParticleSystem("blood_impact_zombie_01")
+PrecacheParticleSystem("blood_impact_antlion_worker_01")

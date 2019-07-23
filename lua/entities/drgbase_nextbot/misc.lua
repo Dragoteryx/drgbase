@@ -378,13 +378,22 @@ if SERVER then
     else return old_DropToFloor(self) end
   end
 
+  local old_Remove = entMETA.Remove
+  function entMETA:Remove()
+    if self.IsDrGNextbot then self._DrGBaseRemoved = true end
+    return old_Remove(self)
+  end
+
   local nextbotMETA = FindMetaTable("NextBot")
 
   local old_BecomeRagdoll = nextbotMETA.BecomeRagdoll
   function nextbotMETA:BecomeRagdoll(dmg)
     if self.IsDrGNextbot then
+      if self:IsFlagSet(FL_KILLME) or
+      self:IsMarkedForDeletion() or
+      self._DrGBaseRemoved then return NULL end
       if not dmg then dmg = DamageInfo() end
-      if not self.IsDrGNextbotSprite and    
+      if not self.IsDrGNextbotSprite and
       util.IsValidRagdoll(self:GetModel()) and
       not dmg:IsDamageType(DMG_REMOVENORAGDOLL) and
       not self:IsFlagSet(FL_DISSOLVING) and
@@ -408,10 +417,10 @@ if SERVER then
           if not GetConVar("ai_serverragdolls"):GetBool() then
             ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
           end
-          for i = 1, self:GetBoneCount() do
-        		local bone = ragdoll:GetPhysicsObjectNum(i-1)
+          for i = 0, (ragdoll:GetPhysicsObjectCount()-1) do
+        		local bone = ragdoll:GetPhysicsObjectNum(i)
         		if not IsValid(bone) then continue end
-      			local pos, angles = self:GetBonePosition(self:TranslatePhysBoneToBone(i-1))
+      			local pos, angles = self:GetBonePosition(ragdoll:TranslatePhysBoneToBone(i))
       			bone:SetPos(pos)
       			bone:SetAngles(angles)
         	end
@@ -428,6 +437,10 @@ if SERVER then
             ragdoll:Fire("fadeandremove", math.Clamp(RagdollFadeOut:GetFloat(), 0, math.huge), RemoveRagdolls:GetFloat())
           end
           self:Remove()
+          local attacker = dmg:GetAttacker()
+          if IsValid(attacker) and attacker.IsDrGNextbot then
+            attacker:SpotEntity(ragdoll)
+          end
           return ragdoll
         else
           self:Remove()

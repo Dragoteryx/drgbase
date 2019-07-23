@@ -214,6 +214,7 @@ if SERVER then
     end end
     for i, ent in ipairs(ents.FindInSphere(self:GetPos(), range)) do
       if not IsValid(ent) then continue end
+      if not DrGBase.IsTarget(ent) then return end
       if not filter(ent) then continue end
       self:DealDamage(ent, value*math.Clamp((range-self:GetPos():Distance(ent:GetPos()))/range, 0, 1), type)
     end

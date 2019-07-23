@@ -73,7 +73,7 @@ if SERVER then
       local oldRegen = self:GetHealthRegen()
       self:SetHealthRegen(regen)
       while math.Round(self:Health()) < math.Round(health) do
-        if isfunction(callback) and callback(self) then break end
+        if isfunction(callback) and callback(self, self:Health()) then break end
         self:YieldCoroutine(false)
       end
       self:SetHealthRegen(oldRegen)

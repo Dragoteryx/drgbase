@@ -566,8 +566,8 @@ if SERVER then
   -- Hooks --
 
   function ENT:OnStartClimbing() end
-  function ENT:OnClimbing()
-    return self:WhileClimbing()
+  function ENT:OnClimbing(...)
+    return self:WhileClimbing(...)
   end
   function ENT:WhileClimbing() end
   function ENT:OnStopClimbing() end

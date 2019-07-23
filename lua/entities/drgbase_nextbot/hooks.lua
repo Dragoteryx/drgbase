@@ -8,6 +8,7 @@ local MultDamageNPC = CreateConVar("drgbase_multiplier_damage_npc", "1", {FCVAR_
 
 function ENT:_InitHooks()
   if CLIENT then return end
+  self._DrGBaseLastDmgInflicted = {}
   self:DrG_AddListener("OnContact", self._HandleContact)
 end
 
@@ -132,10 +133,23 @@ if SERVER then
       local res = attacker:OnDealtDamage(ent, dmg)
       if isnumber(res) then dmg:ScaleDamage(res)
       elseif res == true then return true end
+      attacker._DrGBaseLastDmgInflicted[ent] = {
+        data = util.DrG_SaveDmg(dmg), time = CurTime()
+      }
     end
   end)
 
+  function ENT:LastDamageDealt(ent)
+    if not self._DrGBaseLastDmgInflicted[ent] then return nil, -1 end
+    local last = self._DrGBaseLastDmgInflicted[ent]
+    return util.DrG_LoadDmg(last.data), last.time
+  end
+
   -- Collisions --
+
+  function ENT:OnContact(ent)
+    self:SpotEntity(ent)
+  end
 
   function ENT:OnCombineBall() end
   --function ENT:AfterCombineBall() end

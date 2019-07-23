@@ -219,7 +219,7 @@ if SERVER then
     if not self.IsDrGEntity then return end
     if not self:_HandleNetMessage(name, ply, ...) then
       self:OnNetMessage(name, ply, ...)
-    end    
+    end
   end)
 
   function ENT:NetCallback(name, callback, ply, ...)
@@ -230,6 +230,8 @@ if SERVER then
   end
 
   -- Effects --
+
+  --function ENT:BeamParticleEffect(effect, don't worry roach I'll take care of it) end
 
   function ENT:DynamicLight(color, radius, brightness, style, attachment)
     if color == nil then color = Color(255, 255, 255) end

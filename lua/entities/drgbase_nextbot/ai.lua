@@ -135,7 +135,15 @@ if SERVER then
     if self:IsPossessed() then return NULL end
     local enemies = self:GetEnemies(true)
     table.sort(enemies, function(ent1, ent2)
-      return self:OnFetchEnemy(ent1, ent2)
+      local res = self:OnFetchEnemy(ent1, ent2)
+      if isbool(res) then return res end
+      local disp1, prio1 = self:GetRelationship(ent1)
+      local disp2, prio2 = self:GetRelationship(ent2)
+      if prio1 > prio2 then return true
+      elseif prio2 > prio1 then return false
+      else
+        return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
+      end
     end)
     local enemy = enemies[1]
     if not IsValid(enemy) then return NULL
@@ -178,15 +186,7 @@ if SERVER then
   function ENT:OnUpdateEnemy()
     return self:FetchEnemy()
   end
-  function ENT:OnFetchEnemy(ent1, ent2)
-    local disp1, prio1 = self:GetRelationship(ent1)
-    local disp2, prio2 = self:GetRelationship(ent2)
-    if prio1 > prio2 then return true
-    elseif prio2 > prio1 then return false
-    else
-      return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
-    end
-  end
+  function ENT:OnFetchEnemy() end
 
   function ENT:ShouldRun()
     return self:HasEnemy()

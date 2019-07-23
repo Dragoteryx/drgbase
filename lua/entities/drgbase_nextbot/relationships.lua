@@ -147,6 +147,8 @@ if SERVER then
     if not IsValid(ent) then return end
     self._DrGBaseRelPriorities[ent] = prio or DEFAULT_PRIO
     local curr = self:GetRelationship(ent)
+    if (cur ~= disp or disp == D_HT) and
+    ent:IsNPC() then self:_UpdateNPCRelationship(ent, disp) end
     if curr == disp then return end
     if table.HasValue({D_LI, D_HT, D_FR}, curr) then
       table.RemoveByValue(self._DrGBaseRelationshipCaches[curr], ent)
@@ -155,12 +157,10 @@ if SERVER then
       if disp ~= cdisp then continue end
       self._DrGBaseRelationships[ent] = disp
       table.insert(self._DrGBaseRelationshipCaches[cdisp], ent)
-      if ent:IsNPC() then self:_UpdateNPCRelationship(ent, disp) end
       return
     end
     if curr ~= DEFAULT_DISP then
       self._DrGBaseRelationships[ent] = DEFAULT_DISP
-      if ent:IsNPC() then self:_UpdateNPCRelationship(ent, DEFAULT_DISP) end
     end
   end
 
@@ -175,6 +175,7 @@ if SERVER then
     if ent:IsFlagSet(FL_NOTARGET) then return true end
     if (ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot") and ent:Health() <= 0 then return true end
     if ent.IsDrGNextbot and (ent:IsDown() or ent:IsDead()) then return true end
+    if self:ShouldIgnore(ent) then return true end
     return self._DrGBaseIgnoredEntities[ent] or false
   end
   function ENT:SetIgnored(ent, bool)
@@ -509,6 +510,7 @@ if SERVER then
   -- Hooks --
 
   function ENT:CustomRelationship() end
+  function ENT:ShouldIgnore() end
 
   -- Handlers --
 
@@ -518,7 +520,7 @@ if SERVER then
     elseif relationship == D_HT and self:IsFrightening() then
       relationship = D_FR
     end
-    ent:AddEntityRelationship(self, relationship, 1)
+    ent:DrG_SetRelationship(self, relationship)
     if ent.IsVJBaseSNPC then
       if (relationship == D_HT or relationship == D_FR) then
         if not table.HasValue(ent.VJ_AddCertainEntityAsEnemy, self) then
