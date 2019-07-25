@@ -7,6 +7,9 @@ end
 function plyMETA:DrG_Possessing()
   return self:GetNW2Entity("DrGBasePossessing")
 end
+function plyMETA:DrG_GetPossessing()
+  return self:DrG_Possessing()
+end
 
 function plyMETA:DrG_SteamAvatar(callback, onerror)
   http.Fetch("https://steamcommunity.com/profiles/"..self:SteamID64().."?xml=1", function(body)

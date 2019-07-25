@@ -75,7 +75,8 @@ if SERVER then
 
   function ENT:SpotEntity(ent)
     if not IsValid(ent) then return end
-    if self:IsIgnored(ent) then return end
+    if ent:IsPlayer() and not ent:Alive() then return end
+    if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return end
     if self:GetSpotDuration() == 0 then return end
     local spotted = self:HasSpotted(ent)
     self._DrGBaseLastTime[ent] = CurTime()
@@ -130,7 +131,7 @@ if SERVER then
   hook.Add("PostPlayerDeath", "DrGBaseForgetPlayerDeath", function(ply)
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
       nextbot:LoseEntity(ply)
-      nextbot:UpdateEnemy()
+      nextbot:UpdateAI()
     end
   end)
 

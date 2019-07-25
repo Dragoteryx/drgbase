@@ -131,23 +131,26 @@ if SERVER then
     self:SetEnemy(enemy)
     return enemy
   end
+  local function CompareEnemies(self, ent1, ent2)
+    local res = self:OnFetchEnemy(ent1, ent2)
+    if isbool(res) then return res end
+    local prio1 = self:GetPriority(ent1)
+    local prio2 = self:GetPriority(ent2)
+    if prio1 > prio2 then return true
+    elseif prio2 > prio1 then return false
+    else
+      return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
+    end
+  end
   function ENT:FetchEnemy()
     if self:IsPossessed() then return NULL end
-    local enemies = self:GetEnemies(true)
-    table.sort(enemies, function(ent1, ent2)
-      local res = self:OnFetchEnemy(ent1, ent2)
-      if isbool(res) then return res end
-      local disp1, prio1 = self:GetRelationship(ent1)
-      local disp2, prio2 = self:GetRelationship(ent2)
-      if prio1 > prio2 then return true
-      elseif prio2 > prio1 then return false
-      else
-        return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
+    local current = NULL
+    for enemy in self:EnemyIterator(true) do
+      if not IsValid(current) or CompareEnemies(self, enemy, current) then
+        current = enemy
       end
-    end)
-    local enemy = enemies[1]
-    if not IsValid(enemy) then return NULL
-    else return enemy end
+    end
+    return current
   end
 
   function ENT:ClearPatrolPos()

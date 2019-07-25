@@ -32,11 +32,12 @@ end
 -- Handlers --
 
 function ENT:_InitDetection()
-  if CLIENT then return end
-  self:SetSightFOV(self.SightFOV)
-  self:SetSightRange(self.SightRange)
-  self:SetSightLuminosityRange(self.MinLuminosity, self.MaxLuminosity)
-  self:SetHearingCoefficient(self.HearingCoefficient)
+  if SERVER then
+    self:SetSightFOV(self.SightFOV)
+    self:SetSightRange(self.SightRange)
+    self:SetSightLuminosityRange(self.MinLuminosity, self.MaxLuminosity)
+    self:SetHearingCoefficient(self.HearingCoefficient)
+  else self._DrGBaseWasInSight = {} end
 end
 
 if SERVER then
@@ -76,8 +77,7 @@ if SERVER then
     end
     local angle = (eyepos + self:EyeAngles():Forward()):DrG_Degrees(ent:WorldSpaceCenter(), eyepos)
     if angle > self:GetSightFOV()/2 then return false end
-    local los = self:Visible(ent)
-    return los
+    return self:Visible(ent)
   end
 
   net.DrG_DefineCallback("DrGBaseIsInSight", function(nextbot, ent)
@@ -117,16 +117,16 @@ if SERVER then
   -- Check if entities are in sight
   function ENT:UpdateSight(disp, spotted)
     if self:IsAIDisabled() then return end
-    if not isnumber(disp) then
-      for i, disp in ipairs({
-        D_LI, D_HT, D_FR, D_NU
-      }) do self:UpdateSight(disp) end
-    else
+    if istable(disp) then
+      for i, dis in ipairs(disp) do self:UpdateSight(dis, spotted) end
+    elseif isnumber(disp) then
       for ent in self:EntityIterator(disp, spotted) do
         local res = self:IsInSight(ent)
         if res then self:OnSight(ent) end
       end
-    end
+    else self:UpdateSight({
+      D_LI, D_HT, D_FR, D_NU
+    }, spotted) end
   end
   function ENT:UpdateAlliesSight(spotted)
     return self:UpdateSight(D_LI, spotted)
@@ -176,7 +176,17 @@ else
   -- Getters/setters --
 
   function ENT:IsInSight(ent, callback)
-    return self:NetCallback("DrGBaseIsInSight", callback, ent)
+    if IsValid(ent) then
+      return self:NetCallback("DrGBaseIsInSight", callback, ent)
+    elseif isfunction(callback) then callback(false) end
+  end
+  function ENT:WasInSight(ent)
+    if not IsValid(ent) then return false end
+    self:IsInSight(ent, function(insight)
+      if not IsValid(ent) then return end
+      self._DrGBaseWasInSight[ent] = insight
+    end)
+    return self._DrGBaseWasInSight[ent] or false
   end
 
 end

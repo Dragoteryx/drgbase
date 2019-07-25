@@ -25,6 +25,18 @@ end
 
 if SERVER then
 
+  local DISPS = {
+    [D_LI] = true,
+    [D_HT] = true,
+    [D_FR] = true
+  }
+  local function IsCachedDisp(disp)
+    return DISPS[disp] or false
+  end
+  local function IsValidDisp(disp)
+    return IsCachedDisp(disp) or disp == D_NU
+  end
+
   local DISP_PRIORITIES = {
     [D_LI] = 4,
     [D_HT] = 3,
@@ -123,13 +135,17 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:GetRelationship(ent, absolute)
-    if not IsValid(ent) then return D_ER, -1 end
-    if self == ent then return D_ER, -1 end
+    if not IsValid(ent) then return D_ER end
+    if self == ent then return D_ER end
     local disp = self._DrGBaseRelationships[ent]
-    local prio = self._DrGBaseRelPriorities[ent]
     if not absolute and self:IsIgnored(ent) then
-      return D_NU, prio
-    else return disp, prio end
+      return D_NU
+    else return disp or D_NU end
+  end
+  function ENT:GetPriority(ent)
+    if not IsValid(ent) then return -1 end
+    if self == ent then return -1 end
+    return self._DrGBaseRelPriorities[ent] or DEFAULT_PRIO
   end
   function ENT:IsAlly(ent)
     return self:GetRelationship(ent) == D_LI
@@ -143,25 +159,35 @@ if SERVER then
   function ENT:IsNeutral(ent)
     return self:GetRelationship(ent) == D_NU
   end
-  function ENT:_SetRelationship(ent, disp, prio)
+
+  function ENT:_SetRelationship(ent, disp)
     if not IsValid(ent) then return end
-    self._DrGBaseRelPriorities[ent] = prio or DEFAULT_PRIO
-    local curr = self:GetRelationship(ent)
+    if not IsValidDisp(disp) then return end
+    local curr = self:GetRelationship(ent, true)
     if (cur ~= disp or disp == D_HT) and
     ent:IsNPC() then self:_UpdateNPCRelationship(ent, disp) end
     if curr == disp then return end
-    if table.HasValue({D_LI, D_HT, D_FR}, curr) then
-      table.RemoveByValue(self._DrGBaseRelationshipCaches[curr], ent)
-    end
-    for i, cdisp in ipairs({D_LI, D_HT, D_FR}) do
-      if disp ~= cdisp then continue end
+    --print(ent, curr, "=>", disp)
+    if IsCachedDisp(disp) then
+      self._DrGBaseRelationshipCaches[D_LI][ent] = nil
+      self._DrGBaseRelationshipCaches[D_HT][ent] = nil
+      self._DrGBaseRelationshipCaches[D_FR][ent] = nil
+      self._DrGBaseRelationshipCaches[disp][ent] = true
       self._DrGBaseRelationships[ent] = disp
-      table.insert(self._DrGBaseRelationshipCaches[cdisp], ent)
-      return
-    end
-    if curr ~= DEFAULT_DISP then
+      ent:CallOnRemove("DrGBaseRemoveFromDrGNextbot"..self:GetCreationID().."RelationshipCache", function()
+        if IsValid(self) then self._DrGBaseRelationshipCaches[disp][ent] = nil end
+      end)
+    elseif disp == D_NU then
+      self._DrGBaseRelationshipCaches[D_LI][ent] = nil
+      self._DrGBaseRelationshipCaches[D_HT][ent] = nil
+      self._DrGBaseRelationshipCaches[D_FR][ent] = nil
       self._DrGBaseRelationships[ent] = DEFAULT_DISP
     end
+  end
+  function ENT:_SetPriority(ent, prio)
+    if not IsValid(ent) then return end
+    if not isnumber(prio) then return end
+    self._DrGBaseRelPriorities[ent] = prio
   end
 
   net.DrG_DefineCallback("DrGBaseGetRelationship", function(nextbot, ent)
@@ -205,6 +231,7 @@ if SERVER then
     return rel.disp, rel.prio
   end
   function ENT:_SetRelationshipDefiner(name, id, disp, prio)
+    if not IsValidDisp(disp) then return end
     self._DrGBaseRelationshipDefiners[name][id] = {
       disp = disp, prio = prio or DEFAULT_PRIO
     }
@@ -418,22 +445,41 @@ if SERVER then
       end
     end
     local relationship = HighestRelationship(relationships)
-    self:_SetRelationship(ent, relationship.disp, relationship.prio)
+    self:_SetRelationship(ent, relationship.disp)
+    self:_SetPriority(ent, relationship.prio)
   end
 
   -- Iterators
+  local function NextCachedEntity(self, cache, previous, disp, spotted)
+    local ent = next(cache, previous)
+    if ent == nil then return nil
+    elseif not IsValid(ent) or disp ~= self:GetRelationship(ent) or
+    (spotted and not self:HasSpotted(ent)) then
+      return NextCachedEntity(self, cache, ent, disp, spotted)
+    else return ent end
+  end
   function ENT:EntityIterator(disp, spotted)
-    local i = 1
-    local cache = disp == D_NU and ents.GetAll() or self._DrGBaseRelationshipCaches[disp]
-    return function()
-      for h = i, #cache do
-        local ent = cache[h]
-        i = i+1
-        if disp ~= self:GetRelationship(ent) then continue end
-        if spotted and not self:HasSpotted(ent) then continue end
-        return ent
+    if IsCachedDisp(disp) then
+      local cache = self._DrGBaseRelationshipCaches[disp]
+      local previous = nil
+      return function()
+        previous = NextCachedEntity(self, cache, previous, disp, spotted)
+        return previous
       end
-    end
+    elseif disp == D_NU then
+      local i = 1
+      local entities = ents.GetAll()
+      return function()
+        for h = i, #entities do
+          local ent = entities[h]
+          i = i+1
+          if not IsValid(ent) then continue end
+          if disp ~= self:GetRelationship(ent) then continue end
+          if spotted and not self:HasSpotted(ent) then continue end
+          return ent
+        end
+      end
+    else return function() end end
   end
   function ENT:AllyIterator(spotted)
     return self:EntityIterator(D_LI, spotted)
@@ -469,27 +515,6 @@ if SERVER then
     return self:GetEntities(D_NU, spotted)
   end
 
-  -- Get closest entity
-  function ENT:GetClosestEntity(disp, spotted)
-    local entities = self:GetEntities(disp, spotted)
-    table.sort(entities, function(ent1, ent2)
-      return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
-    end)
-    return entities[1]
-  end
-  function ENT:GetClosestAlly(spotted)
-    return self:GetClosestEntity(D_LI, spotted)
-  end
-  function ENT:GetClosestEnemy(spotted)
-    return self:GetClosestEntity(D_HT, spotted)
-  end
-  function ENT:GetClosestAfraidOf(spotted)
-    return self:GetClosestEntity(D_FR, spotted)
-  end
-  function ENT:GetClosestNeutral(spotted)
-    return self:GetClosestEntity(D_NU, spotted)
-  end
-
   -- Number of entities left
   function ENT:EntitiesLeft(disp, spotted)
     return #self:GetEntities(disp, spotted)
@@ -505,6 +530,30 @@ if SERVER then
   end
   function ENT:NeutralsLeft(spotted)
     return self:EntitiesLeft(D_NU, spotted)
+  end
+
+  -- Get closest entity
+  function ENT:GetClosestEntity(disp, spotted)
+    local closest = NULL
+    for ent in self:EntityIterator(disp, spotted) do
+      if not IsValid(closest) or
+      self:GetRangeSquaredTo(ent) < self:GetRangeSquaredTo(closest) then
+        closest = ent
+      end
+    end
+    return closest
+  end
+  function ENT:GetClosestAlly(spotted)
+    return self:GetClosestEntity(D_LI, spotted)
+  end
+  function ENT:GetClosestEnemy(spotted)
+    return self:GetClosestEntity(D_HT, spotted)
+  end
+  function ENT:GetClosestAfraidOf(spotted)
+    return self:GetClosestEntity(D_FR, spotted)
+  end
+  function ENT:GetClosestNeutral(spotted)
+    return self:GetClosestEntity(D_NU, spotted)
   end
 
   -- Hooks --
@@ -562,18 +611,11 @@ if SERVER then
       end
     end)
   end)
-  hook.Add("EntityRemoved", "DrGBaseNextbotRelationshipsRemove", function(ent)
-    for i, nextbot in ipairs(DrGBase.GetNextbots()) do
-      if ent == nextbot then continue end
-      nextbot:_SetRelationship(ent, D_NU)
-    end
-  end)
 
   -- Aliases --
 
   function ENT:Disposition(ent)
-    local disp, prio = self:GetRelationship(ent)
-    return disp
+    return self:GetRelationship(ent)
   end
   function ENT:AddRelationship(str)
     local split = string.Explode("[%s]+", str, true)
@@ -596,7 +638,9 @@ else
   -- Getters/setters --
 
   function ENT:GetRelationship(ent, callback)
-    return self:NetCallback("DrGBaseGetRelationship", callback, ent)
+    if IsValid(ent) then
+      return self:NetCallback("DrGBaseGetRelationship", callback, ent)
+    elseif isfunction(callback) then callback(D_ER) end
   end
   function ENT:IsAlly(ent, callback)
     return self:GetRelationship(ent, function(disp)

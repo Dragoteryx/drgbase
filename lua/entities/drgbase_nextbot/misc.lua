@@ -195,6 +195,7 @@ if SERVER then
           if not self:Visible(ent) then continue end
           local dmg = DamageInfo()
           dmg:SetAttacker(self)
+          dmg:SetInflictor(self)
           dmg:SetDamage(isfunction(attack.damage) and attack.damage(ent) or attack.damage)
           dmg:SetDamageType(attack.type)
           dmg:SetDamagePosition(self:WorldSpaceCenter())

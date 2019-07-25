@@ -223,15 +223,18 @@ if SERVER then
   end)
 
   function ENT:NetCallback(name, callback, ply, ...)
+    if not isfunction(callback) then return end
     if not ply:IsPlayer() then return end
     return ply:DrG_NetCallback(name, function(...)
-      if IsValid(self) and isfunction(callback) then callback(...) end
+      if IsValid(self) then callback(...) end
     end, self, ...)
   end
 
   -- Effects --
 
-  --function ENT:BeamParticleEffect(effect, don't worry roach I'll take care of it) end
+  function ENT:BeamParticleEffect(effect)
+
+  end
 
   function ENT:DynamicLight(color, radius, brightness, style, attachment)
     if color == nil then color = Color(255, 255, 255) end
@@ -274,8 +277,9 @@ else
   end
   net.DrG_Receive("DrGBaseEntMessage", ReceiveMessage)
   function ENT:NetCallback(name, callback, ...)
+    if not isfunction(callback) then return end
     return net.DrG_UseCallback(name, function(...)
-      if IsValid(self) and isfunction(callback) then callback(...) end
+      if IsValid(self) then callback(...) end
     end, self, ...)
   end
 

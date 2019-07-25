@@ -311,7 +311,8 @@ if SERVER then
   -- Behaviour tree --
 
   function ENT:GetBehaviourTree()
-    return DrGBase.GetBehaviourTree(self.BehaviourTree)
+    if self.BehaviourTree == "" then return
+    else return DrGBase.GetBehaviourTree(self.BehaviourTree) end
   end
   function ENT:GetBT()
     return self:GetBehaviourTree()
@@ -482,13 +483,10 @@ else
     end
     if DisplaySight:GetBool() then
        local eyepos = self:EyePos()
-       local color = self._DrGBaseCanSeeLocalPlayer and DrGBase.CLR_GREEN or DrGBase.CLR_RED
+       local color = self:WasInSight(LocalPlayer()) and DrGBase.CLR_GREEN or DrGBase.CLR_RED
        if self:IsPossessedByLocalPlayer() then color = DrGBase.CLR_ORANGE end
        render.DrawWireframeSphere(eyepos, 2*self:GetScale(), 4, 4, color, false)
        render.DrawLine(eyepos, eyepos + self:EyeAngles():Forward()*15, color, false)
-       self:IsInSight(LocalPlayer(), function(insight)
-         self._DrGBaseCanSeeLocalPlayer = insight
-       end)
     end
   end
 

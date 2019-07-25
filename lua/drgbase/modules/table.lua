@@ -26,3 +26,12 @@ function table.DrG_Unpack(tbl, size, i)
     return tbl[i], table.DrG_Unpack(tbl, size, i+1)
   elseif i == size then return tbl[i] end
 end
+
+function table.DrG_Fetch(tbl, callback)
+  if #tbl == 0 then return end
+  local val = tbl[1]
+  for i = 1, #tbl do
+    if callback(tbl[i], val) then val = tbl[i] end
+  end
+  return val
+end
