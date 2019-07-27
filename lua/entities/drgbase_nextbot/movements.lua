@@ -105,7 +105,7 @@ end
 -- Handlers --
 
 function ENT:_InitMovements()
-  if SERVER then self:LoopTimer(engine.TickInterval(), self.UpdateSpeed) end
+  if SERVER then self:LoopTimer(0.1, self.UpdateSpeed) end
   self._DrGBaseLastAngle = self:GetAngles()
 end
 

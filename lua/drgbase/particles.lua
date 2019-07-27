@@ -26,3 +26,44 @@ PrecacheParticleSystem("blood_impact_green_01")
 PrecacheParticleSystem("blood_impact_antlion_01")
 PrecacheParticleSystem("blood_impact_zombie_01")
 PrecacheParticleSystem("blood_impact_antlion_worker_01")
+
+-- Create particles --
+
+if SERVER then
+
+  function DrGBase.ParticleEffect(effect, data)
+    if not isstring(effect) then return end
+    if not istable(data) then return end
+    local ent = ents.Create("info_particle_system")
+    if not IsValid(ent) then return NULL end
+    ent:SetKeyValue("effect_name", effect)
+    ent:SetName("drg_info_particle_system_"..ent:GetCreationID())
+    if isvector(data.pos) then ent:SetPos(data.pos) end
+    if isangle(data.ang) then ent:SetAngles(data.ang) end
+    if data.active ~= false then ent:SetKeyValue("start_active", "1") end
+    for i, subdata in pairs(data.cpoints or {}) do
+      if not isnumber(i) then continue end
+      if math.Round(i) ~= i then continue end
+      if i < 1 or i > 63 then continue end
+      local sub = DrGBase.ParticleEffect(effect, subdata)
+      if not IsValid(sub) then continue end
+      ent:SetKeyValue("cpoint"..tostring(i), sub:GetName())
+      ent:DeleteOnRemove(sub)
+    end
+    ent:Spawn()
+    ent:Activate()
+    if isentity(data.parent) then
+      if isstring(data.attachment) then
+        ent:SetParent(data.parent)
+        if data.keepoffset then
+          ent:Fire("SetParentAttachmentMaintainOffset", data.attachment)
+        else ent:Fire("SetParentAttachment", data.attachment) end
+      else
+        ent:SetPos(data.parent:GetPos())
+        ent:SetParent(data.parent)
+      end
+    end
+    return ent
+  end
+
+end

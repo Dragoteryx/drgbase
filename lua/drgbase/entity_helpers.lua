@@ -148,18 +148,6 @@ end
 function ENT:_HandleNetMessage() end
 function ENT:OnNetMessage() end
 
--- Effects --
-
-function ENT:ParticleEffect(name, follow, attachment)
-  if follow then
-    local pattach = attachment and PATTACH_POINT_FOLLOW or PATTACH_ABSORIGIN_FOLLOW
-    ParticleEffectAttach(name, pattach, self, attachment or 1)
-  else
-    local pattach = attachment and PATTACH_POINT or PATTACH_ABSORIGIN
-    ParticleEffectAttach(name, pattach, self, attachment or 1)
-  end
-end
-
 if SERVER then
   AddCSLuaFile()
 
@@ -232,8 +220,34 @@ if SERVER then
 
   -- Effects --
 
-  function ENT:BeamParticleEffect(effect)
+  function ENT:ParticleEffect(effect, follow, attachment)
+    return self:CreateParticleEffect(effect, attachment)
+  end
 
+  function ENT:CreateParticleEffect(effect, attachment)
+    return DrGBase.ParticleEffect(effect, {
+      parent = self, attachment = attachment
+    })
+  end
+
+  function ENT:BeamParticleEffect(effect, attachment, ...)
+    local root = {parent = self, attachment = attachment}
+    local data = root
+    local args, n = table.DrG_Pack(...)
+    for i = 1, n do
+      local arg = args[i]
+      if isentity(arg) and IsValid(arg) then
+        data.cpoints = {[1] = {parent = arg}}
+        if isstring(args[i+1]) then
+          data.cpoints[1].attachment = args[i+1]
+        end
+      elseif isvector(arg) then
+        data.cpoints = {[1] = {pos = arg}}
+      else continue end
+      data = data.cpoints[1]
+    end
+    data.active = false
+    return DrGBase.ParticleEffect(effect, root)
   end
 
   function ENT:DynamicLight(color, radius, brightness, style, attachment)

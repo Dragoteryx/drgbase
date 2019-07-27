@@ -48,7 +48,6 @@ function ENT:DirectPoseParametersAt(pos, pitch, yaw, center)
   end
 end
 
-
 -- Hooks --
 
 function ENT:OnAnimEvent() end
@@ -384,8 +383,7 @@ if SERVER then
             self:SetPoseParameter("move_y", movement.y)
           end
         end
-        if options.rate and not self:IsPlayingAnimation() and
-        self:IsOnGround() and self:IsMoving() and not self:IsClimbing() then
+        if options.rate and self:IsOnGround() and not self:IsClimbing() then
           local velocity = self:GetVelocity()
           velocity.z = 0
           if not velocity:IsZero() then

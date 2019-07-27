@@ -30,6 +30,9 @@ ENT.OnRemoveEffects = {}
 -- Misc --
 DrGBase.IncludeFile("meta.lua")
 
+-- Convars --
+local ProjectileTickrate = CreateConVar("drgbase_projectile_tickrate", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+
 -- Handlers --
 
 hook.Add("PhysgunPickup", "DrGBaseProjectilePhysgun", function(ply, ent)
@@ -78,11 +81,13 @@ if SERVER then
       end)
     end
     if #self.AttachEffects > 0 then
-      self:ParticleEffect(self.AttachEffects[math.random(#self.AttachEffects)], true)
+      self:CreateParticleEffect(self.AttachEffects[math.random(#self.AttachEffects)])
     end
     -- custom code --
     self:_BaseInitialize()
     self:CustomInitialize()
+    self._DrGBaseBaseThinkDelay = 0
+    self._DrGBaseCustomThinkDelay = 0
     -- physics --
     self:PhysicsInit(SOLID_VPHYSICS)
     self:SetMoveType(MOVETYPE_VPHYSICS)
@@ -99,9 +104,18 @@ if SERVER then
 
   function ENT:Think()
     self:_HandleContact()
-    self:_BaseThink()
-    self:CustomThink()
-    self:NextThink(CurTime() + engine.TickInterval())
+    if CurTime() > self._DrGBaseBaseThinkDelay then
+      local delay = self:_BaseThink() or 0
+      self._DrGBaseBaseThinkDelay = CurTime() + delay
+    end
+    if CurTime() > self._DrGBaseCustomThinkDelay then
+      local delay = self:CustomThink() or 0
+      self._DrGBaseCustomThinkDelay = CurTime() + delay
+    end
+    local tickrate = ProjectileTickrate:GetFloat()
+    if tickrate > 0 then
+      self:NextThink(CurTime() + 1/tickrate)
+    else self:NextThink(CurTime() + engine.TickInterval()) end
     return true
   end
   function ENT:_BaseThink() end
@@ -252,6 +266,8 @@ if SERVER then
 else
 
   function ENT:Initialize()
+    self._DrGBaseBaseThinkDelay = 0
+    self._DrGBaseCustomThinkDelay = 0
     self:_BaseInitialize()
     self:CustomInitialize()
   end
@@ -259,8 +275,14 @@ else
   function ENT:CustomInitialize() end
 
   function ENT:Think()
-    self:_BaseThink()
-    self:CustomThink()
+    if CurTime() > self._DrGBaseBaseThinkDelay then
+      local delay = self:_BaseThink() or 0
+      self._DrGBaseBaseThinkDelay = CurTime() + delay
+    end
+    if CurTime() > self._DrGBaseCustomThinkDelay then
+      local delay = self:CustomThink() or 0
+      self._DrGBaseCustomThinkDelay = CurTime() + delay
+    end
   end
   function ENT:_BaseThink() end
   function ENT:CustomThink() end

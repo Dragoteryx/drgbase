@@ -32,12 +32,12 @@ end
 -- Handlers --
 
 function ENT:_InitDetection()
-  if SERVER then
-    self:SetSightFOV(self.SightFOV)
-    self:SetSightRange(self.SightRange)
-    self:SetSightLuminosityRange(self.MinLuminosity, self.MaxLuminosity)
-    self:SetHearingCoefficient(self.HearingCoefficient)
-  else self._DrGBaseWasInSight = {} end
+  self._DrGBaseWasInSight = {}
+  if CLIENT then return end
+  self:SetSightFOV(self.SightFOV)
+  self:SetSightRange(self.SightRange)
+  self:SetSightLuminosityRange(self.MinLuminosity, self.MaxLuminosity)
+  self:SetHearingCoefficient(self.HearingCoefficient)
 end
 
 if SERVER then
@@ -122,7 +122,10 @@ if SERVER then
     elseif isnumber(disp) then
       for ent in self:EntityIterator(disp, spotted) do
         local res = self:IsInSight(ent)
-        if res then self:OnSight(ent) end
+        if not res and self._DrGBaseWasInSight[ent] then
+          self:OnLostSight(ent)
+        elseif res then self:OnSight(ent) end
+        self._DrGBaseWasInSight[ent] = res
       end
     else self:UpdateSight({
       D_LI, D_HT, D_FR, D_NU
@@ -146,6 +149,7 @@ if SERVER then
   function ENT:OnSight(ent)
     self:SpotEntity(ent)
   end
+  function ENT:OnLostSight() end
   function ENT:OnSound(ent, sound)
     self:SpotEntity(ent)
   end
