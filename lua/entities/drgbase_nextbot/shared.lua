@@ -19,7 +19,7 @@ ENT.SpawnHealth = 100
 ENT.HealthRegen = 0
 ENT.DamageMultipliers = {}
 ENT.MinPhysDamage = 10
-ENT.MinFallDamage = 0
+ENT.MinFallDamage = 10
 
 -- Sounds --
 ENT.OnSpawnSounds = {}
@@ -171,6 +171,7 @@ function ENT:Initialize()
     self.vFireIsCharacter = true
     self._DrGBaseCorCalls = {}
     self._DrGBaseWaterLevel = self:WaterLevel()
+    self._DrGBaseDownSpeed = 0
   else self:SetIK(true) end
   self:AddFlags(FL_OBJECT + FL_NPC)
   self._DrGBaseBaseThinkDelay = 0
@@ -224,15 +225,31 @@ function ENT:Think()
       self:OnExtinguish()
     end
     self._DrGBaseIsOnFire = self:IsOnFire()
+    -- update fall speed
+    local speed = -self:GetVelocity().z
+    self:Timer(0.1, function()
+      self._DrGBaseDownSpeed = speed
+    end)
     -- on ground
     local onGround = self:IsOnGround()
     if self:GetNW2Bool("DrGBaseOnGround") ~= onGround then
       self:SetNW2Bool("DrGBaseOnGround", onGround)
       if onGround then
         self:InvalidatePath()
+        local damage = math.floor(self:OnFallDamage(self._DrGBaseDownSpeed))
+        print(damage)
+        if damage > math.max(0, self.MinFallDamage) then
+          local dmg = DamageInfo()
+          dmg:SetDamage(damage)
+          dmg:SetAttacker(self)
+          dmg:SetInflictor(self)
+          dmg:SetDamageType(DMG_FALL)
+          self:TakeDamageInfo(dmg)
+        end
       else
 
       end
+
       self:UpdateAnimation()
       self:UpdateSpeed()
     end
@@ -435,6 +452,10 @@ if SERVER then
   function ENT:OnHealthChange() end
   function ENT:OnExtinguish() end
   function ENT:OnWaterLevelChange() end
+  function ENT:OnFallDamage(speed)
+    --return math.max(0, speed-self.loco:GetDeathDropHeight())/15
+    return 0
+  end
 
   -- SLVBase compatibility --
   if file.Exists("autorun/slvbase", "LUA") then
