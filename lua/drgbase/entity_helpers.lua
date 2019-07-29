@@ -223,12 +223,14 @@ if SERVER then
   function ENT:ParticleEffect(effect, ...)
     local root = {parent = self}
     local args, n = table.DrG_Pack(...)
+    local attachment = false
     if n > 0 then
       local data = root
       for i = 1, n do
         local arg = args[i]
         if i == 1 and isstring(arg) then
           root.attachment = arg
+          attachment = true
         elseif isentity(arg) and IsValid(arg) then
           data.cpoints = {{parent = arg}}
           if isstring(args[i+1]) then
@@ -238,9 +240,11 @@ if SERVER then
         elseif isvector(arg) then
           data.cpoints = {{pos = arg}}
           data = data.cpoints[1]
-        else continue end        
+        else continue end
       end
-      data.active = false
+      if data ~= root then
+        data.active = false
+      end
     end
     return DrGBase.ParticleEffect(effect, root)
   end

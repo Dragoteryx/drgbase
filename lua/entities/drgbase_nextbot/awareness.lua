@@ -43,7 +43,7 @@ function ENT:_InitAwareness()
   self._DrGBaseSpotted = {}
   if CLIENT then return end
   self:SetOmniscient(self.Omniscient)
-  self._DrGBaseLastTime = {}
+  self._DrGBaseLastTimeSpotted = {}
   self._DrGBaseLastKnownPos = {}
   self:SetSpotDuration(self.SpotDuration)
 end
@@ -61,7 +61,7 @@ if SERVER then
   end
 
   function ENT:LastTimeSpotted(ent)
-    return self._DrGBaseLastTime[ent] or -1
+    return self._DrGBaseLastTimeSpotted[ent] or -1
   end
   function ENT:LastKnownPosition(ent)
     return self._DrGBaseLastKnownPos[ent]
@@ -79,7 +79,7 @@ if SERVER then
     if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return end
     if self:GetSpotDuration() == 0 then return end
     local spotted = self:HasSpotted(ent)
-    self._DrGBaseLastTime[ent] = CurTime()
+    self._DrGBaseLastTimeSpotted[ent] = CurTime()
     self._DrGBaseSpotted[ent] = true
     self:UpdateKnownPosition(ent)
     if not spotted then

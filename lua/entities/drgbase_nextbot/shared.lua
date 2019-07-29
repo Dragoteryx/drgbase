@@ -18,7 +18,8 @@ DrGBase.IncludeFile("status.lua")
 ENT.SpawnHealth = 100
 ENT.HealthRegen = 0
 ENT.DamageMultipliers = {}
-ENT.FallDamage = false
+ENT.MinPhysDamage = 10
+ENT.MinFallDamage = 0
 
 -- Sounds --
 ENT.OnSpawnSounds = {}

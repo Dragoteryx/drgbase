@@ -161,16 +161,19 @@ if SERVER then
   function ENT:OnCombineBall() end
   --function ENT:AfterCombineBall() end
 
-  function ENT:OnPhysCollision(ent, phys)
-    return phys:GetVelocity():Length() < 600
+  function ENT:OnPhysDamage(ent, phys)
+    return phys:GetEnergy()/333333
   end
 
   local function PhysBounce(self, ent, phys)
     local velocity = phys:GetVelocity()
     local speed = velocity:Length()
-    local dir = self:WorldSpaceCenter():DrG_Direction(self:NearestPoint(ent:GetPos()))
-    phys:AddVelocity(dir:GetNormalized()*speed)
-    phys:SetVelocity(phys:GetVelocity()*0.5)
+    if not ent:IsVehicle() then
+      local nearest = self:NearestPoint(ent:GetPos())
+      local dir = self:WorldSpaceCenter():DrG_Direction(nearest)
+      phys:AddVelocity(dir:GetNormalized()*speed)
+      phys:SetVelocity(phys:GetVelocity()*0.5)
+    end
   end
 
   function ENT:_HandleContact(ent)
@@ -180,7 +183,7 @@ if SERVER then
       self._DrGBaseLastTouchedTime[ent] = CurTime()
       ent:Contact(self)
     elseif ent ~= self:LastTouchedEntity() or
-    CurTime() > self._DrGBaseLastTouchedTime[ent] + 1 then
+    CurTime() > self._DrGBaseLastTouchedTime[ent] + 0.2 then
       self:SetNW2Entity("DrGBaseLastTouchedEntity", ent)
       self._DrGBaseLastTouchedTime[ent] = CurTime()
       local phys = ent:GetPhysicsObject()
@@ -208,22 +211,22 @@ if SERVER then
         self:Remove()
       elseif IsValid(phys) and not ent:IsPlayerHolding() then
         if ent:IsVehicle() or class == "prop_physics" then
-          if not self:OnPhysCollision(ent, phys) then
+          local damage = math.floor(self:OnPhysDamage(ent, phys))
+          if damage > math.max(0, self.MinPhysDamage) then
             local dmg = DamageInfo()
             if ent:IsVehicle() and IsValid(ent:GetDriver()) then
               dmg:SetAttacker(ent:GetDriver())
             else dmg:SetAttacker(ent) end
             dmg:SetInflictor(ent)
-            dmg:SetDamage(self:Health())
+            dmg:SetDamage(damage)
             if ent:IsVehicle() then
               dmg:SetDamageType(DMG_VEHICLE)
             else dmg:SetDamageType(DMG_CRUSH) end
             dmg:SetDamageForce(phys:GetVelocity())
             self:TakeDamageInfo(dmg)
-          elseif not ent:IsVehicle() then
-            PhysBounce(self, ent, phys)
           end
-        else PhysBounce(self, ent, phys) end
+        end
+        PhysBounce(self, ent, phys)
       end
     end
   end
