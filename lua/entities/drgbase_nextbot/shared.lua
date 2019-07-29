@@ -237,7 +237,7 @@ function ENT:Think()
       if onGround then
         self:InvalidatePath()
         local damage = math.floor(self:OnFallDamage(self._DrGBaseDownSpeed))
-        print(damage)
+        --print(damage)
         if damage > math.max(0, self.MinFallDamage) then
           local dmg = DamageInfo()
           dmg:SetDamage(damage)
