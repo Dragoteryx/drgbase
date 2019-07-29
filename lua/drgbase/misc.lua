@@ -60,7 +60,7 @@ function DrGBase.Astar(pos, goal, options, callback)
     else i = i+1 end
     local current = openList:Fetch()
     if not isvector(current) then return {}, false end
-    debugoverlay.Sphere(current, 2, 0.2, DrGBase.CLR_WHITE, true)
+    debugoverlay.Sphere(current, 2, 0.1, DrGBase.CLR_WHITE, true)
     local currentID = tostring(current)
     if currentID == goalID then
       local path = {current}
@@ -77,12 +77,12 @@ function DrGBase.Astar(pos, goal, options, callback)
         local newCost = costSoFar[currentID] + current:Distance(next)
         if not costSoFar[nextID] or newCost < costSoFar[nextID] then
           if isfunction(callback) and callback(current, next) == false then continue end
-          debugoverlay.Line(current, next, 0.2, DrGBase.CLR_WHITE, true)
+          debugoverlay.Line(current, next, 0.1, DrGBase.CLR_GREEN, true)
           costSoFar[nextID] = newCost
           cameFrom[nextID] = current
           local heuristic = isfunction(options.heuristic) and options.heuristic(next, goal) or next:Distance(goal)
           openList:Update(next, newCost + heuristic)
-        end
+        else debugoverlay.Line(current, next, 0.1, DrGBase.CLR_RED, true) end
       end
     end
   end
@@ -188,7 +188,7 @@ if SERVER then
     local toreach = navmesh.GetNearestNavArea(goal)
     local path, success = DrGBase.Astar(closest:GetCenter(), toreach:GetCenter(), {
       neighbours = function(pos)
-        local area = navmesh.DrG_GetAreaFromCenter(pos)
+        local area = navmesh.GetNearestNavArea(pos)
         if area then
           local i = 1
           local adjacent = area:GetAdjacentAreas()
@@ -228,12 +228,12 @@ if SERVER then
         if not GetConVar("developer"):GetBool() then return end
         print("=======")
         --gm_fork:
-        local from = Vector(12014.925781, -4885.867676, -7935.968750 + 60)
-        local to = Vector(-14160.027344, 14420.491211, -10087.968750)
+        --local from = Vector(12014.925781, -4885.867676, -7935.968750 + 60)
+        --local to = Vector(-14160.027344, 14420.491211, -10087.968750)
         --gm_construct:
-        --local from = Vector(0, 0, 0)
-        --local to = Entity(1):GetPos()
-        local path, success = DrGBase.NodegraphAstar(from, to, 50)
+        local from = Vector(0, 0, 100)
+        local to = Entity(1):GetPos()
+        local path, success = DrGBase.NavmeshAstar(from, to, 50)
         if success then
           print("success")
           debugoverlay.Line(from, path[1], 1, DrGBase.CLR_RED, true)

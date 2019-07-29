@@ -4,11 +4,18 @@
 local MultDamagePlayer = CreateConVar("drgbase_multiplier_damage_players", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local MultDamageNPC = CreateConVar("drgbase_multiplier_damage_npc", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
+-- Functions --
+
+function ENT:LastTouchedEntity()
+  return self:GetNW2Entity("DrGBaseLastTouchedEntity")
+end
+
 -- Handlers --
 
 function ENT:_InitHooks()
   if CLIENT then return end
   self._DrGBaseLastDmgInflicted = {}
+  self._DrGBaseLastTouchedTime = table.DrG_Default({}, -1)
   self:DrG_AddListener("OnContact", self._HandleContact)
 end
 
@@ -154,32 +161,70 @@ if SERVER then
   function ENT:OnCombineBall() end
   --function ENT:AfterCombineBall() end
 
+  function ENT:OnPhysCollision(ent, phys)
+    return phys:GetVelocity():Length() < 600
+  end
+
+  local function PhysBounce(self, ent, phys)
+    local velocity = phys:GetVelocity()
+    local speed = velocity:Length()
+    local dir = self:WorldSpaceCenter():DrG_Direction(self:NearestPoint(ent:GetPos()))
+    phys:AddVelocity(dir:GetNormalized()*speed)
+    phys:SetVelocity(phys:GetVelocity()*0.5)
+  end
+
   function ENT:_HandleContact(ent)
     local class = ent:GetClass()
-    if class == "prop_combine_ball" then
-      if self:IsFlagSet(FL_DISSOLVING) then return end
-      if not self:OnCombineBall(ent) then
-        if not self:IsDead() then
-          local dmg = DamageInfo()
-          local owner = ent:GetOwner()
-          dmg:SetAttacker(IsValid(owner) and owner or ent)
-          dmg:SetInflictor(ent)
-          dmg:SetDamage(self:Health())
-          dmg:SetDamageType(DMG_DISSOLVE)
-          dmg:SetDamageForce(ent:GetVelocity())
-          self:TakeDamageInfo(dmg)
-        else self:DrG_Dissolve() end
-        ent:EmitSound("NPC_CombineBall.KillImpact")
-      elseif isfunction(self.AfterCombineBall) then
-        self:CallInCoroutine(function(self, delay)
-          self:AfterCombineBall(ent, delay)
-        end)
-      end
-    elseif class == "replicator_melon" then
-      ent:Replicate(self)
-      self:Remove()
-    elseif ent.IsDrGProjectile then
+    if ent.IsDrGProjectile then
+      self:SetNW2Entity("DrGBaseLastTouchedEntity", ent)
+      self._DrGBaseLastTouchedTime[ent] = CurTime()
       ent:Contact(self)
+    elseif ent ~= self:LastTouchedEntity() or
+    CurTime() > self._DrGBaseLastTouchedTime[ent] + 1 then
+      self:SetNW2Entity("DrGBaseLastTouchedEntity", ent)
+      self._DrGBaseLastTouchedTime[ent] = CurTime()
+      local phys = ent:GetPhysicsObject()
+      if class == "prop_combine_ball" then
+        if self:IsFlagSet(FL_DISSOLVING) then return end
+        if not self:OnCombineBall(ent) then
+          if not self:IsDead() then
+            local dmg = DamageInfo()
+            local owner = ent:GetOwner()
+            dmg:SetAttacker(IsValid(owner) and owner or ent)
+            dmg:SetInflictor(ent)
+            dmg:SetDamage(self:Health())
+            dmg:SetDamageType(DMG_DISSOLVE)
+            dmg:SetDamageForce(ent:GetVelocity())
+            self:TakeDamageInfo(dmg)
+          else self:DrG_Dissolve() end
+          ent:EmitSound("NPC_CombineBall.KillImpact")
+        elseif isfunction(self.AfterCombineBall) then
+          self:CallInCoroutine(function(self, delay)
+            self:AfterCombineBall(ent, delay)
+          end)
+        end
+      elseif class == "replicator_melon" then
+        ent:Replicate(self)
+        self:Remove()
+      elseif IsValid(phys) and not ent:IsPlayerHolding() then
+        if ent:IsVehicle() or class == "prop_physics" then
+          if not self:OnPhysCollision(ent, phys) then
+            local dmg = DamageInfo()
+            if ent:IsVehicle() and IsValid(ent:GetDriver()) then
+              dmg:SetAttacker(ent:GetDriver())
+            else dmg:SetAttacker(ent) end
+            dmg:SetInflictor(ent)
+            dmg:SetDamage(self:Health())
+            if ent:IsVehicle() then
+              dmg:SetDamageType(DMG_VEHICLE)
+            else dmg:SetDamageType(DMG_CRUSH) end
+            dmg:SetDamageForce(phys:GetVelocity())
+            self:TakeDamageInfo(dmg)
+          elseif not ent:IsVehicle() then
+            PhysBounce(self, ent, phys)
+          end
+        else PhysBounce(self, ent, phys) end
+      end
     end
   end
 

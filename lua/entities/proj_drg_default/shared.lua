@@ -81,7 +81,7 @@ if SERVER then
       end)
     end
     if #self.AttachEffects > 0 then
-      self:CreateParticleEffect(self.AttachEffects[math.random(#self.AttachEffects)])
+      self:ParticleEffect(self.AttachEffects[math.random(#self.AttachEffects)])
     end
     -- custom code --
     self:_BaseInitialize()

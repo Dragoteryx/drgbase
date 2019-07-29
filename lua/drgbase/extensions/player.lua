@@ -11,15 +11,6 @@ function plyMETA:DrG_GetPossessing()
   return self:DrG_Possessing()
 end
 
-function plyMETA:DrG_SteamAvatar(callback, onerror)
-  http.Fetch("https://steamcommunity.com/profiles/"..self:SteamID64().."?xml=1", function(body)
-    -- fetch the avatar from the xml file
-    callback(avatar)
-  end, function(err)
-    if isfunction(onerror) then onerror(err) end
-  end)
-end
-
 hook.Add("PlayerButtonDown", "DrGBasePlayerButtonDown", function(ply, button)
   ply._DrGBaseButtonsDown = ply._DrGBaseButtonsDown or {}
   ply._DrGBaseButtonsDown[button] = {

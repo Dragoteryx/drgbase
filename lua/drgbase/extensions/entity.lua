@@ -19,12 +19,11 @@ end
 function entMETA:DrG_AddListener(name, callback)
   if not isfunction(callback) then return false end
   local old_function = self[name]
+  if not isfunction(old_function) then return false end
   self[name] = function(...)
     local res = callback(...)
-    if res ~= nil then return res end
-    if isfunction(old_function) then
-      return old_function(...)
-    end
+    if res ~= nil then return res
+    else return old_function(...) end
   end
   return true
 end
@@ -121,6 +120,12 @@ if SERVER then
     dissolver:Fire("dissolve", self:GetName())
     dissolver:Remove()
     return true
+  end
+
+  function entMETA:DrG_Ragdoll()
+    if not self.IsDrGNextbot then
+      return NULL
+    else return self:BecomeRagdoll() end
   end
 
 end

@@ -121,11 +121,11 @@ if SERVER then
       for i, dis in ipairs(disp) do self:UpdateSight(dis, spotted) end
     elseif isnumber(disp) then
       for ent in self:EntityIterator(disp, spotted) do
-        local res = self:IsInSight(ent)
-        if not res and self._DrGBaseWasInSight[ent] then
+        local insight = self:IsInSight(ent)
+        if not insight and self._DrGBaseWasInSight[ent] then
           self:OnLostSight(ent)
-        elseif res then self:OnSight(ent) end
-        self._DrGBaseWasInSight[ent] = res
+        elseif insight then self:OnSight(ent) end
+        self._DrGBaseWasInSight[ent] = insight
       end
     else self:UpdateSight({
       D_LI, D_HT, D_FR, D_NU

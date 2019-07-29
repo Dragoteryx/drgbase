@@ -328,7 +328,7 @@ if SERVER then
     self:SetNW2Bool("DrGBaseClimbingDown", down)
     self._DrGBaseClimbLadder = ladder
     if res ~= true then
-      local offset = self:CalcOffset(self.ClimbOffset)
+      local offset = self:CalcOffset(self.ClimbOffset)*self:GetScale()
       offset.z = 0
       local lastHeight = self:GetPos().z
       local lastTime = CurTime()
@@ -339,14 +339,16 @@ if SERVER then
           pos = ladder:GetPosAtHeight(lastHeight - self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
           self:SetPos(pos + offset)
           if ladder:GetBottom().z - pos.z <= 0 then break end
-          if self:OnClimbing(ladder, ladder:GetBottom().z - pos.z, true) then break end
-          if isfunction(callback) and callback(self, ladder, ladder:GetBottom().z - pos.z, true) then break end
+          local remaining = (ladder:GetBottom().z - pos.z)/self:GetScale()
+          if self:OnClimbing(ladder, remaining, true) then break end
+          if isfunction(callback) and callback(self, ladder, remaining, true) then break end
         else
           pos = ladder:GetPosAtHeight(lastHeight + self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
           self:SetPos(pos + offset)
           if ladder:GetTop().z - pos.z <= 0 then break end
-          if self:OnClimbing(ladder, ladder:GetTop().z - pos.z, false) then break end
-          if isfunction(callback) and callback(self, ladder, ladder:GetTop().z - pos.z, false) then break end
+          local remaining = (ladder:GetTop().z - pos.z)/self:GetScale()
+          if self:OnClimbing(ladder, remaining, false) then break end
+          if isfunction(callback) and callback(self, ladder, remaining, false) then break end
         end
         lastHeight = pos.z
         lastTime = CurTime()
@@ -372,7 +374,7 @@ if SERVER then
   local function IsEntityClimbable(self, ent)
     if not IsValid(ent) then return false end
     return ent:GetClass() == "func_lod" or
-    (self.ClimbProps and ent:GetClass() == "prop_physics")
+    (self.ClimbProps and ent:GetClass() == "prop_physics" and ent:IsOnGround())
   end
   function ENT:FindLedge()
     if not self.ClimbLedges then return end
@@ -425,7 +427,7 @@ if SERVER then
     self:SetNW2Bool("DrGBaseClimbing", true)
     self:SetNW2Bool("DrGBaseClimbingDown", false)
     if res ~= true then
-      local offset = self:CalcOffset(self.ClimbOffset)
+      local offset = self:CalcOffset(self.ClimbOffset)*self:GetScale()
       offset.z = 0
       local lastPos = self:GetPos()
       local lastTime = CurTime()
@@ -439,7 +441,7 @@ if SERVER then
         local pos = lastPos + lastPos:DrG_Direction(ledge):GetNormalized()*self:GetSpeed()*self:GetScale()*(CurTime()-lastTime)
         if pos.z > ledge.z then pos.z = ledge.z end
         self:SetPos(pos + offset)
-        local remaining = math.abs(ledge.z - self:GetPos().z)
+        local remaining = math.abs(ledge.z - self:GetPos().z)/self:GetScale()
         if remaining == 0 then break end
         if self:OnClimbing(ledge, remaining, false) then break end
         if isfunction(callback) and callback(self, ledge, remaining, false) then break end

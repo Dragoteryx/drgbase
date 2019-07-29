@@ -220,33 +220,28 @@ if SERVER then
 
   -- Effects --
 
-  function ENT:ParticleEffect(effect, follow, attachment)
-    return self:CreateParticleEffect(effect, attachment)
-  end
-
-  function ENT:CreateParticleEffect(effect, attachment)
-    return DrGBase.ParticleEffect(effect, {
-      parent = self, attachment = attachment
-    })
-  end
-
-  function ENT:BeamParticleEffect(effect, attachment, ...)
-    local root = {parent = self, attachment = attachment}
-    local data = root
+  function ENT:ParticleEffect(effect, ...)
+    local root = {parent = self}
     local args, n = table.DrG_Pack(...)
-    for i = 1, n do
-      local arg = args[i]
-      if isentity(arg) and IsValid(arg) then
-        data.cpoints = {[1] = {parent = arg}}
-        if isstring(args[i+1]) then
-          data.cpoints[1].attachment = args[i+1]
-        end
-      elseif isvector(arg) then
-        data.cpoints = {[1] = {pos = arg}}
-      else continue end
-      data = data.cpoints[1]
+    if n > 0 then
+      local data = root
+      for i = 1, n do
+        local arg = args[i]
+        if i == 1 and isstring(arg) then
+          root.attachment = arg
+        elseif isentity(arg) and IsValid(arg) then
+          data.cpoints = {{parent = arg}}
+          if isstring(args[i+1]) then
+            data.cpoints[1].attachment = args[i+1]
+          end
+          data = data.cpoints[1]
+        elseif isvector(arg) then
+          data.cpoints = {{pos = arg}}
+          data = data.cpoints[1]
+        else continue end        
+      end
+      data.active = false
     end
-    data.active = false
     return DrGBase.ParticleEffect(effect, root)
   end
 

@@ -41,10 +41,7 @@ if SERVER then
     if isvector(data.pos) then ent:SetPos(data.pos) end
     if isangle(data.ang) then ent:SetAngles(data.ang) end
     if data.active ~= false then ent:SetKeyValue("start_active", "1") end
-    for i, subdata in pairs(data.cpoints or {}) do
-      if not isnumber(i) then continue end
-      if math.Round(i) ~= i then continue end
-      if i < 1 or i > 63 then continue end
+    for i, subdata in ipairs(data.cpoints or {}) do
       local sub = DrGBase.ParticleEffect(effect, subdata)
       if not IsValid(sub) then continue end
       ent:SetKeyValue("cpoint"..tostring(i), sub:GetName())
@@ -52,18 +49,30 @@ if SERVER then
     end
     ent:Spawn()
     ent:Activate()
-    if isentity(data.parent) then
+    if isentity(data.parent) and IsValid(data.parent) then
       if isstring(data.attachment) then
         ent:SetParent(data.parent)
         if data.keepoffset then
           ent:Fire("SetParentAttachmentMaintainOffset", data.attachment)
         else ent:Fire("SetParentAttachment", data.attachment) end
-      else
+      elseif not data.keepoffset then
         ent:SetPos(data.parent:GetPos())
         ent:SetParent(data.parent)
-      end
+      else ent:SetParent(data.parent) end
     end
     return ent
+  end
+
+  function DrGBase.SimpleParticleEffect(effect, arg1, arg2)
+    if isentity(arg1) and IsValid(arg1) then
+      return DrGBase.ParticleEffect(effect, {
+        parent = arg1, attachment = arg2
+      })
+    elseif isvector(arg1) then
+      return DrGBase.ParticleEffect(effect, {
+        pos = arg1, ang = arg2
+      })
+    end
   end
 
 end

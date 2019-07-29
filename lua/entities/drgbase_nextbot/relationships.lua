@@ -45,13 +45,15 @@ if SERVER then
     [D_ER] = 0
   }
   local function HighestRelationship(relationships)
-    table.sort(relationships, function(rel1, rel2)
-      if rel1.prio > rel2.prio then return true
-      elseif DISP_PRIORITIES[rel1.disp] > DISP_PRIORITIES[rel2.disp] then
+    return table.DrG_Fetch(relationships, function(rel1, rel2)
+      if rel1.prio > rel2.prio then
         return true
+      elseif rel1.prio == rel2.prio then
+        if DISP_PRIORITIES[rel1.disp] > DISP_PRIORITIES[rel2.disp] then
+          return true
+        else return false end
       else return false end
     end)
-    return relationships[1]
   end
 
   local DEFAULT_FACTIONS = {
@@ -571,6 +573,9 @@ if SERVER then
     end
     ent:DrG_SetRelationship(self, relationship)
     if ent.IsVJBaseSNPC then
+      if not table.HasValue(ent.CurrentPossibleEnemies, self) then
+        table.insert(ent.CurrentPossibleEnemies, self)
+      end
       if (relationship == D_HT or relationship == D_FR) then
         if not table.HasValue(ent.VJ_AddCertainEntityAsEnemy, self) then
           table.insert(ent.VJ_AddCertainEntityAsEnemy, self)
@@ -581,30 +586,22 @@ if SERVER then
           table.insert(ent.VJ_AddCertainEntityAsFriendly, self)
         end
       else table.RemoveByValue(ent.VJ_AddCertainEntityAsFriendly, self) end
-      self:_NotifyVJ(ent)
-    elseif ent.CPTBase_NPC then
-      ent:SetRelationship(self, relationship)
-    end
-  end
-  function ENT:_NotifyVJ(ent)
-    if ent:Health() > 1 then
-      local bleeds = ent.Bleeds
-      ent.Bleeds = false
-      local health = ent:Health()
-      local dmg = DamageInfo()
-      dmg:SetDamage(1)
-      dmg:SetAttacker(self)
-      dmg:SetInflictor(self)
-      dmg:SetDamageType(DMG_DIRECT)
-      ent:TakeDamageInfo(dmg)
-      ent:SetHealth(health)
-      ent.Bleeds = bleeds
     end
   end
 
   hook.Add("OnEntityCreated", "DrGBaseNextbotRelationshipsInit", function(ent)
     timer.Simple(0, function()
       if not IsValid(ent) then return end
+      if ent.IsVJBaseSNPC then
+        local old_DoHardEntityCheck = ent.DoHardEntityCheck
+        ent.DoHardEntityCheck = function(ent, tbl)
+          local entities = old_DoHardEntityCheck(ent, tbl)
+          for i, nextbot in ipairs(DrGBase.GetNextbots()) do
+            table.insert(entities, nextbot)
+          end
+          return entities
+        end
+      end
       for i, nextbot in ipairs(DrGBase.GetNextbots()) do
         if ent == nextbot then continue end
         nextbot:UpdateRelationshipWith(ent)
