@@ -19,6 +19,13 @@ function ENT:IsDead()
   return self:GetNW2Bool("DrGBaseDead") or self:IsDying()
 end
 
+function ENT:IsAlive()
+  return not self:IsDead()
+end
+function ENT:Alive()
+  return self:IsAlive()
+end
+
 function ENT:GetDowned()
   return self:GetNW2Int("DrGBaseDowned")
 end

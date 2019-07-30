@@ -25,13 +25,13 @@ end
 
 if SERVER then
 
-  local DISPS = {
+  local CACHED_DISPS = {
     [D_LI] = true,
     [D_HT] = true,
     [D_FR] = true
   }
   local function IsCachedDisp(disp)
-    return DISPS[disp] or false
+    return CACHED_DISPS[disp] or false
   end
   local function IsValidDisp(disp)
     return IsCachedDisp(disp) or disp == D_NU
@@ -201,6 +201,7 @@ if SERVER then
     if ent:IsPlayer() and not ent:Alive() then return true end
     if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return true end
     if ent:IsFlagSet(FL_NOTARGET) then return true end
+    if ent.CPTBase_NPC and ent.UseNotarget then return true end
     if (ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot") and ent:Health() <= 0 then return true end
     if ent.IsDrGNextbot and (ent:IsDown() or ent:IsDead()) then return true end
     if self:ShouldIgnore(ent) then return true end
@@ -214,8 +215,11 @@ if SERVER then
     return self._DrGBaseFrightening or false
   end
   function ENT:SetFrightening(bool)
+    local old = self:IsFrightening()
     self._DrGBaseFrightening = tobool(bool)
-    self:UpdateRelationships()
+    if old ~= self:IsFrightening() then
+      self:UpdateRelationships()
+    end
   end
 
   -- Functions --
@@ -418,12 +422,11 @@ if SERVER then
     local classdisp, classprio = self:GetClassRelationship(ent:GetClass())
     local modeldisp, modelprio = self:GetModelRelationship(ent:GetModel())
     local customdisp, customprio = self:CustomRelationship(ent)
-    local relationships = {
+    local relationships = {HighestRelationship({
       {disp = default, prio = defprio}, {disp = entdisp, prio = entprio},
       {disp = classdisp, prio = classprio}, {disp = modeldisp, prio = modelprio},
       {disp = customdisp or DEFAULT_DISP, prio = customprio or DEFAULT_PRIO}
-    }
-    relationships = {HighestRelationship(relationships)}
+    })}
     for faction, relationship in pairs(self._DrGBaseRelationshipDefiners["faction"]) do
       if istable(faction) then continue end
       if relationship.disp == D_ER or relationship.prio < relationships[1].prio then continue end
@@ -589,6 +592,27 @@ if SERVER then
     end
   end
 
+  local function CPTBaseValidTarget(ent, nextbot)
+    local disp = ent:Disposition(nextbot)
+    if disp ~= D_HT and disp ~= D_FR then return false end
+    if nextbot:IsFlagSet(FL_NOTARGET) then return false end
+    if nextbot:IsDead() or nextbot:IsDown() then return false end
+    return true
+  end
+  local function CPTBasePickClosestEnemy(ent, nextbots)
+    local enemy
+    for i, nextbot in ipairs(nextbots) do
+      if not ent:Visible(nextbot) then continue end
+      if not ent:CanSeeEntities(nextbot) then continue end
+      if not ent:FindInCone(nextbot, ent.ViewAngle) then continue end
+      if not ent:CanSetAsEnemy(nextbot) then continue end
+      if not CPTBaseValidTarget(ent, nextbot) then continue end
+      if not IsValid(enemy) or ent:GetPos():DistToSqr(nextbot:GetPos()) < ent:GetPos():DistToSqr(enemy:GetPos()) then
+        enemy = nextbot
+      end
+    end
+    return enemy
+  end
   hook.Add("OnEntityCreated", "DrGBaseNextbotRelationshipsInit", function(ent)
     timer.Simple(0, function()
       if not IsValid(ent) then return end
@@ -596,10 +620,38 @@ if SERVER then
         local old_DoHardEntityCheck = ent.DoHardEntityCheck
         ent.DoHardEntityCheck = function(ent, tbl)
           local entities = old_DoHardEntityCheck(ent, tbl)
-          for i, nextbot in ipairs(DrGBase.GetNextbots()) do
-            table.insert(entities, nextbot)
+          return table.Merge(entities, DrGBase.GetNextbots())
+        end
+      elseif ent.CPTBase_NPC then
+        local old_LocateEnemies = ent.LocateEnemies
+        ent.LocateEnemies = function(ent)
+          local enemy = old_LocateEnemies(ent)
+          local nextbots = DrGBase.GetNextbots()
+          if #nextbots == 0 then return enemy end
+          local nextbot = CPTBasePickClosestEnemy(ent, nextbots)
+          if not IsValid(nextbot) then return enemy
+          elseif IsValid(enemy) and
+          ent:GetPos():DistToSqr(enemy:GetPos()) < ent:GetPos():DistToSqr(nextbot:GetPos()) then
+            return enemy
+          elseif ent:GetPos():DistToSqr(nextbot:GetPos()) <= ent.FindEntitiesDistance^2 then
+            return nextbot
           end
-          return entities
+        end
+        local old_FindAllEnemies = ent.FindAllEnemies
+        ent.FindAllEnemies = function(ent)
+          local enemy = old_FindAllEnemies(ent)
+          local nextbots = DrGBase.GetNextbots()
+          if #nextbots == 0 then return enemy end
+          local nextbot = table.DrG_Fetch(nextbots, function(nb1, nb2)
+            if not CPTBaseValidTarget(ent, nb1) and CPTBaseValidTarget(ent, nb2) then return false end
+            if CPTBaseValidTarget(ent, nb1) and not CPTBaseValidTarget(ent, nb2) then return true end
+            return ent:GetPos():DistToSqr(nb1:GetPos()) < ent:GetPos():DistToSqr(nb2:GetPos())
+          end)
+          if not CPTBaseValidTarget(ent, nextbot) then return enemy
+          elseif IsValid(enemy) and
+          ent:GetPos():DistToSqr(enemy:GetPos()) < ent:GetPos():DistToSqr(nextbot:GetPos()) then
+            return enemy
+          else return nextbot end
         end
       end
       for i, nextbot in ipairs(DrGBase.GetNextbots()) do

@@ -43,6 +43,7 @@ function SWEP:PrimaryAttack()
       local eyeangles = self.Owner:EyeAngles()
       eyeangles.p = eyeangles.p - self.Primary.Recoil
       self.Owner:SetEyeAngles(eyeangles)
+      self.Owner:ViewPunch(Angle(-self.Primary.Recoil/3, 0, 0))
     end
   end
   if IsFirstTimePredicted() then

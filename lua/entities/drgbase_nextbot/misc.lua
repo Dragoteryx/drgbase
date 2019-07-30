@@ -183,7 +183,7 @@ if SERVER then
     if attack.relationships == nil then
       if self:IsPossessed() and PossessTargetAll:GetBool() then
         attack.relationships = {D_LI, D_HT, D_FR, D_NU}
-      else attack.relationships = {D_HT} end
+      else attack.relationships = {D_HT, D_FR} end
     end
     if not istable(attack.relationships) then attack.relationships = {attack.relationships} end
     self:Timer(math.Clamp(attack.delay, 0, math.huge), function(self)

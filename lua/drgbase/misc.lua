@@ -159,7 +159,8 @@ if SERVER then
     ["replicator_melon"] = true,
     ["replicator_worker"] = true,
     ["replicator_queen"] = true,
-    ["replicator_queen_hive"] = true
+    ["replicator_queen_hive"] = true,
+    ["npc_antlion_grub"] = true
   }
   function DrGBase.IsTarget(ent)
     if not IsValid(ent) then return false end
@@ -170,6 +171,7 @@ if SERVER then
     if ent:IsPlayer() then return true end
     if ent:IsNPC() then return true end
     if ent.Type == "nextbot" then return true end
+    --if ent:IsNextBot() then return true end
     return false
   end
 

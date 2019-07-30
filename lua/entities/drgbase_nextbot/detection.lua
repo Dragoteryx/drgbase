@@ -68,6 +68,8 @@ if SERVER then
   -- Functions --
 
   function ENT:IsInSight(ent)
+    if self:IsBlind() then return false end
+    if ent == self then return true end
     local eyepos = self:EyePos()
     if eyepos:DistToSqr(ent:GetPos()) > self:GetSightRange()^2 then return false end
     if ent:IsPlayer() then

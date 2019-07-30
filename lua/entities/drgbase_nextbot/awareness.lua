@@ -13,21 +13,46 @@ function ENT:GetSpotDuration()
   return self:GetNW2Float("DrGBaseSpotDuration")
 end
 
-function ENT:GetSpotted()
-  local entities = {}
-  for i, ent in ipairs(ents.GetAll()) do
-    if self:HasSpotted(ent) then table.insert(entities, ent) end
-  end
-  return entities
+function ENT:GetSpotted(disp)
+  if istable(disp) then
+    local entities = {}
+    for i, dis in ipairs(disp) do
+      entities = table.Merge(entities, self:GetSpotted(dis))
+    end
+    return entities
+  elseif isnumber(disp) then
+    local entities = {}
+    for ent in self:EntityIterator(disp, true) do
+      table.insert(entities, ent)
+    end
+    return entities
+  else return self:GetSpotted({D_LI, D_HT, D_FR, D_NU}) end
+end
+function ENT:GetLost(disp)
+  if istable(disp) then
+    local entities = {}
+    for i, dis in ipairs(disp) do
+      entities = table.Merge(entities, self:GetSpotted(dis))
+    end
+    return entities
+  elseif isnumber(disp) then
+    local entities = {}
+    for ent in self:EntityIterator(disp) do
+      if self:HasLost(ent) then table.insert(entities, ent) end
+    end
+    return entities
+  else return self:GetSpotted({D_LI, D_HT, D_FR, D_NU}) end
 end
 
 function ENT:HasSpotted(ent)
   if not IsValid(ent) then return false end
+  if ent == self then return true end
   if self:IsOmniscient() then return true end
   return self._DrGBaseSpotted[ent] or false
 end
 function ENT:HasLost(ent)
   if not IsValid(ent) then return false end
+  if ent == self then return false end
   if self:IsOmniscient() then return false end
   return self._DrGBaseSpotted[ent] == false
 end
