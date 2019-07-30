@@ -29,10 +29,10 @@ if SERVER then
     self:SetDelay(self.Delay)
     self:EnableAutoRemove(self.AutoRemove)
     for key, val in pairs(self.ToSpawn) do
-      if isstring(key) and isnumber(value) then
-        self:AddToSpawn(key, value)
-      elseif isnumber(key) and isstring(value) then
-        self:AddToSpawn(value, 1)
+      if isstring(key) and isnumber(val) then
+        self:AddToSpawn(key, val)
+      elseif isnumber(key) and isstring(val) then
+        self:AddToSpawn(val, 1)
       end
     end
     self.Spawning = coroutine.create(function()
