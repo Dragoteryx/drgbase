@@ -36,6 +36,7 @@ ENT.EyeAngle = Angle(0, 0, 0)
 
 -- Possession --
 ENT.PossessionEnabled = true
+ENT.PossessionCrosshair = true
 ENT.PossessionViews = {
   {
     offset = Vector(0, 40, 0),
@@ -51,7 +52,7 @@ ENT.PossessionBinds = {
   [IN_JUMP] = {
     {
       coroutine = false,
-      onkeydown = function(self)
+      onkeypressed = function(self)
         if not self:IsOnGround() then return end
         self:LeaveGround()
         self:SetVelocity(self:PossessorNormal()*1500)
@@ -70,7 +71,7 @@ ENT.PossessionBinds = {
     {
       coroutine = true,
       onkeydown = function(self)
-        --self:BurrowTo(self:PossessorTrace().HitPos)
+        self:BurrowTo(self:PossessorTrace().HitPos)
       end
     }
   }

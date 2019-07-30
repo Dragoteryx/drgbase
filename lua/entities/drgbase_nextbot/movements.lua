@@ -293,25 +293,35 @@ if SERVER then
     end
   end
 
-  function ENT:GoTo(pos, tolerance, generator)
+  function ENT:GoTo(pos, tolerance, callback)
     if isentity(pos) then pos = pos:GetPos() end
+    if not isfunction(callback) then callback = function() end end
     while true do
-      local res = self:FollowPath(pos, tolerance, generator)
+      local res = self:FollowPath(pos, tolerance)
       if res == "reached" then return true
       elseif res == "unreachable" then
         return false
-      else self:YieldCoroutine(true) end
+      else
+        res = callback(self:GetPath())
+        if isbool(res) then return res end
+        self:YieldCoroutine(true)
+      end
     end
   end
 
-  function ENT:ChaseEntity(ent, tolerance, generator)
+  function ENT:ChaseEntity(ent, tolerance, callback)
     if not isentity(ent) then return false end
+    if not isfunction(callback) then callback = function() end end
     while IsValid(ent) do
-      local res = self:FollowPath(pos, tolerance, generator)
+      local res = self:FollowPath(pos, tolerance)
       if res == "reached" then return true
       elseif res == "unreachable" then
         return false
-      else self:YieldCoroutine(true) end
+      else
+        res = callback(self:GetPath())
+        if isbool(res) then return res end
+        self:YieldCoroutine(true)
+      end
     end
     return false
   end

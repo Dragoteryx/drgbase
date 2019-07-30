@@ -3,21 +3,6 @@ local vecMETA = FindMetaTable("Vector")
 
 -- Ballistic stuff --
 
---[[local function Trajectory(start, goal, v)
-  local g = physenv.GetGravity():Length()
-  local vec = Vector(goal.x - start.x, goal.y - start.y, 0)
-  local x = vec:Length()
-  local y = goal.z - start.z
-  local res = math.sqrt(v^4 - g*(g*x*x + 2*y*v*v))
-  if res ~= res then return end
-  local s1 = math.atan((v*v + res)/(g*x))
-  local s2 = math.atan((v*v - res)/(g*x))
-  pitch = s1 > s2 and s2 or s1
-  vec.z = math.tan(pitch)*x
-  local calc = magnitude*math.sin(pitch)
-  return vec:GetNormalized()*v, (calc+math.sqrt(calc^2-2*g*y))/g
-end]]
-
 function vecMETA:DrG_CalcTrajectory(endpos, options)
   options = options or {}
   if not isbool(options.recursive) then

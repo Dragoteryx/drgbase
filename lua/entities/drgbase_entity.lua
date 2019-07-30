@@ -13,7 +13,5 @@ function entMETA:__tostring()
     return "Projectile ["..self:EntIndex().."]["..self:GetClass().."]"
   elseif self.IsDrGSpawner then
     return "Spawner ["..self:EntIndex().."]["..self:GetClass().."]"
-  elseif self.IsDrGRagdoll then
-    return "Ragdoll ["..self:EntIndex().."]["..self:GetClass().."]"
   else return old_tostring(self) end
 end

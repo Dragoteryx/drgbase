@@ -1,16 +1,27 @@
 ENT.Base = "base_entity"
 ENT.Type = "point"
-ENT.IsDrGRagdoll = true
-ENT.PrintName = "Ragdoll"
+ENT.PrintName = "Ragdoll Attachment"
 ENT.Category = "DrGBase"
-
-function ENT:Initialize() end
 function ENT:SetupDataTables()
   self:NetworkVar("Entity", 0, "Ragdoll")
+  self:NetworkVar("Int", 0, "Bone")
 end
-
-function ENT:Think()
-  
-  self:NextThink(CurTime() + engine.TickInterval())
-  return true
+if SERVER then
+  AddCSLuaFile()
+  function ENT:Initialize()
+    local ragdoll = self:GetRagdoll()
+    if IsValid(ragdoll) then
+      --self:DeleteOnRemove(ragdoll)
+    else self:Remove() end
+  end
+  function ENT:Think()
+    --debugoverlay.Sphere(self:GetPos(), 2, 0.1, nil, true)
+    local ragdoll = self:GetRagdoll()
+    if IsValid(ragdoll) then
+      local bone = ragdoll:GetPhysicsObjectNum(ragdoll:TranslateBoneToPhysBone(self:GetBone()))
+      if bone then bone:SetPos(self:GetPos()) end
+    else self:Remove() end
+    self:NextThink(CurTime() + engine.TickInterval())
+    return true
+  end
 end

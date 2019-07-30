@@ -89,19 +89,18 @@ if SERVER then
 
   -- Get entities in sight
   function ENT:GetInSight(disp, spotted)
-    local inSight = {}
-    if isnumber(disp) then
+    local insight = {}
+    if istable(disp) then
+      for i, dis in ipairs(disp) do
+        table.Merge(insight, self:GetInSight(dis, spotted))
+      end
+      return insight
+    elseif isnumber(disp) then
       for ent in self:EntityIterator(disp, spotted) do
-        if self:IsInSight(ent) then table.insert(inSight, ent) end
+        if self:IsInSight(ent) then table.insert(insight, ent) end
       end
-    else
-      for i, ent in ipairs(ents.GetAll()) do
-        if not IsValid(ent) then continue end
-        if spotted and not self:HasSpotted(ent) then continue end
-        if self:IsInSight(ent) then table.insert(inSight, ent) end
-      end
-    end
-    return inSight
+      return insight
+    else return self:GetInSight({D_LI, D_HT, D_FR, D_NU}, spotted) end
   end
   function ENT:GetAlliesInSight(spotted)
     return self:GetInSight(D_LI, spotted)

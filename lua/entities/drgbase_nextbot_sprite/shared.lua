@@ -50,8 +50,6 @@ if SERVER then
     self._DrGBaseAnimAttacks[anim] = tobool(attack)
   end
 
-  function ENT:OnPhysCollision() return true end
-
   function ENT:SequenceAttack() end
   function ENT:SpriteAnimAttack(anim, frame, attack, callback)
     if istable(anim) then

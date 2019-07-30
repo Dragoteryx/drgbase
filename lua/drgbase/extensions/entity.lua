@@ -122,10 +122,81 @@ if SERVER then
     return true
   end
 
-  function entMETA:DrG_Ragdoll()
-    if not self.IsDrGNextbot then
-      return NULL
-    else return self:BecomeRagdoll() end
+  function entMETA:DrG_DeathNotice(attacker, inflictor)
+    if self:IsPlayer() then
+      hook.Run("PlayerDeath", self, inflictor, attacker)
+    else hook.Run("OnNPCKilled", self, attacker, inflictor) end
+  end
+
+  function entMETA:DrG_SearchBone(searchName)
+    for boneId = 0, (self:GetBoneCount()-1) do
+      local boneName = self:GetBoneName(boneId)
+      if not boneName then return end
+      if boneName == "__INVALIDBONE__" then continue end
+      if string.find(string.lower(boneName), string.lower(searchBone)) then
+        return boneId
+      end
+    end
+  end
+
+  function entMETA:DrG_CreateRagdoll(dmg)
+    if not util.IsValidRagdoll(self:GetModel()) then return NULL end
+    local ragdoll = ents.Create("prop_ragdoll")
+    if IsValid(ragdoll) then
+      if not dmg then dmg = DamageInfo() end
+      ragdoll:SetPos(self:GetPos())
+      ragdoll:SetAngles(self:GetAngles())
+      ragdoll:SetModel(self:GetModel())
+      ragdoll:SetSkin(self:GetSkin())
+      ragdoll:SetColor(self:GetColor())
+      ragdoll:SetModelScale(self:GetModelScale())
+      ragdoll:SetBloodColor(self:GetBloodColor())
+      for i = 1, #self:GetBodyGroups() do
+        ragdoll:SetBodygroup(i-1, self:GetBodygroup(i-1))
+      end
+      ragdoll:Spawn()
+      if not GetConVar("ai_serverragdolls"):GetBool() then
+        ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+      end
+      for i = 0, (ragdoll:GetPhysicsObjectCount()-1) do
+        local bone = ragdoll:GetPhysicsObjectNum(i)
+        if not IsValid(bone) then continue end
+        local pos, angles = self:GetBonePosition(ragdoll:TranslatePhysBoneToBone(i))
+        bone:SetPos(pos)
+        bone:SetAngles(angles)
+      end
+      local phys = ragdoll:GetPhysicsObject()
+      phys:SetVelocity(self:GetVelocity())
+      local force = dmg:GetDamageForce()
+      local position = dmg:GetDamagePosition()
+      if IsValid(phys) and isvector(force) and isvector(position) then
+        phys:ApplyForceOffset(force, position)
+      end
+      if dmg:IsDamageType(DMG_DISSOLVE) then ragdoll:DrG_Dissolve()
+      elseif self:IsOnFire() or dmg:IsDamageType(DMG_BURN) then ragdoll:Ignite(10) end
+      local attacker = dmg:GetAttacker()
+      if IsValid(attacker) and attacker.IsDrGNextbot then
+        attacker:SpotEntity(ragdoll)
+      end
+      ragdoll.EntityClass = self:GetClass()
+      return ragdoll
+    else return NULL end
+  end
+  function entMETA:DrG_RagdollDeath(dmg)
+    if self:IsPlayer() then
+      if not self:Alive() then return NULL end
+      self:KillSilent()
+    else
+      self:AddFlags(FL_TRANSRAGDOLL)
+      self:Remove()
+    end
+    if dmg then self:DrG_DeathNotice(dmg:GetAttacker(), dmg:GetInflictor()) end
+    local ragdoll = self:DrG_CreateRagdoll(dmg)
+    if not self:IsPlayer() and IsValid(ragdoll) then
+      undo.ReplaceEntity(self, ragdoll)
+      cleanup.ReplaceEntity(self, ragdoll)
+    end
+    return ragdoll
   end
 
 end

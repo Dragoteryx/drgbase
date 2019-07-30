@@ -29,7 +29,9 @@ function TOOL:RightClick(tr)
 		nextbot._DrGBaseMoverTool = true
 		nextbot:CallInCoroutine(function(nextbot, delay)
 			nextbot._DrGBaseMoverTool = false
-			nextbot:GoTo(tr.HitPos)
+			nextbot:GoTo(tr.HitPos, nil, function(path)
+				if nextbot._DrGBaseMoverTool then return false end
+			end)
 		end)
   end
   return true

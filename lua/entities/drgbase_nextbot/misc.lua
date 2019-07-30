@@ -98,6 +98,7 @@ function ENT:OnAngleChange() end
 function ENT:_InitMisc()
   if SERVER then
     self._DrGBaseAnimAttacks = {}
+    self._DrGBaseGrabbedRagdolls = {}
   end
   self._DrGBaseSlotSounds = {}
   self:AddCallback("OnAngleChange", function(self, angles)
@@ -346,6 +347,55 @@ if SERVER then
     self:Kill(self, self, type)
   end
 
+  function ENT:GrabRagdoll(ragdoll, bone, attachment)
+    if not IsValid(ragdoll) then return NULL end
+    local boneId = self:DrG_SearchBone(bone)
+    if not boneId then return NULL end
+    local attach = ents.Create("point_drg_ragdoll")
+    if not IsValid(attach) then return NULL end
+    if not ragdoll:IsRagdoll() then
+      local dmg = DamageInfo()
+      dmg:SetAttacker(self)
+      ragdoll = ragdoll:DrG_RagdollDeath(dmg)
+    end
+    if not IsValid(ragdoll) then return NULL end
+    attach:SetParent(self)
+    if isstring(attachment) then attach:Fire("SetParentAttachment", attachment) end
+    attach:SetRagdoll(ragdoll)
+    attach:SetBone(boneId)
+    attach:Spawn()
+    attach:Activate()
+    self._DrGBaseGrabbedRagdolls[ragdoll] = self._DrGBaseGrabbedRagdolls[ragdoll] or {}
+    self._DrGBaseGrabbedRagdolls[ragdoll][attach] = true
+    return ragdoll
+  end
+  function ENT:DropRagdoll(ragdoll)
+    if not istable(self._DrGBaseGrabbedRagdolls[ragdoll]) then return end
+    for attach, attached in pairs(self._DrGBaseGrabbedRagdolls[ragdoll]) do
+      if not IsValid(attach) then return end
+      self._DrGBaseGrabbedRagdolls[ragdoll][attach] = nil
+      attach:Remove()
+    end
+    self._DrGBaseGrabbedRagdolls[ragdoll] = nil
+  end
+  function ENT:GrabbedRagdolls()
+    local ragdolls = {}
+    for ragdoll, attachs in pairs(self._DrGBaseGrabbedRagdolls) do
+      if not IsValid(ragdoll) then continue end
+      for attach, attached in pairs(attachs) do
+        if not IsValid(attach) then continue end
+        table.insert(ragdolls, ragdoll)
+        break
+      end
+    end
+    return ragdolls
+  end
+  function ENT:DropAllRagdolls()
+    for i, ragdoll in ipairs(self:GrabbedRagdolls()) do
+      self:DropRagdoll(ragdoll)
+    end
+  end
+
   -- Hooks --
 
   function ENT:OnRagdoll() end
@@ -400,53 +450,16 @@ if SERVER then
       not self:IsFlagSet(FL_DISSOLVING) and
       not self:IsFlagSet(FL_TRANSRAGDOLL) then
         self:AddFlags(FL_TRANSRAGDOLL)
-        local ragdoll = ents.Create("prop_ragdoll")
+        local ragdoll = self:DrG_CreateRagdoll(dmg)
         if IsValid(ragdoll) then
-          ragdoll:SetPos(self:GetPos())
-          ragdoll:SetAngles(self:GetAngles())
-          ragdoll:SetModel(self:GetModel())
-          ragdoll:SetSkin(self:GetSkin())
-          ragdoll:SetColor(self:GetColor())
-          ragdoll:SetModelScale(self:GetModelScale())
-          ragdoll:SetBloodColor(self:GetBloodColor())
-          for i = 1, #self:GetBodyGroups() do
-        		ragdoll:SetBodygroup(i-1, self:GetBodygroup(i-1))
-        	end
-          ragdoll:Spawn()
           undo.ReplaceEntity(self, ragdoll)
           cleanup.ReplaceEntity(self, ragdoll)
-          if not GetConVar("ai_serverragdolls"):GetBool() then
-            ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-          end
-          for i = 0, (ragdoll:GetPhysicsObjectCount()-1) do
-        		local bone = ragdoll:GetPhysicsObjectNum(i)
-        		if not IsValid(bone) then continue end
-      			local pos, angles = self:GetBonePosition(ragdoll:TranslatePhysBoneToBone(i))
-      			bone:SetPos(pos)
-      			bone:SetAngles(angles)
-        	end
-          local phys = ragdoll:GetPhysicsObject()
-          phys:SetVelocity(self:GetVelocity())
-          local force = dmg:GetDamageForce()
-          local position = dmg:GetDamagePosition()
-          if IsValid(phys) and isvector(force) and isvector(position) then
-        		phys:ApplyForceOffset(force, position)
-        	end
-          if dmg:IsDamageType(DMG_DISSOLVE) then ragdoll:DrG_Dissolve()
-          elseif self:IsOnFire() or dmg:IsDamageType(DMG_BURN) then ragdoll:Ignite(10) end
           if not self.OnRagdoll(ragdoll, dmg) and RemoveRagdolls:GetFloat() >= 0 then
             ragdoll:Fire("fadeandremove", math.Clamp(RagdollFadeOut:GetFloat(), 0, math.huge), RemoveRagdolls:GetFloat())
           end
-          self:Remove()
-          local attacker = dmg:GetAttacker()
-          if IsValid(attacker) and attacker.IsDrGNextbot then
-            attacker:SpotEntity(ragdoll)
-          end
-          return ragdoll
-        else
-          self:Remove()
-          return NULL
         end
+        self:Remove()
+        return ragdoll
       else
         self:Remove()
         return NULL
