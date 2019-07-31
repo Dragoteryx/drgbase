@@ -99,6 +99,7 @@ function ENT:_InitMisc()
   if SERVER then
     self._DrGBaseAnimAttacks = {}
     self._DrGBaseGrabbedRagdolls = {}
+    self._DrGBaseGrabbedRagdollsCollisionGroups = {}
   end
   self._DrGBaseSlotSounds = {}
   self:AddCallback("OnAngleChange", function(self, angles)
@@ -196,6 +197,7 @@ if SERVER then
           if not self:Visible(ent) then continue end
           local trace = false
           local origin = self:WorldSpaceCenter()
+          local aimAt = isfunction(attack.aimat) and attack.aimat(ent) or ent:WorldSpaceCenter()
           local dmg = DamageInfo()
           dmg:SetAttacker(self)
           dmg:SetInflictor(self)
@@ -211,7 +213,7 @@ if SERVER then
             if attachment then
               if attack.trace then
                 trace = self:TraceLine(nil, {
-                  endpos = attachment.Pos + attachment.Pos:DrG_Direction(ent:WorldSpaceCenter()),
+                  endpos = attachment.Pos + attachment.Pos:DrG_Direction(aimAt),
                   start = attachment.Pos
                 })
               end
@@ -223,20 +225,25 @@ if SERVER then
               local bonePos, boneAngles = self:GetBonePosition(attack.bone)
               if attack.trace then
                 trace = self:TraceLine(nil, {
-                  endpos = bonePos + bonePos:DrG_Direction(ent:WorldSpaceCenter()),
+                  endpos = bonePos + bonePos:DrG_Direction(aimAt),
                   start = bonePos
                 })
               end
               origin = bonePos
             end
           elseif attack.trace then
-            trace = self:TraceLine(origin:DrG_Direction(ent:WorldSpaceCenter()))
+            trace = self:TraceLine(origin:DrG_Direction(aimAt))
           end
-          dmg:SetDamagePosition(origin)
-          dmg:SetReportedPosition(origin)
           dmg:SetDamage(isfunction(attack.damage) and attack.damage(ent, origin) or attack.damage)
-          if attack.trace and trace then ent:DispatchTraceAttack(dmg, trace)
-          else ent:TakeDamageInfo(dmg) end
+          if attack.trace and trace and trace.Entity == ent then
+            dmg:SetReportedPosition(trace.HitPos)
+            dmg:SetDamagePosition(trace.HitPos)
+            ent:DispatchTraceAttack(dmg, trace)
+          else
+            dmg:SetReportedPosition(origin)
+            dmg:SetDamagePosition(origin)
+            ent:TakeDamageInfo(dmg)
+          end
           if attack.viewpunch and ent:IsPlayer() then
             ent:ViewPunch(attack.viewpunch)
           end
@@ -306,7 +313,7 @@ if SERVER then
       if not IsValid(proj) then return NULL end
       proj:SetOwner(self)
       return proj
-    else return self:CreateProjectile(str2) end    
+    else return self:CreateProjectile(str2) end
   end
   function ENT:CreateGrenade()
     return self:CreateProjectile("proj_drg_grenade")
@@ -381,7 +388,7 @@ if SERVER then
 
   function ENT:GrabRagdoll(ragdoll, bone, attachment)
     if not IsValid(ragdoll) then return NULL end
-    local boneId = self:DrG_SearchBone(bone)
+    local boneId = ragdoll:DrG_SearchBone(bone)
     if not boneId then return NULL end
     local attach = ents.Create("point_drg_ragdoll")
     if not IsValid(attach) then return NULL end
@@ -399,26 +406,32 @@ if SERVER then
     attach:Activate()
     self._DrGBaseGrabbedRagdolls[ragdoll] = self._DrGBaseGrabbedRagdolls[ragdoll] or {}
     self._DrGBaseGrabbedRagdolls[ragdoll][attach] = true
+    self._DrGBaseGrabbedRagdollsCollisionGroups[ragdoll] = ragdoll:GetCollisionGroup()
+    ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
     return ragdoll
   end
   function ENT:DropRagdoll(ragdoll)
-    if not istable(self._DrGBaseGrabbedRagdolls[ragdoll]) then return end
+    if not self:HasGrabbedRagdoll(ragdoll) then return end
     for attach, attached in pairs(self._DrGBaseGrabbedRagdolls[ragdoll]) do
       if not IsValid(attach) then continue end
       self._DrGBaseGrabbedRagdolls[ragdoll][attach] = nil
       attach:Remove()
     end
     self._DrGBaseGrabbedRagdolls[ragdoll] = nil
+    ragdoll:SetCollisionGroup(self._DrGBaseGrabbedRagdollsCollisionGroups[ragdoll])
+    self._DrGBaseGrabbedRagdollsCollisionGroups[ragdoll] = nil
   end
   function ENT:GrabbedRagdolls()
     local ragdolls = {}
     for ragdoll, attachs in pairs(self._DrGBaseGrabbedRagdolls) do
-      if not IsValid(ragdoll) then continue end
-      for attach, attached in pairs(attachs) do
-        if not IsValid(attach) then continue end
-        table.insert(ragdolls, ragdoll)
-        break
-      end
+      if IsValid(ragdoll) then
+        for attach, attached in pairs(attachs) do
+          if IsValid(attach) then
+            table.insert(ragdolls, ragdoll)
+            break
+          else attachs[attach] = nil end          
+        end
+      else self._DrGBaseGrabbedRagdolls[ragdoll] = nil end
     end
     return ragdolls
   end
@@ -426,6 +439,10 @@ if SERVER then
     for i, ragdoll in ipairs(self:GrabbedRagdolls()) do
       self:DropRagdoll(ragdoll)
     end
+  end
+  function ENT:HasGrabbedRagdoll(ragdoll)
+    if not IsValid(ragdoll) then return false end
+    return istable(self._DrGBaseGrabbedRagdolls[ragdoll])
   end
 
   -- Hooks --

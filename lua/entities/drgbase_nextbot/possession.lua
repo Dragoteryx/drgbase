@@ -92,14 +92,9 @@ function ENT:PossessorTrace(options)
   if not self:IsPossessed() then return end
   local origin, angles = self:PossessorView()
   options = options or {}
-  options.filter = options.filter or {}
-  table.insert(options.filter, self)
-  if self:HasWeapon() then
-    table.insert(options.filter, self:GetWeapon())
-  end
   options.start = origin
   options.endpos = origin + angles:Forward()*999999999
-  return util.TraceLine(options)
+  return self:TraceLine(nil, options)
 end
 function ENT:PossessorNormal()
   if not self:IsPossessed() then return end
@@ -296,7 +291,7 @@ if SERVER then
 
   function ENT:PossessionFaceForward()
     if not self:IsPossessed() then return end
-    return self:FaceTowards(self:GetPos() + self:PossessorNormal())
+    return self:FaceTowards(self:PossessorTrace().HitPos)
   end
 
   -- Hooks --

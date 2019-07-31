@@ -205,7 +205,8 @@ if SERVER then
       self:YieldCoroutine(false)
     end
     self._DrGBasePlayingSpriteAnim = oldPlayingAnim
-    self:Timer(0, self.UpdateAnimation)
+    if not self:IsDead() then self:Timer(0, self.UpdateAnimation) end
+    self:UpdateSpeed()
     return CurTime() - now
   end
   function ENT:PlayAnimationAndWait(anim, rate, callback)
