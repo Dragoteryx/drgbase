@@ -171,7 +171,7 @@ if SERVER then
       if nextbot:IsDeaf() then continue end
       local mult = nextbot:VisibleVec(pos) and 1 or 0.5
       if (distance*nextbot:GetHearingCoefficient()*mult)^2 >= nextbot:GetRangeSquaredTo(pos) then
-        nextbot:OnSound(sound.Entity, sound)
+        nextbot:Timer(0, nextbot.OnSound, sound.Entity, sound)
       end
     end
   end)

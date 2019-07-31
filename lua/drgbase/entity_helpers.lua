@@ -52,7 +52,6 @@ end
 
 -- Traces --
 
-local DebugTraces = CreateConVar("drgbase_debug_traces", "0")
 function ENT:TraceLine(vec, data)
   local trdata = {}
   data = data or {}
@@ -64,13 +63,7 @@ function ENT:TraceLine(vec, data)
     trdata.mask = data.mask or self:GetSolidMask()
     trdata.filter = data.filter or {self, self:GetWeapon()}
   else trdata.filter = data.filter or self end
-  local tr = util.TraceLine(trdata)
-  if DebugTraces:GetFloat() > 0 then
-    local clr = tr.Hit and DrGBase.CLR_RED or DrGBase.CLR_GREEN
-    debugoverlay.Line(trdata.start, tr.HitPos, DebugTraces:GetFloat(), clr, false)
-    debugoverlay.Line(tr.HitPos, trdata.endpos, DebugTraces:GetFloat(), DrGBase.CLR_WHITE, false)
-  end
-  return tr
+  return util.DrG_TraceLine(trdata)
 end
 function ENT:TraceHull(vec, data)
   local bound1, bound2 = self:GetCollisionBounds()
@@ -93,14 +86,7 @@ function ENT:TraceHull(vec, data)
   else trdata.filter = data.filter or self end
   trdata.maxs = data.maxs or bound1
   trdata.mins = data.mins or bound2
-  local tr = util.TraceHull(trdata)
-  if DebugTraces:GetFloat() > 0 then
-    local clr = tr.Hit and DrGBase.CLR_RED or DrGBase.CLR_GREEN
-    clr = clr:ToVector():ToColor() clr.a = 0
-    debugoverlay.Line(trdata.start, tr.HitPos, DebugTraces:GetFloat(), DrGBase.CLR_WHITE, false)
-    debugoverlay.Box(tr.HitPos, trdata.mins, trdata.maxs, DebugTraces:GetFloat(), clr)
-  end
-  return tr
+  return util.DrG_TraceHull(trdata)
 end
 function ENT:TraceLineRadial(distance, precision, data)
   local traces = {}

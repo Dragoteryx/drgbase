@@ -133,7 +133,7 @@ function ENT:_InitPossession()
   if SERVER then
     self:SetPossessionEnabled(self.PossessionEnabled)
   else
-    self:SetNW2VarProxy("DrGBasePossessor", function(self, name, old, new)
+    self:SetNWVarProxy("DrGBasePossessor", function(self, name, old, new)
       if not IsValid(old) and IsValid(new) then self:OnPossessed(new)
       elseif IsValid(old) and not IsValid(new) then self:OnDispossessed(old) end
     end)
@@ -280,8 +280,8 @@ if SERVER then
     if not self:IsPossessed() then return "not possessed" end
     local ply = self:GetPossessor()
     if not self:CanDispossess(ply) then return "not allowed" end
-    self:SetNWEntity("DrGBasePossessor", nil)
-    ply:SetNW2Entity("DrGBasePossessing", nil)
+    self:SetNWEntity("DrGBasePossessor", NULL)
+    ply:SetNW2Entity("DrGBasePossessing", NULL)
     ply:SetPos(ply:GetNW2Vector("DrGBasePrePossessPos"))
     ply:SetAngles(ply:GetNW2Angle("DrGBasePrePossessAngle"))
     ply:SetEyeAngles(ply:GetNW2Angle("DrGBasePrePossessEyes"))

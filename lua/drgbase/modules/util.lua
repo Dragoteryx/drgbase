@@ -17,13 +17,33 @@ function util.DrG_TrajectoryTrace(start, velocity, data)
   end
 end
 
+local DebugTraces = CreateConVar("drgbase_debug_traces", "0")
+function util.DrG_TraceLine(data)
+  local tr = util.TraceLine(data)
+  if DebugTraces:GetFloat() > 0 then
+    local clr = tr.Hit and DrGBase.CLR_RED or DrGBase.CLR_GREEN
+    debugoverlay.Line(data.start, tr.HitPos, DebugTraces:GetFloat(), clr, false)
+    debugoverlay.Line(tr.HitPos, data.endpos, DebugTraces:GetFloat(), DrGBase.CLR_WHITE, false)
+  end
+  return tr
+end
+function util.DrG_TraceHull(data)
+  local tr = util.TraceHull(data)
+  if DebugTraces:GetFloat() > 0 then
+    local clr = tr.Hit and DrGBase.CLR_RED or DrGBase.CLR_GREEN
+    clr = clr:ToVector():ToColor() clr.a = 0
+    debugoverlay.Line(data.start, tr.HitPos, DebugTraces:GetFloat(), DrGBase.CLR_WHITE, false)
+    debugoverlay.Box(tr.HitPos, data.mins, data.maxs, DebugTraces:GetFloat(), clr)
+  end
+  return tr
+end
 function util.DrG_TraceLineRadial(dist, precision, data)
   local traces = {}
   for i = 1, precision do
     local normal = Vector(1, 0, 0)
     normal:Rotate(Angle(0, i*(360/precision), 0))
     data.endpos = data.start + normal*dist
-    table.insert(traces, util.TraceLine(data))
+    table.insert(traces, util.DrG_TraceLine(data))
   end
   table.sort(traces, function(tr1, tr2)
     return data.start:DistToSqr(tr1.HitPos) < data.start:DistToSqr(tr2.HitPos)
@@ -36,7 +56,7 @@ function util.DrG_TraceHullRadial(dist, precision, data)
     local normal = Vector(1, 0, 0)
     normal:Rotate(Angle(0, i*(360/precision), 0))
     data.endpos = data.start + normal*dist
-    table.insert(traces, util.TraceHull(data))
+    table.insert(traces, util.DrG_TraceHull(data))
   end
   table.sort(traces, function(tr1, tr2)
     return data.start:DistToSqr(tr1.HitPos) < data.start:DistToSqr(tr2.HitPos)

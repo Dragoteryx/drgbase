@@ -128,7 +128,7 @@ if SERVER then
     else hook.Run("OnNPCKilled", self, attacker, inflictor) end
   end
 
-  function entMETA:DrG_SearchBone(searchName)
+  function entMETA:DrG_SearchBone(searchBone)
     for boneId = 0, (self:GetBoneCount()-1) do
       local boneName = self:GetBoneName(boneId)
       if not boneName then return end

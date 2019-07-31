@@ -194,17 +194,49 @@ if SERVER then
           if ent == self then continue end
           if not DrGBase.CanAttack(ent) then continue end
           if not self:Visible(ent) then continue end
+          local trace = false
+          local origin = self:WorldSpaceCenter()
           local dmg = DamageInfo()
           dmg:SetAttacker(self)
           dmg:SetInflictor(self)
-          dmg:SetDamage(isfunction(attack.damage) and attack.damage(ent) or attack.damage)
           dmg:SetDamageType(attack.type)
-          dmg:SetDamagePosition(self:WorldSpaceCenter())
-          dmg:SetReportedPosition(self:WorldSpaceCenter())
           if attack.push and (not attack.groundforce or ent:IsOnGround()) then
             dmg:SetDamageForce(self:PushEntity(ent, attack.force))
           else dmg:SetDamageForce(self:CalcOffset(attack.force)) end
-          ent:TakeDamageInfo(dmg)
+          if isstring(attack.attachment) or isnumber(attack.attachment) then
+            if isstring(attack.attachment) then
+              attack.attachment = self:LookupAttachment(attack.attachment)
+            end
+            local attachment = self:GetAttachment(attack.attachment)
+            if attachment then
+              if attack.trace then
+                trace = self:TraceLine(nil, {
+                  endpos = attachment.Pos + attachment.Pos:DrG_Direction(ent:WorldSpaceCenter()),
+                  start = attachment.Pos
+                })
+              end
+              origin = attachment.Pos
+            end
+          elseif isstring(attack.bone) or isnumber(attack.bone) then
+            if isstring(attack.bone) then attack.bone = self:LookupBone(attack.bone) end
+            if isnumber(attack.bone) then
+              local bonePos, boneAngles = self:GetBonePosition(attack.bone)
+              if attack.trace then
+                trace = self:TraceLine(nil, {
+                  endpos = bonePos + bonePos:DrG_Direction(ent:WorldSpaceCenter()),
+                  start = bonePos
+                })
+              end
+              origin = bonePos
+            end
+          elseif attack.trace then
+            trace = self:TraceLine(origin:DrG_Direction(ent:WorldSpaceCenter()))
+          end
+          dmg:SetDamagePosition(origin)
+          dmg:SetReportedPosition(origin)
+          dmg:SetDamage(isfunction(attack.damage) and attack.damage(ent, origin) or attack.damage)
+          if attack.trace and trace then ent:DispatchTraceAttack(dmg, trace)
+          else ent:TakeDamageInfo(dmg) end
           if attack.viewpunch and ent:IsPlayer() then
             ent:ViewPunch(attack.viewpunch)
           end
@@ -214,15 +246,14 @@ if SERVER then
       if isfunction(callback) then callback(self, hit) end
     end)
   end
-
   function ENT:BlastAttack(attack, callback)
     attack = attack or {}
     attack.angle = attack.angle or 360
     attack.range = attack.range or self.MeleeAttackRange
     if isnumber(attack.damage) then
       local damage = attack.damage
-      attack.damage = function(ent)
-        return damage*math.Clamp((attack.range-self:GetRangeTo(ent))/attack.range, 0, 1)
+      attack.damage = function(ent, pos)
+        return damage*math.Clamp((attack.range-pos:Distance(ent:GetPos()))/attack.range, 0, 1)
       end
     end
     return self:Attack(attack, callback)
@@ -264,17 +295,18 @@ if SERVER then
     end)
   end
 
-  function ENT:CreateProjectile(model, binds, class)
-    local proj
-    if istable(binds) or isstring(class) then
-      proj = DrGBase.CreateProjectile(model, binds, class)
-    elseif isstring(model) then
-      proj = ents.Create(model)
-      proj:Spawn()
-    else return NULL end
-    if not IsValid(proj) then return NULL end
-    proj:SetOwner(self)
-    return proj
+  function ENT:CreateProjectile(str, binds, str2)
+    if not isstring(str2) then
+      if not isstring(str) then return NULL end
+      local proj
+      if not string.EndsWith(str, ".mdl") then
+        proj = ents.Create(str)
+        proj:Spawn()
+      else proj = DrGBase.CreateProjectile(str, binds) end
+      if not IsValid(proj) then return NULL end
+      proj:SetOwner(self)
+      return proj
+    else return self:CreateProjectile(str2) end    
   end
   function ENT:CreateGrenade()
     return self:CreateProjectile("proj_drg_grenade")
@@ -372,7 +404,7 @@ if SERVER then
   function ENT:DropRagdoll(ragdoll)
     if not istable(self._DrGBaseGrabbedRagdolls[ragdoll]) then return end
     for attach, attached in pairs(self._DrGBaseGrabbedRagdolls[ragdoll]) do
-      if not IsValid(attach) then return end
+      if not IsValid(attach) then continue end
       self._DrGBaseGrabbedRagdolls[ragdoll][attach] = nil
       attach:Remove()
     end

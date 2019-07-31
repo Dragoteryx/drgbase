@@ -85,6 +85,16 @@ if SERVER then
     self:AddPatrolPos(self:RandomPos(1500))
   end
 
+  -- Damage --
+
+  function ENT:OnTakeDamage(dmg, hitgroup)
+    if hitgroup == HITGROUP_HEAD then
+      local attacker = dmg:GetAttacker()
+      if self:HasSpotted(attacker) then return 2
+      else return 100 end
+    end
+  end
+
   -- Animations/Sounds --
 
   function ENT:OnNewEnemy()

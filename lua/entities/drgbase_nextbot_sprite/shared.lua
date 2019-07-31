@@ -68,9 +68,10 @@ else
     local sprite = self:GetSpriteFolder()..anim..self:GetSpriteFrame()..".png"
     render.DrG_DrawSprite(sprite, pos, height, {
       origin = self:IsPossessedByLocalPlayer() and self:GetPos()-self:PossessorForward(),
-      color = self:GetColor(), lighting = true
+      color = self:GetColor(), lighting = true, flip = self:ShouldFlipSprite()
     })
   end
+  function ENT:ShouldFlipSprite() return false end
 
   function ENT:DrawTranslucent()
     local anim = self:GetSpriteAnim()

@@ -186,25 +186,26 @@ if SERVER then
         magnitude = speed, recursive = true, maxmagnitude = speed
       }, feet)
     else
-      if isentity(target) then
+      if isentity(target) and IsValid(target) then
         local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
         local dist = self:GetPos():Distance(aimAt)
         return self:AimAt(aimAt + target:GetVelocity()*(dist/speed), speed, feet)
-      else
+      elseif isvector(target) then
         local vec = self:GetPos():DrG_Direction(target):GetNormalized()*speed
         phys:SetVelocity(vec)
         return vec
-      end
+      else return Vector(0, 0, 0) end
     end
   end
   function ENT:ThrowAt(target, options, feet)
     local phys = self:GetPhysicsObject()
     if not IsValid(phys) then return Vector(0, 0, 0) end
-    if isentity(target) then
+    if isentity(target) and IsValid(target) then
       local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
       local vec, info = self:GetPos():DrG_CalcTrajectory(aimAt, options)
       return self:ThrowAt(aimAt + target:GetVelocity()*info.duration, options, feet)
-    else return phys:DrG_Trajectory(target, options) end
+    elseif isvector(target) then return phys:DrG_Trajectory(target, options)
+    else return Vector(0, 0, 0) end
   end
 
   function ENT:DealDamage(ent, value, type)
@@ -219,7 +220,7 @@ if SERVER then
     dmg:SetInflictor(self)
     ent:TakeDamageInfo(dmg)
   end
-  function ENT:RadiusDamage(value, type, range, filter)
+  function ENT:RadiusDamage(damage, type, range, filter)
     local owner = self:GetOwner()
     if not isfunction(filter) then filter = function(ent)
       if ent == owner then return false end
@@ -228,9 +229,9 @@ if SERVER then
     end end
     for i, ent in ipairs(ents.FindInSphere(self:GetPos(), range)) do
       if not IsValid(ent) then continue end
-      if not DrGBase.IsTarget(ent) then return end
+      if ent == self then continue end
       if not filter(ent) then continue end
-      self:DealDamage(ent, value*math.Clamp((range-self:GetPos():Distance(ent:GetPos()))/range, 0, 1), type)
+      self:DealDamage(ent, damage*math.Clamp((range-self:GetPos():Distance(ent:GetPos()))/range, 0, 1), type)
     end
   end
 

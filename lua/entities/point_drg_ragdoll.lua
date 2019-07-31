@@ -19,7 +19,10 @@ if SERVER then
     local ragdoll = self:GetRagdoll()
     if IsValid(ragdoll) then
       local bone = ragdoll:GetPhysicsObjectNum(ragdoll:TranslateBoneToPhysBone(self:GetBone()))
-      if bone then bone:SetPos(self:GetPos()) end
+      if bone then
+        bone:SetAngleDragCoefficient(100000)
+        bone:SetPos(self:GetPos())
+      end
     else self:Remove() end
     self:NextThink(CurTime() + engine.TickInterval())
     return true

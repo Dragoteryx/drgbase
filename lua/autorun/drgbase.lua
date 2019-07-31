@@ -51,25 +51,32 @@ end)
 function DrGBase.IncludeFile(fileName, serverOnly)
   DrGBase.Print("Include file '"..fileName.."'.")
   if not serverOnly then AddCSLuaFile(fileName) end
-  include(fileName)
+  return include(fileName)
 end
 function DrGBase.IncludeFiles(files, serverOnly)
+  local tbl = {}
   for i, fileName in ipairs(files) do
-    DrGBase.IncludeFile(fileName, serverOnly)
+    local res = DrGBase.IncludeFile(fileName, serverOnly)
+    if res then table.insert(tbl, res) end
   end
+  return tbl
 end
 function DrGBase.IncludeFolder(folder, serverOnly)
   DrGBase.Print("Include folder '"..folder.."'.")
+  local tbl = {}
   for i, fileName in ipairs(file.Find(folder.."/*.lua", "LUA")) do
-    DrGBase.IncludeFile(folder.."/"..fileName, serverOnly)
+    local res = DrGBase.IncludeFile(folder.."/"..fileName, serverOnly)
+    if res then table.insert(tbl, res) end
   end
+  return tbl
 end
 function DrGBase.RecursiveInclude(folder, serverOnly)
-  DrGBase.IncludeFolder(folder)
+  local tbl = DrGBase.IncludeFolder(folder)
   local files, folders = file.Find(folder.."/*", "LUA")
   for i, folderName in ipairs(folders) do
-    DrGBase.RecursiveInclude(folder.."/"..folderName, serverOnly)
+    table.Merge(tbl, DrGBase.RecursiveInclude(folder.."/"..folderName, serverOnly))
   end
+  return tbl
 end
 
 -- Autorun --

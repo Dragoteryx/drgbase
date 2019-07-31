@@ -43,14 +43,24 @@ if SERVER then
     else self:Remove() end
   end
 
+  local function FetchHitgroup(self, dmg)
+    local attacker = dmg:GetAttacker()
+    local inflictor = dmg:GetInflictor()
+    if IsValid(attacker) and attacker:IsPlayer() and dmg:IsBulletDamage() then
+      local tr = attacker:GetEyeTraceNoCursor()
+      if tr.Entity == self then return tr.HitGroup end
+    end
+    return HITGROUP_GENERIC
+  end
+
   function ENT:OnInjured(dmg)
     for type, mult in pairs(self._DrGBaseDamageMultipliers) do
       if type == DMG_DIRECT then continue end
       if dmg:IsDamageType(type) then dmg:ScaleDamage(mult) end
     end
     if dmg:GetDamage() <= 0 then return end
-    local res = self:OnTakeDamage(dmg)
-    local attacker = dmg:GetAttacker()
+    local hitgroup = FetchHitgroup(self, dmg)
+    local res = self:OnTakeDamage(dmg, hitgroup)
     if IsValid(attacker) and DrGBase.IsTarget(attacker) then
       if self:IsAlly(attacker) then
         self._DrGBaseAllyDamageTolerance[attacker] = self._DrGBaseAllyDamageTolerance[attacker] or 0
@@ -74,7 +84,7 @@ if SERVER then
         if #self.OnDeathSounds > 0 then
           self:EmitSound(self.OnDeathSounds[math.random(#self.OnDeathSounds)])
         end
-        if self:OnFatalDamage(dmg) then
+        if self:OnFatalDamage(dmg, hitgroup) then
           self:SetNW2Bool("DrGBaseDown", true)
           self:SetNW2Int("DrGBaseDowned", self:GetNW2Int("DrGBaseDowned")+1)
           self:SetHealth(1)
@@ -82,7 +92,7 @@ if SERVER then
           self:SetNoTarget(true)
           local data = util.DrG_SaveDmg(dmg)
           self:CallInCoroutine(function(self, delay)
-            self:OnDowned(util.DrG_LoadDmg(data), delay)
+            self:OnDowned(util.DrG_LoadDmg(data), delay, hitgroup)
             if self:Health() <= 0 then self:SetHealth(1) end
             self:SetNoTarget(noTarget)
             self:SetNW2Bool("DrGBaseDown", false)
@@ -97,7 +107,7 @@ if SERVER then
           local data = util.DrG_SaveDmg(dmg)
           self:CallInCoroutine(function(self, delay)
             dmg = util.DrG_LoadDmg(data)
-            self:AfterTakeDamage(dmg, delay)
+            self:AfterTakeDamage(dmg, delay, hitgroup)
           end)
         end
       end
@@ -105,11 +115,12 @@ if SERVER then
   end
   function ENT:OnKilled(dmg)
     if self:IsDead() then return end
+    self:SetNW2Bool("DrGBaseDying", true)
     self:SetHealth(0)
     hook.Run("OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor())
     if isfunction(self.OnDeath) then
+      local hitgroup = FetchHitgroup(self, dmg)
       local data = util.DrG_SaveDmg(dmg)
-      self:SetNW2Bool("DrGBaseDying", true)
       self:CallInCoroutine(function(self, delay)
         self:SetNW2Bool("DrGBaseDying", false)
         self:SetHealth(0)
@@ -117,7 +128,7 @@ if SERVER then
         local now = CurTime()
         dmg = util.DrG_LoadDmg(data)
         if dmg:IsDamageType(DMG_DISSOLVE) then self:DrG_Dissolve() end
-        dmg = self:OnDeath(dmg, delay)
+        dmg = self:OnDeath(dmg, delay, hitgroup)
         if dmg == nil then
           dmg = util.DrG_LoadDmg(data)
           if CurTime() > now then
@@ -127,6 +138,7 @@ if SERVER then
         NextbotDeath(self, dmg)
       end, true)
     else
+      self:SetNW2Bool("DrGBaseDying", false)
       self:SetNW2Bool("DrGBaseDead", true)
       NextbotDeath(self, dmg)
     end
