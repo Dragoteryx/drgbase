@@ -38,30 +38,29 @@ end
 function ENT:GetMovement()
   if not self:IsMoving() then return Vector(0, 0, 0) end
   local dir = self:GetVelocity():Angle()
-  local mv = (self:GetAngles()-dir):Forward()
-  return Vector(math.Round(mv.x, 2), math.Round(mv.y, 2), -math.Round(mv.z, 2))
+  return (self:GetAngles()-dir):Forward()
 end
 
 function ENT:IsMoving()
   return not self:GetVelocity():IsZero()
 end
 function ENT:IsMovingUp()
-  return self:GetMovement().z > 0
+  return math.Round(self:GetMovement().z) > 0
 end
 function ENT:IsMovingDown()
-  return self:GetMovement().z < 0
+  return math.Round(self:GetMovement().z) < 0
 end
 function ENT:IsMovingForward()
-  return self:GetMovement().x > 0
+  return math.Round(self:GetMovement().x) > 0
 end
 function ENT:IsMovingBackward()
-  return self:GetMovement().x < 0
+  return math.Round(self:GetMovement().x) < 0
 end
 function ENT:IsMovingRight()
-  return self:GetMovement().y > 0
+  return math.Round(self:GetMovement().y) > 0
 end
 function ENT:IsMovingLeft()
-  return self:GetMovement().y < 0
+  return math.Round(self:GetMovement().y) < 0
 end
 function ENT:IsMovingForwardLeft()
   return self:IsMovingForward() and self:IsMovingLeft()

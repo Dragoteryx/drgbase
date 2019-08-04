@@ -176,6 +176,7 @@ local DEFAULTS = {
   ["baseai"] = true,
   ["handleenemy"] = true,
   ["chaseenemy"] = true,
+  ["fleeenemy"] = true,
   ["patrol"] = true,
   ["movetopos"] = true,
   ["followentity"] = true

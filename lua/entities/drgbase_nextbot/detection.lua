@@ -73,6 +73,7 @@ if SERVER then
     local eyepos = self:EyePos()
     if eyepos:DistToSqr(ent:GetPos()) > self:GetSightRange()^2 then return false end
     if ent:IsPlayer() then
+      if ent:DrG_IsPossessing() then return self:IsInSight(ent:DrG_GetPossessing()) end
       local luminosity = ent:FlashlightIsOn() and 1 or ent:DrG_Luminosity()
       local min, max = self:GetSightLuminosityRange()
       if luminosity < min or luminosity > max then return false end
@@ -89,13 +90,14 @@ if SERVER then
 
   -- Get entities in sight
   function ENT:GetInSight(disp, spotted)
-    local insight = {}
     if istable(disp) then
+      local insight = {}
       for i, dis in ipairs(disp) do
         table.Merge(insight, self:GetInSight(dis, spotted))
       end
       return insight
     elseif isnumber(disp) then
+      local insight = {}
       for ent in self:EntityIterator(disp, spotted) do
         if self:IsInSight(ent) then table.insert(insight, ent) end
       end
@@ -110,6 +112,9 @@ if SERVER then
   end
   function ENT:GetAfraidOfInSight(spotted)
     return self:GetInSight(D_FR, spotted)
+  end
+  function ENT:GetHostilesInSight(spotted)
+    return self:GetInSight({D_HT, D_FR}, spotted)
   end
   function ENT:GetNeutralInSight(spotted)
     return self:GetInSight(D_NU, spotted)
@@ -140,6 +145,9 @@ if SERVER then
   end
   function ENT:UpdateAfraidOfSight(spotted)
     return self:UpdateSight(D_FR, spotted)
+  end
+  function ENT:UpdateHostilesSight(spotted)
+    return self:UpdateSight({D_HT, D_FR}, spotted)
   end
   function ENT:UpdateNeutralSight(spotted)
     return self:UpdateSight(D_NU, spotted)

@@ -15,8 +15,41 @@ BT.Structure = {
         type = "Sequence",
         children = {
           {
-            type = "Tree",
-            name = "ChaseEnemy"
+            type = "Selector",
+            children = {
+              {
+                type = "Sequence",
+                children = {
+                  {
+                    type = "Leaf",
+                    name = "IsEnemy?",
+                    run = function(self, nextbot)
+                      return nextbot:IsEnemy(nextbot:GetEnemy())
+                    end
+                  },
+                  {
+                    type = "Tree",
+                    name = "ChaseEnemy"
+                  }
+                }
+              },
+              {
+                type = "Sequence",
+                children = {
+                  {
+                    type = "Leaf",
+                    name = "IsAfraidOf?",
+                    run = function(self, nextbot)
+                      return nextbot:IsAfraidOf(nextbot:GetEnemy())
+                    end
+                  },
+                  {
+                    type = "Tree",
+                    name = "FleeEnemy"
+                  }
+                }
+              }
+            }
           },
           {
             type = "Leaf",
@@ -32,6 +65,5 @@ BT.Structure = {
 }
 
 function BT:OnInit()
-  self:IgnoreEvent("EnemyChange", true)
   self:IgnoreEvent("LastEnemy", true)
 end

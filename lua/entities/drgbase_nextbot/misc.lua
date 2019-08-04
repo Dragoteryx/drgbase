@@ -197,7 +197,15 @@ if SERVER then
           if not self:Visible(ent) then continue end
           local trace = false
           local origin = self:WorldSpaceCenter()
-          local aimAt = isfunction(attack.aimat) and attack.aimat(ent) or ent:WorldSpaceCenter()
+          local aimAt = ent:WorldSpaceCenter()
+          if isfunction(attack.aimat) then
+            local res = attack.aimat(ent)
+            if isvector(res) then aimAt = res end
+          elseif isstring(attack.aimat) then
+            local boneId = ent:DrG_SearchBone(attack.aimat)
+            if boneId then aimAt = ent:GetBonePosition(boneId) end
+          --elseif isnumber(attack.aimat) then
+          end
           local dmg = DamageInfo()
           dmg:SetAttacker(self)
           dmg:SetInflictor(self)
@@ -429,7 +437,7 @@ if SERVER then
           if IsValid(attach) then
             table.insert(ragdolls, ragdoll)
             break
-          else attachs[attach] = nil end          
+          else attachs[attach] = nil end
         end
       else self._DrGBaseGrabbedRagdolls[ragdoll] = nil end
     end

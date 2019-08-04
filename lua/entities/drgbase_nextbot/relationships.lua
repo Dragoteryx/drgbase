@@ -1,16 +1,28 @@
 
+-- Convars --
+
+local DebugRelationship = CreateConVar("drgbase_debug_relationships", "0")
+
 -- Handlers --
+
+local function EnumToString(disp)
+  if disp == D_LI then return "D_LI"
+  elseif disp == D_HT then return "D_HT"
+  elseif disp == D_FR then return "D_FR"
+  elseif disp == D_NU then return "D_NU"
+  elseif disp == D_ER then return "D_ER" end
+end
 
 local DEFAULT_DISP = D_NU
 local DEFAULT_PRIO = 1
 local DEFAULT_REL = {disp = DEFAULT_DISP, prio = DEFAULT_PRIO}
 function ENT:_InitRelationships()
   if CLIENT then return end
-  self._DrGBaseRelationships = table.DrG_Default({}, DEFAULT_REL)
+  self._DrGBaseRelationships = table.DrG_Default({}, DEFAULT_DISP)
   self._DrGBaseRelPriorities = table.DrG_Default({}, DEFAULT_PRIO)
   self._DrGBaseRelationshipCaches = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
   self._DrGBaseIgnoredEntities = {}
-  self._DrGBaseDefaultRelationship = self.DefaultRelationship
+  self._DrGBaseDefaultRelationship = DEFAULT_DISP
   self._DrGBaseRelationshipDefiners = {
     ["entity"] = table.DrG_Default({}, DEFAULT_REL),
     ["class"] = table.DrG_Default({}, DEFAULT_REL),
@@ -39,8 +51,8 @@ if SERVER then
 
   local DISP_PRIORITIES = {
     [D_LI] = 4,
-    [D_HT] = 3,
-    [D_FR] = 2,
+    [D_FR] = 3,
+    [D_HT] = 2,
     [D_NU] = 1,
     [D_ER] = 0
   }
@@ -158,6 +170,10 @@ if SERVER then
   function ENT:IsAfraidOf(ent)
     return self:GetRelationship(ent) == D_FR
   end
+  function ENT:IsHostile(ent)
+    local disp = self:GetRelationship(ent)
+    return disp == D_HT or disp == D_FR
+  end
   function ENT:IsNeutral(ent)
     return self:GetRelationship(ent) == D_NU
   end
@@ -169,7 +185,6 @@ if SERVER then
     if (cur ~= disp or disp == D_HT) and
     ent:IsNPC() then self:_UpdateNPCRelationship(ent, disp) end
     if curr == disp then return end
-    --print(ent, curr, "=>", disp)
     if IsCachedDisp(disp) then
       self._DrGBaseRelationshipCaches[D_LI][ent] = nil
       self._DrGBaseRelationshipCaches[D_HT][ent] = nil
@@ -184,6 +199,13 @@ if SERVER then
       self._DrGBaseRelationshipCaches[D_HT][ent] = nil
       self._DrGBaseRelationshipCaches[D_FR][ent] = nil
       self._DrGBaseRelationships[ent] = DEFAULT_DISP
+    end
+    self:OnRelationshipChange(ent, curr, disp)
+    if DebugRelationship:GetBool() then
+      DrGBase.Print(tostring(self)..": ".."'"..tostring(ent).."' "..EnumToString(curr).." => "..EnumToString(disp)..".")
+    end
+    if self:GetEnemy() == ent then
+      self:BehaviourTreeEvent("EnemyRelationshipChange", self:GetEnemy(), curr, disp)
     end
   end
   function ENT:_SetPriority(ent, prio)
@@ -202,7 +224,7 @@ if SERVER then
     if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return true end
     if ent:IsFlagSet(FL_NOTARGET) then return true end
     if ent.CPTBase_NPC and ent.UseNotarget then return true end
-    if (ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot") and ent:Health() <= 0 then return true end
+    if (ent:IsPlayer() or ent:IsNPC() or ent:IsNextBot()) and ent:Health() <= 0 then return true end
     if ent.IsDrGNextbot and (ent:IsDown() or ent:IsDead()) then return true end
     if self:ShouldIgnore(ent) then return true end
     return self._DrGBaseIgnoredEntities[ent] or false
@@ -218,7 +240,10 @@ if SERVER then
     local old = self:IsFrightening()
     self._DrGBaseFrightening = tobool(bool)
     if old ~= self:IsFrightening() then
-      self:UpdateRelationships()
+      for i, ent in ipairs(ents.GetAll()) do
+        if not ent:IsNPC() then continue end
+        self:UpdateRelationshipWith(ent)
+      end
     end
   end
 
@@ -464,27 +489,42 @@ if SERVER then
     else return ent end
   end
   function ENT:EntityIterator(disp, spotted)
-    if IsCachedDisp(disp) then
-      local cache = self._DrGBaseRelationshipCaches[disp]
-      local previous = nil
-      return function()
-        previous = NextCachedEntity(self, cache, previous, disp, spotted)
-        return previous
-      end
-    elseif disp == D_NU then
-      local i = 1
-      local entities = ents.GetAll()
-      return function()
-        for h = i, #entities do
-          local ent = entities[h]
-          i = i+1
-          if not IsValid(ent) then continue end
-          if disp ~= self:GetRelationship(ent) then continue end
-          if spotted and not self:HasSpotted(ent) then continue end
-          return ent
+    if istable(disp) then
+      local entities = {}
+      for i, dis in ipairs(disp) do
+        for ent in self:EntityIterator(dis, spotted) do
+          table.insert(entities, ent)
         end
       end
-    else return function() end end
+      local i = 1
+      return function()
+        local ent = entities[i]
+        i = i+1
+        return ent
+      end
+    elseif isnumber(disp) then
+      if IsCachedDisp(disp) then
+        local cache = self._DrGBaseRelationshipCaches[disp]
+        local previous = nil
+        return function()
+          previous = NextCachedEntity(self, cache, previous, disp, spotted)
+          return previous
+        end
+      elseif disp == D_NU then
+        local i = 1
+        local entities = ents.GetAll()
+        return function()
+          for h = i, #entities do
+            local ent = entities[h]
+            i = i+1
+            if not IsValid(ent) then continue end
+            if disp ~= self:GetRelationship(ent) then continue end
+            if spotted and not self:HasSpotted(ent) then continue end
+            return ent
+          end
+        end
+      else return function() end end
+    else return self:EntityIterator({D_LI, D_HT, D_FR, D_NU}, spotted) end
   end
   function ENT:AllyIterator(spotted)
     return self:EntityIterator(D_LI, spotted)
@@ -494,6 +534,9 @@ if SERVER then
   end
   function ENT:AfraidOfIterator(spotted)
     return self:EntityIterator(D_FR, spotted)
+  end
+  function ENT:HostileIterator(spotted)
+    return self:EntityIterator({D_HT, D_FR}, spotted)
   end
   function ENT:NeutralIterator(spotted)
     return self:EntityIterator(D_NU, spotted)
@@ -516,6 +559,9 @@ if SERVER then
   function ENT:GetAfraidOf(spotted)
     return self:GetEntities(D_FR, spotted)
   end
+  function ENT:GetHostiles(spotted)
+    return self:GetEntities({D_HT, D_FR}, spotted)
+  end
   function ENT:GetNeutrals(spotted)
     return self:GetEntities(D_NU, spotted)
   end
@@ -532,6 +578,9 @@ if SERVER then
   end
   function ENT:AfraidOfLeft(spotted)
     return self:Entitiesleft(D_FR, spotted)
+  end
+  function ENT:HostilesLeft(spotted)
+    return self:Entitiesleft({D_HT, D_FR}, spotted)
   end
   function ENT:NeutralsLeft(spotted)
     return self:EntitiesLeft(D_NU, spotted)
@@ -557,6 +606,9 @@ if SERVER then
   function ENT:GetClosestAfraidOf(spotted)
     return self:GetClosestEntity(D_FR, spotted)
   end
+  function ENT:GetClosestHostile(spotted)
+    return self:GetClosestEntity({D_HT, D_FR}, spotted)
+  end
   function ENT:GetClosestNeutral(spotted)
     return self:GetClosestEntity(D_NU, spotted)
   end
@@ -565,6 +617,7 @@ if SERVER then
 
   function ENT:CustomRelationship() end
   function ENT:ShouldIgnore() end
+  function ENT:OnRelationshipChange() end
 
   -- Handlers --
 
@@ -576,7 +629,8 @@ if SERVER then
     end
     ent:DrG_SetRelationship(self, relationship)
     if ent.IsVJBaseSNPC then
-      if not table.HasValue(ent.CurrentPossibleEnemies, self) then
+      if istable(ent.CurrentPossibleEnemies) and
+      not table.HasValue(ent.CurrentPossibleEnemies, self) then
         table.insert(ent.CurrentPossibleEnemies, self)
       end
       if (relationship == D_HT or relationship == D_FR) then
@@ -704,6 +758,11 @@ else
   function ENT:IsAfraidOf(ent, callback)
     return self:GetRelationship(ent, function(disp)
       callback(disp == D_FR)
+    end)
+  end
+  function ENT:IsHostile(ent, callback)
+    return self:GetRelationship(ent, function(disp)
+      callback(disp == D_HT or disp == D_FR)
     end)
   end
   function ENT:IsNeutral(ent, callback)

@@ -38,11 +38,6 @@ end
 
 function ENT:_InitStatus()
   if CLIENT then return end
-  self._DrGBaseDamageMultipliers = {}
-  for type, mult in pairs(self.DamageMultipliers) do
-    if not isnumber(type) then continue end
-    self:SetDamageMultiplier(type, mult)
-  end
   self:LoopTimer(1, self._RegenHealth)
 end
 
@@ -61,14 +56,6 @@ if SERVER then
   end
   function ENT:Scale(mult, delta)
     self:SetScale(self:GetScale()*mult, delta)
-  end
-
-  function ENT:GetDamageMultiplier(type)
-    return self._DrGBaseDamageMultipliers[type] or 1
-  end
-  function ENT:SetDamageMultiplier(type, mult)
-    if mult == 1 then self._DrGBaseDamageMultipliers[type] = nil
-    else self._DrGBaseDamageMultipliers[type] = mult end
   end
 
   -- Functions --

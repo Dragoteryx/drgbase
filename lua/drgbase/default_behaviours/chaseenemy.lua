@@ -34,15 +34,27 @@ BT.Structure = {
                     return not nextbot:IsInRange(enemy, nextbot.ReachEnemyRange) or not nextbot:Visible(enemy)
                   end,
                   success = {
-                    type = "Leaf",
-                    name = "MoveTowardsEnemy",
-                    run = function(self, nextbot)
-                      local enemy = nextbot:GetEnemy()
-                      local res = nextbot:OnChaseEnemy(enemy)
-                      if res ~= nil then return res end
-                      nextbot:FollowPath(enemy)
-                      return true
-                    end
+                    type = "Selector",
+                    children = {
+                      {
+                        type = "Leaf",
+                        name = "MoveTowardsEnemy",
+                        run = function(self, nextbot)
+                          local enemy = nextbot:GetEnemy()
+                          local res = nextbot:OnChaseEnemy(enemy)
+                          if res ~= nil then return res end
+                          return nextbot:FollowPath(enemy) ~= "unreachable"
+                        end
+                      },
+                      {
+                        type = "Leaf",
+                        name = "EnemyUnreachable",
+                        run = function(self, nextbot)
+                          nextbot:OnEnemyUnreachable(nextbot:GetEnemy())
+                          return true
+                        end
+                      }
+                    }
                   }
                 },
                 {
@@ -71,11 +83,21 @@ BT.Structure = {
                         local res = nextbot:OnAvoidEnemy(enemy)
                         if res ~= nil then return res end
                         local away = nextbot:GetPos()*2 - enemy:GetPos()
-                        nextbot:FollowPath(away)
-                        return true
+                        return nextbot:FollowPath(away) ~= "unreachable"
                       end
                     }
                   }
+                },
+                {
+                  type = "Leaf",
+                  name = "WatchEnemy",
+                  run = function(self, nextbot)
+                    local enemy = nextbot:GetEnemy()
+                    local res = nextbot:OnWatchEnemy(enemy)
+                    if res ~= nil then return res end
+                    nextbot:FaceEnemy()
+                    return true
+                  end
                 }
               }
             }
@@ -138,7 +160,8 @@ BT.Structure = {
   }
 }
 
-function BT:OnInit()
-  self:IgnoreEvent("EnemyChange", true)
-  self:IgnoreEvent("LastEnemy", true)
+function BT:OnEvent(nextbot, event, old, new)
+  if event == "EnemyChange" then
+    return nextbot:GetRelationship(new) == D_HT
+  end
 end

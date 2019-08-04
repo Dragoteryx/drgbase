@@ -1,13 +1,27 @@
 
 -- Getters/setters --
 
+function ENT:GetAnimInfoSequence(seq)
+  if isstring(seq) then seq = self:LookupSequence(seq)
+  elseif not isnumber(seq) then return {} end
+  if seq == -1 then return {} end
+  local seqName = self:GetSequenceName(seq)
+  local seqInfo = self:GetSequenceInfo(seq)
+  for i, anim in ipairs(seqInfo.anims) do
+    local info = self:GetAnimInfo(anim)
+    if info.label == "@"..seqName or info.label == "a_"..seqName then
+      return info
+    end
+  end
+end
+
 -- Functions --
 
 function ENT:SelectRandomSequence(anim)
   return self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
 end
 
-function ENT:SequenceEvent(seq, cycles, callback)
+function ENT:SequenceEvent(seq, cycles, callback, ...)
   if istable(seq) then
     for i, se in ipairs(seq) do
       self:SequenceEvent(se, cycles, callback)
@@ -19,9 +33,12 @@ function ENT:SequenceEvent(seq, cycles, callback)
     self._DrGBaseSequenceEvents[seq] = self._DrGBaseSequenceEvents[seq] or {}
     local event = self._DrGBaseSequenceEvents[seq]
     if isnumber(cycles) then cycles = {cycles} end
+    local args, n = table.DrG_Pack(...)
     for i, cycle in ipairs(cycles) do
       event[cycle] = event[cycle] or {}
-      table.insert(event[cycle], callback)
+      table.insert(event[cycle], {
+        callback = callback, args = args, n = n
+      })
     end
   end
 end
@@ -33,6 +50,22 @@ function ENT:ClearSequenceEvents(seq)
     elseif not isnumber(seq) then return end
     self._DrGBaseSequenceEvents[seq] = nil
   else self._DrGBaseSequenceEvents = {} end
+end
+
+function ENT:AddAnimEvent(seq, frames, event)
+  if istable(seq) then
+    for i, se in ipairs(seq) do self:AddAnimEvent(se, frames, event) end
+  elseif isstring(seq) then seq = self:LookupSequence(seq)
+  elseif not isnumber(seq) then return end
+  if seq == -1 then return end
+  local info = self:GetAnimInfoSequence(seq)
+  if not isnumber(info.numframes) then return end
+  if not istable(frames) then frames = {frames} end
+  for i, frame in ipairs(frames) do
+    self:SequenceEvent(seq, frame/(info.numframes-1), function(self)
+      self:OnAnimEvent(event, -1, self:GetPos(), self:GetAngles())
+    end)
+  end
 end
 
 function ENT:DirectPoseParametersAt(pos, pitch, yaw, center)
@@ -59,27 +92,39 @@ function ENT:_InitAnimations()
     self._DrGBaseCurrentGestures = {}
     self:LoopTimer(0.1, self.UpdateAnimation)
   end
+  self._DrGBasePreviousSequence = self:GetSequence()
   self._DrGBaseLastAnimCycle = 0
   self._DrGBaseSequenceEvents = {}
 end
 
 function ENT:_HandleAnimations()
   local current = self:GetSequence()
-  local event = self._DrGBaseSequenceEvents[current]
-  if event ~= nil then
-    for cycle, callbacks in pairs(event) do
-      local trCycle = cycle
-      if trCycle == 0 then trCycle = 0.0000001 end
-      if self._DrGBaseLastAnimCycle < trCycle and self:GetCycle() >= trCycle then
-        for i, callback in ipairs(callbacks) do callback(self, cycle, false) end
-        break
-      end
+  if self._DrGBasePreviousSequence ~= current then
+    self._DrGBasePreviousSequence = current
+    self._DrGBaseLastAnimCycle = 0
+  else
+    self:_PlaySequenceEvents(current, self._DrGBaseLastAnimCycle)
+    self._DrGBaseLastAnimCycle = self:GetCycle()
+  end
+end
+
+function ENT:_PlaySequenceEvents(seq, lastcycle)
+  local events = self._DrGBaseSequenceEvents[seq]
+  for cycle, event in pairs(istable(events) and events or {}) do
+    if (self:GetCycle() > cycle and self._DrGBaseLastAnimCycle <= cycle) or
+    (self:GetCycle() < self._DrGBaseLastAnimCycle and self:GetCycle() >= cycle) or
+    (self:GetCycle() < self._DrGBaseLastAnimCycle and self._DrGBaseLastAnimCycle <= cycle) then
+      for i, todo in ipairs(event) do todo.callback(self, table.DrG_Unpack(todo.args, todo.n)) end
     end
   end
-  self._DrGBaseLastAnimCycle = self:GetCycle()
 end
 
 if SERVER then
+
+  local function SeqHasTurningWalkframes(self, seq)
+    local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
+    return success and angles.y ~= 0
+  end
 
   -- Getters/setters --
 
@@ -224,17 +269,7 @@ if SERVER then
         local cycle = self:GetLayerCycle(layerID)
         if cycle < lastCycle then break end
         --if cycle == lastCycle and cycle == 1 then break end
-        local event = self._DrGBaseSequenceEvents[seq]
-        if event ~= nil then
-          for eventCycle, callbacks in pairs(event) do
-            local trCycle = eventCycle
-            if trCycle == 0 then trCycle = 0.0000001 end
-            if lastCycle < trCycle and cycle >= trCycle then
-              for i, callback in ipairs(callbacks) do callback(self, eventCycle, true) end
-              break
-            end
-          end
-        end
+        self:_PlaySequenceEvents(seq, lastCycle)
         if not callback(self, cycle, layerID) then
           lastCycle = cycle
           coroutine.yield()
@@ -329,12 +364,13 @@ if SERVER then
       end
     end
     if validAnim and
-    (not self.AnimMatchSpeed or self:GetSequenceGroundSpeed(self:GetSequence()) == 0) then
+    ((not self:IsMoving() or self:GetSequenceGroundSpeed(self:GetSequence()) == 0) and
+    (not self:IsTurning() or not SeqHasTurningWalkframes(self, self:GetSequence()))) then
       self:SetPlaybackRate(rate or 1)
     end
   end
   function ENT:OnUpdateAnimation()
-    if self:IsDown() then return end
+    if self:IsDown() or self:IsDead() then return end
     if self:IsClimbingUp() then return self.ClimbUpAnimation, self.ClimbAnimRate
     elseif self:IsClimbingDown() then return self.ClimbDownAnimation, self.ClimbAnimRate
     elseif not self:IsOnGround() then return self.JumpAnimation, self.JumpAnimRate
@@ -346,10 +382,7 @@ if SERVER then
   -- Hooks --
 
   function ENT:BodyUpdate()
-    self:BodyMoveXY({
-      rate = self.AnimMatchSpeed,
-      direction = self.AnimMatchDirection
-    })
+    self:BodyMoveXY()
   end
 
   function ENT:HandleAnimEvent(event, time, cycle, type, options)
@@ -369,13 +402,14 @@ if SERVER then
       options = options or {}
       if options.rate == nil then options.rate = true end
       if options.direction == nil then options.direction = true end
-      if options.frameadvance == nil then options.frameadvance = true end
-      if options.frameadvance then self:FrameAdvance() end
-      if self:IsMoving() and not self:IsPlayingAnimation() then
-        if options.direction then
+      if options.frameadvance ~= false then self:FrameAdvance() end
+      local seq = self:GetSequence()
+      if not self:IsPlayingAnimation() and
+      (self:IsMoving() or (self:IsTurning() and SeqHasTurningWalkframes(self, seq))) then
+        if options.direction and self:IsMoving() then
           local movement = self:GetMovement()
           self:SetPoseParameter("move_z", movement.z)
-          if self:OnWalkframes(self:GetSequenceName(self:GetSequence())) then
+          if self:OnWalkframes(self:GetSequenceName(seq)) then
             self:SetPoseParameter("move_x", 1)
             self:SetPoseParameter("move_y", 0)
           else
@@ -388,15 +422,22 @@ if SERVER then
           velocity.z = 0
           if not velocity:IsZero() then
             local speed = velocity:Length()
-            local seqspeed = self:GetSequenceGroundSpeed(self:GetSequence())
+            local seqspeed = self:GetSequenceGroundSpeed(seq)
             if seqspeed ~= 0 then self:SetPlaybackRate(speed/seqspeed) end
+          elseif self:IsTurning() then
+            local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
+            if success and angles.y ~= 0 then
+              local seqspeed = math.abs(angles.y)/self:SequenceDuration(seq)
+              local turnspeed = math.abs(self:GetAngles().y-self._DrGBaseLastAngle.y)/0.1
+              if seqspeed ~= 0 then self:SetPlaybackRate(turnspeed/seqspeed) end
+            end
           end
         end
       end
     else return old_BodyMoveXY(self) end
   end
 
-  --[[local old_GetActivity = nextbotMETA.GetActivity
+  local old_GetActivity = nextbotMETA.GetActivity
   function nextbotMETA:GetActivity()
     if self.IsDrGNextbot then
       return self:GetSequenceActivity(self:GetSequence())
@@ -411,7 +452,7 @@ if SERVER then
       self:ResetSequence(seq)
       return true
     else return old_StartActivity(self, act) end
-  end]]
+  end
 
 else
 

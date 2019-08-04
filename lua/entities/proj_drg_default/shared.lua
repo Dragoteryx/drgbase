@@ -182,20 +182,23 @@ if SERVER then
     local phys = self:GetPhysicsObject()
     if not IsValid(phys) then return Vector(0, 0, 0) end
     if phys:IsGravityEnabled() then
-      return self:ThrowAt(target, {
+      local dir, info = self:ThrowAt(target, {
         magnitude = speed, recursive = true, maxmagnitude = speed
       }, feet)
-    else
-      if isentity(target) and IsValid(target) then
-        local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
-        local dist = self:GetPos():Distance(aimAt)
-        return self:AimAt(aimAt + target:GetVelocity()*(dist/speed), speed, feet)
-      elseif isvector(target) then
-        local vec = self:GetPos():DrG_Direction(target):GetNormalized()*speed
-        phys:SetVelocity(vec)
-        return vec
-      else return Vector(0, 0, 0) end
-    end
+      return dir
+    elseif isentity(target) and IsValid(target) then
+      local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
+      local dist = self:GetPos():Distance(aimAt)
+      return self:AimAt(aimAt + target:GetVelocity()*(dist/speed), speed, feet)
+    elseif isvector(target) then
+      local dir = self:GetPos():DrG_Direction(target):GetNormalized()*speed
+      phys:SetVelocity(dir)
+      return dir
+    elseif IsValid(self:GetOwner()) then
+      local dir = self:GetOwner():GetForward()*speed
+      phys:SetVelocity(dir)
+      return dir
+    else return Vector(0, 0, 0) end
   end
   function ENT:ThrowAt(target, options, feet)
     local phys = self:GetPhysicsObject()
@@ -205,7 +208,12 @@ if SERVER then
       local vec, info = self:GetPos():DrG_CalcTrajectory(aimAt, options)
       return self:ThrowAt(aimAt + target:GetVelocity()*info.duration, options, feet)
     elseif isvector(target) then return phys:DrG_Trajectory(target, options)
-    else return Vector(0, 0, 0) end
+    elseif IsValid(self:GetOwner()) then
+      local speed = math.Clamp(options.magnitude or 1000, 0, options.maxmagnitude or math.huge)
+      local dir = self:GetOwner():GetForward()*speed
+      phys:SetVelocity(dir)
+      return dir, {}
+    else return Vector(0, 0, 0), {} end
   end
 
   function ENT:DealDamage(ent, value, type)

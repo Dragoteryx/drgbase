@@ -84,6 +84,8 @@ if SERVER then
     level = 60
   })
 
+  -- Init/Think --
+
   function ENT:CustomInitialize()
     self:SetDefaultRelationship(D_HT)
     self:SetSelfClassRelationship(D_LI)
@@ -97,6 +99,8 @@ if SERVER then
       end)
     end
   end
+
+  -- AI --
 
   function ENT:OnRangeAttack(enemy)
     if self:IsMoving() then return end
@@ -112,17 +116,35 @@ if SERVER then
     self:AddPatrolPos(self:RandomPos(1500))
   end
 
-  function ENT:OnDeath(dmg)
-    if self:IsClimbing() then return end
-    local deaths = {
-      "death_01", "death_02", "death_03", "death_04"
-    }
-    self:PlaySequenceAndWait(deaths[math.random(#deaths)])
+  function ENT:OnRelationshipChange(ent, old, new)
+    print(ent, old, "=>", new)
   end
 
-  function ENT:OnRemove()
-    self:StopSound("DrGBase.RiseAndShine")
+  function ENT:CustomRelationship(ent)
+    if ent:GetClass() == "prop_physics" and ent:GetModel() == "models/props_c17/doll01.mdl" then
+      return D_FR, 2
+    end
   end
+
+  -- Damage --
+
+  function ENT:OnTakeDamage(dmg, hitgroup)
+    if hitgroup == HITGROUP_HEAD then
+      local attacker = dmg:GetAttacker()
+      if not self:HasSpotted(attacker) then
+        self:Kill(attacker, dmg:GetInflictor())
+      end
+    end
+  end
+  function ENT:OnDeath(dmg, delay, hitgroup)
+    if self:IsClimbing() then return end
+    if hitgroup ~= HITGROUP_HEAD then
+      local deaths = {"death_01", "death_02", "death_03"}
+      self:PlaySequenceAndWait(deaths[math.random(#deaths)])
+    else self:PlaySequenceAndWait("death_04") end
+  end
+
+  -- Misc --
 
   function ENT:OnClimbing(ladder, left, down)
     if IsValid(ladder) then
@@ -141,6 +163,10 @@ if SERVER then
       if cycle > 0.5 or not IsValid(ladder) then return end
       self:EmitSlotSound("DrGBaseLadderClimbing", 0.3, "player/footsteps/ladder"..math.random(4)..".wav")
     end)
+  end
+
+  function ENT:OnRemove()
+    self:StopSound("DrGBase.RiseAndShine")
   end
 
 end

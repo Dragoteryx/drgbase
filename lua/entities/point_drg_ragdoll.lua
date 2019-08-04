@@ -10,12 +10,9 @@ if SERVER then
   AddCSLuaFile()
   function ENT:Initialize()
     local ragdoll = self:GetRagdoll()
-    if IsValid(ragdoll) then
-      --self:DeleteOnRemove(ragdoll)
-    else self:Remove() end
+    if not IsValid(ragdoll) then self:Remove() end
   end
   function ENT:Think()
-    --debugoverlay.Sphere(self:GetPos(), 2, 0.1, nil, true)
     local ragdoll = self:GetRagdoll()
     if IsValid(ragdoll) then
       local bone = ragdoll:GetPhysicsObjectNum(ragdoll:TranslateBoneToPhysBone(self:GetBone()))
@@ -26,5 +23,20 @@ if SERVER then
     else self:Remove() end
     self:NextThink(CurTime() + engine.TickInterval())
     return true
+  end
+else
+  local AdjustRagdollsAttachs = CreateClientConVar("drgbase_adjust_ragdoll_attachments", "0")
+  function ENT:Think()
+    if not AdjustRagdollsAttachs:GetBool() then return end
+    local ragdoll = self:GetRagdoll()
+    if IsValid(ragdoll) then
+      local pos = ragdoll:GetBonePosition(self:GetBone())
+      local offset = pos:DrG_Direction(self:GetPos())
+      for boneId = 0, (ragdoll:GetBoneCount()-1) do
+        if ragdoll:GetBoneName(boneId) == "__INVALIDBONE__" then continue end
+        local bonePos, boneAng = ragdoll:GetBonePosition(boneId)
+        ragdoll:SetBonePosition(boneId, bonePos+offset, boneAng)
+      end
+    end
   end
 end

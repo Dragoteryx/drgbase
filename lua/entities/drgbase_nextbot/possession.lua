@@ -2,11 +2,11 @@
 -- Getters/setters --
 
 function ENT:IsPossessionEnabled()
-  return self:GetNWBool("DrGBasePossessionEnabled")
+  return self:GetNW2Bool("DrGBasePossessionEnabled")
 end
 
 function ENT:GetPossessor()
-  return self:GetNWEntity("DrGBasePossessor")
+  return self:GetNW2Entity("DrGBasePossessor")
 end
 function ENT:IsPossessed()
   return IsValid(self:GetPossessor())
@@ -128,7 +128,7 @@ function ENT:_InitPossession()
   if SERVER then
     self:SetPossessionEnabled(self.PossessionEnabled)
   else
-    self:SetNWVarProxy("DrGBasePossessor", function(self, name, old, new)
+    self:SetNW2VarProxy("DrGBasePossessor", function(self, name, old, new)
       if not IsValid(old) and IsValid(new) then self:OnPossessed(new)
       elseif IsValid(old) and not IsValid(new) then self:OnDispossessed(old) end
     end)
@@ -178,7 +178,9 @@ function ENT:_HandlePossession(cor)
       elseif left then direction = direction - self:PossessorRight() end
       if direction ~= self:GetPos() then self:MoveTowards(direction)
       else self:PossessionFaceForward() end
-    else self:PossessionControls(forward, backward, right, left) end
+    elseif self.PossessionMovement == POSSESSION_MOVE_CUSTOM then
+      self:PossessionControls(forward, backward, right, left)
+    end
     if possessor:DrG_ButtonDown(possessor:GetInfoNum("drgbase_possession_climb", KEY_C)) then
       if self.ClimbLadders and navmesh.IsLoaded() then
         local ladders = navmesh.GetNearestNavArea(self:GetPos()):GetLadders()
@@ -238,7 +240,7 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:SetPossessionEnabled(bool)
-    self:SetNWBool("DrGBasePossessionEnabled", bool)
+    self:SetNW2Bool("DrGBasePossessionEnabled", bool)
     if not bool and self:IsPossessed() then self:Dispossess() end
   end
 
@@ -253,7 +255,7 @@ if SERVER then
     if ply:InVehicle() then return "in vehicle" end
     if ply:DrG_IsPossessing() then return "already possessing" end
     if not self:CanPossess(ply) then return "not allowed" end
-    self:SetNWEntity("DrGBasePossessor", ply)
+    self:SetNW2Entity("DrGBasePossessor", ply)
     ply:SetNW2Entity("DrGBasePossessing", self)
     ply:SetNW2Vector("DrGBasePrePossessPos", ply:GetPos())
     ply:SetNW2Angle("DrGBasePrePossessAngle", ply:GetAngles())
@@ -275,7 +277,7 @@ if SERVER then
     if not self:IsPossessed() then return "not possessed" end
     local ply = self:GetPossessor()
     if not self:CanDispossess(ply) then return "not allowed" end
-    self:SetNWEntity("DrGBasePossessor", NULL)
+    self:SetNW2Entity("DrGBasePossessor", NULL)
     ply:SetNW2Entity("DrGBasePossessing", NULL)
     ply:SetPos(ply:GetNW2Vector("DrGBasePrePossessPos"))
     ply:SetAngles(ply:GetNW2Angle("DrGBasePrePossessAngle"))
@@ -291,7 +293,7 @@ if SERVER then
 
   function ENT:PossessionFaceForward()
     if not self:IsPossessed() then return end
-    return self:FaceTowards(self:PossessorTrace().HitPos)
+    return self:FaceTowards(self:GetPos() + self:PossessorNormal())
   end
 
   -- Hooks --

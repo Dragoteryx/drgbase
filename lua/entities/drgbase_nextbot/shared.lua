@@ -17,7 +17,6 @@ ENT.RagdollOnDeath = true
 DrGBase.IncludeFile("status.lua")
 ENT.SpawnHealth = 100
 ENT.HealthRegen = 0
-ENT.DamageMultipliers = {}
 ENT.MinPhysDamage = 10
 ENT.MinFallDamage = 10
 
@@ -29,6 +28,7 @@ ENT.ClientIdleSounds = false
 ENT.OnDamageSounds = {}
 ENT.DamageSoundDelay = 0.25
 ENT.OnDeathSounds = {}
+ENT.OnDownedSounds = {}
 ENT.Footsteps = {}
 
 -- AI --
@@ -40,11 +40,12 @@ ENT.RangeAttackRange = 0
 ENT.MeleeAttackRange = 50
 ENT.ReachEnemyRange = 50
 ENT.AvoidEnemyRange = 0
+ENT.AvoidAfraidOfRange = 500
+ENT.WatchAfraidOfRange = 750
 
 -- Relationships --
 DrGBase.IncludeFile("relationships.lua")
 ENT.Factions = {}
-ENT.DefaultRelationship = D_NU
 ENT.Frightening = false
 ENT.AllyDamageTolerance = 0.33
 ENT.AfraidDamageTolerance = 0.33
@@ -71,8 +72,6 @@ ENT.IdleAnimation = ACT_IDLE
 ENT.IdleAnimRate = 1
 ENT.JumpAnimation = ACT_JUMP
 ENT.JumpAnimRate = 1
-ENT.AnimMatchSpeed = true
-ENT.AnimMatchDirection = true
 
 -- Movements --
 ENT.UseWalkframes = false
@@ -103,13 +102,13 @@ ENT.ClimbOffset = Vector(0, 0, 0)
 -- Detection --
 DrGBase.IncludeFile("awareness.lua")
 DrGBase.IncludeFile("detection.lua")
+ENT.EyeBone = ""
+ENT.EyeOffset = Vector(0, 0, 0)
+ENT.EyeAngle = Angle(0, 0, 0)
 ENT.SightFOV = 150
 ENT.SightRange = 15000
 ENT.MinLuminosity = 0
 ENT.MaxLuminosity = 1
-ENT.EyeBone = ""
-ENT.EyeOffset = Vector(0, 0, 0)
-ENT.EyeAngle = Angle(0, 0, 0)
 ENT.HearingCoefficient = 1
 
 -- Weapons --
@@ -119,7 +118,7 @@ ENT.Weapons = {}
 ENT.WeaponAccuracy = 1
 ENT.WeaponAttachment = "Anim_Attachment_RH"
 ENT.DropWeaponOnDeath = false
-ENT.AcceptPlayerWeapons = false
+ENT.AcceptPlayerWeapons = true
 
 -- Possession --
 DrGBase.IncludeFile("possession.lua")
@@ -162,16 +161,19 @@ function ENT:Initialize()
     self:SetHealthRegen(self.HealthRegen)
     self:SetBloodColor(self.BloodColor)
     self:SetCollisionGroup(COLLISION_GROUP_NPC)
-    self:SetCollisionBounds(
-      Vector(self.CollisionBounds.x, self.CollisionBounds.y, self.CollisionBounds.z),
-      Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0)
-    )
+    if isvector(self.CollisionBounds) then
+      self:SetCollisionBounds(
+        Vector(self.CollisionBounds.x, self.CollisionBounds.y, self.CollisionBounds.z),
+        Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0)
+      )
+    else self:SetCollisionBounds(self:GetModelBounds()) end
     self:SetUseType(SIMPLE_USE)
     self.VJ_AddEntityToSNPCAttackList = true
     self.vFireIsCharacter = true
     self._DrGBaseCorCalls = {}
     self._DrGBaseWaterLevel = self:WaterLevel()
     self._DrGBaseDownSpeed = 0
+    self:SetSolid(SOLID_OBB)
   else self:SetIK(true) end
   self:AddFlags(FL_OBJECT + FL_NPC)
   self._DrGBaseBaseThinkDelay = 0

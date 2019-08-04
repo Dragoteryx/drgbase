@@ -114,7 +114,7 @@ if SERVER then
   -- Functions --
 
   function ENT:UpdateAI()
-    self:UpdateEnemiesSight()
+    self:UpdateHostilesSight()
     self:UpdateEnemy()
   end
 
@@ -123,8 +123,13 @@ if SERVER then
     if not self:IsPossessed() then
       if self:HasNemesis() then return self:GetNemesis() end
       enemy = self:OnUpdateEnemy()
+      if enemy == nil then return self:GetEnemy() end
       if not IsValid(enemy) or
       self:GetRangeSquaredTo(enemy) > EnemyRadius:GetFloat()^2 then
+        enemy = NULL
+      end
+      if self:IsAfraidOf(enemy) and
+      not self:IsInRange(enemy, self.WatchAfraidOfRange) then
         enemy = NULL
       end
     else enemy = NULL end
@@ -145,7 +150,7 @@ if SERVER then
   function ENT:FetchEnemy()
     if self:IsPossessed() then return NULL end
     local current = NULL
-    for enemy in self:EnemyIterator(true) do
+    for enemy in self:HostileIterator(true) do
       if not IsValid(current) or CompareEnemies(self, enemy, current) then
         current = enemy
       end
@@ -176,6 +181,11 @@ if SERVER then
   function ENT:OnMeleeAttack() end
   function ENT:OnChaseEnemy() end
   function ENT:OnAvoidEnemy() end
+  function ENT:OnWatchEnemy() end
+  function ENT:OnEnemyUnreachable() end
+
+  function ENT:OnAvoidAfraidOf() end
+  function ENT:OnWatchAfraidOf() end
 
   function ENT:OnReachedPatrol() end
   function ENT:OnPatrolUnreachable() end
