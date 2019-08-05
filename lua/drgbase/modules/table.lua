@@ -30,7 +30,7 @@ end
 function table.DrG_Fetch(tbl, callback)
   if #tbl == 0 then return end
   local val = tbl[1]
-  for i = 1, #tbl do
+  for i = 2, #tbl do
     if callback(tbl[i], val) then val = tbl[i] end
   end
   return val

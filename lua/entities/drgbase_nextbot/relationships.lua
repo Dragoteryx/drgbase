@@ -3,6 +3,12 @@
 
 local DebugRelationship = CreateConVar("drgbase_debug_relationships", "0")
 
+-- Getters/setters --
+
+function ENT:IsFrightening()
+  return self:GetNW2Bool("DrGBaseFrightening")
+end
+
 -- Handlers --
 
 local function EnumToString(disp)
@@ -29,13 +35,15 @@ function ENT:_InitRelationships()
     ["model"] = table.DrG_Default({}, DEFAULT_REL),
     ["faction"] = table.DrG_Default({}, DEFAULT_REL)
   }
-  self._DrGBaseFrightening = tobool(self.Frightening)
+  self:SetNW2Bool("DrGBaseFrightening", self.Frightening)
   self._DrGBaseFactions = {}
   self:UpdateRelationships()
   self:JoinFactions(self.Factions)
 end
 
 if SERVER then
+
+  -- Cache --
 
   local CACHED_DISPS = {
     [D_LI] = true,
@@ -48,6 +56,8 @@ if SERVER then
   local function IsValidDisp(disp)
     return IsCachedDisp(disp) or disp == D_NU
   end
+
+  -- Util --
 
   local DISP_PRIORITIES = {
     [D_LI] = 4,
@@ -233,12 +243,10 @@ if SERVER then
     self._DrGBaseIgnoredEntities[ent] = tobool(bool)
   end
 
-  function ENT:IsFrightening()
-    return self._DrGBaseFrightening or false
-  end
-  function ENT:SetFrightening(bool)
+  function ENT:SetFrightening(frightening)
     local old = self:IsFrightening()
-    self._DrGBaseFrightening = tobool(bool)
+    if old == tobool(frightening) then return end
+    self:SetNW2Bool("DrGBaseFrightening", frightening)
     if old ~= self:IsFrightening() then
       for i, ent in ipairs(ents.GetAll()) do
         if not ent:IsNPC() then continue end
@@ -480,51 +488,54 @@ if SERVER then
   end
 
   -- Iterators
-  local function NextCachedEntity(self, cache, previous, disp, spotted)
+  local function NextCachedEntity(self, cache, previous, spotted)
     local ent = next(cache, previous)
     if ent == nil then return nil
-    elseif not IsValid(ent) or disp ~= self:GetRelationship(ent) or
+    elseif not IsValid(ent) or
+    self:GetRelationship(ent) == D_NU or
     (spotted and not self:HasSpotted(ent)) then
-      return NextCachedEntity(self, cache, ent, disp, spotted)
+      return NextCachedEntity(self, cache, ent, spotted)
     else return ent end
+  end
+  local function NextNeutralEntity(self, entities, previous, spotted)
+    local i, ent = next(entities, previous)
+    if ent == nil then return i, nil
+    elseif not IsValid(ent) or
+    self:GetRelationship(ent) ~= D_NU or
+    (spotted and not self:HasSpotted(ent)) then
+      return NextNeutralEntity(self, entities, i, spotted)
+    else return i, ent end
   end
   function ENT:EntityIterator(disp, spotted)
     if istable(disp) then
-      local entities = {}
+      local i = 1
+      local iterators = {}
       for i, dis in ipairs(disp) do
-        for ent in self:EntityIterator(dis, spotted) do
-          table.insert(entities, ent)
+        table.insert(iterators, self:EntityIterator(dis, spotted))
+      end
+      return function(inv, previous)
+        local ent = iterators[i](nil, previous)
+        if IsValid(ent) then return ent end
+        for j = i+1, #iterators do
+          i = j
+          ent = iterators[i](nil, nil)
+          if IsValid(ent) then return ent end
         end
       end
+    elseif IsCachedDisp(disp) then
+      local cache = self._DrGBaseRelationshipCaches[disp]
+      return function(inv, previous)
+        return NextCachedEntity(self, cache, previous, spotted)
+      end
+    elseif disp == D_NU then
       local i = 1
+      local entities = ents.GetAll()
       return function()
-        local ent = entities[i]
-        i = i+1
+        local j, ent = NextNeutralEntity(self, entities, i, spotted)
+        i = j
         return ent
       end
-    elseif isnumber(disp) then
-      if IsCachedDisp(disp) then
-        local cache = self._DrGBaseRelationshipCaches[disp]
-        local previous = nil
-        return function()
-          previous = NextCachedEntity(self, cache, previous, disp, spotted)
-          return previous
-        end
-      elseif disp == D_NU then
-        local i = 1
-        local entities = ents.GetAll()
-        return function()
-          for h = i, #entities do
-            local ent = entities[h]
-            i = i+1
-            if not IsValid(ent) then continue end
-            if disp ~= self:GetRelationship(ent) then continue end
-            if spotted and not self:HasSpotted(ent) then continue end
-            return ent
-          end
-        end
-      else return function() end end
-    else return self:EntityIterator({D_LI, D_HT, D_FR, D_NU}, spotted) end
+    else return function() end end
   end
   function ENT:AllyIterator(spotted)
     return self:EntityIterator(D_LI, spotted)

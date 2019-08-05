@@ -15,6 +15,7 @@ function ENT:GetSightLuminosityRange()
   return self:GetNW2Float("DrGBaseMinLuminosity"), self:GetNW2Float("DrGBaseMaxLuminosity")
 end
 function ENT:IsBlind()
+  if self:GetCooldown("DrGBaseBlind") > 0 then return true end
   return self:GetSightFOV() <= 0 or self:GetSightRange() <= 0
 end
 
@@ -153,6 +154,18 @@ if SERVER then
     return self:UpdateSight(D_NU, spotted)
   end
 
+  function ENT:Blind(blind)
+    if self:IsBlind() then return end
+    local res = self:OnBlinded(blind)
+    if res == true then return
+    elseif isnumber(res) then blind:ScaleDuration(res) end
+    self:SetCooldown("DrGBaseBlind", blind:GetDuration())
+    if not isfunction(self.AfterBlinded) then return end
+    self:CallInCoroutine(function(self, delay)
+      self:AfterBlinded(blind, delay)
+    end)
+  end
+
   -- Hooks --
 
   function ENT:OnSight(ent)
@@ -162,6 +175,8 @@ if SERVER then
   function ENT:OnSound(ent, sound)
     self:SpotEntity(ent)
   end
+  function ENT:OnBlinded() end
+  --function ENT:AfterBlinded() end
 
   -- Handlers --
 

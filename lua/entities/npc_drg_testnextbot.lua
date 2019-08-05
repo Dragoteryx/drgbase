@@ -116,10 +116,6 @@ if SERVER then
     self:AddPatrolPos(self:RandomPos(1500))
   end
 
-  function ENT:OnRelationshipChange(ent, old, new)
-    print(ent, old, "=>", new)
-  end
-
   function ENT:CustomRelationship(ent)
     if ent:GetClass() == "prop_physics" and ent:GetModel() == "models/props_c17/doll01.mdl" then
       return D_FR, 2

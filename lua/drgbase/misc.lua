@@ -181,6 +181,46 @@ if SERVER then
     return IsValid(phys)
   end
 
+  local BlindData = {}
+  BlindData.__index = BlindData
+  function BlindData:New()
+    local blind = {}
+    blind._duration = 3
+    blind._attacker = NULL
+    blind._inflictor = NULL
+    setmetatable(blind, self)
+    return blind
+  end
+  function BlindData:GetDuration()
+    return self._duration
+  end
+  function BlindData:SetDuration(duration)
+    if not isnumber(duration) then return end
+    self._duration = math.max(0, duration)
+  end
+  function BlindData:ScaleDuration(scale)
+    if not isnumber(scale) or scale < 0 then return end
+    self:SetDuration(self:GetDuration()*scale)
+  end
+  function BlindData:GetAttacker()
+    return self._attacker
+  end
+  function BlindData:SetAttacker(attacker)
+    if not isentity(attacker) then return end
+    self._attacker = attacker
+  end
+  function BlindData:GetInflictor()
+    return self._inflictor
+  end
+  function BlindData:SetInflictor(inflictor)
+    if not isentity(inflictor) then return end
+    self._inflictor = inflictor
+  end
+
+  function DrGBase.Blind()
+    return BlindData:New()
+  end
+
   -- Astar --
 
   function DrGBase.NavmeshAstar(pos, goal, callback)
