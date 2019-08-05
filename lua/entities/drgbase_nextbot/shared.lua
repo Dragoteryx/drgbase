@@ -173,7 +173,6 @@ function ENT:Initialize()
     self._DrGBaseCorCalls = {}
     self._DrGBaseWaterLevel = self:WaterLevel()
     self._DrGBaseDownSpeed = 0
-    self:SetSolid(SOLID_OBB)
   else self:SetIK(true) end
   self:AddFlags(FL_OBJECT + FL_NPC)
   self._DrGBaseBaseThinkDelay = 0

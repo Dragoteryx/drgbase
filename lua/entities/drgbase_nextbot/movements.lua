@@ -191,17 +191,93 @@ if SERVER then
     else self:MoveTowards(away) end
   end
 
-  function ENT:MoveForward()
-    self:Approach(self:GetPos() + self:GetForward())
+  function ENT:MoveForward(dist, callback)
+    if not isnumber(dist) then
+      self:Approach(self:GetPos() + self:GetForward())
+    elseif dist > 0 then
+      local start = self:GetPos()
+      while self:GetRangeSquaredTo(start) < dist^2 do
+        self:MoveForward()
+        if isfunction(callback) and callback(self, self:GetRangeTo(start)) then return end
+        self:YieldCoroutine(true)
+      end
+    end
   end
-  function ENT:MoveBackward()
-    self:Approach(self:GetPos() - self:GetForward())
+  function ENT:MoveBackward(dist, callback)
+    if not isnumber(dist) then
+      self:Approach(self:GetPos() - self:GetForward())
+    elseif dist > 0 then
+      local start = self:GetPos()
+      while self:GetRangeSquaredTo(start) < dist^2 do
+        self:MoveBackward()
+        if isfunction(callback) and callback(self, self:GetRangeTo(start)) then return end
+        self:YieldCoroutine(true)
+      end
+    end
   end
-  function ENT:MoveRight()
-    self:Approach(self:GetPos() + self:GetRight())
+  function ENT:MoveRight(dist, callback)
+    if not isnumber(dist) then
+      self:Approach(self:GetPos() + self:GetRight())
+    elseif dist > 0 then
+      local start = self:GetPos()
+      while self:GetRangeSquaredTo(start) < dist^2 do
+        self:MoveRight()
+        if isfunction(callback) and callback(self, self:GetRangeTo(start)) then return end
+        self:YieldCoroutine(true)
+      end
+    end
   end
-  function ENT:MoveLeft()
-    self:Approach(self:GetPos() - self:GetRight())
+  function ENT:MoveLeft(dist, callback)
+    if not isnumber(dist) then
+      self:Approach(self:GetPos() - self:GetRight())
+    elseif dist > 0 then
+      local start = self:GetPos()
+      while self:GetRangeSquaredTo(start) < dist^2 do
+        self:MoveLeft()
+        if isfunction(callback) and callback(self, self:GetRangeTo(start)) then return end
+        self:YieldCoroutine(true)
+      end
+    end
+  end
+
+  function ENT:TurnRight(angle, callback)
+    if not isnumber(angle) then
+      self:FaceTowards(self:GetPos() + self:GetRight())
+    elseif angle > 0 then
+      local turned = 0
+      local last = self:GetAngles()
+      local forward = self:GetForward()
+      forward:Rotate(Angle(0, -angle, 0))
+      while math.Round(turned) < angle do
+        if angle - turned < 180 then
+          self:FaceTowards(self:GetPos() + forward)
+        else self:TurnRight() end
+        turned = turned + math.AngleDifference(last.y, self:GetAngles().y)
+        if isfunction(callback) and callback(self, turned) then return end
+        last = self:GetAngles()
+        self:YieldCoroutine(true)
+      end
+    end
+  end
+  function ENT:TurnLeft(angle, callback)
+    if not isnumber(angle) then
+      self:FaceTowards(self:GetPos() - self:GetRight())
+    elseif angle > 0 then
+      if angle <= 0 then return end
+      local turned = 0
+      local last = self:GetAngles()
+      local forward = self:GetForward()
+      forward:Rotate(Angle(0, angle, 0))
+      while math.Round(turned) < angle do
+        if angle - turned < 180 then
+          self:FaceTowards(self:GetPos() + forward)
+        else self:TurnLeft() end
+        turned = turned - math.AngleDifference(last.y, self:GetAngles().y)
+        if isfunction(callback) and callback(self, turned) then return end
+        last = self:GetAngles()
+        self:YieldCoroutine(true)
+      end
+    end
   end
 
   -- Coroutine --
