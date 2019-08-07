@@ -124,13 +124,31 @@ ENT.PossessionViews = {
 }
 ENT.PossessionBinds = {}
 
+function ENT:OnPickupWeapon(weapon, class)
+  print("pickup", class)
+end
+function ENT:OnDropWeapon(weapon, class)
+  print("drop", class)
+end
+function ENT:OnSpotted(ent)
+  print("spotted", ent)
+end
+
 if SERVER then
 
   function ENT:CustomInitialize()
-    self:GiveWeapon("weapon_ar2")
+    self:SetPlayersRelationship(D_FR)
+    self:GiveWeapon("weapon_pistol")
   end
   function ENT:CustomThink() end
-  function ENT:CustomUse() end
+  function ENT:CustomUse()
+    --PrintTable(self:GetWeapons())
+    --PrintTable(self:GetWeapons())
+    self:GiveWeapon("weapon_ar2")
+    self:SwitchWeapon()
+    --
+    --self:DropWeapon(self:GetActiveWeapon())
+  end
 
   -- These hooks are called when the nextbot has an enemy (inside the coroutine)
   function ENT:OnMeleeAttack(enemy) end
@@ -151,7 +169,7 @@ if SERVER then
   function ENT:OnLastEnemy(enemy) end
 
   -- Those hooks are called when the nextbots detects an entity (outside the coroutine)
-  function ENT:OnSpotted(ent) end
+  --function ENT:OnSpotted(ent) end
   function ENT:OnLost(ent) end
   function ENT:OnSight(ent)
     self:SpotEntity(ent)
@@ -182,7 +200,10 @@ else
 
   function ENT:CustomInitialize() end
   function ENT:CustomThink() end
-  function ENT:CustomUse() end
+  function ENT:CustomUse()
+    print("a")
+    PrintTable(self:GetWeapons())
+  end
   function ENT:CustomDraw() end
 
 end

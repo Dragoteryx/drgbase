@@ -67,7 +67,7 @@ if SERVER then
     [D_ER] = 0
   }
   local function HighestRelationship(relationships)
-    return table.DrG_Fetch(relationships, function(rel1, rel2)
+    local relationship = table.DrG_Fetch(relationships, function(rel1, rel2)
       if rel1.prio > rel2.prio then
         return true
       elseif rel1.prio == rel2.prio then
@@ -76,6 +76,7 @@ if SERVER then
         else return false end
       else return false end
     end)
+    return relationship
   end
 
   local DEFAULT_FACTIONS = {
@@ -164,7 +165,7 @@ if SERVER then
     local disp = self._DrGBaseRelationships[ent]
     if not absolute and self:IsIgnored(ent) then
       return D_NU
-    else return disp or D_NU end
+    else return disp or DEFAULT_DISP end
   end
   function ENT:GetPriority(ent)
     if not IsValid(ent) then return -1 end

@@ -3,8 +3,9 @@ local entMETA = FindMetaTable("Entity")
 
 -- Misc --
 
-function entMETA:DrG_IsSanic()
-  return self.OnReloaded ~= nil and
+function entMETA:DrG_IsSanic()  
+  return self:IsNextBot() and
+  self.OnReloaded ~= nil and
   self.GetNearestTarget ~= nil and
   self.AttackNearbyTargets ~= nil and
   self.IsHidingSpotFull ~= nil and

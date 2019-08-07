@@ -151,6 +151,7 @@ if SERVER then
 
   function ENT:Contact(ent)
     if not IsValid(ent) and not ent:IsWorld() then return end
+    if ent:GetClass() == "trigger_soundscape" then return end
     if not isnumber(self._DrGBaseLastContact) or CurTime() > self._DrGBaseLastContact + self.OnContactDelay then
       if self:OnContact(ent) ~= false then
         self._DrGBaseLastContact = CurTime()
@@ -181,23 +182,25 @@ if SERVER then
   function ENT:AimAt(target, speed, feet)
     local phys = self:GetPhysicsObject()
     if not IsValid(phys) then return Vector(0, 0, 0) end
+    local pos = self:GetPos()
     if phys:IsGravityEnabled() then
-      local dir, info = self:ThrowAt(target, {
+      return self:ThrowAt(target, {
         magnitude = speed, recursive = true, maxmagnitude = speed
       }, feet)
-      return dir
     elseif isentity(target) and IsValid(target) then
       local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
-      local dist = self:GetPos():Distance(aimAt)
+      local dist = pos:Distance(aimAt)
       return self:AimAt(aimAt + target:GetVelocity()*(dist/speed), speed, feet)
     elseif isvector(target) then
-      local dir = self:GetPos():DrG_Direction(target):GetNormalized()*speed
+      local dir = pos:DrG_Direction(target):GetNormalized()*speed
       phys:SetVelocity(dir)
-      return dir
-    elseif IsValid(self:GetOwner()) then
-      local dir = self:GetOwner():GetForward()*speed
-      phys:SetVelocity(dir)
-      return dir
+      local info = dir:DrG_Data()
+      local dist = pos:Distance(target)
+      info.duration = dist/speed
+      info.Predict = function(t)
+        return pos+dir*t, dir
+      end
+      return dir, info
     else return Vector(0, 0, 0) end
   end
   function ENT:ThrowAt(target, options, feet)
@@ -206,14 +209,11 @@ if SERVER then
     if isentity(target) and IsValid(target) then
       local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
       local vec, info = self:GetPos():DrG_CalcTrajectory(aimAt, options)
-      return self:ThrowAt(aimAt + target:GetVelocity()*info.duration, options, feet)
+      if info.duration ~= -1 then
+        return self:ThrowAt(aimAt + target:GetVelocity()*info.duration, options, feet)
+      else return self:ThrowAt(aimAt, options, feet) end
     elseif isvector(target) then return phys:DrG_Trajectory(target, options)
-    elseif IsValid(self:GetOwner()) then
-      local speed = math.Clamp(options.magnitude or 1000, 0, options.maxmagnitude or math.huge)
-      local dir = self:GetOwner():GetForward()*speed
-      phys:SetVelocity(dir)
-      return dir, {}
-    else return Vector(0, 0, 0), {} end
+    else return Vector(0, 0, 0) end
   end
 
   function ENT:DealDamage(ent, value, type)

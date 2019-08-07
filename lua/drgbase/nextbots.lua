@@ -38,7 +38,10 @@ function DrGBase.AddNextbot(ENT)
         if isfunction(ENT.OnContact) then
           ent:DrG_AddListener("OnContact", ent._HandleContact)
         end
-      end)      
+        if isfunction(ENT.OnNavAreaChanged) then
+          ent:DrG_AddListener("OnNavAreaChanged", ent._HandleNavAreaChanged)
+        end
+      end)
     end
   end
   local nextbot = {

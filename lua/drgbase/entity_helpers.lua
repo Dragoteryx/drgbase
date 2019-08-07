@@ -271,7 +271,7 @@ else
       if self:_HandleNetMessage(name, ...) then return end
       if isfunction(self.OnNetMessage) then
         self:OnNetMessage(name, ...)
-      end
+      else timer.DrG_Simple(engine.TickInterval(), ReceiveMessage, name, self, ...) end
     else timer.DrG_Simple(engine.TickInterval(), ReceiveMessage, name, self, ...) end
   end
   net.DrG_Receive("DrGBaseEntMessage", ReceiveMessage)

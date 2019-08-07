@@ -28,7 +28,7 @@ function vecMETA:DrG_CalcTrajectory(endpos, options)
         options.pitch = math.deg(pitch)+1
         return self:DrG_CalcTrajectory(endpos, options)
       else return Vector(0, 0, 0), {pitch = math.deg(pitch)} end
-    else magnitude = math.sqrt((-g*x^2)/(2*math.pow(math.cos(pitch), 2)*(y - x*math.tan(pitch)))) end
+    else magnitude = math.sqrt((-g*x*x)/(2*(math.cos(pitch)^2)*(y - x*math.tan(pitch)))) end
   elseif magnitudenumber and not pitchnumber then
     magnitude = math.abs(options.magnitude)
     local v = magnitude
@@ -69,8 +69,17 @@ function vecMETA:DrG_CalcTrajectory(endpos, options)
     direction = velocity, magnitude = magnitude,
     pitch = math.deg(pitch), gravity = g
   })
-  local calc = magnitude*math.sin(pitch)
-  info.duration = (calc+math.sqrt(calc^2-2*g*y))/g
+  local calc = math.sqrt(((velocity.z^2)/(g^2))-((2*y)/g))
+  local duration1 = (velocity.z/g)+calc
+  local duration2 = (velocity.z/g)-calc
+  if duration1 ~= duration1 and duration2 ~= duration2 then
+    info.duration = -1
+  else
+    local dist1 = info.Predict(duration1):DistToSqr(endpos)
+    local dist2 = info.Predict(duration2):DistToSqr(endpos)
+    if dist1 < dist2 then info.duration = duration1
+    else info.duration = duration2 end
+  end
   return velocity, info
 end
 
@@ -102,18 +111,13 @@ function vecMETA:DrG_TrajectoryInfo2(options)
 end
 
 function vecMETA:DrG_TrajectoryInfo(direction)
-  local data = direction:DrG_Data()
-  return self:DrG_TrajectoryInfo2({
-    direction = data.direction,
-    magnitude = data.magnitude, pitch = data.pitch
-  })
+  return self:DrG_TrajectoryInfo2(direction:DrG_Data())
 end
 
 function vecMETA:DrG_Data()
   local forward = Vector(self.x, self.y, 0)
   local pitch = math.atan(self.z/forward:Length())
   return {
-    normal = self:GetNormalized(),
     direction = forward:GetNormalized(),
     magnitude = self:Length(),
     pitch = math.deg(pitch)

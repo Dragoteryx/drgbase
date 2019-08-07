@@ -286,8 +286,7 @@ if SERVER then
     if isentity(pos) then pos = pos:GetPos() end
     tolerance = isnumber(tolerance) and tolerance or 20
     local selfpos = self:GetPos()
-    if navmesh.IsLoaded() and self:GetGroundEntity():IsWorld() and
-    navmesh.GetNearestNavArea(self:GetPos()):Contains(self:GetPos()) then
+    if navmesh.IsLoaded() and self:GetGroundEntity():IsWorld() then
       pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
       local path = self:GetPath()
       path:SetMinLookAheadDistance(300)
@@ -300,10 +299,26 @@ if SERVER then
         end
       else path:Compute(self, pos, generator) end
       if not IsValid(path) then return "unreachable" end
-      local ledge = self:FindLedge()
       local current = path:GetCurrentGoal()
       local ladder = current.ladder
-      if current.type == 4 then
+      if current.type == 2 then
+        local ledge = self:FindLedge()
+        if isvector(ledge) then
+          self:ClimbLedge(ledge)
+          path:Invalidate()
+          return "ledge", ledge
+        elseif not self._DrGBaseLastComputeSuccess and
+        path:GetCurrentGoal().distanceFromStart == path:LastSegment().distanceFromStart then
+          return "unreachable"
+        elseif not self:AvoidObstacles(true) then
+          path:Update(self)
+          if not IsValid(path) then return "reached"
+          elseif self.loco:IsStuck() then
+            self:HandleStuck()
+            return "stuck"
+          else return "moving" end
+        else return "obstacles" end
+      elseif current.type == 4 then
         if not self.ClimbLaddersUp then return "unreachable" end
         if self:GetHullRangeSquaredTo(ladder:GetBottom()) < self.LaddersUpDistance^2 then
           self:ClimbLadderUp(ladder)
@@ -336,10 +351,6 @@ if SERVER then
             return "stuck", ladder
           else return "moving", ladder end
         else return "obstacles" end
-      elseif isvector(ledge) then
-        self:ClimbLedge(ledge)
-        path:Invalidate()
-        return "ledge", ledge
       elseif not self._DrGBaseLastComputeSuccess and
       path:GetCurrentGoal().distanceFromStart == path:LastSegment().distanceFromStart then
         return "unreachable"
@@ -355,7 +366,7 @@ if SERVER then
       local ledge = self:FindLedge()
       if isvector(ledge) then
         self:ClimbLedge(ledge)
-        return "ledge"
+        return "ledge", ledge
       elseif not self:AvoidObstacles(true) then
         if self:GetHullRangeSquaredTo(pos) > tolerance^2 then
           self:MoveTowards(pos)

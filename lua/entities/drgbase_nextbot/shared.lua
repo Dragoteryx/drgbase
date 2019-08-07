@@ -112,11 +112,10 @@ ENT.MaxLuminosity = 1
 ENT.HearingCoefficient = 1
 
 -- Weapons --
-DrGBase.IncludeFile("weapons.lua")
+DrGBase.IncludeFile("weapons2.lua")
 ENT.UseWeapons = false
 ENT.Weapons = {}
 ENT.WeaponAccuracy = 1
-ENT.WeaponAttachment = "Anim_Attachment_RH"
 ENT.DropWeaponOnDeath = false
 ENT.AcceptPlayerWeapons = true
 
@@ -480,6 +479,19 @@ else
       local ent = args[1]
       self._DrGBaseSpotted[ent] = false
       self:OnLost(ent)
+      return true
+    elseif name == "DrGBasePickupWeapon" then
+      local weapon = args[1]
+      print("receive pickup message", weapon)
+      if not IsValid(weapon) then return end
+      self._DrGBaseWeapons[weapon:GetClass()] = weapon
+      self:OnPickupWeapon(weapon, weapon:GetClass())
+      return true
+    elseif name == "DrGBaseDropWeapon" then
+      local class = args[1]
+      print("receive drop message", class)
+      self._DrGBaseWeapons[class] = nil
+      self:OnDropWeapon(NULL, class)
       return true
     end
   end
