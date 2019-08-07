@@ -529,7 +529,7 @@ if SERVER then
         return NextCachedEntity(self, cache, previous, spotted)
       end
     elseif disp == D_NU then
-      local i = 1
+      local i
       local entities = ents.GetAll()
       return function()
         local j, ent = NextNeutralEntity(self, entities, i, spotted)

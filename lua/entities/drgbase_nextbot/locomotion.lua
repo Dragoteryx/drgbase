@@ -105,11 +105,9 @@ end
 
 local AREA_LARGEENOUGH_CACHE = {}
 
-local old_IsAreaTraversable = locoMETA.IsAreaTraversable
-function locoMETA:IsAreaTraversable(area)
+function locoMETA:DrG_IsAreaLargeEnough(area)
   local nextbot = self:GetNextBot()
-  local traversable = old_IsAreaTraversable(self, area)
-  if not nextbot.IsDrGNextbot or not traversable then return traversable end
+  if not nextbot.IsDrGNextbot then return true end
   local mins, maxs = nextbot:GetCollisionBounds()
   local str = tostring(mins).." // "..tostring(maxs).." // "..tostring(self:GetStepHeight())
   AREA_LARGEENOUGH_CACHE[str] = AREA_LARGEENOUGH_CACHE[str] or {}

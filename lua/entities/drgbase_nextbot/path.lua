@@ -72,6 +72,7 @@ function ENT:GetPathGenerator()
     if not IsValid(fromArea) then return 0 end
     if self:IsNavAreaBlacklisted(area) then return -1 end
     if not self.loco:IsAreaTraversable(area) then return -1 end
+    --if not self.loco:DrG_IsAreaLargeEnough(area) then return -1 end
     local dist = 0
     if IsValid(ladder) then
       if not self.ClimbLadders then return -1 end
@@ -104,8 +105,8 @@ function ENT:GetPathGenerator()
       local drop = -height
       if IsValid(ladder) then
         if not self.ClimbLaddersDown then return -1 end
-        if height < self.ClimbLaddersDownMinHeight then return -1 end
-        if height > self.ClimbLaddersDownMaxHeight then return -1 end
+        if drop < self.ClimbLaddersDownMinHeight then return -1 end
+        if drop > self.ClimbLaddersDownMaxHeight then return -1 end
         cost, unreach = MultiplyCost(self, self.OnComputePathLadderDown, cost, dist, fromArea, area, ladder)
         if unreach then return -1 end
       elseif drop < self.loco:GetDeathDropHeight() then

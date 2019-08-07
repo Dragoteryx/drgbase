@@ -187,7 +187,7 @@ function ENT:Initialize()
   self:_BaseInitialize()
   self:CustomInitialize()
   if CLIENT then return end
-  --print(#DrGBase.GetNextbots())
+  --DrGBase.Print("Nextbots spawned: "..tostring(#DrGBase.GetNextbots()), {color = DrGBase.CLR_GREEN, chat = true})
   self:UpdateAI()
 end
 function ENT:_BaseInitialize() end
