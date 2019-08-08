@@ -195,6 +195,7 @@ function ENT:CustomInitialize() end
 function ENT:_InitModules()
   if SERVER then
     self:_InitLocomotion()
+    self:_InitPath()
   end
   self:_InitHooks()
   self:_InitMisc()
@@ -249,7 +250,6 @@ function ENT:Think()
       else
 
       end
-
       self:UpdateAnimation()
       self:UpdateSpeed()
     end
@@ -303,14 +303,6 @@ end
 function ENT:_BaseThink() end
 function ENT:CustomThink() end
 function ENT:PossessionThink() end
-
--- Use --
-function ENT:Use(...)
-  self:_BaseUse(...)
-  self:CustomUse(...)
-end
-function ENT:_BaseUse() end
-function ENT:CustomUse() end
 
 if SERVER then
   AddCSLuaFile()
@@ -482,14 +474,12 @@ else
       return true
     elseif name == "DrGBasePickupWeapon" then
       local weapon = args[1]
-      print("receive pickup message", weapon)
       if not IsValid(weapon) then return end
       self._DrGBaseWeapons[weapon:GetClass()] = weapon
       self:OnPickupWeapon(weapon, weapon:GetClass())
       return true
     elseif name == "DrGBaseDropWeapon" then
       local class = args[1]
-      print("receive drop message", class)
       self._DrGBaseWeapons[class] = nil
       self:OnDropWeapon(NULL, class)
       return true

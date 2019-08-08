@@ -285,11 +285,9 @@ if SERVER then
   function ENT:FollowPath(pos, tolerance, generator)
     if isentity(pos) then pos = pos:GetPos() end
     tolerance = isnumber(tolerance) and tolerance or 20
-    local selfpos = self:GetPos()
     if navmesh.IsLoaded() and self:GetGroundEntity():IsWorld() then
       pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
       local path = self:GetPath()
-      path:SetMinLookAheadDistance(300)
       path:SetGoalTolerance(tolerance)
       if IsValid(path) then
         local tol = (tolerance*(path:LastSegment().distanceFromStart-path:GetCurrentGoal().distanceFromStart))/100
@@ -307,7 +305,7 @@ if SERVER then
           self:ClimbLedge(ledge)
           path:Invalidate()
           return "ledge", ledge
-        elseif not self._DrGBaseLastComputeSuccess and
+        elseif not self:LastComputeSuccess() and
         path:GetCurrentGoal().distanceFromStart == path:LastSegment().distanceFromStart then
           return "unreachable"
         elseif not self:AvoidObstacles(true) then
@@ -351,7 +349,7 @@ if SERVER then
             return "stuck", ladder
           else return "moving", ladder end
         else return "obstacles" end
-      elseif not self._DrGBaseLastComputeSuccess and
+      elseif not self:LastComputeSuccess() and
       path:GetCurrentGoal().distanceFromStart == path:LastSegment().distanceFromStart then
         return "unreachable"
       elseif not self:AvoidObstacles(true) then
@@ -399,7 +397,7 @@ if SERVER then
     if not isentity(ent) then return false end
     if not isfunction(callback) then callback = function() end end
     while IsValid(ent) do
-      local res = self:FollowPath(pos, tolerance)
+      local res = self:FollowPath(ent, tolerance)
       if res == "reached" then return true
       elseif res == "unreachable" then
         return false

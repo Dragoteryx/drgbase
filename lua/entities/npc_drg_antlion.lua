@@ -26,8 +26,8 @@ ENT.FollowPlayers = true
 ENT.Factions = {FACTION_ANTLIONS}
 
 -- Movements/animations --
-ENT.JumpAnimation = ACT_GLIDE
 ENT.UseWalkframes = true
+ENT.JumpAnimation = ACT_GLIDE
 
 -- Detection --
 ENT.EyeBone = "Antlion.Head_Bone"
@@ -87,6 +87,7 @@ if SERVER then
       pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
     end
     self:SetPos(pos)
+    self:DropToFloor()
     self:PlaySequenceAndMove("digout")
   end
 
@@ -94,7 +95,6 @@ if SERVER then
 
   function ENT:CustomInitialize()
     self:SetDefaultRelationship(D_HT)
-    for i = 1, 6 do self:SetAttack("attack"..i, true) end
   end
 
   -- AI --
@@ -125,8 +125,8 @@ if SERVER then
     end
   end
 
-  function ENT:HandleAnimEvent(...)
-    if string.StartWith(self:GetSequenceName(self:GetSequence()), "attack") then
+  function ENT:OnAnimEvent()
+    if self:IsAttacking() then
       if self:GetCycle() > 0.3 then
         self:Attack({
           damage = 5,

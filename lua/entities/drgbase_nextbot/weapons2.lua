@@ -19,6 +19,9 @@ end
 function ENT:GetWeapons()
   return table.DrG_Copy(self._DrGBaseWeapons)
 end
+function ENT:GetWeaponCount()
+  return table.Count(self._DrGBaseWeapons)
+end
 
 -- Functions --
 
@@ -44,12 +47,16 @@ end
 
 if SERVER then
 
+  -- Misc --
+
+  local function IsWeapon(ent)
+    return isentity(ent) and IsValid(ent) and ent:IsWeapon()
+  end
+
   -- Getters/setters --
 
-  -- Functions --
-
   function ENT:SetActiveWeapon(weapon)
-    if not IsValid(weapon) or not weapon:IsWeapon() then return false end
+    if not IsWeapon(weapon) then return false end
     if self._DrGBaseWeapons[weapon:GetClass()] ~= weapon then return false end
     local active = self:GetActiveWeapon()
     if IsValid(active) then active:SetNoDraw(true) end
@@ -58,10 +65,12 @@ if SERVER then
     return true
   end
 
+  -- Functions --
+
   function ENT:GiveWeapon(class)
     local weapon = ents.Create(class)
     if not IsValid(weapon) then return NULL end
-    if weapon:IsWeapon() then
+    if IsWeapon(weapon) then
       weapon:Spawn()
       if not self:PickupWeapon(weapon) then
         weapon:Remove()
@@ -73,7 +82,7 @@ if SERVER then
     end
   end
   function ENT:PickupWeapon(weapon)
-    if not IsValid(wep) or not wep:IsWeapon() then return false end
+    if not IsWeapon(weapon) then return false end
     if self:HasWeapon(weapon:GetClass()) then return false end
     weapon:SetMoveType(MOVETYPE_NONE)
     weapon:SetOwner(self)
@@ -98,7 +107,7 @@ if SERVER then
   function ENT:DropWeapon(weapon)
     if weapon == nil then weapon = self:GetActiveWeapon() end
     if isstring(weapon) then weapon = self:GetWeapon(weapon) end
-    if not IsValid(weapon) or not weapon:IsWeapon() then return NULL end
+    if not IsWeapon(weapon) then return NULL end
     if self._DrGBaseWeapons[weapon:GetClass()] ~= weapon then return NULL end
     local active = self:GetActiveWeapon()
     weapon:SetOwner(NULL)
@@ -109,8 +118,8 @@ if SERVER then
     self._DrGBaseWeapons[weapon:GetClass()] = nil
     self:OnDropWeapon(weapon, weapon:GetClass())
     self:NetMessage("DrGBaseDropWeapon", weapon:GetClass())
-    if active == weapon then self:SwitchWeapon()
-    else weapon:SetNoDraw(false) end
+    if active == weapon then self:SwitchWeapon() end
+    weapon:SetNoDraw(false)
     return weapon
   end
 
@@ -120,7 +129,6 @@ if SERVER then
     self:SetActiveWeapon(weapon)
     return weapon
   end
-
   function ENT:SwitchWeapon(class)
     local weapon = table.DrG_Fetch(self._DrGBaseWeapons, function(weap1, weap2)
       if not IsValid(weap1) then return false end
@@ -140,8 +148,8 @@ if SERVER then
 
   -- Handlers --
 
-  hook.Add("PlayerCanPickupWeapon", "DrGBaseWeaponsPlayerPickup", function(ply, wep)
-    if IsValid(wep:GetOwner()) and wep:GetOwner().IsDrGNextbot then return false end
+  hook.Add("PlayerCanPickupWeapon", "DrGBaseNextbotWeaponPlayerPickup", function(ply, weapon)
+    if IsValid(weapon:GetOwner()) and weapon:GetOwner().IsDrGNextbot then return false end
   end)
 
 else

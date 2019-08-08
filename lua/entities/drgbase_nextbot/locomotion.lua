@@ -62,7 +62,9 @@ function ENT:ClearStuck()
   return self.loco:ClearStuck()
 end
 function ENT:IsStuckInWorld()
-
+  return self:TraceHull(Vector(0, 0, 0), {
+    collisiongroup = COLLISION_GROUP_DEBRIS
+  }).HitWorld
 end
 
 function ENT:GetDesiredSpeed()

@@ -5,11 +5,24 @@ if CLIENT then return end
 local ComputeDelay = CreateConVar("drgbase_compute_delay", "0.1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local ComputeOptim = CreateConVar("drgbase_compute_optimisation", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
+-- Handlers --
+
+function ENT:_InitPath()
+  self._DrGBaseNavAreaBlacklist = {}
+end
+
 -- Getters/setters --
 
 function ENT:GetPath()
-  self._DrGBasePath = self._DrGBasePath or Path("Follow")
-  return self._DrGBasePath
+  if not self._DrGBasePath then
+    self._DrGBasePath = Path("Follow")
+    self._DrGBasePath:SetMinLookAheadDistance(300)
+    return self._DrGBasePath
+  else return self._DrGBasePath end
+end
+
+function ENT:LastComputeSuccess()
+  return self._DrGBaseLastComputeSuccess or false
 end
 
 -- Functions --
@@ -41,19 +54,16 @@ end
 function ENT:RecomputePath(generator)
   local path = self:GetPath()
   if not IsValid(path) then return end
-  return path:DrG_ForceCompute(self, path:LastSegment().pos, generator)
+  return path:DrG_ForceCompute(self, path:GetEnd(), generator)
 end
 
 function ENT:BlacklistNavArea(area, blacklist)
-  self._DrGBaseNavAreaBlacklist = self._DrGBaseNavAreaBlacklist or {}
   self._DrGBaseNavAreaBlacklist[area:GetID()] = tobool(blacklist)
 end
 function ENT:IsNavAreaBlacklisted(area)
-  self._DrGBaseNavAreaBlacklist = self._DrGBaseNavAreaBlacklist or {}
   return self._DrGBaseNavAreaBlacklist[area:GetID()] or false
 end
 function ENT:BlacklistedNavAreas()
-  self._DrGBaseNavAreaBlacklist = self._DrGBaseNavAreaBlacklist or {}
   local areas = {}
   for id, blacklisted in pairs(self._DrGBaseNavAreaBlacklist) do
     if blacklisted then table.insert(areas, navmesh.GetNavAreaByID(id)) end
@@ -140,13 +150,13 @@ function ENT:OnComputePathUnderwater(cost, dist) return 1 end
 local pathMETA = FindMetaTable("PathFollower")
 
 local old_Compute = pathMETA.Compute
-function pathMETA:Compute(nextbot, pos, generator, meta)
+function pathMETA:Compute(nextbot, pos, generator)
   if nextbot.IsDrGNextbot then
     local delay = math.Clamp(ComputeDelay:GetFloat()*(1+(#DrGBase.GetNextbots()-1)/(10/ComputeOptim:GetFloat())), 0.1, math.huge)
-    if not IsValid(self) or CurTime() > nextbot._DrGBaseLastComputeTime + delay or meta == "stupid metatables" then
+    if not IsValid(self) or CurTime() > nextbot._DrGBaseLastComputeTime + delay then
       if not isfunction(generator) then generator = nextbot:GetPathGenerator() end
+      nextbot._DrGBaseLastComputeSuccess = old_Compute(self, nextbot, pos, generator)
       nextbot._DrGBaseLastComputeTime = CurTime()
-      nextbot._DrGBaseLastComputeSuccess = old_Compute(self, nextbot, pos, generator, "stupid metatables")
       return nextbot._DrGBaseLastComputeSuccess
     else
       self:ResetAge()

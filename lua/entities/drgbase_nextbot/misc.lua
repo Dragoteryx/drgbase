@@ -283,8 +283,7 @@ if SERVER then
     if isstring(seq) then seq = self:LookupSequence(seq)
     elseif not isnumber(seq) then return false end
     if seq == -1 then return false end
-    if self._DrGBaseAnimAttacks[seq] then return true
-    elseif self._DrGBaseAnimAttacks[seq] == false then return false
+    if isbool(self._DrGBaseAnimAttacks[seq]) then return self._DrGBaseAnimAttacks[seq]
     elseif string.find(string.lower(self:GetSequenceName(seq)), "attack") ~= nil then
       return true
     elseif string.find(self:GetSequenceActivityName(seq), "ATTACK") ~= nil then
@@ -294,9 +293,7 @@ if SERVER then
   function ENT:SetAttack(seq, attack)
     if isstring(seq) then seq = self:LookupSequence(seq)
     elseif not isnumber(seq) then return false end
-    if seq ~= 1 then
-      self._DrGBaseAnimAttacks[seq] = tobool(attack)
-    end
+    if seq ~= 1 then self._DrGBaseAnimAttacks[seq] = tobool(attack) end
   end
 
   function ENT:SequenceAttack(seq, cycle, attack, callback)

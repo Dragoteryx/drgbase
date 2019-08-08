@@ -22,6 +22,7 @@ function ENT:_InitHooks()
   self:DrG_AddListener("OnTraceAttack", self._HandleTraceAttack)
   self:DrG_AddListener("OnContact", self._HandleContact)
   self:DrG_AddListener("OnNavAreaChanged", self._HandleNavAreaChanged)
+  self:DrG_AddListener("Use", self._HandleUse)
 end
 
 if SERVER then
@@ -245,7 +246,7 @@ if SERVER then
     end
   end
 
-  -- Misc --
+  -- OnNavAreaChanged --
 
   function ENT:GetPreviousNavArea()
     return self._DrGBasePreviousNavArea
@@ -253,11 +254,14 @@ if SERVER then
   function ENT:GetNavArea()
     return self._DrGBaseNavArea
   end
-
   function ENT:_HandleNavAreaChanged(old, new)
     self._DrGBasePreviousNavArea = old
     self._DrGBaseNavArea = new
   end
+
+  -- Misc --
+
+  function ENT:_HandleUse() end
 
   hook.Add("vFireEntityStartedBurning", "DrGBaseNextbotOnIgniteVFire", function(ent)
     if ent.IsDrGNextbot then ent:OnIgnite() end

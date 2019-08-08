@@ -124,16 +124,6 @@ ENT.PossessionViews = {
 }
 ENT.PossessionBinds = {}
 
-function ENT:OnPickupWeapon(weapon, class)
-  print("pickup", class)
-end
-function ENT:OnDropWeapon(weapon, class)
-  print("drop", class)
-end
-function ENT:OnSpotted(ent)
-  print("spotted", ent)
-end
-
 if SERVER then
 
   function ENT:CustomInitialize()
@@ -141,13 +131,9 @@ if SERVER then
     self:GiveWeapon("weapon_pistol")
   end
   function ENT:CustomThink() end
-  function ENT:CustomUse()
-    --PrintTable(self:GetWeapons())
-    --PrintTable(self:GetWeapons())
+  function ENT:Use()
     self:GiveWeapon("weapon_ar2")
     self:SwitchWeapon()
-    --
-    --self:DropWeapon(self:GetActiveWeapon())
   end
 
   -- These hooks are called when the nextbot has an enemy (inside the coroutine)
@@ -195,16 +181,6 @@ if SERVER then
   function ENT:AfterTakeDamage(dmg, delay, hitgroup) end
   function ENT:OnDeath(dmg, delay, hitgroup) end
   function ENT:OnDowned(dmg, delay, hitgroup) end
-
-else
-
-  function ENT:CustomInitialize() end
-  function ENT:CustomThink() end
-  function ENT:CustomUse()
-    print("a")
-    PrintTable(self:GetWeapons())
-  end
-  function ENT:CustomDraw() end
 
 end
 

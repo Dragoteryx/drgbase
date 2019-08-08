@@ -63,12 +63,6 @@ if SERVER then
   function ENT:CustomInitialize()
     self:SetDefaultRelationship(D_HT)
     self:SetBodygroup(1, 1)
-    self:SetAttack("attackA", true)
-    self:SetAttack("attackB", true)
-    self:SetAttack("attackC", true)
-    self:SetAttack("attackD", true)
-    self:SetAttack("attackE", true)
-    self:SetAttack("attackF", true)
   end
 
   -- AI --
@@ -91,7 +85,7 @@ if SERVER then
     self:EmitSound("Zombie.Alert")
   end
 
-  function ENT:HandleAnimEvent()
+  function ENT:OnAnimEvent()
     if self:IsAttacking() and self:GetCycle() > 0.3 then
       self:Attack({
         damage = 10,
