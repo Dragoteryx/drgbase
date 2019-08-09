@@ -184,9 +184,7 @@ if SERVER then
     if not IsValid(phys) then return Vector(0, 0, 0) end
     local pos = self:GetPos()
     if phys:IsGravityEnabled() then
-      return self:ThrowAt(target, {
-        magnitude = speed, recursive = true, maxmagnitude = speed
-      }, feet)
+      return self:ThrowAt(target, {magnitude = speed, maxmagnitude = speed}, feet)
     elseif isentity(target) and IsValid(target) then
       local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
       local dist = pos:Distance(aimAt)
@@ -197,11 +195,15 @@ if SERVER then
       local info = dir:DrG_Data()
       local dist = pos:Distance(target)
       info.duration = dist/speed
+      info.reached = true
       info.Predict = function(t)
         return pos+dir*t, dir
       end
       return dir, info
-    else return Vector(0, 0, 0) end
+    elseif IsValid(self:GetOwner()) then
+      local owner = self:GetOwner()
+      return self:AimAt(self:GetPos()+owner:GetForward()*speed, speed, feet)
+    else return self:AimAt(self:GetPos()+self:GetForward()*speed, speed, feet) end
   end
   function ENT:ThrowAt(target, options, feet)
     local phys = self:GetPhysicsObject()
@@ -209,11 +211,14 @@ if SERVER then
     if isentity(target) and IsValid(target) then
       local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
       local vec, info = self:GetPos():DrG_CalcTrajectory(aimAt, options)
-      if info.duration ~= -1 then
+      if info.reached then
         return self:ThrowAt(aimAt + target:GetVelocity()*info.duration, options, feet)
       else return self:ThrowAt(aimAt, options, feet) end
     elseif isvector(target) then return phys:DrG_Trajectory(target, options)
-    else return Vector(0, 0, 0) end
+    elseif IsValid(self:GetOwner()) then
+      local owner = self:GetOwner()
+      return self:ThrowAt(self:GetPos()+owner:GetForward()*1000, options, feet)
+    else return self:ThrowAt(self:GetPos()+self:GetForward()*1000, options, feet) end
   end
 
   function ENT:DealDamage(ent, value, type)

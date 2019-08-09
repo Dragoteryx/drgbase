@@ -53,6 +53,7 @@ ENT.MaxYawRate = 250
 ENT.DeathDropHeight = 200
 
 -- Animations --
+DrGBase.IncludeFile("animations.lua")
 ENT.WalkAnimation = ACT_WALK
 ENT.WalkAnimRate = 1
 ENT.RunAnimation = ACT_RUN

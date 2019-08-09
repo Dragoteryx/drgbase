@@ -10,12 +10,13 @@ function physMETA:DrG_Trajectory(pos, options)
     if not options.drag then self:EnableDrag(false)
     else self:EnableDrag(true) end
     if DebugTrajectory:GetFloat() > 0 then
-      debugoverlay.DrG_Trajectory(self:GetPos(), vec, DebugTrajectory:GetFloat(), nil, false, {
-        from = -info.duration, to = info.duration*2, colors = function(t)
-          if t < 0 then return DrGBase.CLR_GREEN
-          elseif t > info.duration then return DrGBase.CLR_RED
-          else return DrGBase.CLR_WHITE end
-        end
+      debugoverlay.DrG_Trajectory(self:GetPos(), vec, DebugTrajectory:GetFloat(), function(t)
+        if t < 0 then return DrGBase.CLR_GREEN
+        elseif t > info.duration then return DrGBase.CLR_RED
+        else return DrGBase.CLR_WHITE end
+      end, false, {
+        from = math.min(-info.duration, info.highest),
+        to = math.max(info.duration*2, info.highest)
       })
     end
     self:SetVelocity(vec)

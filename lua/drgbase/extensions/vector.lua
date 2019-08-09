@@ -5,9 +5,6 @@ local vecMETA = FindMetaTable("Vector")
 
 function vecMETA:DrG_CalcTrajectory(endpos, options)
   options = options or {}
-  if not isbool(options.recursive) then
-    options.recursive = (not isnumber(options.pitch) and not isnumber(options.magnitude))
-  end
   local g = isnumber(options.gravity) and options.gravity or physenv.GetGravity():Length()
   local vec = Vector(endpos.x - self.x, endpos.y - self.y, 0)
   local x = options._length or vec:Length()
@@ -22,24 +19,20 @@ function vecMETA:DrG_CalcTrajectory(endpos, options)
     if pitch < -90 then pitch = -90 end
     pitch = math.rad(pitch)
     if y >= math.tan(pitch)*x then
-      if options.recursive and math.deg(pitch) < 90 then
-        options.gravity = g
-        options._length = x
-        options.pitch = math.deg(pitch)+1
-        return self:DrG_CalcTrajectory(endpos, options)
-      else return Vector(0, 0, 0), {pitch = math.deg(pitch)} end
+      options.gravity = g
+      options._length = x
+      options.pitch = math.deg(pitch)+1
+      return self:DrG_CalcTrajectory(endpos, options)
     else magnitude = math.sqrt((-g*x*x)/(2*(math.cos(pitch)^2)*(y - x*math.tan(pitch)))) end
   elseif magnitudenumber and not pitchnumber then
     magnitude = math.abs(options.magnitude)
     local v = magnitude
     local res = math.sqrt(v^4 - g*(g*x*x + 2*y*v*v))
     if res ~= res then
-      if options.recursive then
-        options.gravity = g
-        options._length = x
-        options.magnitude = magnitude*1.05
-        return self:DrG_CalcTrajectory(endpos, options)
-      else return Vector(0, 0, 0), {magnitude = magnitude} end
+      options.gravity = g
+      options._length = x
+      options.magnitude = magnitude*1.05
+      return self:DrG_CalcTrajectory(endpos, options)
     else
       local s1 = math.atan((v*v + res)/(g*x))
       local s2 = math.atan((v*v - res)/(g*x))
@@ -56,13 +49,18 @@ function vecMETA:DrG_CalcTrajectory(endpos, options)
     options.pitch = (90 - forward:DrG_Degrees(normal))/2
     return self:DrG_CalcTrajectory(endpos, options)
   else
-    pitch = options.pitch
+    pitch = math.rad(options.pitch)
     magnitude = options.magnitude
   end
-  if isnumber(options.minmagnitude) and magnitude < options.minmagnitude then magnitude = options.minmagnitude end
-  if isnumber(options.maxmagnitude) and magnitude > options.maxmagnitude then magnitude = options.maxmagnitude end
-  if isnumber(options.minpitch) and math.deg(pitch) < options.minpitch then pitch = math.rad(options.minpitch) end
-  if isnumber(options.maxpitch) and math.deg(pitch) > options.maxpitch then pitch = math.rad(options.maxpitch) end
+  if options.recursive ~= false then
+    if isnumber(options.minmagnitude) and magnitude < options.minmagnitude then magnitude = options.minmagnitude end
+    if isnumber(options.maxmagnitude) and magnitude > options.maxmagnitude then magnitude = options.maxmagnitude end
+    if isnumber(options.minpitch) and math.deg(pitch) < options.minpitch then pitch = math.rad(options.minpitch) end
+    if isnumber(options.maxpitch) and math.deg(pitch) > options.maxpitch then pitch = math.rad(options.maxpitch) end
+  else
+    if isnumber(options.magnitude) then magnitude = options.magnitude end
+    if isnumber(options.pitch) then pitch = math.rad(options.pitch) end
+  end
   vec.z = math.tan(pitch)*x
   local velocity = vec:GetNormalized()*magnitude
   local info = self:DrG_TrajectoryInfo2({
@@ -80,6 +78,7 @@ function vecMETA:DrG_CalcTrajectory(endpos, options)
     if dist1 < dist2 then info.duration = duration1
     else info.duration = duration2 end
   end
+  info.reached = (info.duration ~= -1)
   return velocity, info
 end
 

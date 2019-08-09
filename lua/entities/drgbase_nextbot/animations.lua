@@ -15,6 +15,22 @@ function ENT:GetAnimInfoSequence(seq)
   end
 end
 
+function ENT:GetActivityIDFromName(name)
+  if isnumber(self._DrGBaseActIDsFromNames[name]) then
+    return self._DrGBaseActIDsFromNames[name]
+  else
+    for i, seq in pairs(self:GetSequenceList()) do
+      if self:GetSequenceActivityName(i) == name then
+        local id = self:GetSequenceActivity(i)
+        self._DrGBaseActIDsFromNames[name] = id
+        return id
+      end
+    end
+    self._DrGBaseActIDsFromNames[name] = ACT_INVALID
+    return ACT_INVALID
+  end
+end
+
 -- Functions --
 
 function ENT:SelectRandomSequence(anim)
@@ -92,6 +108,7 @@ function ENT:_InitAnimations()
     self._DrGBaseCurrentGestures = {}
     self:LoopTimer(0.1, self.UpdateAnimation)
   end
+  self._DrGBaseActIDsFromNames = {}
   self._DrGBasePreviousSequence = self:GetSequence()
   self._DrGBaseLastAnimCycle = 0
   self._DrGBaseSequenceEvents = {}
@@ -99,21 +116,16 @@ end
 
 function ENT:_HandleAnimations()
   local current = self:GetSequence()
-  if self._DrGBasePreviousSequence ~= current then
-    self._DrGBasePreviousSequence = current
-    self._DrGBaseLastAnimCycle = 0
-  else
-    self:_PlaySequenceEvents(current, self._DrGBaseLastAnimCycle)
-    self._DrGBaseLastAnimCycle = self:GetCycle()
-  end
+  self:_PlaySequenceEvents(current, self:GetCycle(), self._DrGBaseLastAnimCycle)
+  self._DrGBaseLastAnimCycle = self:GetCycle()
 end
 
-function ENT:_PlaySequenceEvents(seq, lastcycle)
+function ENT:_PlaySequenceEvents(seq, currCycle, lastcycle)
   local events = self._DrGBaseSequenceEvents[seq]
   for cycle, event in pairs(istable(events) and events or {}) do
-    if (self:GetCycle() > cycle and self._DrGBaseLastAnimCycle <= cycle) or
-    (self:GetCycle() < self._DrGBaseLastAnimCycle and self:GetCycle() >= cycle) or
-    (self:GetCycle() < self._DrGBaseLastAnimCycle and self._DrGBaseLastAnimCycle <= cycle) then
+    if (currCycle > cycle and self._DrGBaseLastAnimCycle <= cycle) or
+    (currCycle < self._DrGBaseLastAnimCycle and currCycle >= cycle) or
+    (currCycle < self._DrGBaseLastAnimCycle and self._DrGBaseLastAnimCycle <= cycle) then
       for i, todo in ipairs(event) do todo.callback(self, table.DrG_Unpack(todo.args, todo.n)) end
     end
   end
@@ -269,7 +281,7 @@ if SERVER then
         local cycle = self:GetLayerCycle(layerID)
         if cycle < lastCycle then break end
         --if cycle == lastCycle and cycle == 1 then break end
-        self:_PlaySequenceEvents(seq, lastCycle)
+        self:_PlaySequenceEvents(seq, cycle, lastCycle)
         if not callback(self, cycle, layerID) then
           lastCycle = cycle
           coroutine.yield()
@@ -347,6 +359,9 @@ if SERVER then
   function ENT:UpdateAnimation()
     if self:IsPlayingAnimation() then return end
     local anim, rate = self:OnUpdateAnimation()
+    if isstring(anim) and string.StartWith(anim, "ACT_") then
+      anim = self:GetActivityIDFromName(anim)
+    end
     local current = self:GetSequence()
     local validAnim = false
     if isnumber(anim) then

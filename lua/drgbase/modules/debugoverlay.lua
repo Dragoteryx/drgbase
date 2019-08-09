@@ -9,7 +9,9 @@ function debugoverlay.DrG_Trajectory(start, velocity, lifetime, color, ignoreZ, 
   if options.height == nil then options.height = true end
   local t = options.from
   while t < options.to do
-    debugoverlay.Line(info.Predict(t), info.Predict(t+options.increments), lifetime, options.colors(t) or color, ignoreZ)
+    if isfunction(color) then
+      debugoverlay.Line(info.Predict(t), info.Predict(t+options.increments), lifetime, color(t), ignoreZ)
+    else debugoverlay.Line(info.Predict(t), info.Predict(t+options.increments), lifetime, color, ignoreZ) end
     t = t+options.increments
   end
   if options.height then
@@ -19,6 +21,8 @@ function debugoverlay.DrG_Trajectory(start, velocity, lifetime, color, ignoreZ, 
       endpos = highestPoint + Vector(0, 0, -999999999),
       collisiongroup = COLLISION_GROUP_IN_VEHICLE
     })
-    debugoverlay.Line(highestPoint, tr.HitPos, lifetime, options.colors(info.highest) or color, ignoreZ)
+    if isfunction(color) then
+      debugoverlay.Line(highestPoint, tr.HitPos, lifetime, color(info.highest), ignoreZ)
+    else debugoverlay.Line(highestPoint, tr.HitPos, lifetime, color, ignoreZ) end
   end
 end
