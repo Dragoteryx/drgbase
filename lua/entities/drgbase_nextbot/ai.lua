@@ -53,15 +53,10 @@ function ENT:_InitAI()
     if not self._DrGBaseHasEnemy and IsValid(new) then
       self._DrGBaseHasEnemy = true
       self:OnNewEnemy(new)
-      if SERVER then self:BehaviourTreeEvent("NewEnemy", new) end
     elseif self._DrGBaseHasEnemy and not IsValid(new) then
       self._DrGBaseHasEnemy = false
       self:OnLastEnemy(old)
-      if SERVER then self:BehaviourTreeEvent("LastEnemy", old) end
-    else
-      self:OnEnemyChange(old, new)
-      if SERVER then self:BehaviourTreeEvent("EnemyChange", old, new) end
-    end
+    else self:OnEnemyChange(old, new) end
   end)
 end
 
@@ -96,19 +91,15 @@ if SERVER then
     if not isvector(pos) then return end
     if isnumber(i) then
       table.insert(self._DrGBasePatrolPos, i, pos)
-      self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
     else
       table.insert(self._DrGBasePatrolPos, pos)
-      self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
     end
   end
   function ENT:GetPatrolPos(i)
     return self._DrGBasePatrolPos[i]
   end
   function ENT:RemovePatrolPos(i)
-    local pos = table.remove(self._DrGBasePatrolPos, i)
-    self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
-    return pos
+    return table.remove(self._DrGBasePatrolPos, i)
   end
 
   -- Functions --
@@ -126,10 +117,6 @@ if SERVER then
       if enemy == nil then return self:GetEnemy() end
       if not IsValid(enemy) or
       self:GetRangeSquaredTo(enemy) > EnemyRadius:GetFloat()^2 then
-        enemy = NULL
-      end
-      if self:IsAfraidOf(enemy) and
-      not self:IsInRange(enemy, self.WatchAfraidOfRange) then
         enemy = NULL
       end
     else enemy = NULL end
@@ -160,19 +147,16 @@ if SERVER then
 
   function ENT:ClearPatrolPos()
     self._DrGBasePatrolPos = {}
-    self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
   end
   function ENT:ShufflePatrolPos()
     table.sort(self._DrGBasePatrolPos, function()
       return math.random(2) == 1
     end)
-    self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
   end
   function ENT:SortPatrolPos()
     table.sort(self._DrGBasePatrolPos, function(pos1, pos2)
       return self:GroundDistance(pos1) < self:GroundDistance(pos2)
     end)
-    self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
   end
 
   -- Hooks --

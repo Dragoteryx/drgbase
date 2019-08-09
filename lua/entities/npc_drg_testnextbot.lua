@@ -7,7 +7,6 @@ ENT.Category = "DrGBase"
 ENT.Models = {"models/player/gman_high.mdl"}
 
 -- AI --
-ENT.BehaviourTree = "BaseAI"
 ENT.RangeAttackRange = 100
 ENT.MeleeAttackRange = 0
 ENT.ReachEnemyRange = 100

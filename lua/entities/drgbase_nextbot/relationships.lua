@@ -215,9 +215,6 @@ if SERVER then
     if DebugRelationship:GetBool() then
       DrGBase.Print(tostring(self)..": ".."'"..tostring(ent).."' "..EnumToString(curr).." => "..EnumToString(disp)..".")
     end
-    if self:GetEnemy() == ent then
-      self:BehaviourTreeEvent("EnemyRelationshipChange", self:GetEnemy(), curr, disp)
-    end
   end
   function ENT:_SetPriority(ent, prio)
     if not IsValid(ent) then return end

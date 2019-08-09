@@ -49,32 +49,26 @@ ENT.PossessionViews = {
   }
 }
 ENT.PossessionBinds = {
-  [IN_JUMP] = {
-    {
-      coroutine = false,
-      onkeypressed = function(self)
-        if not self:IsOnGround() then return end
-        self:LeaveGround()
-        self:SetVelocity(self:PossessorNormal()*1500)
-      end
-    }
-  },
-  [IN_ATTACK] = {
-    {
-      coroutine = true,
-      onkeydown = function(self)
-        self:PlaySequenceAndMove("attack"..math.random(6), 1, self.PossessionFaceForward)
-      end
-    }
-  },
-  [IN_ATTACK2] = {
-    {
-      coroutine = true,
-      onkeydown = function(self)
-        self:BurrowTo(self:PossessorTrace().HitPos)
-      end
-    }
-  }
+  [IN_JUMP] = {{
+    coroutine = false,
+    onkeypressed = function(self)
+      if not self:IsOnGround() then return end
+      self:LeaveGround()
+      self:SetVelocity(self:PossessorNormal()*1500)
+    end
+  }},
+  [IN_ATTACK] = {{
+    coroutine = true,
+    onkeydown = function(self)
+      self:PlaySequenceAndMove("attack"..math.random(6), 1, self.PossessionFaceForward)
+    end
+  }},
+  [IN_ATTACK2] = {{
+    coroutine = true,
+    onkeydown = function(self)
+      self:BurrowTo(self:PossessorTrace().HitPos)
+    end
+  }}
 }
 
 if SERVER then

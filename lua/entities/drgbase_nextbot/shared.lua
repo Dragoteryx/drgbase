@@ -33,7 +33,6 @@ ENT.Footsteps = {}
 
 -- AI --
 DrGBase.IncludeFile("ai.lua")
-ENT.BehaviourTree = "BaseAI"
 ENT.Omniscient = false
 ENT.SpotDuration = 30
 ENT.RangeAttackRange = 0
@@ -325,25 +324,6 @@ if SERVER then
   end)
   function ENT:SpawnedBy() end
 
-  -- Behaviour tree --
-
-  function ENT:GetBehaviourTree()
-    if self.BehaviourTree == "" then return
-    else return DrGBase.GetBehaviourTree(self.BehaviourTree) end
-  end
-  function ENT:GetBT()
-    return self:GetBehaviourTree()
-  end
-
-  function ENT:BehaviourTreeEvent(event, ...)
-    local tree = self:GetBehaviourTree()
-    if not tree then return end
-    tree:Event(self, event, ...)
-  end
-  function ENT:BTEvent(...)
-    return self:BehaviourTreeEvent(...)
-  end
-
   -- Coroutine --
 
   function ENT:CallInCoroutine(callback, force)
@@ -375,7 +355,8 @@ if SERVER then
     else coroutine.yield() end
   end
   function ENT:PauseCoroutine(duration, interrompt)
-    if isnumber(duration) and duration >= 0 then
+    if isnumber(duration) then
+      if duration <= 0 then return end
       local now = CurTime()
       while CurTime() < now + duration do
         self:YieldCoroutine(interrompt)
@@ -423,9 +404,7 @@ if SERVER then
       if self:IsPossessed() then
         self:_HandlePossession(true)
       elseif not self:IsAIDisabled() then
-        local tree = self:GetBehaviourTree()
-        if tree then tree:Run(self)
-        else self:AIBehaviour() end
+        self:AIBehaviour()
       end
       self:YieldCoroutine(true)
     end
@@ -439,7 +418,6 @@ if SERVER then
 
   function ENT:OnSpawn() end
   function ENT:OnError() end
-  function ENT:AIBehaviour() end
 
   function ENT:OnHealthChange() end
   function ENT:OnExtinguish() end
@@ -452,6 +430,68 @@ if SERVER then
   -- SLVBase compatibility --
   if file.Exists("autorun/slvbase", "LUA") then
     function ENT:PercentageFrozen() return 0 end
+  end
+
+  -- AI Behaviour --
+
+  function ENT:AIBehaviour()
+    if self:HasEnemy() then
+      local enemy = self:GetEnemy()
+      local relationship = self:GetRelationship(enemy)
+      if relationship == D_HT then
+        local visible = self:Visible(enemy)
+        if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
+          if self:OnChaseEnemy(enemy) ~= true then
+            if self:FollowPath(enemy) == "unreachable" then
+              self:OnEnemyUnreachable(enemy)
+            end
+          end
+        elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible and
+        not self:IsInRange(enemy, self.MeleeAttackRange) then
+          if self:OnAvoidEnemy(enemy) ~= true then
+            local away = self:GetPos()*2 - enemy:GetPos()
+            self:FollowPath(away)
+          end
+        elseif self:OnWatchEnemy(enemy) ~= true then self:FaceTowards(enemy) end
+        if not IsValid(enemy) then return end
+        if self:IsInRange(enemy, self.MeleeAttackRange) and
+        self:OnMeleeAttack(enemy) ~= false then
+        elseif self:IsInRange(enemy, self.RangeAttackRange) then
+          self:OnRangeAttack(enemy)
+        end
+      elseif relationship == D_FR and self:IsInRange(enemy, self.WatchAfraidOfRange) then
+        local visible = self:Visible(enemy)
+        if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
+          if self:OnAvoidAfraidOf(enemy) ~= true then
+            local away = self:GetPos()*2 - enemy:GetPos()
+            self:FollowPath(away)
+          end
+        elseif self:OnWatchAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
+        if not IsValid(enemy) then return end
+        if self:IsInRange(enemy, self.MeleeAttackRange) and
+        self:OnMeleeAttack(enemy) ~= false then
+        elseif self:IsInRange(enemy, self.RangeAttackRange) then
+          self:OnRangeAttack(enemy)
+        end
+      elseif isvector(self:GetPatrolPos(1)) then self:Patrol() end
+      if not self:HasEnemy() then self:UpdateEnemy() end
+    elseif isvector(self:GetPatrolPos(1)) then self:Patrol()
+    else self:OnIdle() end
+  end
+
+  function ENT:Patrol()
+    local patrol = self:GetPatrolPos(1)
+    local res = self:OnPatrolling(patrol)
+    if not isbool(res) then
+      local follow = self:FollowPath(patrol)
+      if follow == "unreachable" then res = false
+      elseif follow == "reached" then res = true end
+    end
+    if isbool(res) then
+      if res then self:OnReachedPatrol(patrol)
+      else self:OnPatrolUnreachable(patrol) end
+      self:RemovePatrolPos(1)
+    end
   end
 
 else

@@ -42,20 +42,18 @@ function ENT:SequenceEvent(seq, cycles, callback, ...)
     for i, se in ipairs(seq) do
       self:SequenceEvent(se, cycles, callback)
     end
-  else
-    if isstring(seq) then seq = self:LookupSequence(seq)
-    elseif not isnumber(seq) then return end
-    if seq == -1 then return end
-    self._DrGBaseSequenceEvents[seq] = self._DrGBaseSequenceEvents[seq] or {}
-    local event = self._DrGBaseSequenceEvents[seq]
-    if isnumber(cycles) then cycles = {cycles} end
-    local args, n = table.DrG_Pack(...)
-    for i, cycle in ipairs(cycles) do
-      event[cycle] = event[cycle] or {}
-      table.insert(event[cycle], {
-        callback = callback, args = args, n = n
-      })
-    end
+  elseif isstring(seq) then seq = self:LookupSequence(seq)
+  elseif not isnumber(seq) then return end
+  if seq == -1 then return end
+  self._DrGBaseSequenceEvents[seq] = self._DrGBaseSequenceEvents[seq] or {}
+  local event = self._DrGBaseSequenceEvents[seq]
+  if isnumber(cycles) then cycles = {cycles} end
+  local args, n = table.DrG_Pack(...)
+  for i, cycle in ipairs(cycles) do
+    event[cycle] = event[cycle] or {}
+    table.insert(event[cycle], {
+      callback = callback, args = args, n = n
+    })
   end
 end
 function ENT:ClearSequenceEvents(seq)
@@ -116,7 +114,11 @@ end
 
 function ENT:_HandleAnimations()
   local current = self:GetSequence()
-  self:_PlaySequenceEvents(current, self:GetCycle(), self._DrGBaseLastAnimCycle)
+  if self:GetSequence() ~= self._DrGBasePreviousSequence then
+    self._DrGBasePreviousSequence = current
+    self._DrGBaseLastAnimCycle = 0
+    self:_PlaySequenceEvents(current, 0, 0)
+  else self:_PlaySequenceEvents(current, self:GetCycle(), self._DrGBaseLastAnimCycle) end
   self._DrGBaseLastAnimCycle = self:GetCycle()
 end
 
@@ -164,6 +166,9 @@ if SERVER then
     if isstring(seq) then seq = self:LookupSequence(seq)
     elseif not isnumber(seq) then return end
     if seq == -1 then return end
+    if seq ~= self:GetSequence() then
+      self:OnAnimChange(self:GetSequenceName(self:GetSequence()), self:LookupName(seq), 0)
+    end
     rate = isnumber(rate) and rate or 1
     local oldPlayingAnim = self._DrGBasePlayingAnimation
     self._DrGBasePlayingAnimation = seq
@@ -370,12 +375,22 @@ if SERVER then
       local activity = self:GetSequenceActivity(current)
       if validAnim and (self:GetCycle() == 1 or anim ~= activity) then
         self:ResetSequence(seq)
+        if isfunction(self.OnAnimChange) then
+          self:CallInCoroutine(function(self, delay)
+            self:OnAnimChange(activity, anim, delay)
+          end)
+        end
       end
     elseif isstring(anim) then
       local seq = self:LookupSequence(anim)
       validAnim = seq ~= -1
       if validAnim and (self:GetCycle() == 1 or seq ~= current) then
         self:ResetSequence(seq)
+        if isfunction(self.OnAnimChange) then
+          self:CallInCoroutine(function(self, delay)
+            self:OnAnimChange(self:GetSequenceName(current), self:GetSequenceName(seq), delay)
+          end)
+        end
       end
     end
     if validAnim and
@@ -394,7 +409,9 @@ if SERVER then
     else return self.IdleAnimation, self.IdleAnimRate end
   end
 
-  -- Hooks --
+  -- Hooks
+
+  --function ENT:OnAnimChange() end
 
   function ENT:BodyUpdate()
     self:BodyMoveXY()

@@ -45,15 +45,13 @@ ENT.PossessionViews = {
   }
 }
 ENT.PossessionBinds = {
-  [IN_ATTACK] = {
-    {
-      coroutine = true,
-      onkeydown = function(self)
-        self:EmitSound("Zombie.Attack")
-        self:PlayActivityAndMove(ACT_MELEE_ATTACK1, 1, self.PossessionFaceForward)
-      end
-    }
-  }
+  [IN_ATTACK] = {{
+    coroutine = true,
+    onkeydown = function(self)
+      self:EmitSound("Zombie.Attack")
+      self:PlayActivityAndMove(ACT_MELEE_ATTACK1, 1, self.PossessionFaceForward)
+    end
+  }}
 }
 
 if SERVER then

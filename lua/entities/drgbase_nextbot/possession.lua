@@ -268,7 +268,6 @@ if SERVER then
     ply:SetEyeAngles(self:EyeAngles())
     self:UpdateEnemy()
     self:SetNW2Int("DrGBasePossessionView", 1)
-    self:BehaviourTreeEvent("Possessed", ply)
     self:OnPossessed(ply)
     return "ok"
   end
