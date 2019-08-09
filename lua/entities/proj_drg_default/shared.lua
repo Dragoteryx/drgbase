@@ -188,7 +188,8 @@ if SERVER then
     elseif isentity(target) and IsValid(target) then
       local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
       local dist = pos:Distance(aimAt)
-      return self:AimAt(aimAt + target:GetVelocity()*(dist/speed), speed, feet)
+      local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
+      return self:AimAt(aimAt + velocity*(dist/speed), speed, feet)
     elseif isvector(target) then
       local dir = pos:DrG_Direction(target):GetNormalized()*speed
       phys:SetVelocity(dir)
@@ -202,8 +203,8 @@ if SERVER then
       return dir, info
     elseif IsValid(self:GetOwner()) then
       local owner = self:GetOwner()
-      return self:AimAt(self:GetPos()+owner:GetForward()*speed, speed, feet)
-    else return self:AimAt(self:GetPos()+self:GetForward()*speed, speed, feet) end
+      return self:AimAt(self:GetPos()+owner:GetForward(), speed, feet)
+    else return self:AimAt(self:GetPos()+self:GetForward(), speed, feet) end
   end
   function ENT:ThrowAt(target, options, feet)
     local phys = self:GetPhysicsObject()
@@ -212,7 +213,8 @@ if SERVER then
       local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
       local vec, info = self:GetPos():DrG_CalcTrajectory(aimAt, options)
       if info.reached then
-        return self:ThrowAt(aimAt + target:GetVelocity()*info.duration, options, feet)
+        local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
+        return self:ThrowAt(aimAt + velocity*info.duration, options, feet)
       else return self:ThrowAt(aimAt, options, feet) end
     elseif isvector(target) then return phys:DrG_Trajectory(target, options)
     elseif IsValid(self:GetOwner()) then

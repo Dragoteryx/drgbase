@@ -670,6 +670,7 @@ if SERVER then
   function ENT:CustomClimbing() end
 
   function ENT:HandleStuck()
+    self:RecomputePath()
     self.loco:ClearStuck()
   end
 

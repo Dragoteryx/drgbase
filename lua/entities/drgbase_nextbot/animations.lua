@@ -166,8 +166,8 @@ if SERVER then
     if isstring(seq) then seq = self:LookupSequence(seq)
     elseif not isnumber(seq) then return end
     if seq == -1 then return end
-    if seq ~= self:GetSequence() then
-      self:OnAnimChange(self:GetSequenceName(self:GetSequence()), self:LookupName(seq), 0)
+    if isfunction(self.OnAnimChange) and seq ~= self:GetSequence() then
+      self:OnAnimChange(self:GetSequenceName(self:GetSequence()), self:GetSequenceName(seq), 0)
     end
     rate = isnumber(rate) and rate or 1
     local oldPlayingAnim = self._DrGBasePlayingAnimation

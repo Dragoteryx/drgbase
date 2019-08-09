@@ -436,47 +436,51 @@ if SERVER then
 
   function ENT:AIBehaviour()
     if self:HasEnemy() then
-      local enemy = self:GetEnemy()
-      local relationship = self:GetRelationship(enemy)
-      if relationship == D_HT then
-        local visible = self:Visible(enemy)
-        if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
-          if self:OnChaseEnemy(enemy) ~= true then
-            if self:FollowPath(enemy) == "unreachable" then
-              self:OnEnemyUnreachable(enemy)
-            end
-          end
-        elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible and
-        not self:IsInRange(enemy, self.MeleeAttackRange) then
-          if self:OnAvoidEnemy(enemy) ~= true then
-            local away = self:GetPos()*2 - enemy:GetPos()
-            self:FollowPath(away)
-          end
-        elseif self:OnWatchEnemy(enemy) ~= true then self:FaceTowards(enemy) end
-        if not IsValid(enemy) then return end
-        if self:IsInRange(enemy, self.MeleeAttackRange) and
-        self:OnMeleeAttack(enemy) ~= false then
-        elseif self:IsInRange(enemy, self.RangeAttackRange) then
-          self:OnRangeAttack(enemy)
-        end
-      elseif relationship == D_FR and self:IsInRange(enemy, self.WatchAfraidOfRange) then
-        local visible = self:Visible(enemy)
-        if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
-          if self:OnAvoidAfraidOf(enemy) ~= true then
-            local away = self:GetPos()*2 - enemy:GetPos()
-            self:FollowPath(away)
-          end
-        elseif self:OnWatchAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
-        if not IsValid(enemy) then return end
-        if self:IsInRange(enemy, self.MeleeAttackRange) and
-        self:OnMeleeAttack(enemy) ~= false then
-        elseif self:IsInRange(enemy, self.RangeAttackRange) then
-          self:OnRangeAttack(enemy)
-        end
-      elseif isvector(self:GetPatrolPos(1)) then self:Patrol() end
+      self:ReactToEnemy()
       if not self:HasEnemy() then self:UpdateEnemy() end
     elseif isvector(self:GetPatrolPos(1)) then self:Patrol()
     else self:OnIdle() end
+  end
+
+  function ENT:ReactToEnemy()
+    local enemy = self:GetEnemy()
+    local relationship = self:GetRelationship(enemy)
+    if relationship == D_HT then
+      local visible = self:Visible(enemy)
+      if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
+        if self:OnChaseEnemy(enemy) ~= true then
+          if self:FollowPath(enemy) == "unreachable" then
+            self:OnEnemyUnreachable(enemy)
+          end
+        end
+      elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible and
+      not self:IsInRange(enemy, self.MeleeAttackRange) then
+        if self:OnAvoidEnemy(enemy) ~= true then
+          local away = self:GetPos()*2 - enemy:GetPos()
+          self:FollowPath(away)
+        end
+      elseif self:OnWatchEnemy(enemy) ~= true then self:FaceTowards(enemy) end
+      if not IsValid(enemy) or not self:Visible(enemy) then return end
+      if self:IsInRange(enemy, self.MeleeAttackRange) and
+      self:OnMeleeAttack(enemy) ~= false then
+      elseif self:IsInRange(enemy, self.RangeAttackRange) then
+        self:OnRangeAttack(enemy)
+      end
+    elseif relationship == D_FR and self:IsInRange(enemy, self.WatchAfraidOfRange) then
+      local visible = self:Visible(enemy)
+      if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
+        if self:OnAvoidAfraidOf(enemy) ~= true then
+          local away = self:GetPos()*2 - enemy:GetPos()
+          self:FollowPath(away)
+        end
+      elseif self:OnWatchAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
+      if not IsValid(enemy) or not self:Visible(enemy) then return end
+      if self:IsInRange(enemy, self.MeleeAttackRange) and
+      self:OnMeleeAttack(enemy) ~= false then
+      elseif self:IsInRange(enemy, self.RangeAttackRange) then
+        self:OnRangeAttack(enemy)
+      end
+    elseif isvector(self:GetPatrolPos(1)) then self:Patrol() end
   end
 
   function ENT:Patrol()
