@@ -68,7 +68,7 @@ if SERVER then
     local disabled = self:GetNW2Bool("DrGBaseAIDisabled")
     self:SetNW2Bool("DrGBaseAIDisabled", bool)
     if disabled and not bool then
-      nextbot:UpdateAI()
+      self:UpdateAI()
     end
   end
   function ENT:DisableAI()
@@ -119,20 +119,26 @@ if SERVER then
       self:GetRangeSquaredTo(enemy) > EnemyRadius:GetFloat()^2 then
         enemy = NULL
       end
+      if self:IsAfraidOf(enemy) and
+      not self:IsInRange(enemy, self.WatchAfraidOfRange) then
+        enemy = NULL
+      end
     else enemy = NULL end
     self:SetEnemy(enemy)
     return enemy
   end
-  local function CompareEnemies(self, ent1, ent2)
+  local function CompareEnemies(self, ent1, ent2)  
+    if self:IsAfraidOf(ent1) and self:IsEnemy(ent2) and
+    not self:IsInRange(ent1, self.WatchAfraidOfRange) then return false end
+    if self:IsEnemy(ent1) and self:IsAfraidOf(ent2) and
+    not self:IsInRange(ent2, self.WatchAfraidOfRange) then return true end
     local res = self:OnFetchEnemy(ent1, ent2)
     if isbool(res) then return res end
     local prio1 = self:GetPriority(ent1)
     local prio2 = self:GetPriority(ent2)
     if prio1 > prio2 then return true
     elseif prio2 > prio1 then return false
-    else
-      return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
-    end
+    else return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2) end
   end
   function ENT:FetchEnemy()
     if self:IsPossessed() then return NULL end

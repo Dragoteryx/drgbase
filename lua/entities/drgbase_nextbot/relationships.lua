@@ -637,22 +637,6 @@ if SERVER then
       relationship = D_FR
     end
     ent:DrG_SetRelationship(self, relationship)
-    if ent.IsVJBaseSNPC then
-      if istable(ent.CurrentPossibleEnemies) and
-      not table.HasValue(ent.CurrentPossibleEnemies, self) then
-        table.insert(ent.CurrentPossibleEnemies, self)
-      end
-      if (relationship == D_HT or relationship == D_FR) then
-        if not table.HasValue(ent.VJ_AddCertainEntityAsEnemy, self) then
-          table.insert(ent.VJ_AddCertainEntityAsEnemy, self)
-        end
-      else table.RemoveByValue(ent.VJ_AddCertainEntityAsEnemy, self) end
-      if relationship == D_LI then
-        if not table.HasValue(ent.VJ_AddCertainEntityAsFriendly, self) then
-          table.insert(ent.VJ_AddCertainEntityAsFriendly, self)
-        end
-      else table.RemoveByValue(ent.VJ_AddCertainEntityAsFriendly, self) end
-    end
   end
 
   local function CPTBaseValidTarget(ent, nextbot)

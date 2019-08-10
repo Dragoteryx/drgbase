@@ -17,21 +17,12 @@ TOOL.BuildCPanel = function(panel)
 	panel:Help("If both ways, it will set the same relationship on the other entity.")
 end
 
-function TOOL:Deploy()
-	if CLIENT then return end
-  self.Selected = self.Selected or {}
-end
 function TOOL:LeftClick(tr)
   if not IsValid(tr.Entity) then return false end
-  if not tr.Entity.IsDrGNextbot then return false end
+  if not tr.Entity.IsDrGNextbot and
+	not tr.Entity:IsNPC() then return false end
 	if CLIENT then return true end
-  if table.HasValue(self.Selected, tr.Entity) then
-    table.RemoveByValue(self.Selected, tr.Entity)
-  else table.insert(self.Selected, tr.Entity) end
-	net.Start("DrGBaseToolRelationshipSelect")
-  net.WriteEntity(tr.Entity)
-  net.WriteBool(table.HasValue(self.Selected, tr.Entity))
-  net.Send(self:GetOwner())
+  self:GetOwner():DrG_CleverEntitySelect(tr.Entity)
   return true
 end
 function TOOL:RightClick(tr)
@@ -39,46 +30,47 @@ function TOOL:RightClick(tr)
 	if CLIENT then return true end
 	if tr.Entity:IsWorld() then tr.Entity = self:GetOwner() end
 	local disp = self:GetClientNumber("disposition")
-	for i, nextbot in ipairs(self.Selected) do
-    if not IsValid(nextbot) then continue end
-    nextbot:_SetRelationship(tr.Entity, disp)
-		if tr.Entity.IsDrGNextbot and tobool(self:GetClientNumber("bothways")) then
-			tr.Entity:_SetRelationship(nextbot, disp)
-		end
-  end
+	if self:GetOwner():KeyDown(IN_SPEED) then
+		for ent in self:GetOwner():DrG_SelectedEntities() do
+			for ent2 in self:GetOwner():DrG_SelectedEntities() do
+		    if ent == ent2 then continue end
+				if ent.IsDrGNextbot then
+					ent:_SetRelationship(ent2, disp)
+				elseif ent:IsNPC() then
+					ent:DrG_SetRelationship(ent2, disp)
+				end
+		  end
+	  end
+	else
+		for ent in self:GetOwner():DrG_SelectedEntities() do
+			if ent.IsDrGNextbot then
+				ent:_SetRelationship(tr.Entity, disp)
+			elseif ent:IsNPC() then
+				ent:DrG_SetRelationship(tr.Entity, disp)
+			end
+	  end
+	end
   return true
 end
 function TOOL:Reload(tr)
 	if CLIENT then return true end
-  self.Selected = {}
-	net.Start("DrGBaseToolRelationshipClear")
-  net.Send(self:GetOwner())
+  self:GetOwner():DrG_ClearSelectedEntities()
   return true
 end
 
-if SERVER then
-  util.AddNetworkString("DrGBaseToolRelationshipSelect")
-  util.AddNetworkString("DrGBaseToolRelationshipClear")
-else
+if CLIENT then
 	language.Add("tool.drgbase_tool_relationship.name", "AI Relationship")
 	language.Add("tool.drgbase_tool_relationship.desc", "Change relationship of a nextbot towards an entity.")
-	language.Add("tool.drgbase_tool_relationship.0", "Left click to select/deselect a nextbot, right click to set the relationship towards an entity (aim at the ground to set the relationship towards yourself) and reload to clear the list of selected nextbots.")
+	language.Add("tool.drgbase_tool_relationship.0", "Left click to select/deselect a nextbot/NPC (hold shift to select multiple entities), right click to set the relationship towards an entity (aim at the ground to set the relationship towards yourself) and reload to clear the list of selected entities.")
 
-  local selected = {}
-  net.Receive("DrGBaseToolRelationshipSelect", function()
-    local ent = net.ReadEntity()
-    if net.ReadBool() then table.insert(selected, ent)
-    else table.RemoveByValue(selected, ent) end
-  end)
-  net.Receive("DrGBaseToolRelationshipClear", function()
-    selected = {}
-  end)
   hook.Add("PreDrawHalos", "DrGBaseToolRelationshipHalos", function()
-    local wep = LocalPlayer():GetActiveWeapon()
+		local ply = LocalPlayer()
+    local wep = ply:GetActiveWeapon()
     if not IsValid(wep) or wep:GetClass() ~= "gmod_tool" then return end
-    local tool = LocalPlayer():GetTool()
+    local tool = ply:GetTool()
     if tool == nil or tool.Mode ~= "drgbase_tool_relationship" then return end
 		local disp = GetConVar("drgbase_tool_relationship_disposition"):GetInt()
+		local selected = ply:DrG_GetSelectedEntities()
 		if disp == D_LI then halo.Add(selected, DrGBase.CLR_GREEN)
 		elseif disp == D_HT then halo.Add(selected, DrGBase.CLR_RED)
 		elseif disp == D_FR then halo.Add(selected, DrGBase.CLR_PURPLE)

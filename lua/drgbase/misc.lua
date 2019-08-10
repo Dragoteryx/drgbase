@@ -6,43 +6,36 @@ NodeList.__index = NodeList
 function NodeList:New()
   local list = {}
   list._nodes = {}
-  list._has = {}
+  list._size = 0
   setmetatable(list, self)
   return list
 end
-function NodeList:Insert(pos, cost)
-  if self:Has(pos) then return self end
-  local id = tostring(pos)
-  self._has[id] = true
-  table.insert(self._nodes, {
-    pos = pos, cost = cost
-  })
-  table.sort(self._nodes, function(node1, node2)
-    return node1.cost < node2.cost
-  end)
+function NodeList:Insert(node, cost)
+  if self:Has(node) then return self end
+  self._nodes[tostring(node)] = {pos = node, cost = cost}
+  self._size = self._size+1
   return self
 end
-function NodeList:Update(pos, cost)
-  if self:Has(pos) then
-    local id = tostring(pos)
-    table.sort(self._nodes, function(node1, node2)
-      if tostring(node1) == id then node1.cost = cost end
-      if tostring(node2) == id then node2.cost = cost end
-      return node1.cost < node2.cost
-    end)
+function NodeList:Update(node, cost)
+  if self:Has(node) then
+    self._nodes[tostring(node)].cost = cost
     return self
-  else return self:Insert(pos, cost) end
+  else return self:Insert(node, cost) end
 end
 function NodeList:Fetch()
-  local node = table.remove(self._nodes, 1)
-  self._has[tostring(node.pos)] = false
+  local node = table.DrG_Fetch(self._nodes, function(node1, node2)
+    return node1.cost < node2.cost
+  end)
+  if not node then return end
+  self._nodes[tostring(node.pos)] = nil
+  self._size = self._size-1
   return node.pos
 end
-function NodeList:Has(pos)
-  return self._has[tostring(pos)] or false
+function NodeList:Has(node)
+  return self._nodes[tostring(node)] ~= nil
 end
 function NodeList:Empty()
-  return #self._nodes == 0
+  return self._size == 0
 end
 
 function DrGBase.Astar(pos, goal, options, callback)
@@ -54,7 +47,7 @@ function DrGBase.Astar(pos, goal, options, callback)
   costSoFar[tostring(pos)] = 0
   local i = 1
   while not openList:Empty() do
-    if coroutine.running() and i == 1 then
+    if coroutine.running() and i == 5 then
       i = 1
       coroutine.yield()
     else i = i+1 end
@@ -120,7 +113,7 @@ function DrGBase.GridAstar(pos, goal, grid, callback)
       end
     end,
     heuristic = function(next, goal)
-      return next:DrG_ManhattanDistance(goal)
+      return next:DrG_ManhattanDistance(goal)*1.05
     end
   }, callback)
   table.remove(path, #path)
@@ -273,12 +266,12 @@ if SERVER then
         --gm_construct:
         local from = Vector(0, 0, 100)
         local to = Entity(1):GetPos()
-        local path, success = DrGBase.NavmeshAstar(from, to, 50)
+        local path, success = DrGBase.NodegraphAstar(from, to, 50)
         if success then
           print("success")
           debugoverlay.Line(from, path[1], 1, DrGBase.CLR_RED, true)
           for i = 1, #path do
-            if path[i+1] then debugoverlay.Line(path[i], path[i+1], 1, DrGBase.CLR_GREEN, true) end
+            if path[i+1] then debugoverlay.Line(path[i], path[i+1], 1, DrGBase.CLR_WHITE, true) end
           end
         else print("failure") end
       end)

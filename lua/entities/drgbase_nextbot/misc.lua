@@ -8,7 +8,7 @@ local PossessTargetAll = CreateConVar("drgbase_possession_targetall", "1", {FCVA
 -- Getters/setters --
 
 function ENT:IsInRange(pos, range)
-  return self:GetHullRangeSquaredTo(pos) <= math.pow(range*self:GetScale(), 2)
+  return self:GetHullRangeSquaredTo(pos) <= (range*self:GetScale())^2
 end
 function ENT:GetHullRangeTo(pos)
   if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end

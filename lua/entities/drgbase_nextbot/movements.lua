@@ -1,6 +1,8 @@
 
 -- Convars --
 
+local ComputeDelay = CreateConVar("drgbase_compute_delay", "0.1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local ComputeOptim = CreateConVar("drgbase_compute_optimisation", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local AvoidObstacles = CreateConVar("drgbase_avoid_obstacles", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local MultSpeed = CreateConVar("drgbase_multiplier_speed", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
@@ -282,23 +284,25 @@ if SERVER then
 
   -- Coroutine --
 
+  function ENT:ShouldCompute(path, pos)
+    if not IsValid(path) then return true end
+    if path:GetEnd():DistToSqr(pos) <= (path:GetGoalTolerance()*#path:GetAllSegments()*1.5)^2 then return false end
+    if path:GetAge() < ComputeDelay:GetFloat()*(1+ComputeOptim:GetFloat()*0.1*(#DrGBase.GetNextbots()-1)) then return false end
+    return true
+  end
+
   function ENT:FollowPath(pos, tolerance, generator)
     if isentity(pos) then pos = pos:GetPos() end
     tolerance = isnumber(tolerance) and tolerance or 20
     if navmesh.IsLoaded() and self:GetGroundEntity():IsWorld() then
-      pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
       local path = self:GetPath()
       path:SetGoalTolerance(tolerance)
-      if IsValid(path) then
-        local tol = (tolerance*(path:LastSegment().distanceFromStart-path:GetCurrentGoal().distanceFromStart))/100
-        if tol < tolerance then tol = tolerance end
-        if path:GetEnd():DistToSqr(pos) > tol^2 then
-          path:Compute(self, pos, generator)
-        end
-      else path:Compute(self, pos, generator) end
+      pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
+      if not IsValid(path) and
+      self:GetRangeSquaredTo(pos) <= path:GetGoalTolerance()^2 then return "reached" end
+      if self:ShouldCompute(path, pos) then path:Compute(self, pos, generator) end
       if not IsValid(path) then return "unreachable" end
       local current = path:GetCurrentGoal()
-      local ladder = current.ladder
       if current.type == 2 then
         local ledge = self:FindLedge()
         if isvector(ledge) then
@@ -315,8 +319,9 @@ if SERVER then
             self:HandleStuck()
             return "stuck"
           else return "moving" end
-        else return "obstacles" end
+        else return "obstacle" end
       elseif current.type == 4 then
+        local ladder = current.ladder
         if not self.ClimbLaddersUp then return "unreachable" end
         if self:GetHullRangeSquaredTo(ladder:GetBottom()) < self.LaddersUpDistance^2 then
           self:ClimbLadderUp(ladder)
@@ -327,6 +332,7 @@ if SERVER then
           return "moving", ladder
         else return "obstacle" end
       elseif current.type == 5 then
+        local ladder = current.ladder
         if not self.ClimbLaddersDown then
           local drop = ladder:GetTop().z - ladder:GetBottom().z
           if drop <= self.loco:GetDeathDropHeight() then
@@ -336,7 +342,7 @@ if SERVER then
                 self:HandleStuck()
                 return "stuck", ladder
               else return "moving", ladder end
-            else return "obstacles" end
+            else return "obstacle" end
           else return "unreachable" end
         elseif self:GetHullRangeSquaredTo(ladder:GetTop()) < self.LaddersDownDistance^2 then
           self:ClimbLadderDown(ladder)
@@ -348,7 +354,7 @@ if SERVER then
             self:HandleStuck()
             return "stuck", ladder
           else return "moving", ladder end
-        else return "obstacles" end
+        else return "obstacle" end
       elseif not self:LastComputeSuccess() and
       path:GetCurrentGoal().distanceFromStart == path:LastSegment().distanceFromStart then
         return "unreachable"
@@ -359,7 +365,7 @@ if SERVER then
           self:HandleStuck()
           return "stuck"
         else return "moving" end
-      else return "obstacles" end
+      else return "obstacle" end
     else
       local ledge = self:FindLedge()
       if isvector(ledge) then
@@ -373,7 +379,7 @@ if SERVER then
             return "stuck"
           else return "moving" end
         else return "reached" end
-      else return "obstacles" end
+      else return "obstacle" end
     end
   end
 
@@ -386,7 +392,7 @@ if SERVER then
       elseif res == "unreachable" then
         return false
       else
-        res = callback(self:GetPath())
+        res = callback(self, self:GetPath())
         if isbool(res) then return res end
         self:YieldCoroutine(true)
       end
@@ -402,7 +408,7 @@ if SERVER then
       elseif res == "unreachable" then
         return false
       else
-        res = callback(self:GetPath())
+        res = callback(self, self:GetPath())
         if isbool(res) then return res end
         self:YieldCoroutine(true)
       end
@@ -670,7 +676,6 @@ if SERVER then
   function ENT:CustomClimbing() end
 
   function ENT:HandleStuck()
-    self:RecomputePath()
     self.loco:ClearStuck()
   end
 

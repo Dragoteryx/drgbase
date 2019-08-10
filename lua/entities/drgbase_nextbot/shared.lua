@@ -136,6 +136,7 @@ DrGBase.IncludeFile("misc.lua")
 -- Convars --
 local NextbotTickrate = CreateConVar("drgbase_nextbot_tickrate", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local MultHealth = CreateConVar("drgbase_multiplier_health", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local EnablePatrol = CreateConVar("drgbase_ai_patrol", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Initialize --
 function ENT:Initialize()
@@ -316,9 +317,7 @@ if SERVER then
         local msg = "Nextbots need a navmesh to navigate around the map. "
         if game.SinglePlayer() then msg = msg.."You can generate a navmesh using the command 'nav_generate' in the console."
         else msg = msg.."If you are the server owner you can generate a navmesh using the command 'nav_generate' in the server console." end
-        DrGBase.Error(msg.."\nSet 'drgbase_navmesh_error' to 0 to disable this message.", {
-          player = ply, color = DrGBase.CLR_GREEN, chat = true
-        })
+        DrGBase.Error(msg.."\nSet 'drgbase_navmesh_error' to 0 to disable this message.", {player = ply, color = DrGBase.CLR_GREEN, chat = true})
       end
     else ent:Remove() end
   end)
@@ -401,12 +400,15 @@ if SERVER then
       self:OnSpawn()
     end
     while true do
-      if self:IsPossessed() then
-        self:_HandlePossession(true)
-      elseif not self:IsAIDisabled() then
-        self:AIBehaviour()
-      end
+      self:_HandleBehaviour()
       self:YieldCoroutine(true)
+    end
+  end
+  function ENT:_HandleBehaviour()
+    if self:IsPossessed() then
+      self:_HandlePossession(true)
+    elseif not self:IsAIDisabled() then
+      self:AIBehaviour()
     end
   end
 
@@ -466,7 +468,7 @@ if SERVER then
       elseif self:IsInRange(enemy, self.RangeAttackRange) then
         self:OnRangeAttack(enemy)
       end
-    elseif relationship == D_FR and self:IsInRange(enemy, self.WatchAfraidOfRange) then
+    elseif relationship == D_FR then
       local visible = self:Visible(enemy)
       if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
         if self:OnAvoidAfraidOf(enemy) ~= true then
@@ -484,6 +486,7 @@ if SERVER then
   end
 
   function ENT:Patrol()
+    if not EnablePatrol:GetBool() then return end
     local patrol = self:GetPatrolPos(1)
     local res = self:OnPatrolling(patrol)
     if not isbool(res) then

@@ -1,10 +1,5 @@
 if CLIENT then return end
 
--- Convars --
-
-local ComputeDelay = CreateConVar("drgbase_compute_delay", "0.1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
-local ComputeOptim = CreateConVar("drgbase_compute_optimisation", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
-
 -- Handlers --
 
 function ENT:_InitPath()
@@ -23,6 +18,11 @@ end
 
 function ENT:LastComputeSuccess()
   return self._DrGBaseLastComputeSuccess or false
+end
+function ENT:LastComputeTime()
+  local path = self:GetPath()
+  if not IsValid(path) then return -1 end
+  return CurTime()-path:GetAge()
 end
 
 -- Functions --
@@ -51,10 +51,10 @@ function ENT:ComputePath(pos, generator)
   return path:Compute(self, pos, generator)
 end
 
-function ENT:RecomputePath(generator)
+function ENT:RefreshPath(generator)
   local path = self:GetPath()
   if not IsValid(path) then return end
-  return path:DrG_ForceCompute(self, path:GetEnd(), generator)
+  return path:Compute(self, path:GetEnd(), generator)
 end
 
 function ENT:BlacklistNavArea(area, blacklist)
@@ -143,30 +143,18 @@ function ENT:OnComputePathLedge(from, to, height) return 1 end
 function ENT:OnComputePathStep(from, to, height) return 0 end
 function ENT:OnComputePathJump(from, to, height) return 1 end
 function ENT:OnComputePathDrop(from, to, drop) return 1 end
-function ENT:OnComputePathUnderwater(cost, dist) return 1 end
+function ENT:OnComputePathUnderwater(from, to) return 1 end
 
 -- Meta --
 
 local pathMETA = FindMetaTable("PathFollower")
 
-local old_Compute = pathMETA.Compute
+DrGBase.OLD_COMPUTE = DrGBase.OLD_COMPUTE or pathMETA.Compute
 function pathMETA:Compute(nextbot, pos, generator)
   if nextbot.IsDrGNextbot then
-    local delay = math.Clamp(ComputeDelay:GetFloat()*(1+(#DrGBase.GetNextbots()-1)/(10/ComputeOptim:GetFloat())), 0.1, math.huge)
-    if not IsValid(self) or CurTime() > nextbot._DrGBaseLastComputeTime + delay then
-      if not isfunction(generator) then generator = nextbot:GetPathGenerator() end
-      nextbot._DrGBaseLastComputeSuccess = old_Compute(self, nextbot, pos, generator)
-      nextbot._DrGBaseLastComputeTime = CurTime()
-      return nextbot._DrGBaseLastComputeSuccess
-    else
-      self:ResetAge()
-      return nextbot._DrGBaseLastComputeSuccess
-    end
-  else return old_Compute(self, nextbot, pos, generator) end
-end
-
-function pathMETA:DrG_ForceCompute(nextbot, pos, generator)
-  if not nextbot.IsDrGNextbot then return end
-  nextbot._DrGBaseLastComputeTime = -999999
-  return self:Compute(nextbot, pos, generator)
+    --print("compute", nextbot)
+    if not isfunction(generator) then generator = nextbot:GetPathGenerator() end
+    nextbot._DrGBaseLastComputeSuccess = DrGBase.OLD_COMPUTE(self, nextbot, pos, generator)
+    return nextbot._DrGBaseLastComputeSuccess
+  else return DrGBase.OLD_COMPUTE(self, nextbot, pos, generator) end
 end
