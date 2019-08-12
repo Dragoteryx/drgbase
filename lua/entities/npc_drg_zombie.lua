@@ -83,11 +83,15 @@ if SERVER then
     if hitgroup == HITGROUP_HEAD then
 
     else
+      self:SetBodygroup(1, 0)
       local headcrab = ents.Create("npc_drg_headcrab")
       if not IsValid(headcrab) then return end
       headcrab:SetPos(self:EyePos())
       headcrab:SetAngles(self:GetAngles())
       headcrab:Spawn()
+      if IsValid(self:GetCreator()) then
+        self:GetCreator():DrG_AddUndo(headcrab, "NPC", "Undone Headcrab")
+      end
     end
   end
 

@@ -12,15 +12,9 @@ ENT.BloodColor = BLOOD_COLOR_GREEN
 ENT.SpawnHealth = 40
 
 -- Sounds --
-ENT.OnSpawnSounds = {}
-ENT.OnIdleSounds = {}
-ENT.IdleSoundDelay = 2
-ENT.ClientIdleSounds = false
-ENT.OnDamageSounds = {}
-ENT.DamageSoundDelay = 0.25
-ENT.OnDeathSounds = {}
-ENT.OnDownedSounds = {}
-ENT.Footsteps = {}
+ENT.OnIdleSounds = {"NPC_HeadCrab.Idle"}
+ENT.OnDamageSounds = {"NPC_HeadCrab.Pain"}
+ENT.OnDeathSounds = {"NPC_HeadCrab.Die"}
 
 -- AI --
 ENT.RangeAttackRange = 150
@@ -46,6 +40,7 @@ ENT.EyeOffset = Vector(4, 0, 0)
 
 -- Possession --
 ENT.PossessionEnabled = true
+ENT.PossessionCrosshair = true
 ENT.PossessionViews = {
   {
     offset = Vector(0, 10, 10),
@@ -57,9 +52,30 @@ ENT.PossessionViews = {
     eyepos = true
   }
 }
-ENT.PossessionBinds = {}
+ENT.PossessionBinds = {
+  [IN_ATTACK] = {{
+    coroutine = true,
+    onkeydown = function(self)
+      self:HeadcrabLeap(self:PossessorTrace().HitPos)
+    end
+  }}
+}
 
 if SERVER then
+
+  -- Headcrab --
+
+  function ENT:HeadcrabLeap(pos)
+    self:FaceTo(pos)
+    self.OnIdleSounds = {}
+    self:PlaySequence("jumpattack_broadcast")
+    self:PauseCoroutine(0.5)
+    self.CanBite = true
+    self:EmitSound("NPC_Headcrab.Attack")
+    self:Leap(pos, 400)
+    self.CanBite = false
+    self.OnIdleSounds = {"NPC_HeadCrab.Idle"}
+  end
 
   -- Init/Think --
 
@@ -71,16 +87,13 @@ if SERVER then
   -- AI --
 
   function ENT:OnRangeAttack(enemy)
-    self:FaceTo(enemy)
-    self:PlaySequence("jumpattack_broadcast")
-    self:PauseCoroutine(0.5)
-    self.CanBite = true
-    self:Leap(enemy:EyePos(), 400)
-    self.CanBite = false
+    self:HeadcrabLeap(enemy:EyePos()-Vector(0, 0, 10))
   end
   function ENT:OnContact(ent)
+    if not IsValid(ent) then return end
     if self.CanBite and
     (self:IsPossessed() or ent == self:GetEnemy()) then
+      self:EmitSound("NPC_HeadCrab.Bite")
       self.CanBite = false
       local dmg = DamageInfo()
       dmg:SetDamage(20)
@@ -96,6 +109,24 @@ if SERVER then
   end
   function ENT:OnIdle()
     self:AddPatrolPos(self:RandomPos(1500))
+  end
+
+  -- Damage --
+
+  function ENT:OnTakeDamage(dmg)
+    local attacker = dmg:GetAttacker()
+    if IsValid(attacker) and attacker:IsPlayer() then
+      local weapon = attacker:GetActiveWeapon()
+      if IsValid(weapon) and weapon:GetClass() == "weapon_crowbar" then
+        return 2
+      end
+    end
+  end
+
+  -- Sounds --
+
+  function ENT:OnNewEnemy()
+    self:EmitSound("NPC_HeadCrab.Alert")
   end
 
 end

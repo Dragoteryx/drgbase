@@ -234,9 +234,9 @@ if SERVER then
     undo.Create(type)
     undo.SetPlayer(self)
     undo.AddEntity(ent)
-    if isstring(text) then
-      undo.SetCustomUndoText(text)
-    end
+    if not isstring(text) then
+      undo.SetCustomUndoText("Undone #"..ent:GetClass())
+    else undo.SetCustomUndoText(text) end
     undo.Finish()
   end
 

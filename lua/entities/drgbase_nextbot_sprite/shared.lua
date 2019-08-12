@@ -80,17 +80,19 @@ else
       local selected = LocalPlayer():DrG_GetSelectedEntities()[1]
       if selected == self then return end
     end
-    local anim = self:GetSpriteAnim()
-    if anim ~= "" then
-      if self:SpriteAnim8Dir(anim) then
-        DrawSprite(self, string.lower(self:CalcPosDirection(EyePos(), true)).."_"..anim)
-      elseif self:SpriteAnim4Dir(anim) then
-        DrawSprite(self, string.lower(self:CalcPosDirection(EyePos(), false)).."_"..anim)
-      else DrawSprite(self, anim) end
+    if self:ShouldDraw() then
+      local anim = self:GetSpriteAnim()
+      if anim ~= "" then
+        if self:SpriteAnim8Dir(anim) then
+          DrawSprite(self, string.lower(self:CalcPosDirection(EyePos(), true)).."_"..anim)
+        elseif self:SpriteAnim4Dir(anim) then
+          DrawSprite(self, string.lower(self:CalcPosDirection(EyePos(), false)).."_"..anim)
+        else DrawSprite(self, anim) end
+      end
+      self:_BaseDraw()
+      self:CustomDraw()
     end
     self:_DrawDebug()
-    self:_BaseDraw()
-    self:CustomDraw()
     if self:IsPossessedByLocalPlayer() then
       self:PossessionDraw()
     end
@@ -98,5 +100,6 @@ else
   function ENT:_BaseDraw() end
   function ENT:CustomDraw() end
   function ENT:PossessionDraw() end
+  function ENT:ShouldDraw() return true end
 
 end

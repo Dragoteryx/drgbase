@@ -12,6 +12,9 @@ end
 function ENT:IsDown()
   return self:GetNW2Bool("DrGBaseDown")
 end
+function ENT:IsDowned()
+  return self:IsDown()
+end
 function ENT:IsDying()
   return self:GetNW2Bool("DrGBaseDying")
 end

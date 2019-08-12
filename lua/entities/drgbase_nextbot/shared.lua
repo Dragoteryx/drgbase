@@ -535,10 +535,12 @@ else
       local selected = LocalPlayer():DrG_GetSelectedEntities()[1]
       if selected == self then return end
     end
-    self:DrawModel()
-    self:_DrawDebug()
-    self:_BaseDraw()
-    self:CustomDraw()
+    if self:ShouldDraw() then
+      self:DrawModel()
+      self:_BaseDraw()
+      self:CustomDraw()
+    end
+    self:_DrawDebug()    
     if self:IsPossessedByLocalPlayer() then
       self:PossessionDraw()
     end
@@ -546,6 +548,7 @@ else
   function ENT:_BaseDraw() end
   function ENT:CustomDraw() end
   function ENT:PossessionDraw() end
+  function ENT:ShouldDraw() return true end
 
   function ENT:_DrawDebug()
     if not GetConVar("developer"):GetBool() then return end

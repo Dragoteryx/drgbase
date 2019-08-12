@@ -128,6 +128,7 @@ if SERVER then
     if #self.OnDeathSounds > 0 then
       self:EmitSound(self.OnDeathSounds[math.random(#self.OnDeathSounds)])
     end
+    if dmg:IsDamageType(DMG_DISSOLVE) then self:DrG_Dissolve() end
     if isfunction(self.OnDeath) then
       local data = util.DrG_SaveDmg(dmg)
       self:CallInCoroutine(function(self, delay)
@@ -135,9 +136,7 @@ if SERVER then
         self:SetHealth(0)
         self:SetNW2Bool("DrGBaseDead", true)
         local now = CurTime()
-        dmg = util.DrG_LoadDmg(data)
-        if dmg:IsDamageType(DMG_DISSOLVE) then self:DrG_Dissolve() end
-        dmg = self:OnDeath(dmg, delay, hitgroup)
+        dmg = self:OnDeath(util.DrG_LoadDmg(data), delay, hitgroup)
         if dmg == nil then
           dmg = util.DrG_LoadDmg(data)
           if CurTime() > now then
@@ -197,6 +196,7 @@ if SERVER then
   end
 
   function ENT:_HandleContact(ent)
+    if ent == self:GetPossessor() then return true end
     local class = ent:GetClass()
     if ent.IsDrGProjectile then
       self:SetNW2Entity("DrGBaseLastTouchedEntity", ent)
