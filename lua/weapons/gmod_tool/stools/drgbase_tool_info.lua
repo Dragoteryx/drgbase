@@ -40,7 +40,7 @@ end
 
 if CLIENT then
 	DrGBase.INFO_TOOL = {}
-	DrGBase.INFO_TOOL.Viewcam = false
+	DrGBase.INFO_TOOL.Viewcam = nil
 	DrGBase.INFO_TOOL.RT = GetRenderTarget("DrGBaseInfoToolRT", 256, 256, false)
 	DrGBase.INFO_TOOL.Mat = CreateMaterial("DrGBaseInfoToolMaterial", "GMODScreenspace", {
 		["$basetexture"] = DrGBase.INFO_TOOL.RT,
@@ -123,10 +123,9 @@ function TOOL:DrawToolScreen(width, height)
 				angles = selected:EyeAngles(),
 				dopostprocess = false,
 				drawviewmodel = false,
-				drawmonitors = true,
-				fov = 60,
+				drawmonitors = true
 			})
-			DrGBase.INFO_TOOL.Viewcam = false
+			DrGBase.INFO_TOOL.Viewcam = nil
 			render.PopRenderTarget()
 			owner.ShouldDisableLegs = legs
 			DrGBase.INFO_TOOL.Mat:SetTexture("$basetexture", DrGBase.INFO_TOOL.RT)
@@ -178,7 +177,9 @@ if CLIENT then
 			if selected:IsPossessed() then
 				halo.Add({selected}, DrGBase.CLR_GREEN, nil, nil, nil, nil, true)
 			else halo.Add({selected}, DrGBase.CLR_RED, nil, nil, nil, nil, true) end
-		elseif not DrGBase.INFO_TOOL.Viewcam then halo.Add({selected}, DrGBase.CLR_CYAN, nil, nil, nil, nil, true) end
+		elseif not DrGBase.INFO_TOOL.Viewcam then
+			halo.Add({selected}, DrGBase.CLR_CYAN, nil, nil, nil, nil, true)
+		end
   end)
 
 	hook.Add("ShouldDrawLocalPlayer", "DrGBaseNextbotInfoToolDrawPlayer", function(ply)
@@ -188,7 +189,10 @@ if CLIENT then
     if tool == nil or tool.Mode ~= "drgbase_tool_info" then return end
 		local selected = ply:DrG_GetSelectedEntities()[1]
 		if not IsValid(selected) then return end
+		local page = ply:GetNW2Int("DrGBaseNextbotInfoToolPage")
+		local pageName = PAGE_NAMES[page] or "Invalid"
+		if pageName ~= "Viewcam" then return end
 		cam.Start3D() cam.End3D()
-		if DrGBase.INFO_TOOL.Viewcam then return true end
+		return DrGBase.INFO_TOOL.Viewcam
 	end)
 end
