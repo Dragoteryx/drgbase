@@ -33,6 +33,9 @@ end
 function ENT:HaveNemesis()
   return self:HasNemesis()
 end
+function ENT:HadNemesis()
+  return self:GetNW2Bool("DrGBaseNemesis") and self:HadEnemy()
+end
 
 -- Functions --
 
