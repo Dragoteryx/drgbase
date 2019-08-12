@@ -465,7 +465,8 @@ if SERVER then
       if not IsValid(enemy) or not self:Visible(enemy) then return end
       if self:IsInRange(enemy, self.MeleeAttackRange) and
       self:OnMeleeAttack(enemy) ~= false then
-      elseif self:IsInRange(enemy, self.RangeAttackRange) then
+      elseif not self:IsInRange(enemy, self.AvoidEnemyRange) and
+      self:IsInRange(enemy, self.RangeAttackRange) then
         self:OnRangeAttack(enemy)
       end
     elseif relationship == D_FR then
@@ -479,7 +480,8 @@ if SERVER then
       if not IsValid(enemy) or not self:Visible(enemy) then return end
       if self:IsInRange(enemy, self.MeleeAttackRange) and
       self:OnMeleeAttack(enemy) ~= false then
-      elseif self:IsInRange(enemy, self.RangeAttackRange) then
+      elseif not self:IsInRange(enemy, self.AvoidEnemyRange) and
+      self:IsInRange(enemy, self.RangeAttackRange) then
         self:OnRangeAttack(enemy)
       end
     elseif isvector(self:GetPatrolPos(1)) then self:Patrol() end

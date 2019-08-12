@@ -105,10 +105,16 @@ function TOOL:DrawToolScreen(width, height)
 			draw.SimpleText("Movement:", "DermaLarge", 10, 130, DrGBase.CLR_LIGHTGRAY)
 			draw.SimpleText(selected:GetMovement():DrG_ToString(2), "DermaLarge", 10, 170, DrGBase.CLR_CYAN)
 		elseif pageName == "Animation" then
-			draw.SimpleText("Sequence:", "DermaLarge", 10, 10, DrGBase.CLR_LIGHTGRAY)
-			draw.SimpleText(selected:GetSequenceName(selected:GetSequence()), "DermaLarge", 10, 50, DrGBase.CLR_CYAN)
-			draw.SimpleText("Activity:", "DermaLarge", 10, 90, DrGBase.CLR_LIGHTGRAY)
-			draw.SimpleText(selected:GetSequenceActivityName(selected:GetSequence()), "DermaLarge", 10, 130, DrGBase.CLR_CYAN)
+			if selected.IsDrGNextbotSprite then
+				draw.SimpleText("Animation:", "DermaLarge", 10, 10, DrGBase.CLR_LIGHTGRAY)
+				draw.SimpleText(selected:GetSpriteAnim(), "DermaLarge", 10, 50, DrGBase.CLR_CYAN)
+				draw.SimpleText("Frame: "..tostring(selected:GetSpriteFrame()), "DermaLarge", 10, 90, DrGBase.CLR_LIGHTGRAY)
+			else
+				draw.SimpleText("Sequence:", "DermaLarge", 10, 10, DrGBase.CLR_LIGHTGRAY)
+				draw.SimpleText(selected:GetSequenceName(selected:GetSequence()), "DermaLarge", 10, 50, DrGBase.CLR_CYAN)
+				draw.SimpleText("Activity:", "DermaLarge", 10, 90, DrGBase.CLR_LIGHTGRAY)
+				draw.SimpleText(selected:GetSequenceActivityName(selected:GetSequence()), "DermaLarge", 10, 130, DrGBase.CLR_CYAN)
+			end
 			draw.SimpleText("Attacking? "..(selected:IsAttack(selected:GetSequence()) and "True" or "False"), "DermaLarge", 10, 170, DrGBase.CLR_LIGHTGRAY)
 		elseif pageName == "Viewcam" then
 			local legs = owner.ShouldDisableLegs

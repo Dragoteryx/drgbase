@@ -77,6 +77,20 @@ if SERVER then
     self:AddPatrolPos(self:RandomPos(1500))
   end
 
+  -- Damage --
+
+  function ENT:OnDeath(dmg, delay, hitgroup)
+    if hitgroup == HITGROUP_HEAD then
+
+    else
+      local headcrab = ents.Create("npc_drg_headcrab")
+      if not IsValid(headcrab) then return end
+      headcrab:SetPos(self:EyePos())
+      headcrab:SetAngles(self:GetAngles())
+      headcrab:Spawn()
+    end
+  end
+
   -- Animations/Sounds --
 
   function ENT:OnNewEnemy()

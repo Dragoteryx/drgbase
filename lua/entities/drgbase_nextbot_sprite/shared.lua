@@ -26,6 +26,13 @@ ENT.ClimbOffset = Vector(-10, 0, 0)
 -- Detection --
 ENT.SightFOV = 360
 
+-- Misc --
+
+function ENT:IsAttack(anim)
+  if self:GetNW2Bool("DrGBaseAnimAttacks/"..anim) then return true
+  else return string.find(string.lower(anim), "attack") ~= nil end
+end
+
 if SERVER then
   AddCSLuaFile()
 
@@ -41,13 +48,8 @@ if SERVER then
   function ENT:IsAttacking()
     return self:IsAttack(self:GetSpriteAnim())
   end
-  function ENT:IsAttack(anim)
-    if self._DrGBaseAnimAttacks[anim] then return true
-    elseif self._DrGBaseAnimAttacks[anim] == false then return false
-    else return string.find(string.lower(anim), "attack") ~= nil end
-  end
   function ENT:SetAttack(anim, attack)
-    self._DrGBaseAnimAttacks[anim] = tobool(attack)
+    self:SetNW2Bool("DrGBaseAnimAttacks/"..anim, attack)
   end
 
   function ENT:SequenceAttack() end
@@ -74,6 +76,10 @@ else
   function ENT:ShouldFlipSprite() return false end
 
   function ENT:DrawTranslucent()
+    if DrGBase.INFO_TOOL.Viewcam then
+      local selected = LocalPlayer():DrG_GetSelectedEntities()[1]
+      if selected == self then return end
+    end
     local anim = self:GetSpriteAnim()
     if anim ~= "" then
       if self:SpriteAnim8Dir(anim) then

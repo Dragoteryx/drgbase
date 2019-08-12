@@ -60,7 +60,7 @@ function ENT:TraceLine(vec, data)
   trdata.endpos = data.endpos or trdata.start + vec
   trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
   if self.IsDrGNextbot then
-    trdata.mask = data.mask or self:GetSolidMask()
+    if SERVER then trdata.mask = data.mask or self:GetSolidMask() end
     trdata.filter = data.filter or {self, self:GetWeapon(), self:GetPossessor()}
   else trdata.filter = data.filter or self end
   return util.DrG_TraceLine(trdata)
@@ -81,7 +81,7 @@ function ENT:TraceHull(vec, data)
   trdata.endpos = data.endpos or trdata.start + vec
   trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
   if self.IsDrGNextbot then
-    trdata.mask = data.mask or self:GetSolidMask()
+    if SERVER then trdata.mask = data.mask or self:GetSolidMask() end
     trdata.filter = data.filter or {self, self:GetWeapon(), self:GetPossessor()}
   else trdata.filter = data.filter or self end
   trdata.maxs = data.maxs or bound1

@@ -1,5 +1,5 @@
-ENT.Base = "base_entity"
 ENT.Type = "point"
+ENT.Base = "base_entity"
 ENT.PrintName = "Ragdoll Attachment"
 ENT.Category = "DrGBase"
 function ENT:SetupDataTables()

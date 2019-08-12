@@ -639,6 +639,7 @@ if SERVER then
   end
 
   function ENT:UpdateSpeed()
+    if self:IsPlayingAnimation() then return end
     if self:OnWalkframes(self:GetSequenceName(self:GetSequence())) then
       local speed = 0
       local seq = self:GetSequence()
