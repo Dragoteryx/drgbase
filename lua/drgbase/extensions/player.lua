@@ -144,6 +144,22 @@ if SERVER then
     self:DrG_ToggleEntitySelect(ent, mode)
   end
 
+  function plyMETA:DrG_SingleEntitySelect(ent, mode)
+    if not self:DrG_IsEntitySelected(ent, mode) then
+      self:DrG_ClearSelectedEntities(mode)
+      self:DrG_SelectEntity(ent, mode)
+    else self:DrG_DeselectEntity(ent, mode) end
+  end
+
+  hook.Add("SetupPlayerVisibility", "DrGBaseSelectedEntitiesAddToPVS", function(ply)
+		local wep = ply:GetActiveWeapon()
+    if not IsValid(wep) or wep:GetClass() ~= "gmod_tool" then return end
+    if ply:GetTool() == nil then return end
+		for ent in ply:DrG_SelectedEntities() do
+      AddOriginToPVS(ent:GetPos())
+    end
+	end)
+
   -- Factions --
 
   function plyMETA:DrG_JoinFaction(faction)

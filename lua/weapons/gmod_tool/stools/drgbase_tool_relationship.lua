@@ -74,6 +74,6 @@ if CLIENT then
 		if disp == D_LI then halo.Add(selected, DrGBase.CLR_GREEN)
 		elseif disp == D_HT then halo.Add(selected, DrGBase.CLR_RED)
 		elseif disp == D_FR then halo.Add(selected, DrGBase.CLR_PURPLE)
-		else halo.Add(selected, DrGBase.CLR_CYAN) end
+		else halo.Add(selected, DrGBase.CLR_CYAN, nil, nil, nil, nil, true) end
   end)
 end

@@ -89,7 +89,7 @@ if SERVER then
   function ENT:CustomInitialize()
     self:SetDefaultRelationship(D_HT)
     self:SetSelfClassRelationship(D_LI)
-    self:SetPlayersRelationship(D_HT, 2)
+    self:SetPlayersRelationship(D_NU, 2)
     for i, walk in ipairs({
       self.RunAnimation,
       self.WalkAnimation

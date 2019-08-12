@@ -509,17 +509,7 @@ else
 
   function ENT:_HandleNetMessage(name, ...)
     local args, n = table.DrG_Pack(...)
-    if name == "DrGBaseHasSpotted" then
-      local ent = args[1]
-      self._DrGBaseSpotted[ent] = true
-      self:OnSpotted(ent)
-      return true
-    elseif name == "DrGBaseHasLost" then
-      local ent = args[1]
-      self._DrGBaseSpotted[ent] = false
-      self:OnLost(ent)
-      return true
-    elseif name == "DrGBasePickupWeapon" then
+    if name == "DrGBasePickupWeapon" then
       local weapon = args[1]
       if not IsValid(weapon) then return end
       self._DrGBaseWeapons[weapon:GetClass()] = weapon
@@ -539,6 +529,7 @@ else
   local DisplaySight = CreateClientConVar("drgbase_display_sight", "0")
 
   function ENT:Draw()
+    if DrGBase.INFO_TOOL.Viewcam then return end
     self:DrawModel()
     self:_DrawDebug()
     self:_BaseDraw()

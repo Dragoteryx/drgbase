@@ -19,6 +19,18 @@ function ENT:GetHullRangeSquaredTo(pos)
   return self:NearestPoint(pos):DistToSqr(pos)
 end
 
+function ENT:IsAttack(seq)
+  if isstring(seq) then seq = self:LookupSequence(seq)
+  elseif not isnumber(seq) then return false end
+  if seq == -1 then return false end
+  if self:GetNW2Bool("DrGBaseAnimAttack/"..tostring(seq)) then return true
+  elseif string.find(string.lower(self:GetSequenceName(seq)), "attack") ~= nil then
+    return true
+  elseif string.find(self:GetSequenceActivityName(seq), "ATTACK") ~= nil then
+    return true
+  else return  false end
+end
+
 -- Functions --
 
 function ENT:EmitSlotSound(slot, duration, soundName, soundLevel, pitchPercent, volume, channel)
@@ -77,7 +89,7 @@ end
 
 function ENT:Height()
   local bound1, bound2 = self:GetCollisionBounds()
-  return math.abs(bound1.z - bound2.z)
+  return math.max(bound1.z, bound2.z)
 end
 
 function ENT:RandomizeBodygroup(id)
@@ -92,6 +104,7 @@ end
 -- Hooks --
 
 function ENT:OnAngleChange() end
+function ENT:OnFireBullets() end
 
 -- Handlers --
 
@@ -111,6 +124,9 @@ end
 
 hook.Add("PhysgunDrop", "DrGBaseNextbotPhysgunDrop", function(ply, ent)
   if ent.IsDrGNextbot then ent:Timer(0, ent.SetVelocity, Vector(0, 0, 0)) end
+end)
+hook.Add("EntityFireBullets", "DrGBaseNextbotFireBullets", function(ent, bullet)
+  if ent.IsDrGNextbot then ent:OnFireBullets(bullet) end
 end)
 
 -- Meta --
@@ -279,21 +295,10 @@ if SERVER then
     end
     return false
   end
-  function ENT:IsAttack(seq)
-    if isstring(seq) then seq = self:LookupSequence(seq)
-    elseif not isnumber(seq) then return false end
-    if seq == -1 then return false end
-    if isbool(self._DrGBaseAnimAttacks[seq]) then return self._DrGBaseAnimAttacks[seq]
-    elseif string.find(string.lower(self:GetSequenceName(seq)), "attack") ~= nil then
-      return true
-    elseif string.find(self:GetSequenceActivityName(seq), "ATTACK") ~= nil then
-      return true
-    else return  false end
-  end
   function ENT:SetAttack(seq, attack)
     if isstring(seq) then seq = self:LookupSequence(seq)
     elseif not isnumber(seq) then return false end
-    if seq ~= 1 then self._DrGBaseAnimAttacks[seq] = tobool(attack) end
+    if seq ~= 1 then self:SetNW2Bool("DrGBaseAnimAttack/"..tostring(seq), attack) end
   end
 
   function ENT:SequenceAttack(seq, cycle, attack, callback)

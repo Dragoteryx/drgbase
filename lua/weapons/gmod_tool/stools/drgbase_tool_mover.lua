@@ -42,6 +42,6 @@ if CLIENT then
     if not IsValid(wep) or wep:GetClass() ~= "gmod_tool" then return end
     local tool = ply:GetTool()
     if tool == nil or tool.Mode ~= "drgbase_tool_mover" then return end
-    halo.Add(ply:DrG_GetSelectedEntities(), DrGBase.CLR_CYAN)
+    halo.Add(ply:DrG_GetSelectedEntities(), DrGBase.CLR_CYAN, nil, nil, nil, nil, true)
   end)
 end

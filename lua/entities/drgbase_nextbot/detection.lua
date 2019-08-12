@@ -1,6 +1,7 @@
 
 -- Convars --
 
+local EnableSight = CreateConVar("drgbase_ai_sight", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local EnableHearing = CreateConVar("drgbase_ai_hearing", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Getters/setters --
@@ -15,6 +16,7 @@ function ENT:GetSightLuminosityRange()
   return self:GetNW2Float("DrGBaseMinLuminosity"), self:GetNW2Float("DrGBaseMaxLuminosity")
 end
 function ENT:IsBlind()
+  if not EnableSight:GetBool() then return true end
   if self:GetCooldown("DrGBaseBlind") > 0 then return true end
   return self:GetSightFOV() <= 0 or self:GetSightRange() <= 0
 end
@@ -23,7 +25,8 @@ function ENT:GetHearingCoefficient()
   return self:GetNW2Int("DrGBaseHearingCoefficient")
 end
 function ENT:IsDeaf()
-  return self:GetHearingCoefficient() <= 0
+  if not EnableHearing:GetBool() then return true
+  else return self:GetHearingCoefficient() <= 0 end
 end
 
 -- Functions --

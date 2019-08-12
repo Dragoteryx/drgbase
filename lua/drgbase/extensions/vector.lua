@@ -144,3 +144,15 @@ end
 function vecMETA:DrG_Equals(vec)
   return self.x == vec.x and self.y == vec.y and self.z == vec.z
 end
+
+function vecMETA:DrG_Round(round)
+  return Vector(
+    math.Round(self.x, round),
+    math.Round(self.y, round),
+    math.Round(self.z, round)
+  )
+end
+function vecMETA:DrG_ToString(round)
+  local rounded = self:DrG_Round(round)
+  return tostring(util.NiceFloat(rounded.x)).." / "..tostring(util.NiceFloat(rounded.y)).." / "..tostring(util.NiceFloat(rounded.z))
+end

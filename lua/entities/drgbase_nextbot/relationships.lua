@@ -42,6 +42,7 @@ function ENT:_InitRelationships()
 end
 
 if SERVER then
+  util.AddNetworkString("DrGBaseNextbotPlayerRelationship")
 
   -- Cache --
 
@@ -214,6 +215,12 @@ if SERVER then
     self:OnRelationshipChange(ent, curr, disp)
     if DebugRelationship:GetBool() then
       DrGBase.Print(tostring(self)..": ".."'"..tostring(ent).."' "..EnumToString(curr).." => "..EnumToString(disp)..".")
+    end
+    if ent:IsPlayer() then
+      net.Start("DrGBaseNextbotPlayerRelationship")
+      net.WriteEntity(self)
+      net.WriteInt(disp, 4)
+      net.Send(ent)
     end
   end
   function ENT:_SetPriority(ent, prio)
@@ -732,6 +739,17 @@ if SERVER then
 else
 
   -- Getters/setters --
+
+  function ENT:LocalPlayerRelationship()
+    return self._DrGBaseLocalPlayerRelationship or DEFAULT_DISP
+  end
+  net.Receive("DrGBaseNextbotPlayerRelationship", function()
+    local nextbot = net.ReadEntity()
+    local disp = net.ReadInt(4)
+    if IsValid(nextbot) then
+      nextbot._DrGBaseLocalPlayerRelationship = disp
+    end
+  end)
 
   function ENT:GetRelationship(ent, callback)
     if IsValid(ent) then

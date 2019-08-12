@@ -14,12 +14,12 @@ end
 
 function ENT:Speed(scale)
   local speed = self:GetVelocity():Length()
-  if scale then return math.Round(speed*self:GetScale())
-  else return math.Round(speed) end
+  if scale then return speed/self:GetScale()
+  else return speed end
 end
 function ENT:SpeedSqr(scale)
-  if not scale then return math.Round(self:GetVelocity():LengthSqr())
-  else return math.Round((self:GetVelocity()/self:GetScale()):LengthSqr()) end
+  if not scale then return self:GetVelocity():LengthSqr()
+  else return (self:GetVelocity()/self:GetScale()):LengthSqr() end
 end
 function ENT:IsSpeedMore(speed, scale)
   return speed^2 < self:SpeedSqr(scale)

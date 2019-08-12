@@ -89,6 +89,10 @@ if SERVER then
 		if ply:DrG_IsPossessing() then return 0 end
 	end)
 
+	hook.Add("SetupPlayerVisibility", "DrGBasePossessionAddToPVS", function(ply)
+		if ply:DrG_IsPossessing() then AddOriginToPVS(ply:DrG_GetPossessing():GetPos()) end
+	end)
+
 else
 
 	CreateClientConVar("drgbase_possession_exit", tostring(KEY_E), true, true)

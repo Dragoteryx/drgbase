@@ -55,60 +55,65 @@ if SERVER then
   end
   function ENT:OnInjured(dmg)
     if dmg:GetDamage() <= 0 then return end
-    local hitgroup = self._DrGBaseHitGroupToHandle and self:LastHitGroup() or HITGROUP_GENERIC
-    local attacker = dmg:GetAttacker()
-    local res = self:OnTakeDamage(dmg, hitgroup)
-    if IsValid(attacker) and DrGBase.IsTarget(attacker) then
-      if self:IsAlly(attacker) then
-        self._DrGBaseAllyDamageTolerance[attacker] = self._DrGBaseAllyDamageTolerance[attacker] or 0
-        self._DrGBaseAllyDamageTolerance[attacker] = self._DrGBaseAllyDamageTolerance[attacker] + self.AllyDamageTolerance
-        self:AddEntityRelationship(attacker, D_HT, self._DrGBaseAllyDamageTolerance[attacker])
-      elseif self:IsAfraidOf(attacker) then
-        self._DrGBaseAfraidOfDamageTolerance[attacker] = self._DrGBaseAfraidOfDamageTolerance[attacker] or 0
-        self._DrGBaseAfraidOfDamageTolerance[attacker] = self._DrGBaseAfraidOfDamageTolerance[attacker] + self.AfraidDamageTolerance
-        self:AddEntityRelationship(attacker, D_HT, self._DrGBaseAfraidOfDamageTolerance[attacker])
-      elseif self:IsNeutral(attacker) then
-        self._DrGBaseNeutralDamageTolerance[attacker] = self._DrGBaseNeutralDamageTolerance[attacker] or 0
-        self._DrGBaseNeutralDamageTolerance[attacker] = self._DrGBaseNeutralDamageTolerance[attacker] + self.NeutralDamageTolerance
-        self:AddEntityRelationship(attacker, D_HT, self._DrGBaseNeutralDamageTolerance[attacker])
-      end
-    end
-    if res == true or self:IsDown() or self:IsDead() then
+    if self:GetGodMode() then
       self._DrGBaseHitGroupToHandle = false
       return dmg:ScaleDamage(0)
     else
-      if isnumber(res) then dmg:ScaleDamage(res) end
-      if dmg:GetDamage() >= self:Health() then
-        if self:OnFatalDamage(dmg, hitgroup) then
-          self._DrGBaseHitGroupToHandle = false
-          self:SetNW2Bool("DrGBaseDown", true)
-          self:SetNW2Int("DrGBaseDowned", self:GetNW2Int("DrGBaseDowned")+1)
-          self:SetHealth(1)
-          if #self.OnDownedSounds > 0 then
-            self:EmitSound(self.OnDownedSounds[math.random(#self.OnDownedSounds)])
-          end
-          local noTarget = self:GetNoTarget()
-          self:SetNoTarget(true)
-          local data = util.DrG_SaveDmg(dmg)
-          self:CallInCoroutine(function(self, delay)
-            self:OnDowned(util.DrG_LoadDmg(data), delay, hitgroup)
-            if self:Health() <= 0 then self:SetHealth(1) end
-            self:SetNoTarget(noTarget)
-            self:SetNW2Bool("DrGBaseDown", false)
-          end)
-        else self:SetHealth(0) end
+      local hitgroup = self._DrGBaseHitGroupToHandle and self:LastHitGroup() or HITGROUP_GENERIC
+      local attacker = dmg:GetAttacker()
+      local res = self:OnTakeDamage(dmg, hitgroup)
+      if IsValid(attacker) and DrGBase.IsTarget(attacker) then
+        if self:IsAlly(attacker) then
+          self._DrGBaseAllyDamageTolerance[attacker] = self._DrGBaseAllyDamageTolerance[attacker] or 0
+          self._DrGBaseAllyDamageTolerance[attacker] = self._DrGBaseAllyDamageTolerance[attacker] + self.AllyDamageTolerance
+          self:AddEntityRelationship(attacker, D_HT, self._DrGBaseAllyDamageTolerance[attacker])
+        elseif self:IsAfraidOf(attacker) then
+          self._DrGBaseAfraidOfDamageTolerance[attacker] = self._DrGBaseAfraidOfDamageTolerance[attacker] or 0
+          self._DrGBaseAfraidOfDamageTolerance[attacker] = self._DrGBaseAfraidOfDamageTolerance[attacker] + self.AfraidDamageTolerance
+          self:AddEntityRelationship(attacker, D_HT, self._DrGBaseAfraidOfDamageTolerance[attacker])
+        elseif self:IsNeutral(attacker) then
+          self._DrGBaseNeutralDamageTolerance[attacker] = self._DrGBaseNeutralDamageTolerance[attacker] or 0
+          self._DrGBaseNeutralDamageTolerance[attacker] = self._DrGBaseNeutralDamageTolerance[attacker] + self.NeutralDamageTolerance
+          self:AddEntityRelationship(attacker, D_HT, self._DrGBaseNeutralDamageTolerance[attacker])
+        end
+      end
+      if res == true or self:IsDown() or self:IsDead() then
+        self._DrGBaseHitGroupToHandle = false
         return dmg:ScaleDamage(0)
       else
-        self._DrGBaseHitGroupToHandle = false
-        if #self.OnDamageSounds > 0 then
-          self:EmitSlotSound("DrGBaseDamageSounds", self.DamageSoundDelay, self.OnDamageSounds[math.random(#self.OnDamageSounds)])
-        end
-        if isfunction(self.AfterTakeDamage) then
-          local data = util.DrG_SaveDmg(dmg)
-          self:CallInCoroutine(function(self, delay)
-            dmg = util.DrG_LoadDmg(data)
-            self:AfterTakeDamage(dmg, delay, hitgroup)
-          end)
+        if isnumber(res) then dmg:ScaleDamage(res) end
+        if dmg:GetDamage() >= self:Health() then
+          if self:OnFatalDamage(dmg, hitgroup) then
+            self._DrGBaseHitGroupToHandle = false
+            self:SetNW2Bool("DrGBaseDown", true)
+            self:SetNW2Int("DrGBaseDowned", self:GetNW2Int("DrGBaseDowned")+1)
+            self:SetHealth(1)
+            if #self.OnDownedSounds > 0 then
+              self:EmitSound(self.OnDownedSounds[math.random(#self.OnDownedSounds)])
+            end
+            local noTarget = self:GetNoTarget()
+            self:SetNoTarget(true)
+            local data = util.DrG_SaveDmg(dmg)
+            self:CallInCoroutine(function(self, delay)
+              self:OnDowned(util.DrG_LoadDmg(data), delay, hitgroup)
+              if self:Health() <= 0 then self:SetHealth(1) end
+              self:SetNoTarget(noTarget)
+              self:SetNW2Bool("DrGBaseDown", false)
+            end)
+          else self:SetHealth(0) end
+          return dmg:ScaleDamage(0)
+        else
+          self._DrGBaseHitGroupToHandle = false
+          if #self.OnDamageSounds > 0 then
+            self:EmitSlotSound("DrGBaseDamageSounds", self.DamageSoundDelay, self.OnDamageSounds[math.random(#self.OnDamageSounds)])
+          end
+          if isfunction(self.AfterTakeDamage) then
+            local data = util.DrG_SaveDmg(dmg)
+            self:CallInCoroutine(function(self, delay)
+              dmg = util.DrG_LoadDmg(data)
+              self:AfterTakeDamage(dmg, delay, hitgroup)
+            end)
+          end
         end
       end
     end
@@ -119,7 +124,7 @@ if SERVER then
     self._DrGBaseHitGroupToHandle = false
     self:SetNW2Bool("DrGBaseDying", true)
     self:SetHealth(0)
-    hook.Run("OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor())
+    self:DrG_DeathNotice(dmg:GetAttacker(), dmg:GetInflictor())
     if #self.OnDeathSounds > 0 then
       self:EmitSound(self.OnDeathSounds[math.random(#self.OnDeathSounds)])
     end

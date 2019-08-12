@@ -102,3 +102,13 @@ function util.DrG_LoadDmg(data)
   dmg:SetReportedPosition(data.reportedPosition)
   return dmg
 end
+
+function util.DrG_MergeColors(ratio, max, low)
+  ratio = math.Clamp(ratio, 0, 1)
+  return Color(
+    max.r*ratio + low.r*(1-ratio),
+    max.g*ratio + low.g*(1-ratio),
+    max.b*ratio + low.b*(1-ratio),
+    max.a*ratio + low.a*(1-ratio)
+  )
+end

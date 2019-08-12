@@ -30,6 +30,10 @@ function ENT:GetDowned()
   return self:GetNW2Int("DrGBaseDowned")
 end
 
+function ENT:GetGodMode()
+  return self:GetNW2Bool("DrGBaseGodMode")
+end
+
 -- Functions --
 
 -- Hooks --
@@ -56,6 +60,16 @@ if SERVER then
   end
   function ENT:Scale(mult, delta)
     self:SetScale(self:GetScale()*mult, delta)
+  end
+
+  function ENT:SetGodMode(god)
+    return self:SetNW2Bool("DrGBaseGodMode", god)
+  end
+  function ENT:EnableGodMode()
+    self:SetGodMode(true)
+  end
+  function ENT:DisableGodMode()
+    self:SetGodMode(false)
   end
 
   -- Functions --
