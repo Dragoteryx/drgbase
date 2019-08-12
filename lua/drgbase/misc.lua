@@ -135,7 +135,8 @@ if SERVER then
     if isfunction(binds.Think) then proj.CustomThink = binds.Think end
     if isfunction(binds.Contact) then proj.OnContact = binds.Contact end
     if isfunction(binds.Use) then proj.Use = binds.Use end
-    if isfunction(binds.Damage) then proj.OnTakeDamage = binds.Damage end
+    if isfunction(binds.DealtDamage) then proj.OnDealtDamage = binds.DealtDamage end
+    if isfunction(binds.TakeDamage) then proj.OnTakeDamage = binds.TakeDamage end
     if isfunction(binds.Remove) then proj.OnRemove = binds.Remove end
     proj:Spawn()
     return proj

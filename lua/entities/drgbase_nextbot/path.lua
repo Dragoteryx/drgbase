@@ -71,13 +71,13 @@ function ENT:BlacklistedNavAreas()
   return areas
 end
 
+local ENABLE_JUMPING = false
 local function MultiplyCost(nextbot, callback, cost, dist, ...)
   local res = callback(nextbot, ...)
   local mult = math.Clamp(res, 0, math.huge)+1
   return cost + dist*mult, res < 0
 end
 function ENT:GetPathGenerator()
-  local enableJumping = false
   return function(area, fromArea, ladder, elevator, length)
     if not IsValid(fromArea) then return 0 end
     if self:IsNavAreaBlacklisted(area) then return -1 end
@@ -102,7 +102,7 @@ function ENT:GetPathGenerator()
       elseif height < self.loco:GetStepHeight() then
         cost, unreach = MultiplyCost(self, self.OnComputePathStep, cost, dist, fromArea, area, height)
         if unreach then return -1 end
-      elseif enableJumping and height < self.loco:GetJumpHeight() then
+      elseif ENABLE_JUMPING and height < self.loco:GetJumpHeight() then
         cost, unreach = MultiplyCost(self, self.OnComputePathJump, cost, dist, fromArea, area, height)
         if unreach then return -1 end
       elseif self.ClimbLedges then

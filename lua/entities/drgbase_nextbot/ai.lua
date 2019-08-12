@@ -18,6 +18,9 @@ end
 function ENT:HaveEnemy()
   return self:HasEnemy()
 end
+function ENT:HadEnemy()
+  return self._DrGBaseHasEnemy
+end
 
 function ENT:GetNemesis()
   if self:HasNemesis() then
@@ -127,7 +130,7 @@ if SERVER then
     self:SetEnemy(enemy)
     return enemy
   end
-  local function CompareEnemies(self, ent1, ent2)  
+  local function CompareEnemies(self, ent1, ent2)
     if self:IsAfraidOf(ent1) and self:IsEnemy(ent2) and
     not self:IsInRange(ent1, self.WatchAfraidOfRange) then return false end
     if self:IsEnemy(ent1) and self:IsAfraidOf(ent2) and
