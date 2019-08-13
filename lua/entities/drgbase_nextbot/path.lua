@@ -149,12 +149,12 @@ function ENT:OnComputePathUnderwater(from, to) return 1 end
 
 local pathMETA = FindMetaTable("PathFollower")
 
-DrGBase.OLD_COMPUTE = DrGBase.OLD_COMPUTE or pathMETA.Compute
+DrGBase.OLD_Compute = DrGBase.OLD_Compute or pathMETA.Compute
 function pathMETA:Compute(nextbot, pos, generator)
   if nextbot.IsDrGNextbot then
     --print("compute", nextbot)
     if not isfunction(generator) then generator = nextbot:GetPathGenerator() end
-    nextbot._DrGBaseLastComputeSuccess = DrGBase.OLD_COMPUTE(self, nextbot, pos, generator)
+    nextbot._DrGBaseLastComputeSuccess = DrGBase.OLD_Compute(self, nextbot, pos, generator)
     return nextbot._DrGBaseLastComputeSuccess
-  else return DrGBase.OLD_COMPUTE(self, nextbot, pos, generator) end
+  else return DrGBase.OLD_Compute(self, nextbot, pos, generator) end
 end

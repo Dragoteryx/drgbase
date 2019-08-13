@@ -36,6 +36,7 @@ ENT.EyeAngle = Angle(0, 0, 0)
 
 -- Possession --
 ENT.PossessionEnabled = true
+ENT.PossessionMovement = POSSESSION_MOVE_8DIR
 ENT.PossessionCrosshair = true
 ENT.PossessionViews = {
   {
@@ -132,9 +133,7 @@ if SERVER then
         end)
       else self:EmitSound("NPC_Antlion.MeleeAttackSingle") end
     elseif self:IsOnGround() then
-      if math.random(2) == 1 then
-        self:EmitSound("NPC_Antlion.FootstepSoft")
-      else self:EmitSound("NPC_Antlion.Footstep") end
+      self:EmitSound("NPC_Antlion.Footstep")
     end
   end
 

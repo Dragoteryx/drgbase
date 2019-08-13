@@ -112,8 +112,8 @@ ENT.AcceptPlayerWeapons = true
 -- Possession --
 ENT.PossessionEnabled = false
 ENT.PossessionPrompt = true
-ENT.PossessionCrosshair = false
-ENT.PossessionMovement = POSSESSION_MOVE_1DIR
+ENT.PossessionCrosshair = true
+ENT.PossessionMovement = POSSESSION_MOVE_8DIR
 ENT.PossessionViews = {}
 ENT.PossessionBinds = {}
 

@@ -19,6 +19,7 @@ ENT.IdleAnimation = ACT_HL2MP_IDLE
 ENT.JumpAnimation = ACT_HL2MP_JUMP_KNIFE
 
 -- Movements --
+ENT.UseWalkframes = false
 ENT.RunSpeed = 300
 
 -- Climbing --

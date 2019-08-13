@@ -33,6 +33,7 @@ ENT.EyeOffset = Vector(7.5, 0, 5)
 
 -- Possession --
 ENT.PossessionEnabled = true
+ENT.PossessionMovement = POSSESSION_MOVE_8DIR
 ENT.PossessionViews = {
   {
     offset = Vector(0, 30, 20),
@@ -59,6 +60,7 @@ if SERVER then
   -- Init/Think --
 
   function ENT:CustomInitialize()
+    self:PrintPoseParameters()
     self:SetDefaultRelationship(D_HT)
     self:SetBodygroup(1, 1)
   end

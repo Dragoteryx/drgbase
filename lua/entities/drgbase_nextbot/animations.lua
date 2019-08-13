@@ -105,6 +105,10 @@ function ENT:_InitAnimations()
   if SERVER then
     self._DrGBaseCurrentGestures = {}
     self:LoopTimer(0.1, self.UpdateAnimation)
+    self._DrGBasePoseParameters = {}
+    for i = 0, (self:GetNumPoseParameters()-1) do
+    	self._DrGBasePoseParameters[self:GetPoseParameterName(i)] = true
+    end
   end
   self._DrGBaseActIDsFromNames = {}
   self._DrGBasePreviousSequence = self:GetSequence()
@@ -429,7 +433,7 @@ if SERVER then
 
   local nextbotMETA = FindMetaTable("NextBot")
 
-  local old_BodyMoveXY = nextbotMETA.BodyMoveXY
+  DrGBase.OLD_BodyMoveXY = DrGBase.OLD_BodyMoveXY or nextbotMETA.BodyMoveXY
   function nextbotMETA:BodyMoveXY(options)
     if self.IsDrGNextbot then
       if self.IsDrGNextbotSprite then return end
@@ -441,15 +445,23 @@ if SERVER then
       if not self:IsPlayingAnimation() and
       (self:IsMoving() or (self:IsTurning() and SeqHasTurningWalkframes(self, seq))) then
         if options.direction and self:IsMoving() then
-          local movement = self:GetMovement()
-          self:SetPoseParameter("move_z", movement.z)
-          if self:OnWalkframes(self:GetSequenceName(seq)) then
-            self:SetPoseParameter("move_x", 1)
-            self:SetPoseParameter("move_y", 0)
-          else
+          if self._DrGBasePoseParameters["move_x"] or
+          self._DrGBasePoseParameters["move_y"] or
+          self._DrGBasePoseParameters["move_z"] then
+            local movement = self:GetMovement()
             self:SetPoseParameter("move_x", movement.x)
             self:SetPoseParameter("move_y", movement.y)
+            self:SetPoseParameter("move_z", movement.z)
           end
+          if self._DrGBasePoseParameters["move_yaw"] then
+            local forward = self:GetForward()
+            local velocity = self:GetVelocity()
+            forward.z = 0
+            velocity.z = 0
+            local forwardAng = forward:Angle()
+            local velocityAng = velocity:Angle()
+            self:SetPoseParameter("move_yaw", math.AngleDifference(velocityAng.y, forwardAng.y))
+          end        
         end
         if options.rate and self:IsOnGround() and not self:IsClimbing() then
           local velocity = self:GetVelocity()
@@ -468,7 +480,7 @@ if SERVER then
           end
         end
       end
-    else return old_BodyMoveXY(self) end
+    else return DrGBase.OLD_BodyMoveXY(self) end
   end
 
   local old_GetActivity = nextbotMETA.GetActivity
