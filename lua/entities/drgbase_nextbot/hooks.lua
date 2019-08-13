@@ -168,7 +168,13 @@ if SERVER then
 
   -- Collisions --
 
-  function ENT:PhysicsCollide() end
+  function ENT:OnCombineBall() end
+  --function ENT:AfterCombineBall() end
+
+  function ENT:OnPhysDamage(ent, data)
+    return (data.TheirOldVelocity:Length()*data.HitObject:GetMass())/1000
+  end
+
   function ENT:_HandleCollide(data)
     local ent = data.HitEntity
     local class = ent:GetClass()
@@ -213,12 +219,17 @@ if SERVER then
     end
   end
 
-  function ENT:OnCombineBall() end
-  --function ENT:AfterCombineBall() end
-
-  function ENT:OnPhysDamage(ent, data)
-    return data.HitObject:GetEnergy()/333333
-  end
+  hook.Add("OnEntityCreated", "DrGBaseAddPhysicsCollideCallback", function(ent)
+    timer.Simple(0, function()
+      if not IsValid(ent) then return end
+      ent:AddCallback("PhysicsCollide", function(ent, data)
+        if not isfunction(ent.PhysicsCollide) then return end
+        if IsValid(data.HitEntity) and data.HitEntity.IsDrGNextbot then
+          ent:PhysicsCollide(data, data.PhysObject)
+        end
+      end)
+    end)
+  end)
 
   -- OnNavAreaChanged --
 

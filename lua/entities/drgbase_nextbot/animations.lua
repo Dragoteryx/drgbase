@@ -144,6 +144,16 @@ if SERVER then
     return success and angles.y ~= 0
   end
 
+  local function CallOnAnimChange(self, old, new)
+    return self:OnAnimChange(self:GetSequenceName(old), self:GetSequenceName(new))
+  end
+  local function CallAfterAnimChange(self, old, new)
+    if not isfunction(self.AfterAnimChange) then return end
+    self:CallInCoroutine(function(self, delay)
+      self:AfterAnimChange(self:GetSequenceName(old), self:GetSequenceName(new), delay)
+    end)
+  end
+
   -- Getters/setters --
 
   function ENT:IsPlayingAnimation()
@@ -170,32 +180,33 @@ if SERVER then
     if isstring(seq) then seq = self:LookupSequence(seq)
     elseif not isnumber(seq) then return end
     if seq == -1 then return end
-    if isfunction(self.OnAnimChange) and seq ~= self:GetSequence() then
-      self:OnAnimChange(self:GetSequenceName(self:GetSequence()), self:GetSequenceName(seq), 0)
+    local current = self:GetSequence()
+    if seq == self:GetSequence() or CallOnAnimChange(self, current, seq) ~= false then
+      --self:AfterAnimChange(self:GetSequenceName(current), self:GetSequenceName(seq), 0)
+      rate = isnumber(rate) and rate or 1
+      local oldPlayingAnim = self._DrGBasePlayingAnimation
+      self._DrGBasePlayingAnimation = seq
+      local len = self:SetSequence(seq)
+      self:ResetSequenceInfo()
+      self:SetCycle(0)
+      self:SetPlaybackRate(rate)
+      local now = CurTime()
+      local lastCycle = -1
+      while seq == self:GetSequence() do
+        local cycle = self:GetCycle()
+        if lastCycle > cycle then break end
+        if lastCycle == cycle and cycle == 1 then break end
+        lastCycle = cycle
+        if isfunction(callback) and callback(self, cycle) then break end
+        self:YieldCoroutine(false)
+      end
+      self._DrGBasePlayingAnimation = oldPlayingAnim
+      self:Timer(0, function()
+        self:UpdateAnimation()
+        self:UpdateSpeed()
+      end)
+      return CurTime() - now
     end
-    rate = isnumber(rate) and rate or 1
-    local oldPlayingAnim = self._DrGBasePlayingAnimation
-    self._DrGBasePlayingAnimation = seq
-    local len = self:SetSequence(seq)
-    self:ResetSequenceInfo()
-    self:SetCycle(0)
-    self:SetPlaybackRate(rate)
-    local now = CurTime()
-    local lastCycle = -1
-    while seq == self:GetSequence() do
-      local cycle = self:GetCycle()
-      if lastCycle > cycle then break end
-      if lastCycle == cycle and cycle == 1 then break end
-      lastCycle = cycle
-      if isfunction(callback) and callback(self, self:GetCycle()) then break end
-      self:YieldCoroutine(false)
-    end
-    self._DrGBasePlayingAnimation = oldPlayingAnim
-    self:Timer(0, function()
-      self:UpdateAnimation()
-      self:UpdateSpeed()
-    end)
-    return CurTime() - now
   end
   function ENT:PlayActivityAndWait(act, rate, callback)
     local seq = self:SelectRandomSequence(act)
@@ -380,22 +391,18 @@ if SERVER then
       validAnim = seq ~= -1
       local activity = self:GetSequenceActivity(current)
       if validAnim and (self:GetCycle() == 1 or anim ~= activity) then
-        self:ResetSequence(seq)
-        if isfunction(self.OnAnimChange) then
-          self:CallInCoroutine(function(self, delay)
-            self:OnAnimChange(activity, anim, delay)
-          end)
+        if CallOnAnimChange(self, current, seq) ~= false then
+          CallAfterAnimChange(self, current, seq)
+          self:ResetSequence(seq)
         end
       end
     elseif isstring(anim) then
       local seq = self:LookupSequence(anim)
       validAnim = seq ~= -1
       if validAnim and (self:GetCycle() == 1 or seq ~= current) then
-        self:ResetSequence(seq)
-        if isfunction(self.OnAnimChange) then
-          self:CallInCoroutine(function(self, delay)
-            self:OnAnimChange(self:GetSequenceName(current), self:GetSequenceName(seq), delay)
-          end)
+        if CallOnAnimChange(self, current, seq) ~= false then
+          CallAfterAnimChange(self, current, seq)
+          self:ResetSequence(seq)
         end
       end
     end
@@ -417,7 +424,8 @@ if SERVER then
 
   -- Hooks
 
-  --function ENT:OnAnimChange() end
+  function ENT:OnAnimChange() end
+  --function ENT:AfterAnimChange() end
 
   function ENT:BodyUpdate()
     self:BodyMoveXY()

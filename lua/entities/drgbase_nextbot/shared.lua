@@ -172,12 +172,11 @@ function ENT:Initialize()
     self._DrGBaseCorCalls = {}
     self._DrGBaseWaterLevel = self:WaterLevel()
     self._DrGBaseDownSpeed = 0
+    self:SetName("drgbase_nextbot_"..self:GetCreationID())
     if self:PhysicsInitShadow() then
       self:AddCallback("PhysicsCollide", function(self, data)
-        local phys = self:GetPhysicsObject()
-        self:_HandleCollide(data, phys)
-        self:PhysicsCollide(data, phys)
-        if IsValid(data.HitEntity) and data.HitEntity:IsScripted() then
+        self:_HandleCollide(data, self:GetPhysicsObject())
+        --[[if isfunction(data.HitEntity.PhysicsCollide) then
           local otherData = {}
           otherData.HitPos = data.HitPos
           otherData.HitEntity = self
@@ -189,7 +188,7 @@ function ENT:Initialize()
           otherData.HitNormal = -data.HitNormal
           otherData.PhysObj = data.HitObject
           data.HitEntity:PhysicsCollide(otherData, data.HitObject)
-        end
+        end]]
       end)
     end
   else self:SetIK(true) end
