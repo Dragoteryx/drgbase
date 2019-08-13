@@ -59,6 +59,7 @@ if SERVER then
   function ENT:SetScale(scale, delta)
     self:SetNW2Float("DrGBaseScale", scale)
     self:SetModelScale(self.ModelScale*scale, delta)
+    self:PhysicsInitShadow()
     self:UpdateSpeed()
   end
   function ENT:Scale(mult, delta)

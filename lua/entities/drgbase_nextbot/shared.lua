@@ -172,9 +172,7 @@ function ENT:Initialize()
     self._DrGBaseCorCalls = {}
     self._DrGBaseWaterLevel = self:WaterLevel()
     self._DrGBaseDownSpeed = 0
-    self:PhysicsInitShadow()
-    local phys = self:GetPhysicsObject()
-    if IsValid(phys) then
+    if self:PhysicsInitShadow() then
       self:AddCallback("PhysicsCollide", function(self, data)
         local phys = self:GetPhysicsObject()
         self:_HandleCollide(data, phys)
@@ -190,7 +188,7 @@ function ENT:Initialize()
           otherData.Speed = self:Speed()
           otherData.HitNormal = -data.HitNormal
           otherData.PhysObj = data.HitObject
-          data.HitEntity:PhysicsCollide(otherData, data.PhysObj)
+          data.HitEntity:PhysicsCollide(otherData, data.HitObject)
         end
       end)
     end
