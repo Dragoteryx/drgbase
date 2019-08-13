@@ -172,6 +172,28 @@ function ENT:Initialize()
     self._DrGBaseCorCalls = {}
     self._DrGBaseWaterLevel = self:WaterLevel()
     self._DrGBaseDownSpeed = 0
+    self:PhysicsInitShadow()
+    local phys = self:GetPhysicsObject()
+    if IsValid(phys) then
+      self:AddCallback("PhysicsCollide", function(self, data)
+        local phys = self:GetPhysicsObject()
+        self:_HandleCollide(data, phys)
+        self:PhysicsCollide(data, phys)
+        if IsValid(data.HitEntity) and data.HitEntity:IsScripted() then
+          local otherData = {}
+          otherData.HitPos = data.HitPos
+          otherData.HitEntity = self
+          otherData.OurOldVelocity = data.TheirOldVelocity
+          otherData.HitObject = phys
+          otherData.DeltaTime = data.DeltaTime
+          otherData.TheirOldVelocity = data.OurOldVelocity
+          otherData.Speed = self:Speed()
+          otherData.HitNormal = -data.HitNormal
+          otherData.PhysObj = data.HitObject
+          data.HitEntity:PhysicsCollide(otherData, data.PhysObj)
+        end
+      end)
+    end
   else self:SetIK(true) end
   self:AddFlags(FL_OBJECT + FL_NPC)
   self._DrGBaseBaseThinkDelay = 0
@@ -215,6 +237,9 @@ function ENT:Think()
   self:_HandleAnimations()
   self:_HandleMovements()
   if SERVER then
+    -- move phys obj --
+    local phys = self:GetPhysicsObject()
+    if IsValid(phys) then phys:SetPos(self:GetPos(), true) end
     -- water level
     local waterLevel = self:WaterLevel()
     if self._DrGBaseWaterLevel ~= waterLevel then
@@ -540,7 +565,7 @@ else
       self:_BaseDraw()
       self:CustomDraw()
     end
-    self:_DrawDebug()    
+    self:_DrawDebug()
     if self:IsPossessedByLocalPlayer() then
       self:PossessionDraw()
     end

@@ -35,9 +35,6 @@ function DrGBase.AddNextbot(ENT)
         if isfunction(ENT.OnTraceAttack) then
           ent:DrG_AddListener("OnTraceAttack", ent._HandleTraceAttack)
         end
-        if isfunction(ENT.OnContact) then
-          ent:DrG_AddListener("OnContact", ent._HandleContact)
-        end
         if isfunction(ENT.OnNavAreaChanged) then
           ent:DrG_AddListener("OnNavAreaChanged", ent._HandleNavAreaChanged)
         end

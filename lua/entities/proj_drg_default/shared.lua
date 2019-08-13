@@ -103,7 +103,6 @@ if SERVER then
   function ENT:CustomInitialize() end
 
   function ENT:Think()
-    self:_HandleContact()
     if CurTime() > self._DrGBaseBaseThinkDelay then
       local delay = self:_BaseThink() or 0
       self._DrGBaseBaseThinkDelay = CurTime() + delay
@@ -135,18 +134,6 @@ if SERVER then
   end
   function ENT:Touch(ent)
     self:Contact(ent)
-  end
-  function ENT:_HandleContact()
-    local dir
-    if self:GetVelocity():IsZero() then
-      dir = Vector(0, 0, 0)
-    else dir = self:GetVelocity():GetNormalized() end
-    local mins, maxs = self:GetModelBounds()
-    local tr = self:TraceHull(dir, {
-      mins = mins*self:GetModelScale(), maxs = maxs*self:GetModelScale(),
-      collisiongroup = COLLISION_GROUP_NPC
-    })
-    if IsValid(tr.Entity) then self:Contact(tr.Entity) end
   end
 
   function ENT:Contact(ent)

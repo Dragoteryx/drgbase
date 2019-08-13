@@ -461,6 +461,34 @@ if SERVER then
 
   -- Handlers --
 
+  DrGBase.BARNACLES = DrGBase.BARNACLES or {}
+  hook.Add("OnEntityCreated", "DrGBaseRegisterBarnacles", function(ent)
+    if ent:GetClass() ~= "npc_barnacle" then return end
+    timer.Simple(0, function()
+      if not IsValid(ent) then return end
+      DrGBase.BARNACLES[ent] = true
+      ent:CallOnRemove("DrGBaseRemoveBarnacle", function(ent)
+        DrGBase.BARNACLES[ent] = nil
+      end)
+    end)
+  end)
+  hook.Add("Think", "DrGBaseBarnacleTongues", function()
+    --[[for barnacle, reg in pairs(DrGBase.BARNACLES) do
+      local tr = util.DrG_TraceLine({
+        start = barnacle:GetPos() - Vector(0, 0, 10),
+        endpos = barnacle:GetPos() - Vector(0, 0, 999999),
+        filter = barnacle
+      })
+      local ent = tr.Entity
+      if IsValid(ent) and ent.IsDrGNextbot then
+        local dmg = DamageInfo()
+        dmg:SetAttacker(barnacle)
+        dmg:SetInflictor(barnacle)
+        ent:DrG_RagdollDeath(dmg)
+      end
+    end]]
+  end)
+
   -- Meta --
 
   local entMETA = FindMetaTable("Entity")

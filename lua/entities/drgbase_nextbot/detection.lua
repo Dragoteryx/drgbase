@@ -171,6 +171,9 @@ if SERVER then
 
   -- Hooks --
 
+  function ENT:OnContact(ent)
+    self:SpotEntity(ent)
+  end
   function ENT:OnSight(ent)
     self:SpotEntity(ent)
   end
