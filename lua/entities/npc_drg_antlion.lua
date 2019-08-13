@@ -16,7 +16,7 @@ ENT.OnDamageSounds = {"NPC_Antlion.Pain"}
 ENT.SpawnHealth = 40
 
 -- AI --
-ENT.RangeAttackRange = 0
+ENT.RangeAttackRange = 750
 ENT.MeleeAttackRange = 50
 ENT.ReachEnemyRange = 50
 ENT.AvoidEnemyRange = 0
@@ -94,6 +94,12 @@ if SERVER then
 
   -- AI --
 
+  function ENT:OnRangeAttack(enemy)
+    if not self:IsInRange(enemy, 500) then
+      self:Leap(enemy, 1000)
+      self:PauseCoroutine(0.25)
+    end
+  end
   function ENT:OnMeleeAttack(enemy)
     self:PlaySequenceAndMove("attack"..math.random(6), 1, self.FaceEnemy)
   end
