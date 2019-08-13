@@ -186,21 +186,30 @@ if SERVER then
 
   -- Handlers --
 
-  hook.Add("EntityEmitSound", "DrGBaseNextbotHearing", function(sound)
-    if not EnableHearing:GetBool() then return end
-    if not IsValid(sound.Entity) then return end
-    if not sound.Entity:IsPlayer() then return end
+  local function HandleSound(ent, sound)
     if #DrGBase.GetNextbots() == 0 then return end
-    local pos = sound.Pos or sound.Entity:GetPos()
+    local pos = sound.Pos or ent:GetPos()
     local distance = math.pow(sound.SoundLevel/2, 2)*sound.Volume
     --print(distance)
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
-      if sound.Entity == nextbot then continue end
+      if ent == nextbot then continue end
       if nextbot:IsAIDisabled() then continue end
       if nextbot:IsDeaf() then continue end
       local mult = nextbot:VisibleVec(pos) and 1 or 0.5
       if (distance*nextbot:GetHearingCoefficient()*mult)^2 >= nextbot:GetRangeSquaredTo(pos) then
-        nextbot:Timer(0, nextbot.OnSound, sound.Entity, sound)
+        nextbot:Timer(0, nextbot.OnSound, ent, sound)
+      end
+    end
+  end
+  hook.Add("EntityEmitSound", "DrGBaseNextbotHearing", function(sound)
+    if not EnableHearing:GetBool() then return end
+    if not IsValid(sound.Entity) then return end
+    if sound.Entity:IsPlayer() then
+      HandleSound(sound.Entity, sound)
+    elseif sound.Entity:IsVehicle() then
+      local driver = sound.Entity:GetDriver()
+      if IsValid(driver) and driver:IsPlayer() then
+        HandleSound(driver, sound)
       end
     end
   end)

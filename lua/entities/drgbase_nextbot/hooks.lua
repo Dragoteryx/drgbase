@@ -187,12 +187,13 @@ if SERVER then
           self:TakeDamageInfo(dmg)
         else self:DrG_Dissolve() end
         ent:EmitSound("NPC_CombineBall.KillImpact")
-      elseif isfunction(self.AfterCombineBall) then
+      end
+      if isfunction(self.AfterCombineBall) then
         self:CallInCoroutine(function(self, delay)
           self:AfterCombineBall(ent, delay)
         end)
       end
-    elseif ent:IsVehicle() or class == "prop_physics" then
+    elseif not ent:IsPlayerHolding() then
       local damage = math.floor(self:OnPhysDamage(ent, data))
       if damage > math.max(0, self.MinPhysDamage) then
         local dmg = DamageInfo()

@@ -461,7 +461,7 @@ if SERVER then
             local forwardAng = forward:Angle()
             local velocityAng = velocity:Angle()
             self:SetPoseParameter("move_yaw", math.AngleDifference(velocityAng.y, forwardAng.y))
-          end        
+          end
         end
         if options.rate and self:IsOnGround() and not self:IsClimbing() then
           local velocity = self:GetVelocity()

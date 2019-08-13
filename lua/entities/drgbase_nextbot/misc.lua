@@ -38,7 +38,8 @@ function ENT:EmitSlotSound(slot, duration, soundName, soundLevel, pitchPercent, 
   if lastSlot == nil or CurTime() > lastSlot then
     self._DrGBaseSlotSounds[slot] = CurTime() + duration
     self:EmitSound(soundName, soundLevel, pitchPercent, volume, channel)
-  end
+    return true
+  else return false end
 end
 
 function ENT:EmitStep(soundLevel, pitchPercent, volume, channel)
@@ -51,7 +52,7 @@ function ENT:EmitStep(soundLevel, pitchPercent, volume, channel)
   local sounds = self.Footsteps[tr.MatType] or DrGBase.DefaultFootsteps[tr.MatType]
   if not istable(sounds) or #sounds == 0 then sounds = self.Footsteps[MAT_DEFAULT] end
   if not istable(sounds) or #sounds == 0 then return false end
-  self:EmitSound(sounds[math.random(#sounds)], soundLevel, pitchPercent, volume, channel or CHAN_BODY)
+  return self:EmitSound(sounds[math.random(#sounds)], soundLevel, pitchPercent, volume, channel or CHAN_BODY)
 end
 function ENT:EmitFootstep(...)
   return self:EmitStep(...)

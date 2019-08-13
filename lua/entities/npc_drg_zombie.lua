@@ -60,7 +60,6 @@ if SERVER then
   -- Init/Think --
 
   function ENT:CustomInitialize()
-    self:PrintPoseParameters()
     self:SetDefaultRelationship(D_HT)
     self:SetBodygroup(1, 1)
   end

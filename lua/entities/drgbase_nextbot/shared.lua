@@ -235,9 +235,12 @@ function ENT:Think()
   self:_HandleAnimations()
   self:_HandleMovements()
   if SERVER then
-    -- move phys obj --
+    -- update phys obj
     local phys = self:GetPhysicsObject()
-    if IsValid(phys) then phys:SetPos(self:GetPos(), true) end
+    if IsValid(phys) then
+      phys:SetPos(self:GetPos())
+      phys:SetAngles(self:GetAngles())
+    end
     -- water level
     local waterLevel = self:WaterLevel()
     if self._DrGBaseWaterLevel ~= waterLevel then
@@ -293,9 +296,10 @@ function ENT:Think()
   if #self.OnIdleSounds > 0 then
     if (SERVER and not self.ClientIdleSounds) or
     (CLIENT and self.ClientIdleSounds) then
-      self._DrGBaseIdleSound = self.OnIdleSounds[math.random(#self.OnIdleSounds)]
-      local sound = self._DrGBaseIdleSound
-      self:EmitSlotSound("DrGBaseIdleSounds", SoundDuration(sound) + self.IdleSoundDelay, sound)
+      local sound = self.OnIdleSounds[math.random(#self.OnIdleSounds)]
+      if self:EmitSlotSound("DrGBaseIdleSounds", SoundDuration(sound) + self.IdleSoundDelay, sound) then
+        self._DrGBaseIdleSound = sound
+      end
     end
   end
   -- custom thinks
