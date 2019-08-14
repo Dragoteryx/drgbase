@@ -454,6 +454,21 @@ if SERVER then
     return istable(self._DrGBaseGrabbedRagdolls[ragdoll])
   end
 
+  function ENT:AimProjectile(proj, speed)
+    if self:IsPossessed() then
+      local lockedOn = self:PossessionGetLockedOn()
+      if not IsValid(lockedOn) then
+        return proj:AimAt(self:PossessorTrace().HitPos, speed)
+      else return proj:AimAt(lockedOn, speed) end
+    elseif self:HasEnemy() then
+      return proj:AimAt(self:GetEnemy(), speed)
+    else
+      local dir = self:GetForward()*speed
+      proj:SetVelocity(dir)
+      return dir, {}
+    end
+  end
+
   -- Hooks --
 
   function ENT:OnRagdoll() end

@@ -77,15 +77,15 @@ function ENT:IsMovingBackwardRight()
   return self:IsMovingBackward() and self:IsMovingRight()
 end
 
-function ENT:IsTurning()
-  return self:GetAngles().y ~= self._DrGBaseLastAngle.y
+function ENT:IsTurning(prec)
+  return math.Round(self:GetAngles().y, prec) ~= math.Round(self._DrGBaseLastAngle.y, prec)
 end
-function ENT:IsTurningLeft()
-  if not self:IsTurning() then return false end
+function ENT:IsTurningLeft(prec)
+  if not self:IsTurning(prec) then return false end
   return math.AngleDifference(self:GetAngles().y, self._DrGBaseLastAngle.y) > 0
 end
-function ENT:IsTurningRight()
-  if not self:IsTurning() then return false end
+function ENT:IsTurningRight(prec)
+  if not self:IsTurning(prec) then return false end
   return math.AngleDifference(self:GetAngles().y, self._DrGBaseLastAngle.y) < 0
 end
 

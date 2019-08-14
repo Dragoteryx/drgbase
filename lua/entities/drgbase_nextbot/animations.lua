@@ -1,7 +1,8 @@
 
 -- Getters/setters --
 
-function ENT:GetAnimInfoSequence(seq)
+
+--[[function ENT:GetAnimInfoSequence(seq)
   if isstring(seq) then seq = self:LookupSequence(seq)
   elseif not isnumber(seq) then return {} end
   if seq == -1 then return {} end
@@ -11,6 +12,20 @@ function ENT:GetAnimInfoSequence(seq)
     local info = self:GetAnimInfo(anim)
     if info.label == "@"..seqName or info.label == "a_"..seqName then
       return info
+    end
+  end
+end]]
+function ENT:GetAnimInfoSequence(seq)
+  if isstring(seq) and self:LookupSequence(seq) == -1 then return {}
+  elseif isnumber(seq) then seq = self:GetSequenceName(seq) end
+  if seq == "Unknown" then return {} end
+  local first = self:GetAnimInfo(0)
+  for i = 0, 1600 do
+    local info = self:GetAnimInfo(i)
+    if info.label == "@"..seq or info.label == "a_"..seq then
+            return info
+        elseif i > 0 and info.label == first.label then
+      return {}
     end
   end
 end

@@ -156,3 +156,14 @@ function vecMETA:DrG_ToString(round)
   local rounded = self:DrG_Round(round)
   return tostring(util.NiceFloat(rounded.x)).." / "..tostring(util.NiceFloat(rounded.y)).." / "..tostring(util.NiceFloat(rounded.z))
 end
+
+function vecMETA:DrG_Copy()
+  local copy = Vector()
+  copy:Set(self)
+  return copy
+end
+
+function vecMETA:DrG_Join(other, speed)
+  return (self*(1-speed)+other*speed)
+end
+

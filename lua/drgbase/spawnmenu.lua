@@ -94,8 +94,11 @@ hook.Add("PopulateToolMenu", "DrGBaseToolMenu", function()
     })
     panel:AddControl("numpad", {
       label = "Climb",
-      command = "drgbase_possession_climb"
+      command = "drgbase_possession_climb",
+      label2 = "Lock on",
+      command2 = "drgbase_possession_lockon"
     })
+    panel:NumSlider("Lock on speed", "drgbase_possession_lockon_speed", 0.01, 1, 2)
   end)
   spawnmenu.AddToolMenuOption("DrGBase", "Nextbot Settings", "drgbase_nb_settings_misc", "Misc", "", "", function(panel)
     panel:ClearControls()

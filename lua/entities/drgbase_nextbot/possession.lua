@@ -2,7 +2,8 @@
 -- Getters/setters --
 
 function ENT:IsPossessionEnabled()
-  return self:GetNW2Bool("DrGBasePossessionEnabled")
+  --return self:GetNW2Bool("DrGBasePossessionEnabled")
+  return self:GetNWBool("DrGBasePossessionEnabled")
 end
 
 function ENT:GetPossessor()
@@ -12,7 +13,8 @@ function ENT:IsPossessed()
   return IsValid(self:GetPossessor())
 end
 function ENT:IsPossessor(ent)
-  return self:GetPossessor() == ent
+  if not self:IsPossessed() then return false
+  else return self:GetPossessor() == ent end
 end
 
 function ENT:CurrentViewPreset()
@@ -36,11 +38,17 @@ function ENT:CycleViewPresets()
   end
 end
 
+function ENT:PossessionGetLockedOn()
+  if not self:IsPossessed() then return NULL
+  else return self:GetNW2Entity("DrGBasePossessionLockedOn") end
+end
+
 -- Functions --
 
 function ENT:PossessorView()
   if not self:IsPossessed() then return end
   local current, preset = self:CurrentViewPreset()
+  local offset = preset.offset or Vector(0, 0, 0)
   local center = self:WorldSpaceCenter()
   local eyes = self:GetPossessor():EyeAngles()
   local angles = Angle(-eyes.p, eyes.y + 180, 0)
@@ -64,7 +72,7 @@ function ENT:PossessorView()
     local offset = preset.offset or Vector(0, 0, 0)
     local forward = -Angle(0, angles.y, 0):Forward()
     local right = Angle(0, angles.y + 90, 0):Forward()
-    local up = Angle(-90, 0, 0):Forward()
+    local up = Vector(0, 0, 1)
     local origin = center +
     forward*offset.x*self:GetModelScale() +
     right*offset.y*self:GetModelScale() +
@@ -72,7 +80,7 @@ function ENT:PossessorView()
     local tr1 = util.TraceLine({
       start = center,
       endpos = origin,
-      collisiongroup = COLLISION_GROUP_IN_VEHICLE
+      collisiongroup = COLLISION_GROUP_DEBRIS
     })
     if tr1.HitWorld then origin = tr1.HitPos + tr1.Normal*-10 end
     local distance = preset.distance or 1
@@ -81,7 +89,7 @@ function ENT:PossessorView()
     local tr2 = util.TraceLine({
       start = origin,
       endpos = endpos,
-      collisiongroup = COLLISION_GROUP_IN_VEHICLE
+      collisiongroup = COLLISION_GROUP_DEBRIS
     })
     if tr2.HitWorld then endpos = tr2.HitPos + tr2.Normal*-10 end
     local viewangle = (tr2.Normal*-1):Angle()
@@ -103,9 +111,16 @@ function ENT:PossessorNormal()
 end
 function ENT:PossessorForward()
   if not self:IsPossessed() then return end
-  local normal = self:PossessorNormal()
-  normal.z = 0
-  return normal:GetNormalized()
+  local lockedOn = self:PossessionGetLockedOn()
+  if IsValid(lockedOn) then
+    local dir = self:GetPos():DrG_Direction(lockedOn:GetPos())
+    dir.z = 0
+    return dir:GetNormalized()
+  else
+    local normal = self:PossessorNormal()
+    normal.z = 0
+    return normal:GetNormalized()
+  end
 end
 function ENT:PossessorRight()
   if not self:IsPossessed() then return end
@@ -150,24 +165,24 @@ function ENT:_HandlePossession(cor)
     local left = l and not r
     if self.PossessionMovement == POSSESSION_MOVE_8DIR then
       self:PossessionFaceForward()
-      if forward then self:Approach(self:GetPos() + self:PossessorForward())
-      elseif backward then self:Approach(self:GetPos() - self:PossessorForward()) end
-      if right then self:Approach(self:GetPos() + self:PossessorRight())
-      elseif left then self:Approach(self:GetPos() - self:PossessorRight()) end
+      if forward then self:PossessionMoveForward()
+      elseif backward then self:PossessionMoveBackward() end
+      if right then self:PossessionMoveRight()
+      elseif left then self:PossessionMoveLeft() end
     elseif self.PossessionMovement == POSSESSION_MOVE_4DIR then
       self:PossessionFaceForward()
       local dir = self._DrGBasePossLast4DIR or ""
       if forward and (dir == "" or dir == "N") then
-        self:MoveForward()
+        self:PossessionMoveForward()
         self._DrGBasePossLast4DIR = "N"
       elseif backward and (dir == "" or dir == "S") then
-        self:MoveBackward()
+        self:PossessionMoveBackward()
         self._DrGBasePossLast4DIR = "S"
       elseif right and (dir == "" or dir == "E") then
-        self:MoveRight()
+        self:PossessionMoveRight()
         self._DrGBasePossLast4DIR = "E"
       elseif left and (dir == "" or dir == "W") then
-        self:MoveLeft()
+        self:PossessionMoveLeft()
         self._DrGBasePossLast4DIR = "W"
       else self._DrGBasePossLast4DIR = "" end
     elseif self.PossessionMovement == POSSESSION_MOVE_1DIR then
@@ -240,8 +255,18 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:SetPossessionEnabled(bool)
-    self:SetNW2Bool("DrGBasePossessionEnabled", bool)
+    --self:SetNW2Bool("DrGBasePossessionEnabled", bool)
+    self:SetNWBool("DrGBasePossessionEnabled", bool)
     if not bool and self:IsPossessed() then self:Dispossess() end
+  end
+
+  function ENT:PossessionLockOn(ent)
+    if not self:IsPossessed() then return end
+    if IsValid(ent) then
+      self:SetNW2Entity("DrGBasePossessionLockedOn", ent)
+    else
+      self:SetNW2Entity("DrGBasePossessionLockedOn", NULL)
+    end
   end
 
   -- Functions --
@@ -267,6 +292,7 @@ if SERVER then
     ply:AllowFlashlight(false)
     ply:SetEyeAngles(self:EyeAngles())
     self:UpdateEnemy()
+    self:SetNW2Entity("DrGBasePossessionLockedOn", NULL)
     self:SetNW2Int("DrGBasePossessionView", 1)
     self:OnPossessed(ply)
     return "ok"
@@ -292,7 +318,23 @@ if SERVER then
 
   function ENT:PossessionFaceForward()
     if not self:IsPossessed() then return end
-    return self:FaceTowards(self:GetPos() + self:PossessorNormal())
+    local lockedOn = self:PossessionGetLockedOn()
+    if not IsValid(lockedOn) then
+      self:FaceTowards(self:GetPos() + self:PossessorNormal())
+    else self:FaceTowards(lockedOn) end
+  end
+
+  function ENT:PossessionMoveForward()
+    return self:Approach(self:GetPos() + self:PossessorForward())
+  end
+  function ENT:PossessionMoveBackward()
+    return self:Approach(self:GetPos() - self:PossessorForward())
+  end
+  function ENT:PossessionMoveRight()
+    return self:Approach(self:GetPos() + self:PossessorRight())
+  end
+  function ENT:PossessionMoveLeft()
+    return self:Approach(self:GetPos() - self:PossessorRight())
   end
 
   -- Hooks --
@@ -301,6 +343,10 @@ if SERVER then
   function ENT:CanDispossess() return true end
   function ENT:OnPossession() end
   function ENT:PossessionControls(forward, backward, right, left) end
+  function ENT:PossessionFetchLockOn()
+    local closest = self:GetClosestHostile()
+    if self:Visible(closest) then return closest end
+  end
 
   -- Handlers --
 

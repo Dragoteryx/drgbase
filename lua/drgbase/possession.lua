@@ -35,11 +35,25 @@ properties.Add("drgbasepossess", {
 hook.Add("StartCommand", "DrGBasePossessionStartCommand", function(ply, cmd)
 	if not isfunction(ply.DrG_IsPossessing) then return end
 	if ply:DrG_IsPossessing() then
+		local possessing = ply:DrG_GetPossessing()
+		-- disable movement
 		cmd:ClearMovement()
 		if ply:HasWeapon("drgbase_possession") then
 			cmd:SelectWeapon(ply:GetWeapon("drgbase_possession"))
 		elseif SERVER then
 			ply:Give("drgbase_possession")
+		end
+		-- lock on entity
+		local lockedOn = possessing:PossessionGetLockedOn()
+		if IsValid(lockedOn) then
+			local origin = possessing:PossessorView()
+			local forward = cmd:GetViewAngles():Forward()
+			local dir = origin:DrG_Direction(lockedOn:WorldSpaceCenter()):GetNormalized()
+			if SERVER then
+				cmd:SetViewAngles(forward:DrG_Join(dir, ply:GetInfoNum("drgbase_possession_lockon_speed", 0.05)):Angle())
+			else
+				cmd:SetViewAngles(forward:DrG_Join(dir, GetConVar("drgbase_possession_lockon_speed"):GetFloat()):Angle())
+			end
 		end
 	elseif SERVER then
 		ply:StripWeapon("drgbase_possession")
@@ -77,6 +91,12 @@ if SERVER then
 				possessing:CycleViewPresets()
 			elseif button == ply:GetInfoNum("drgbase_possession_exit", KEY_E) then
 				possessing:Dispossess()
+			elseif button == ply:GetInfoNum("drgbase_possession_lockon", KEY_L) then
+				local lockedOn = possessing:PossessionGetLockedOn()
+				local closest = possessing:PossessionFetchLockOn()
+				if closest ~= lockedOn then
+					possessing:PossessionLockOn(closest)
+				else possessing:PossessionLockOn(NULL) end
 			end
 		end
 	end)
@@ -90,7 +110,12 @@ if SERVER then
 	end)
 
 	hook.Add("SetupPlayerVisibility", "DrGBasePossessionAddToPVS", function(ply)
-		if ply:DrG_IsPossessing() then AddOriginToPVS(ply:DrG_GetPossessing():GetPos()) end
+		if ply:DrG_IsPossessing() then
+			local possessing = ply:DrG_GetPossessing()
+			AddOriginToPVS(possessing:GetPos())
+			local lockedOn = possessing:PossessionGetLockedOn()
+			if IsValid(lockedOn) then AddOriginToPVS(lockedOn:GetPos()) end
+		end
 	end)
 
 else
@@ -98,6 +123,8 @@ else
 	CreateClientConVar("drgbase_possession_exit", tostring(KEY_E), true, true)
 	CreateClientConVar("drgbase_possession_view", tostring(KEY_V), true, true)
 	CreateClientConVar("drgbase_possession_climb", tostring(KEY_C), true, true)
+	CreateClientConVar("drgbase_possession_lockon", tostring(KEY_L), true, true)
+	CreateClientConVar("drgbase_possession_lockon_speed", "0.05", true, true)
 
 	net.Receive("DrGBaseNextbotCanPossess", function()
 		local ent = net.ReadEntity()
@@ -135,7 +162,7 @@ else
 		if not isfunction(ply.DrG_IsPossessing) then return end
 		if not ply:DrG_IsPossessing() then return end
 		if HUD_HIDE[name] then return false end
-		if name == "CHudCrosshair" and not ply:DrG_Possessing().PossessionCrosshair then return false end
+		--if name == "CHudCrosshair" and not ply:DrG_Possessing().PossessionCrosshair then return false end
 	end)
 
 	hook.Add("CalcView", "DrGBasePossessionCalcView", function(ply, origin, angles, fov, znear, zfar)
