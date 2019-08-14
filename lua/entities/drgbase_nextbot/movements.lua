@@ -1,6 +1,8 @@
 
 -- Convars --
 
+local ComputeDelay = CreateConVar("drgbase_compute_delay", "0.1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local ComputeOptim = CreateConVar("drgbase_compute_optimisation", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local AvoidObstacles = CreateConVar("drgbase_avoid_obstacles", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local MultSpeed = CreateConVar("drgbase_multiplier_speed", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
@@ -12,12 +14,12 @@ end
 
 function ENT:Speed(scale)
   local speed = self:GetVelocity():Length()
-  if scale then return math.Round(speed*self:GetScale())
-  else return math.Round(speed) end
+  if scale then return speed/self:GetScale()
+  else return speed end
 end
 function ENT:SpeedSqr(scale)
-  if not scale then return math.Round(self:GetVelocity():LengthSqr())
-  else return math.Round((self:GetVelocity()/self:GetScale()):LengthSqr()) end
+  if not scale then return self:GetVelocity():LengthSqr()
+  else return (self:GetVelocity()/self:GetScale()):LengthSqr() end
 end
 function ENT:IsSpeedMore(speed, scale)
   return speed^2 < self:SpeedSqr(scale)
@@ -38,30 +40,29 @@ end
 function ENT:GetMovement()
   if not self:IsMoving() then return Vector(0, 0, 0) end
   local dir = self:GetVelocity():Angle()
-  local mv = (self:GetAngles()-dir):Forward()
-  return Vector(math.Round(mv.x, 2), math.Round(mv.y, 2), -math.Round(mv.z, 2))
+  return (self:GetAngles()-dir):Forward()
 end
 
 function ENT:IsMoving()
   return not self:GetVelocity():IsZero()
 end
 function ENT:IsMovingUp()
-  return self:GetMovement().z > 0
+  return math.Round(self:GetMovement().z) > 0
 end
 function ENT:IsMovingDown()
-  return self:GetMovement().z < 0
+  return math.Round(self:GetMovement().z) < 0
 end
 function ENT:IsMovingForward()
-  return self:GetMovement().x > 0
+  return math.Round(self:GetMovement().x) > 0
 end
 function ENT:IsMovingBackward()
-  return self:GetMovement().x < 0
+  return math.Round(self:GetMovement().x) < 0
 end
 function ENT:IsMovingRight()
-  return self:GetMovement().y > 0
+  return math.Round(self:GetMovement().y) > 0
 end
 function ENT:IsMovingLeft()
-  return self:GetMovement().y < 0
+  return math.Round(self:GetMovement().y) < 0
 end
 function ENT:IsMovingForwardLeft()
   return self:IsMovingForward() and self:IsMovingLeft()
@@ -76,15 +77,15 @@ function ENT:IsMovingBackwardRight()
   return self:IsMovingBackward() and self:IsMovingRight()
 end
 
-function ENT:IsTurning()
-  return self:GetAngles().y ~= self._DrGBaseLastAngle.y
+function ENT:IsTurning(prec)
+  return math.Round(self:GetAngles().y, prec) ~= math.Round(self._DrGBaseLastAngle.y, prec)
 end
-function ENT:IsTurningLeft()
-  if not self:IsTurning() then return false end
+function ENT:IsTurningLeft(prec)
+  if not self:IsTurning(prec) then return false end
   return math.AngleDifference(self:GetAngles().y, self._DrGBaseLastAngle.y) > 0
 end
-function ENT:IsTurningRight()
-  if not self:IsTurning() then return false end
+function ENT:IsTurningRight(prec)
+  if not self:IsTurning(prec) then return false end
   return math.AngleDifference(self:GetAngles().y, self._DrGBaseLastAngle.y) < 0
 end
 
@@ -192,43 +193,135 @@ if SERVER then
     else self:MoveTowards(away) end
   end
 
-  function ENT:MoveForward()
-    self:Approach(self:GetPos() + self:GetForward())
+  function ENT:MoveForward(dist, callback)
+    if not isnumber(dist) then
+      self:Approach(self:GetPos() + self:GetForward())
+    elseif dist > 0 then
+      local start = self:GetPos()
+      while self:GetRangeSquaredTo(start) < dist^2 do
+        self:MoveForward()
+        if isfunction(callback) and callback(self, self:GetRangeTo(start)) then return end
+        self:YieldCoroutine(true)
+      end
+    end
   end
-  function ENT:MoveBackward()
-    self:Approach(self:GetPos() - self:GetForward())
+  function ENT:MoveBackward(dist, callback)
+    if not isnumber(dist) then
+      self:Approach(self:GetPos() - self:GetForward())
+    elseif dist > 0 then
+      local start = self:GetPos()
+      while self:GetRangeSquaredTo(start) < dist^2 do
+        self:MoveBackward()
+        if isfunction(callback) and callback(self, self:GetRangeTo(start)) then return end
+        self:YieldCoroutine(true)
+      end
+    end
   end
-  function ENT:MoveRight()
-    self:Approach(self:GetPos() + self:GetRight())
+  function ENT:MoveRight(dist, callback)
+    if not isnumber(dist) then
+      self:Approach(self:GetPos() + self:GetRight())
+    elseif dist > 0 then
+      local start = self:GetPos()
+      while self:GetRangeSquaredTo(start) < dist^2 do
+        self:MoveRight()
+        if isfunction(callback) and callback(self, self:GetRangeTo(start)) then return end
+        self:YieldCoroutine(true)
+      end
+    end
   end
-  function ENT:MoveLeft()
-    self:Approach(self:GetPos() - self:GetRight())
+  function ENT:MoveLeft(dist, callback)
+    if not isnumber(dist) then
+      self:Approach(self:GetPos() - self:GetRight())
+    elseif dist > 0 then
+      local start = self:GetPos()
+      while self:GetRangeSquaredTo(start) < dist^2 do
+        self:MoveLeft()
+        if isfunction(callback) and callback(self, self:GetRangeTo(start)) then return end
+        self:YieldCoroutine(true)
+      end
+    end
+  end
+
+  function ENT:TurnRight(angle, callback)
+    if not isnumber(angle) then
+      self:FaceTowards(self:GetPos() + self:GetRight())
+    elseif angle > 0 then
+      local turned = 0
+      local last = self:GetAngles()
+      local forward = self:GetForward()
+      forward:Rotate(Angle(0, -angle, 0))
+      while math.Round(turned) < angle do
+        if angle - turned < 180 then
+          self:FaceTowards(self:GetPos() + forward)
+        else self:TurnRight() end
+        turned = turned + math.AngleDifference(last.y, self:GetAngles().y)
+        if isfunction(callback) and callback(self, turned) then return end
+        last = self:GetAngles()
+        self:YieldCoroutine(true)
+      end
+    end
+  end
+  function ENT:TurnLeft(angle, callback)
+    if not isnumber(angle) then
+      self:FaceTowards(self:GetPos() - self:GetRight())
+    elseif angle > 0 then
+      if angle <= 0 then return end
+      local turned = 0
+      local last = self:GetAngles()
+      local forward = self:GetForward()
+      forward:Rotate(Angle(0, angle, 0))
+      while math.Round(turned) < angle do
+        if angle - turned < 180 then
+          self:FaceTowards(self:GetPos() + forward)
+        else self:TurnLeft() end
+        turned = turned - math.AngleDifference(last.y, self:GetAngles().y)
+        if isfunction(callback) and callback(self, turned) then return end
+        last = self:GetAngles()
+        self:YieldCoroutine(true)
+      end
+    end
   end
 
   -- Coroutine --
 
+  function ENT:ShouldCompute(path, pos)
+    if not IsValid(path) then return true end
+    if path:GetEnd():DistToSqr(pos) <= (path:GetGoalTolerance()*#path:GetAllSegments()*1.5)^2 then return false end
+    if path:GetAge() < ComputeDelay:GetFloat()*(1+ComputeOptim:GetFloat()*0.1*(#DrGBase.GetNextbots()-1)) then return false end
+    return true
+  end
+
   function ENT:FollowPath(pos, tolerance, generator)
     if isentity(pos) then pos = pos:GetPos() end
     tolerance = isnumber(tolerance) and tolerance or 20
-    local selfpos = self:GetPos()
-    if navmesh.IsLoaded() and self:GetGroundEntity():IsWorld() and
-    navmesh.GetNearestNavArea(self:GetPos()):Contains(self:GetPos()) then
-      pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
+    if navmesh.IsLoaded() and self:GetGroundEntity():IsWorld() then
       local path = self:GetPath()
-      path:SetMinLookAheadDistance(300)
       path:SetGoalTolerance(tolerance)
-      if IsValid(path) then
-        local tol = (tolerance*(path:LastSegment().distanceFromStart-path:GetCurrentGoal().distanceFromStart))/100
-        if tol < tolerance then tol = tolerance end
-        if path:GetEnd():DistToSqr(pos) > tol^2 then
-          path:Compute(self, pos, generator)
-        end
-      else path:Compute(self, pos, generator) end
+      pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
+      if not IsValid(path) and
+      self:GetRangeSquaredTo(pos) <= path:GetGoalTolerance()^2 then return "reached" end
+      if self:ShouldCompute(path, pos) then path:Compute(self, pos, generator) end
       if not IsValid(path) then return "unreachable" end
-      local ledge = self:FindLedge()
       local current = path:GetCurrentGoal()
-      local ladder = current.ladder
-      if current.type == 4 then
+      if current.type == 2 then
+        local ledge = self:FindLedge()
+        if isvector(ledge) then
+          self:ClimbLedge(ledge)
+          path:Invalidate()
+          return "ledge", ledge
+        elseif not self:LastComputeSuccess() and
+        path:GetCurrentGoal().distanceFromStart == path:LastSegment().distanceFromStart then
+          return "unreachable"
+        elseif not self:AvoidObstacles(true) then
+          path:Update(self)
+          if not IsValid(path) then return "reached"
+          elseif self.loco:IsStuck() then
+            self:HandleStuck()
+            return "stuck"
+          else return "moving" end
+        else return "obstacle" end
+      elseif current.type == 4 then
+        local ladder = current.ladder
         if not self.ClimbLaddersUp then return "unreachable" end
         if self:GetHullRangeSquaredTo(ladder:GetBottom()) < self.LaddersUpDistance^2 then
           self:ClimbLadderUp(ladder)
@@ -239,6 +332,7 @@ if SERVER then
           return "moving", ladder
         else return "obstacle" end
       elseif current.type == 5 then
+        local ladder = current.ladder
         if not self.ClimbLaddersDown then
           local drop = ladder:GetTop().z - ladder:GetBottom().z
           if drop <= self.loco:GetDeathDropHeight() then
@@ -248,7 +342,7 @@ if SERVER then
                 self:HandleStuck()
                 return "stuck", ladder
               else return "moving", ladder end
-            else return "obstacles" end
+            else return "obstacle" end
           else return "unreachable" end
         elseif self:GetHullRangeSquaredTo(ladder:GetTop()) < self.LaddersDownDistance^2 then
           self:ClimbLadderDown(ladder)
@@ -260,12 +354,8 @@ if SERVER then
             self:HandleStuck()
             return "stuck", ladder
           else return "moving", ladder end
-        else return "obstacles" end
-      elseif isvector(ledge) then
-        self:ClimbLedge(ledge)
-        path:Invalidate()
-        return "ledge", ledge
-      elseif not self._DrGBaseLastComputeSuccess and
+        else return "obstacle" end
+      elseif not self:LastComputeSuccess() and
       path:GetCurrentGoal().distanceFromStart == path:LastSegment().distanceFromStart then
         return "unreachable"
       elseif not self:AvoidObstacles(true) then
@@ -275,12 +365,12 @@ if SERVER then
           self:HandleStuck()
           return "stuck"
         else return "moving" end
-      else return "obstacles" end
+      else return "obstacle" end
     else
       local ledge = self:FindLedge()
       if isvector(ledge) then
         self:ClimbLedge(ledge)
-        return "ledge"
+        return "ledge", ledge
       elseif not self:AvoidObstacles(true) then
         if self:GetHullRangeSquaredTo(pos) > tolerance^2 then
           self:MoveTowards(pos)
@@ -289,7 +379,7 @@ if SERVER then
             return "stuck"
           else return "moving" end
         else return "reached" end
-      else return "obstacles" end
+      else return "obstacle" end
     end
   end
 
@@ -302,7 +392,7 @@ if SERVER then
       elseif res == "unreachable" then
         return false
       else
-        res = callback(self:GetPath())
+        res = callback(self, self:GetPath())
         if isbool(res) then return res end
         self:YieldCoroutine(true)
       end
@@ -313,12 +403,12 @@ if SERVER then
     if not isentity(ent) then return false end
     if not isfunction(callback) then callback = function() end end
     while IsValid(ent) do
-      local res = self:FollowPath(pos, tolerance)
+      local res = self:FollowPath(ent, tolerance)
       if res == "reached" then return true
       elseif res == "unreachable" then
         return false
       else
-        res = callback(self:GetPath())
+        res = callback(self, self:GetPath())
         if isbool(res) then return res end
         self:YieldCoroutine(true)
       end
@@ -549,6 +639,7 @@ if SERVER then
   end
 
   function ENT:UpdateSpeed()
+    if self:IsPlayingAnimation() then return end
     if self:OnWalkframes(self:GetSequenceName(self:GetSequence())) then
       local speed = 0
       local seq = self:GetSequence()

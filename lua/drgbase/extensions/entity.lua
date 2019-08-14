@@ -4,7 +4,9 @@ local entMETA = FindMetaTable("Entity")
 -- Misc --
 
 function entMETA:DrG_IsSanic()
-  return self.OnReloaded ~= nil and
+  --return self:IsNextBot() and
+  return self.Type == "nextbot" and
+  self.OnReloaded ~= nil and
   self.GetNearestTarget ~= nil and
   self.AttackNearbyTargets ~= nil and
   self.IsHidingSpotFull ~= nil and
@@ -173,7 +175,7 @@ if SERVER then
         phys:ApplyForceOffset(force, position)
       end
       if dmg:IsDamageType(DMG_DISSOLVE) then ragdoll:DrG_Dissolve()
-      elseif self:IsOnFire() or dmg:IsDamageType(DMG_BURN) then ragdoll:Ignite(10) end
+      elseif self:IsOnFire() then ragdoll:Ignite(10) end
       local attacker = dmg:GetAttacker()
       if IsValid(attacker) and attacker.IsDrGNextbot then
         attacker:SpotEntity(ragdoll)
