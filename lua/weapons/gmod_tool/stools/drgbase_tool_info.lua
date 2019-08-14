@@ -93,8 +93,15 @@ function TOOL:DrawToolScreen(width, height)
 			draw.SimpleText("Omniscient: "..(selected:IsOmniscient() and "True" or "False"), "DermaLarge", 10, 90, DrGBase.CLR_LIGHTGRAY)
 		elseif pageName == "Possession" then
 			if selected:IsPossessed() then
-				draw.SimpleText("Possessed by:", "DermaLarge", width/2, height/2-40, DrGBase.CLR_LIGHTGRAY, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-				draw.SimpleText(selected:GetPossessor():GetName(), "DermaLarge", width/2, height/2, DrGBase.CLR_CYAN, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+				draw.SimpleText("Possessed by:", "DermaLarge", 10, 10, DrGBase.CLR_LIGHTGRAY)
+				draw.SimpleText(selected:GetPossessor():GetName(), "DermaLarge", 10, 50, DrGBase.CLR_CYAN)
+				draw.SimpleText("Locked on:", "DermaLarge", 10, 90, DrGBase.CLR_LIGHTGRAY)
+				local lockedOn = selected:PossessionGetLockedOn()
+				if IsValid(lockedOn) then
+					if lockedOn:IsPlayer() then
+						draw.SimpleText(lockedOn:GetName(), "DermaLarge", 10, 130, DrGBase.CLR_ORANGE)
+					else draw.SimpleText("#"..lockedOn:GetClass(), "DermaLarge", 10, 130, DrGBase.CLR_ORANGE) end
+				else draw.SimpleText("None", "DermaLarge", 10, 130, DrGBase.CLR_ORANGE) end
 			else
 				draw.SimpleText("This nextbot", "DermaLarge", width/2, height/2-40, DrGBase.CLR_RED, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 				draw.SimpleText("isn't possessed", "DermaLarge", width/2, height/2, DrGBase.CLR_RED, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)

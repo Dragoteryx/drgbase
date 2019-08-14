@@ -1,7 +1,6 @@
 
 -- Getters/setters --
 
-
 --[[function ENT:GetAnimInfoSequence(seq)
   if isstring(seq) then seq = self:LookupSequence(seq)
   elseif not isnumber(seq) then return {} end

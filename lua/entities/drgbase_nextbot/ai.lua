@@ -19,7 +19,7 @@ function ENT:HaveEnemy()
   return self:HasEnemy()
 end
 function ENT:HadEnemy()
-  return self._DrGBaseHasEnemy
+  return self._DrGBaseHadEnemy
 end
 
 function ENT:GetNemesis()
@@ -56,11 +56,11 @@ function ENT:_InitAI()
     self:LoopTimer(1, self.UpdateAI)
   end
   self:SetNW2VarProxy("DrGBaseEnemy", function(self, name, old, new)
-    if not self._DrGBaseHasEnemy and IsValid(new) then
-      self._DrGBaseHasEnemy = true
+    if not self._DrGBaseHadEnemy and IsValid(new) then
+      self._DrGBaseHadEnemy = true
       self:OnNewEnemy(new)
-    elseif self._DrGBaseHasEnemy and not IsValid(new) then
-      self._DrGBaseHasEnemy = false
+    elseif self._DrGBaseHadEnemy and not IsValid(new) then
+      self._DrGBaseHadEnemy = false
       self:OnLastEnemy(old)
     else self:OnEnemyChange(old, new) end
   end)
