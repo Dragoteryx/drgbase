@@ -176,18 +176,16 @@ if SERVER then
   end
 
   function ENT:RandomPos(min, max)
-    if not isnumber(max) then
-      max = min
-      min = 0
-    end
     if not navmesh.IsLoaded() then return self:GetPos() end
-    local areas = {}
-    for i, area in ipairs(navmesh.Find(self:GetPos(), max, max, max)) do
-      local distsqr = self:GetRangeSquaredTo(area:GetCenter())
-      if distsqr >= min^2 then table.insert(areas, area) end
-    end
-    if #areas == 0 then return self:GetPos()
-    else return areas[math.random(#areas)]:GetRandomPoint() end
+    if isnumber(max) then
+      local areas = {}
+      for i, area in ipairs(navmesh.Find(self:GetPos(), max, max, max)) do
+        local distsqr = self:GetRangeSquaredTo(area:GetCenter())
+        if distsqr >= min^2 then table.insert(areas, area) end
+      end
+      if #areas == 0 then return self:GetPos()
+      else return areas[math.random(#areas)]:GetRandomPoint() end
+    else return self:RandomPos(0, min) end    
   end
 
   function ENT:Attack(attack, callback)
