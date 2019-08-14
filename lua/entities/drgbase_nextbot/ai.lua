@@ -18,6 +18,9 @@ end
 function ENT:HaveEnemy()
   return self:HasEnemy()
 end
+function ENT:HadEnemy()
+  return self._DrGBaseHasEnemy
+end
 
 function ENT:GetNemesis()
   if self:HasNemesis() then
@@ -29,6 +32,9 @@ function ENT:HasNemesis()
 end
 function ENT:HaveNemesis()
   return self:HasNemesis()
+end
+function ENT:HadNemesis()
+  return self:GetNW2Bool("DrGBaseNemesis") and self:HadEnemy()
 end
 
 -- Functions --
@@ -53,15 +59,10 @@ function ENT:_InitAI()
     if not self._DrGBaseHasEnemy and IsValid(new) then
       self._DrGBaseHasEnemy = true
       self:OnNewEnemy(new)
-      if SERVER then self:BehaviourTreeEvent("NewEnemy", new) end
     elseif self._DrGBaseHasEnemy and not IsValid(new) then
       self._DrGBaseHasEnemy = false
       self:OnLastEnemy(old)
-      if SERVER then self:BehaviourTreeEvent("LastEnemy", old) end
-    else
-      self:OnEnemyChange(old, new)
-      if SERVER then self:BehaviourTreeEvent("EnemyChange", old, new) end
-    end
+    else self:OnEnemyChange(old, new) end
   end)
 end
 
@@ -73,7 +74,7 @@ if SERVER then
     local disabled = self:GetNW2Bool("DrGBaseAIDisabled")
     self:SetNW2Bool("DrGBaseAIDisabled", bool)
     if disabled and not bool then
-      nextbot:UpdateAI()
+      self:UpdateAI()
     end
   end
   function ENT:DisableAI()
@@ -96,25 +97,21 @@ if SERVER then
     if not isvector(pos) then return end
     if isnumber(i) then
       table.insert(self._DrGBasePatrolPos, i, pos)
-      self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
     else
       table.insert(self._DrGBasePatrolPos, pos)
-      self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
     end
   end
   function ENT:GetPatrolPos(i)
     return self._DrGBasePatrolPos[i]
   end
   function ENT:RemovePatrolPos(i)
-    local pos = table.remove(self._DrGBasePatrolPos, i)
-    self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
-    return pos
+    return table.remove(self._DrGBasePatrolPos, i)
   end
 
   -- Functions --
 
   function ENT:UpdateAI()
-    self:UpdateEnemiesSight()
+    self:UpdateHostilesSight()
     self:UpdateEnemy()
   end
 
@@ -123,8 +120,13 @@ if SERVER then
     if not self:IsPossessed() then
       if self:HasNemesis() then return self:GetNemesis() end
       enemy = self:OnUpdateEnemy()
+      if enemy == nil then return self:GetEnemy() end
       if not IsValid(enemy) or
       self:GetRangeSquaredTo(enemy) > EnemyRadius:GetFloat()^2 then
+        enemy = NULL
+      end
+      if self:IsAfraidOf(enemy) and
+      not self:IsInRange(enemy, self.WatchAfraidOfRange) then
         enemy = NULL
       end
     else enemy = NULL end
@@ -132,20 +134,22 @@ if SERVER then
     return enemy
   end
   local function CompareEnemies(self, ent1, ent2)
+    if self:IsAfraidOf(ent1) and self:IsEnemy(ent2) and
+    not self:IsInRange(ent1, self.WatchAfraidOfRange) then return false end
+    if self:IsEnemy(ent1) and self:IsAfraidOf(ent2) and
+    not self:IsInRange(ent2, self.WatchAfraidOfRange) then return true end
     local res = self:OnFetchEnemy(ent1, ent2)
     if isbool(res) then return res end
     local prio1 = self:GetPriority(ent1)
     local prio2 = self:GetPriority(ent2)
     if prio1 > prio2 then return true
     elseif prio2 > prio1 then return false
-    else
-      return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
-    end
+    else return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2) end
   end
   function ENT:FetchEnemy()
     if self:IsPossessed() then return NULL end
     local current = NULL
-    for enemy in self:EnemyIterator(true) do
+    for enemy in self:HostileIterator(true) do
       if not IsValid(current) or CompareEnemies(self, enemy, current) then
         current = enemy
       end
@@ -155,19 +159,16 @@ if SERVER then
 
   function ENT:ClearPatrolPos()
     self._DrGBasePatrolPos = {}
-    self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
   end
   function ENT:ShufflePatrolPos()
     table.sort(self._DrGBasePatrolPos, function()
       return math.random(2) == 1
     end)
-    self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
   end
   function ENT:SortPatrolPos()
     table.sort(self._DrGBasePatrolPos, function(pos1, pos2)
       return self:GroundDistance(pos1) < self:GroundDistance(pos2)
     end)
-    self:BehaviourTreeEvent("PatrolPos", self:GetPatrolPos(1))
   end
 
   -- Hooks --
@@ -176,6 +177,11 @@ if SERVER then
   function ENT:OnMeleeAttack() end
   function ENT:OnChaseEnemy() end
   function ENT:OnAvoidEnemy() end
+  function ENT:OnWatchEnemy() end
+  function ENT:OnEnemyUnreachable() end
+
+  function ENT:OnAvoidAfraidOf() end
+  function ENT:OnWatchAfraidOf() end
 
   function ENT:OnReachedPatrol() end
   function ENT:OnPatrolUnreachable() end

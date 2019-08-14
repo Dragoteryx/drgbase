@@ -26,6 +26,16 @@ if SERVER then
     net.WriteVector(self:GetPos())
     net.WriteFloat(self:GetRange())
     net.Broadcast()
+    local blind = DrGBase.Blind()
+    blind:SetDuration(3)
+    local owner = self:GetOwner()
+    blind:SetAttacker(IsValid(owner) and owner or self)
+    blind:SetInflictor(self)
+    for i, ent in ipairs(ents.FindInSphere(self:GetPos(), self:GetRange())) do
+      if ent:IsPlayer() and ent:Alive() then
+        ent:ScreenFade(SCREENFADE.IN, nil, 3, 0)
+      elseif ent.IsDrGNextbot then ent:Blind(blind) end
+    end
   end
 
 else

@@ -15,10 +15,6 @@ if SERVER then
 
   -- Hooks --
 
-  --[[function ENT:OnUpdateAnimation()
-
-  end]]
-
   -- Handlers --
 
 else

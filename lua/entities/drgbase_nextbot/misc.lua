@@ -8,7 +8,7 @@ local PossessTargetAll = CreateConVar("drgbase_possession_targetall", "1", {FCVA
 -- Getters/setters --
 
 function ENT:IsInRange(pos, range)
-  return self:GetHullRangeSquaredTo(pos) <= math.pow(range*self:GetScale(), 2)
+  return self:GetHullRangeSquaredTo(pos) <= (range*self:GetScale())^2
 end
 function ENT:GetHullRangeTo(pos)
   if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
@@ -19,6 +19,18 @@ function ENT:GetHullRangeSquaredTo(pos)
   return self:NearestPoint(pos):DistToSqr(pos)
 end
 
+function ENT:IsAttack(seq)
+  if isstring(seq) then seq = self:LookupSequence(seq)
+  elseif not isnumber(seq) then return false end
+  if seq == -1 then return false end
+  if self:GetNW2Bool("DrGBaseAnimAttack/"..tostring(seq)) then return true
+  elseif string.find(string.lower(self:GetSequenceName(seq)), "attack") ~= nil then
+    return true
+  elseif string.find(self:GetSequenceActivityName(seq), "ATTACK") ~= nil then
+    return true
+  else return  false end
+end
+
 -- Functions --
 
 function ENT:EmitSlotSound(slot, duration, soundName, soundLevel, pitchPercent, volume, channel)
@@ -26,7 +38,8 @@ function ENT:EmitSlotSound(slot, duration, soundName, soundLevel, pitchPercent, 
   if lastSlot == nil or CurTime() > lastSlot then
     self._DrGBaseSlotSounds[slot] = CurTime() + duration
     self:EmitSound(soundName, soundLevel, pitchPercent, volume, channel)
-  end
+    return true
+  else return false end
 end
 
 function ENT:EmitStep(soundLevel, pitchPercent, volume, channel)
@@ -39,7 +52,7 @@ function ENT:EmitStep(soundLevel, pitchPercent, volume, channel)
   local sounds = self.Footsteps[tr.MatType] or DrGBase.DefaultFootsteps[tr.MatType]
   if not istable(sounds) or #sounds == 0 then sounds = self.Footsteps[MAT_DEFAULT] end
   if not istable(sounds) or #sounds == 0 then return false end
-  self:EmitSound(sounds[math.random(#sounds)], soundLevel, pitchPercent, volume, channel or CHAN_BODY)
+  return self:EmitSound(sounds[math.random(#sounds)], soundLevel, pitchPercent, volume, channel or CHAN_BODY)
 end
 function ENT:EmitFootstep(...)
   return self:EmitStep(...)
@@ -77,7 +90,7 @@ end
 
 function ENT:Height()
   local bound1, bound2 = self:GetCollisionBounds()
-  return math.abs(bound1.z - bound2.z)
+  return math.max(bound1.z, bound2.z)
 end
 
 function ENT:RandomizeBodygroup(id)
@@ -92,6 +105,7 @@ end
 -- Hooks --
 
 function ENT:OnAngleChange() end
+function ENT:OnFireBullets() end
 
 -- Handlers --
 
@@ -111,6 +125,9 @@ end
 
 hook.Add("PhysgunDrop", "DrGBaseNextbotPhysgunDrop", function(ply, ent)
   if ent.IsDrGNextbot then ent:Timer(0, ent.SetVelocity, Vector(0, 0, 0)) end
+end)
+hook.Add("EntityFireBullets", "DrGBaseNextbotFireBullets", function(ent, bullet)
+  if ent.IsDrGNextbot then ent:OnFireBullets(bullet) end
 end)
 
 -- Meta --
@@ -159,18 +176,16 @@ if SERVER then
   end
 
   function ENT:RandomPos(min, max)
-    if not isnumber(max) then
-      max = min
-      min = 0
-    end
     if not navmesh.IsLoaded() then return self:GetPos() end
-    local areas = {}
-    for i, area in ipairs(navmesh.Find(self:GetPos(), max, max, max)) do
-      local distsqr = self:GetRangeSquaredTo(area:GetCenter())
-      if distsqr >= min^2 then table.insert(areas, area) end
-    end
-    if #areas == 0 then return self:GetPos()
-    else return areas[math.random(#areas)]:GetRandomPoint() end
+    if isnumber(max) then
+      local areas = {}
+      for i, area in ipairs(navmesh.Find(self:GetPos(), max, max, max)) do
+        local distsqr = self:GetRangeSquaredTo(area:GetCenter())
+        if distsqr >= min^2 then table.insert(areas, area) end
+      end
+      if #areas == 0 then return self:GetPos()
+      else return areas[math.random(#areas)]:GetRandomPoint() end
+    else return self:RandomPos(0, min) end    
   end
 
   function ENT:Attack(attack, callback)
@@ -190,65 +205,71 @@ if SERVER then
     if not istable(attack.relationships) then attack.relationships = {attack.relationships} end
     self:Timer(math.Clamp(attack.delay, 0, math.huge), function(self)
       local hit = {}
-      for h, rel in ipairs(attack.relationships) do
-        for i, ent in ipairs(self:EntitiesInCone(attack.angle, attack.range, rel)) do
-          if ent == self then continue end
-          if not DrGBase.CanAttack(ent) then continue end
-          if not self:Visible(ent) then continue end
-          local trace = false
-          local origin = self:WorldSpaceCenter()
-          local aimAt = isfunction(attack.aimat) and attack.aimat(ent) or ent:WorldSpaceCenter()
-          local dmg = DamageInfo()
-          dmg:SetAttacker(self)
-          dmg:SetInflictor(self)
-          dmg:SetDamageType(attack.type)
-          if attack.push and (not attack.groundforce or ent:IsOnGround()) then
-            dmg:SetDamageForce(self:PushEntity(ent, attack.force))
-          else dmg:SetDamageForce(self:CalcOffset(attack.force)) end
-          if isstring(attack.attachment) or isnumber(attack.attachment) then
-            if isstring(attack.attachment) then
-              attack.attachment = self:LookupAttachment(attack.attachment)
-            end
-            local attachment = self:GetAttachment(attack.attachment)
-            if attachment then
-              if attack.trace then
-                trace = self:TraceLine(nil, {
-                  endpos = attachment.Pos + attachment.Pos:DrG_Direction(aimAt),
-                  start = attachment.Pos
-                })
-              end
-              origin = attachment.Pos
-            end
-          elseif isstring(attack.bone) or isnumber(attack.bone) then
-            if isstring(attack.bone) then attack.bone = self:LookupBone(attack.bone) end
-            if isnumber(attack.bone) then
-              local bonePos, boneAngles = self:GetBonePosition(attack.bone)
-              if attack.trace then
-                trace = self:TraceLine(nil, {
-                  endpos = bonePos + bonePos:DrG_Direction(aimAt),
-                  start = bonePos
-                })
-              end
-              origin = bonePos
-            end
-          elseif attack.trace then
-            trace = self:TraceLine(origin:DrG_Direction(aimAt))
-          end
-          dmg:SetDamage(isfunction(attack.damage) and attack.damage(ent, origin) or attack.damage)
-          if attack.trace and trace and trace.Entity == ent then
-            dmg:SetReportedPosition(trace.HitPos)
-            dmg:SetDamagePosition(trace.HitPos)
-            ent:DispatchTraceAttack(dmg, trace)
-          else
-            dmg:SetReportedPosition(origin)
-            dmg:SetDamagePosition(origin)
-            ent:TakeDamageInfo(dmg)
-          end
-          if attack.viewpunch and ent:IsPlayer() then
-            ent:ViewPunch(attack.viewpunch)
-          end
-          table.insert(hit, ent)
+      for i, ent in ipairs(self:EntitiesInCone(attack.angle, attack.range, attack.relationships)) do
+        if ent == self then continue end
+        if not DrGBase.CanAttack(ent) then continue end
+        if not self:Visible(ent) then continue end
+        local trace = false
+        local origin = self:WorldSpaceCenter()
+        local aimAt = ent:WorldSpaceCenter()
+        if isfunction(attack.aimat) then
+          local res = attack.aimat(ent)
+          if isvector(res) then aimAt = res end
+        elseif isstring(attack.aimat) then
+          local boneId = ent:DrG_SearchBone(attack.aimat)
+          if boneId then aimAt = ent:GetBonePosition(boneId) end
+        --elseif isnumber(attack.aimat) then
         end
+        local dmg = DamageInfo()
+        dmg:SetAttacker(self)
+        dmg:SetInflictor(self)
+        dmg:SetDamageType(attack.type)
+        if attack.push and (not attack.groundforce or ent:IsOnGround()) then
+          dmg:SetDamageForce(self:PushEntity(ent, attack.force))
+        else dmg:SetDamageForce(self:CalcOffset(attack.force)) end
+        if isstring(attack.attachment) or isnumber(attack.attachment) then
+          if isstring(attack.attachment) then
+            attack.attachment = self:LookupAttachment(attack.attachment)
+          end
+          local attachment = self:GetAttachment(attack.attachment)
+          if attachment then
+            if attack.trace then
+              trace = self:TraceLine(nil, {
+                endpos = attachment.Pos + attachment.Pos:DrG_Direction(aimAt),
+                start = attachment.Pos
+              })
+            end
+            origin = attachment.Pos
+          end
+        elseif isstring(attack.bone) or isnumber(attack.bone) then
+          if isstring(attack.bone) then attack.bone = self:LookupBone(attack.bone) end
+          if isnumber(attack.bone) then
+            local bonePos, boneAngles = self:GetBonePosition(attack.bone)
+            if attack.trace then
+              trace = self:TraceLine(nil, {
+                endpos = bonePos + bonePos:DrG_Direction(aimAt),
+                start = bonePos
+              })
+            end
+            origin = bonePos
+          end
+        elseif attack.trace then
+          trace = self:TraceLine(origin:DrG_Direction(aimAt))
+        end
+        dmg:SetDamage(isfunction(attack.damage) and attack.damage(ent, origin) or attack.damage)
+        if attack.trace and trace and trace.Entity == ent then
+          dmg:SetReportedPosition(trace.HitPos)
+          dmg:SetDamagePosition(trace.HitPos)
+          ent:DispatchTraceAttack(dmg, trace)
+        else
+          dmg:SetReportedPosition(origin)
+          dmg:SetDamagePosition(origin)
+          ent:TakeDamageInfo(dmg)
+        end
+        if attack.viewpunch and ent:IsPlayer() then
+          ent:ViewPunch(attack.viewpunch)
+        end
+        table.insert(hit, ent)
       end
       if isfunction(callback) then callback(self, hit) end
     end)
@@ -273,24 +294,10 @@ if SERVER then
     end
     return false
   end
-  function ENT:IsAttack(seq)
-    if isstring(seq) then seq = self:LookupSequence(seq)
-    elseif not isnumber(seq) then return false end
-    if seq == -1 then return false end
-    if self._DrGBaseAnimAttacks[seq] then return true
-    elseif self._DrGBaseAnimAttacks[seq] == false then return false
-    elseif string.find(string.lower(self:GetSequenceName(seq)), "attack") ~= nil then
-      return true
-    elseif string.find(self:GetSequenceActivityName(seq), "ATTACK") ~= nil then
-      return true
-    else return  false end
-  end
   function ENT:SetAttack(seq, attack)
     if isstring(seq) then seq = self:LookupSequence(seq)
     elseif not isnumber(seq) then return false end
-    if seq ~= 1 then
-      self._DrGBaseAnimAttacks[seq] = tobool(attack)
-    end
+    if seq ~= 1 then self:SetNW2Bool("DrGBaseAnimAttack/"..tostring(seq), attack) end
   end
 
   function ENT:SequenceAttack(seq, cycle, attack, callback)
@@ -347,12 +354,11 @@ if SERVER then
     end
   end
 
-  function ENT:EntitiesInCone(angle, distance, disp)
+  function ENT:EntitiesInCone(angle, distance, disp, spotted)
     local entities = {}
     local selfpos = self:GetPos()
     local forward = self:GetForward()
-    for i, ent in ipairs(isnumber(disp) and self:GetEntities(disp) or ents.GetAll()) do
-      if ent == self then continue end
+    for ent in self:EntityIterator(disp, spotted) do
       if not self:IsInRange(ent, distance) then continue end
       if (selfpos + forward):DrG_Degrees(ent:GetPos(), selfpos) <= angle/2 then
         table.insert(entities, ent)
@@ -360,17 +366,20 @@ if SERVER then
     end
     return entities
   end
-  function ENT:AlliesInCone(angle, distance)
-    return self:EntitiesInCone(angle, distance, D_LI)
+  function ENT:AlliesInCone(angle, distance, spotted)
+    return self:EntitiesInCone(angle, distance, D_LI, spotted)
   end
-  function ENT:EnemiesInCone(angle, distance)
-    return self:EntitiesInCone(angle, distance, D_HT)
+  function ENT:EnemiesInCone(angle, distance, spotted)
+    return self:EntitiesInCone(angle, distance, D_HT, spotted)
   end
-  function ENT:AfraidOfInCone(angle, distance)
-    return self:EntitiesInCone(angle, distance, D_FR)
+  function ENT:AfraidOfInCone(angle, distance, spotted)
+    return self:EntitiesInCone(angle, distance, D_FR, spotted)
   end
-  function ENT:NeutralInCone(angle, distance)
-    return self:EntitiesInCone(angle, distance, D_NU)
+  function ENT:HostileInCone(angle, distance, spotted)
+    return self:EntitiesInCone(angle, distance, {D_HT, D_FR}, spotted)
+  end
+  function ENT:NeutralInCone(angle, distance, spotted)
+    return self:EntitiesInCone(angle, distance, D_NU, spotted)
   end
 
   function ENT:Kill(attacker, inflictor, type)

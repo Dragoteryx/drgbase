@@ -6,43 +6,36 @@ NodeList.__index = NodeList
 function NodeList:New()
   local list = {}
   list._nodes = {}
-  list._has = {}
+  list._size = 0
   setmetatable(list, self)
   return list
 end
-function NodeList:Insert(pos, cost)
-  if self:Has(pos) then return self end
-  local id = tostring(pos)
-  self._has[id] = true
-  table.insert(self._nodes, {
-    pos = pos, cost = cost
-  })
-  table.sort(self._nodes, function(node1, node2)
-    return node1.cost < node2.cost
-  end)
+function NodeList:Insert(node, cost)
+  if self:Has(node) then return self end
+  self._nodes[tostring(node)] = {pos = node, cost = cost}
+  self._size = self._size+1
   return self
 end
-function NodeList:Update(pos, cost)
-  if self:Has(pos) then
-    local id = tostring(pos)
-    table.sort(self._nodes, function(node1, node2)
-      if tostring(node1) == id then node1.cost = cost end
-      if tostring(node2) == id then node2.cost = cost end
-      return node1.cost < node2.cost
-    end)
+function NodeList:Update(node, cost)
+  if self:Has(node) then
+    self._nodes[tostring(node)].cost = cost
     return self
-  else return self:Insert(pos, cost) end
+  else return self:Insert(node, cost) end
 end
 function NodeList:Fetch()
-  local node = table.remove(self._nodes, 1)
-  self._has[tostring(node.pos)] = false
+  local node = table.DrG_Fetch(self._nodes, function(node1, node2)
+    return node1.cost < node2.cost
+  end)
+  if not node then return end
+  self._nodes[tostring(node.pos)] = nil
+  self._size = self._size-1
   return node.pos
 end
-function NodeList:Has(pos)
-  return self._has[tostring(pos)] or false
+function NodeList:Has(node)
+  return self._nodes[tostring(node)] ~= nil
 end
 function NodeList:Empty()
-  return #self._nodes == 0
+  return self._size == 0
 end
 
 function DrGBase.Astar(pos, goal, options, callback)
@@ -54,7 +47,7 @@ function DrGBase.Astar(pos, goal, options, callback)
   costSoFar[tostring(pos)] = 0
   local i = 1
   while not openList:Empty() do
-    if coroutine.running() and i == 1 then
+    if coroutine.running() and i == 5 then
       i = 1
       coroutine.yield()
     else i = i+1 end
@@ -120,7 +113,7 @@ function DrGBase.GridAstar(pos, goal, grid, callback)
       end
     end,
     heuristic = function(next, goal)
-      return next:DrG_ManhattanDistance(goal)
+      return next:DrG_ManhattanDistance(goal)*1.05
     end
   }, callback)
   table.remove(path, #path)
@@ -142,7 +135,8 @@ if SERVER then
     if isfunction(binds.Think) then proj.CustomThink = binds.Think end
     if isfunction(binds.Contact) then proj.OnContact = binds.Contact end
     if isfunction(binds.Use) then proj.Use = binds.Use end
-    if isfunction(binds.Damage) then proj.OnTakeDamage = binds.Damage end
+    if isfunction(binds.DealtDamage) then proj.OnDealtDamage = binds.DealtDamage end
+    if isfunction(binds.TakeDamage) then proj.OnTakeDamage = binds.TakeDamage end
     if isfunction(binds.Remove) then proj.OnRemove = binds.Remove end
     proj:Spawn()
     return proj
@@ -169,8 +163,7 @@ if SERVER then
     if ent.DrGBase_Target then return true end
     if ent:IsPlayer() then return true end
     if ent:IsNPC() then return true end
-    if ent.Type == "nextbot" then return true end
-    --if ent:IsNextBot() then return true end
+    if ent:IsNextBot() then return true end
     return false
   end
 
@@ -180,6 +173,46 @@ if SERVER then
     if DrGBase.IsTarget(ent) then return true end
     local phys = ent:GetPhysicsObject()
     return IsValid(phys)
+  end
+
+  local BlindData = {}
+  BlindData.__index = BlindData
+  function BlindData:New()
+    local blind = {}
+    blind._duration = 3
+    blind._attacker = NULL
+    blind._inflictor = NULL
+    setmetatable(blind, self)
+    return blind
+  end
+  function BlindData:GetDuration()
+    return self._duration
+  end
+  function BlindData:SetDuration(duration)
+    if not isnumber(duration) then return end
+    self._duration = math.max(0, duration)
+  end
+  function BlindData:ScaleDuration(scale)
+    if not isnumber(scale) or scale < 0 then return end
+    self:SetDuration(self:GetDuration()*scale)
+  end
+  function BlindData:GetAttacker()
+    return self._attacker
+  end
+  function BlindData:SetAttacker(attacker)
+    if not isentity(attacker) then return end
+    self._attacker = attacker
+  end
+  function BlindData:GetInflictor()
+    return self._inflictor
+  end
+  function BlindData:SetInflictor(inflictor)
+    if not isentity(inflictor) then return end
+    self._inflictor = inflictor
+  end
+
+  function DrGBase.Blind()
+    return BlindData:New()
   end
 
   -- Astar --
@@ -234,12 +267,12 @@ if SERVER then
         --gm_construct:
         local from = Vector(0, 0, 100)
         local to = Entity(1):GetPos()
-        local path, success = DrGBase.NavmeshAstar(from, to, 50)
+        local path, success = DrGBase.NodegraphAstar(from, to, 50)
         if success then
           print("success")
           debugoverlay.Line(from, path[1], 1, DrGBase.CLR_RED, true)
           for i = 1, #path do
-            if path[i+1] then debugoverlay.Line(path[i], path[i+1], 1, DrGBase.CLR_GREEN, true) end
+            if path[i+1] then debugoverlay.Line(path[i], path[i+1], 1, DrGBase.CLR_WHITE, true) end
           end
         else print("failure") end
       end)

@@ -16,7 +16,7 @@ function ENT:GetSpriteFolder()
 end
 
 function ENT:GetSpriteAnim()
-  return self:GetNWString("DrGBaseSpriteAnim")
+  return self:GetNW2String("DrGBaseSpriteAnim")
 end
 function ENT:GetSpriteFrame()
   return self:GetNW2Int("DrGBaseSpriteFrame", 1)
@@ -167,7 +167,7 @@ if SERVER then
     if not self:SpriteAnimExists(anim) then return end
     self:SetNW2Int("DrGBaseSpriteFrame", 0)
     self:SetSpriteFrame(1)
-    self:SetNWString("DrGBaseSpriteAnim", anim)
+    self:SetNW2String("DrGBaseSpriteAnim", anim)
   end
 
   function ENT:SetSpriteFrame(frame)
@@ -205,8 +205,10 @@ if SERVER then
       self:YieldCoroutine(false)
     end
     self._DrGBasePlayingSpriteAnim = oldPlayingAnim
-    if not self:IsDead() then self:Timer(0, self.UpdateAnimation) end
-    self:UpdateSpeed()
+    self:Timer(0, function()
+      self:UpdateAnimation()
+      self:UpdateSpeed()
+    end)
     return CurTime() - now
   end
   function ENT:PlayAnimationAndWait(anim, rate, callback)

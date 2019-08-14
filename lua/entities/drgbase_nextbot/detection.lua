@@ -1,6 +1,7 @@
 
 -- Convars --
 
+local EnableSight = CreateConVar("drgbase_ai_sight", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local EnableHearing = CreateConVar("drgbase_ai_hearing", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Getters/setters --
@@ -15,6 +16,8 @@ function ENT:GetSightLuminosityRange()
   return self:GetNW2Float("DrGBaseMinLuminosity"), self:GetNW2Float("DrGBaseMaxLuminosity")
 end
 function ENT:IsBlind()
+  if not EnableSight:GetBool() then return true end
+  if self:GetCooldown("DrGBaseBlind") > 0 then return true end
   return self:GetSightFOV() <= 0 or self:GetSightRange() <= 0
 end
 
@@ -22,7 +25,8 @@ function ENT:GetHearingCoefficient()
   return self:GetNW2Int("DrGBaseHearingCoefficient")
 end
 function ENT:IsDeaf()
-  return self:GetHearingCoefficient() <= 0
+  if not EnableHearing:GetBool() then return true
+  else return self:GetHearingCoefficient() <= 0 end
 end
 
 -- Functions --
@@ -73,6 +77,7 @@ if SERVER then
     local eyepos = self:EyePos()
     if eyepos:DistToSqr(ent:GetPos()) > self:GetSightRange()^2 then return false end
     if ent:IsPlayer() then
+      if ent:DrG_IsPossessing() then return self:IsInSight(ent:DrG_GetPossessing()) end
       local luminosity = ent:FlashlightIsOn() and 1 or ent:DrG_Luminosity()
       local min, max = self:GetSightLuminosityRange()
       if luminosity < min or luminosity > max then return false end
@@ -89,13 +94,14 @@ if SERVER then
 
   -- Get entities in sight
   function ENT:GetInSight(disp, spotted)
-    local insight = {}
     if istable(disp) then
+      local insight = {}
       for i, dis in ipairs(disp) do
         table.Merge(insight, self:GetInSight(dis, spotted))
       end
       return insight
     elseif isnumber(disp) then
+      local insight = {}
       for ent in self:EntityIterator(disp, spotted) do
         if self:IsInSight(ent) then table.insert(insight, ent) end
       end
@@ -110,6 +116,9 @@ if SERVER then
   end
   function ENT:GetAfraidOfInSight(spotted)
     return self:GetInSight(D_FR, spotted)
+  end
+  function ENT:GetHostilesInSight(spotted)
+    return self:GetInSight({D_HT, D_FR}, spotted)
   end
   function ENT:GetNeutralInSight(spotted)
     return self:GetInSight(D_NU, spotted)
@@ -141,12 +150,30 @@ if SERVER then
   function ENT:UpdateAfraidOfSight(spotted)
     return self:UpdateSight(D_FR, spotted)
   end
+  function ENT:UpdateHostilesSight(spotted)
+    return self:UpdateSight({D_HT, D_FR}, spotted)
+  end
   function ENT:UpdateNeutralSight(spotted)
     return self:UpdateSight(D_NU, spotted)
   end
 
+  function ENT:Blind(blind)
+    if self:IsBlind() then return end
+    local res = self:OnBlinded(blind)
+    if res == true then return
+    elseif isnumber(res) then blind:ScaleDuration(res) end
+    self:SetCooldown("DrGBaseBlind", blind:GetDuration())
+    if not isfunction(self.AfterBlinded) then return end
+    self:CallInCoroutine(function(self, delay)
+      self:AfterBlinded(blind, delay)
+    end)
+  end
+
   -- Hooks --
 
+  function ENT:OnContact(ent)
+    self:SpotEntity(ent)
+  end
   function ENT:OnSight(ent)
     self:SpotEntity(ent)
   end
@@ -154,24 +181,35 @@ if SERVER then
   function ENT:OnSound(ent, sound)
     self:SpotEntity(ent)
   end
+  function ENT:OnBlinded() end
+  --function ENT:AfterBlinded() end
 
   -- Handlers --
 
-  hook.Add("EntityEmitSound", "DrGBaseNextbotHearing", function(sound)
-    if not EnableHearing:GetBool() then return end
-    if not IsValid(sound.Entity) then return end
-    if not sound.Entity:IsPlayer() then return end
+  local function HandleSound(ent, sound)
     if #DrGBase.GetNextbots() == 0 then return end
-    local pos = sound.Pos or sound.Entity:GetPos()
+    local pos = sound.Pos or ent:GetPos()
     local distance = math.pow(sound.SoundLevel/2, 2)*sound.Volume
     --print(distance)
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
-      if sound.Entity == nextbot then continue end
+      if ent == nextbot then continue end
       if nextbot:IsAIDisabled() then continue end
       if nextbot:IsDeaf() then continue end
       local mult = nextbot:VisibleVec(pos) and 1 or 0.5
       if (distance*nextbot:GetHearingCoefficient()*mult)^2 >= nextbot:GetRangeSquaredTo(pos) then
-        nextbot:Timer(0, nextbot.OnSound, sound.Entity, sound)
+        nextbot:Timer(0, nextbot.OnSound, ent, sound)
+      end
+    end
+  end
+  hook.Add("EntityEmitSound", "DrGBaseNextbotHearing", function(sound)
+    if not EnableHearing:GetBool() then return end
+    if not IsValid(sound.Entity) then return end
+    if sound.Entity:IsPlayer() then
+      HandleSound(sound.Entity, sound)
+    elseif sound.Entity:IsVehicle() then
+      local driver = sound.Entity:GetDriver()
+      if IsValid(driver) and driver:IsPlayer() then
+        HandleSound(driver, sound)
       end
     end
   end)

@@ -103,7 +103,6 @@ if SERVER then
   function ENT:CustomInitialize() end
 
   function ENT:Think()
-    self:_HandleContact()
     if CurTime() > self._DrGBaseBaseThinkDelay then
       local delay = self:_BaseThink() or 0
       self._DrGBaseBaseThinkDelay = CurTime() + delay
@@ -136,21 +135,10 @@ if SERVER then
   function ENT:Touch(ent)
     self:Contact(ent)
   end
-  function ENT:_HandleContact()
-    local dir
-    if self:GetVelocity():IsZero() then
-      dir = Vector(0, 0, 0)
-    else dir = self:GetVelocity():GetNormalized() end
-    local mins, maxs = self:GetModelBounds()
-    local tr = self:TraceHull(dir, {
-      mins = mins*self:GetModelScale(), maxs = maxs*self:GetModelScale(),
-      collisiongroup = COLLISION_GROUP_NPC
-    })
-    if IsValid(tr.Entity) then self:Contact(tr.Entity) end
-  end
 
   function ENT:Contact(ent)
     if not IsValid(ent) and not ent:IsWorld() then return end
+    if ent:GetClass() == "trigger_soundscape" then return end
     if not isnumber(self._DrGBaseLastContact) or CurTime() > self._DrGBaseLastContact + self.OnContactDelay then
       if self:OnContact(ent) ~= false then
         self._DrGBaseLastContact = CurTime()
@@ -181,21 +169,29 @@ if SERVER then
   function ENT:AimAt(target, speed, feet)
     local phys = self:GetPhysicsObject()
     if not IsValid(phys) then return Vector(0, 0, 0) end
+    local pos = self:GetPos()
     if phys:IsGravityEnabled() then
-      return self:ThrowAt(target, {
-        magnitude = speed, recursive = true, maxmagnitude = speed
-      }, feet)
-    else
-      if isentity(target) and IsValid(target) then
-        local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
-        local dist = self:GetPos():Distance(aimAt)
-        return self:AimAt(aimAt + target:GetVelocity()*(dist/speed), speed, feet)
-      elseif isvector(target) then
-        local vec = self:GetPos():DrG_Direction(target):GetNormalized()*speed
-        phys:SetVelocity(vec)
-        return vec
-      else return Vector(0, 0, 0) end
-    end
+      return self:ThrowAt(target, {magnitude = speed, maxmagnitude = speed}, feet)
+    elseif isentity(target) and IsValid(target) then
+      local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
+      local dist = pos:Distance(aimAt)
+      local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
+      return self:AimAt(aimAt + velocity*(dist/speed), speed, feet)
+    elseif isvector(target) then
+      local dir = pos:DrG_Direction(target):GetNormalized()*speed
+      phys:SetVelocity(dir)
+      local info = dir:DrG_Data()
+      local dist = pos:Distance(target)
+      info.duration = dist/speed
+      info.reached = true
+      info.Predict = function(t)
+        return pos+dir*t, dir
+      end
+      return dir, info
+    elseif IsValid(self:GetOwner()) then
+      local owner = self:GetOwner()
+      return self:AimAt(self:GetPos()+owner:GetForward(), speed, feet)
+    else return self:AimAt(self:GetPos()+self:GetForward(), speed, feet) end
   end
   function ENT:ThrowAt(target, options, feet)
     local phys = self:GetPhysicsObject()
@@ -203,9 +199,15 @@ if SERVER then
     if isentity(target) and IsValid(target) then
       local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
       local vec, info = self:GetPos():DrG_CalcTrajectory(aimAt, options)
-      return self:ThrowAt(aimAt + target:GetVelocity()*info.duration, options, feet)
+      if info.reached then
+        local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
+        return self:ThrowAt(aimAt + velocity*info.duration, options, feet)
+      else return self:ThrowAt(aimAt, options, feet) end
     elseif isvector(target) then return phys:DrG_Trajectory(target, options)
-    else return Vector(0, 0, 0) end
+    elseif IsValid(self:GetOwner()) then
+      local owner = self:GetOwner()
+      return self:ThrowAt(self:GetPos()+owner:GetForward()*1000, options, feet)
+    else return self:ThrowAt(self:GetPos()+self:GetForward()*1000, options, feet) end
   end
 
   function ENT:DealDamage(ent, value, type)

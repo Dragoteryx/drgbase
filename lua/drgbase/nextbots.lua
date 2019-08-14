@@ -27,7 +27,23 @@ function DrGBase.AddNextbot(ENT)
       color = Color(255, 80, 0, 255)
     }
     killicon.Add(class, ENT.Killicon.icon, ENT.Killicon.color)
-  else resource.AddFile("materials/entities/"..class..".png") end
+  else
+    resource.AddFile("materials/entities/"..class..".png")
+    for i, ent in ipairs(ents.FindByClass(class)) do
+      if not ent.IsDrGNextbot then continue end
+      ent:Timer(0, function()
+        if isfunction(ENT.OnTraceAttack) then
+          ent:DrG_AddListener("OnTraceAttack", ent._HandleTraceAttack)
+        end
+        if isfunction(ENT.OnNavAreaChanged) then
+          ent:DrG_AddListener("OnNavAreaChanged", ent._HandleNavAreaChanged)
+        end
+        if isfunction(ENT.Use) then
+          ent:DrG_AddListener("Use", ent._HandleUse)
+        end
+      end)
+    end
+  end
   local nextbot = {
     Name = ENT.PrintName,
     Class = class,

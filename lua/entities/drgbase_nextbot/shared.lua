@@ -17,7 +17,6 @@ ENT.RagdollOnDeath = true
 DrGBase.IncludeFile("status.lua")
 ENT.SpawnHealth = 100
 ENT.HealthRegen = 0
-ENT.DamageMultipliers = {}
 ENT.MinPhysDamage = 10
 ENT.MinFallDamage = 10
 
@@ -29,22 +28,23 @@ ENT.ClientIdleSounds = false
 ENT.OnDamageSounds = {}
 ENT.DamageSoundDelay = 0.25
 ENT.OnDeathSounds = {}
+ENT.OnDownedSounds = {}
 ENT.Footsteps = {}
 
 -- AI --
 DrGBase.IncludeFile("ai.lua")
-ENT.BehaviourTree = "BaseAI"
 ENT.Omniscient = false
 ENT.SpotDuration = 30
 ENT.RangeAttackRange = 0
 ENT.MeleeAttackRange = 50
 ENT.ReachEnemyRange = 50
 ENT.AvoidEnemyRange = 0
+ENT.AvoidAfraidOfRange = 500
+ENT.WatchAfraidOfRange = 750
 
 -- Relationships --
 DrGBase.IncludeFile("relationships.lua")
 ENT.Factions = {}
-ENT.DefaultRelationship = D_NU
 ENT.Frightening = false
 ENT.AllyDamageTolerance = 0.33
 ENT.AfraidDamageTolerance = 0.33
@@ -71,8 +71,6 @@ ENT.IdleAnimation = ACT_IDLE
 ENT.IdleAnimRate = 1
 ENT.JumpAnimation = ACT_JUMP
 ENT.JumpAnimRate = 1
-ENT.AnimMatchSpeed = true
-ENT.AnimMatchDirection = true
 
 -- Movements --
 ENT.UseWalkframes = false
@@ -103,23 +101,22 @@ ENT.ClimbOffset = Vector(0, 0, 0)
 -- Detection --
 DrGBase.IncludeFile("awareness.lua")
 DrGBase.IncludeFile("detection.lua")
+ENT.EyeBone = ""
+ENT.EyeOffset = Vector(0, 0, 0)
+ENT.EyeAngle = Angle(0, 0, 0)
 ENT.SightFOV = 150
 ENT.SightRange = 15000
 ENT.MinLuminosity = 0
 ENT.MaxLuminosity = 1
-ENT.EyeBone = ""
-ENT.EyeOffset = Vector(0, 0, 0)
-ENT.EyeAngle = Angle(0, 0, 0)
 ENT.HearingCoefficient = 1
 
 -- Weapons --
-DrGBase.IncludeFile("weapons.lua")
+DrGBase.IncludeFile("weapons2.lua")
 ENT.UseWeapons = false
 ENT.Weapons = {}
 ENT.WeaponAccuracy = 1
-ENT.WeaponAttachment = "Anim_Attachment_RH"
 ENT.DropWeaponOnDeath = false
-ENT.AcceptPlayerWeapons = false
+ENT.AcceptPlayerWeapons = true
 
 -- Possession --
 DrGBase.IncludeFile("possession.lua")
@@ -139,6 +136,7 @@ DrGBase.IncludeFile("misc.lua")
 -- Convars --
 local NextbotTickrate = CreateConVar("drgbase_nextbot_tickrate", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local MultHealth = CreateConVar("drgbase_multiplier_health", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local EnablePatrol = CreateConVar("drgbase_ai_patrol", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Initialize --
 function ENT:Initialize()
@@ -162,16 +160,37 @@ function ENT:Initialize()
     self:SetHealthRegen(self.HealthRegen)
     self:SetBloodColor(self.BloodColor)
     self:SetCollisionGroup(COLLISION_GROUP_NPC)
-    self:SetCollisionBounds(
-      Vector(self.CollisionBounds.x, self.CollisionBounds.y, self.CollisionBounds.z),
-      Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0)
-    )
+    if isvector(self.CollisionBounds) then
+      self:SetCollisionBounds(
+        Vector(self.CollisionBounds.x, self.CollisionBounds.y, self.CollisionBounds.z),
+        Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0)
+      )
+    else self:SetCollisionBounds(self:GetModelBounds()) end
     self:SetUseType(SIMPLE_USE)
     self.VJ_AddEntityToSNPCAttackList = true
     self.vFireIsCharacter = true
     self._DrGBaseCorCalls = {}
     self._DrGBaseWaterLevel = self:WaterLevel()
     self._DrGBaseDownSpeed = 0
+    self:SetName("drgbase_nextbot_"..self:GetCreationID())
+    if self:PhysicsInitShadow() then
+      self:AddCallback("PhysicsCollide", function(self, data)
+        self:_HandleCollide(data, self:GetPhysicsObject())
+        --[[if isfunction(data.HitEntity.PhysicsCollide) then
+          local otherData = {}
+          otherData.HitPos = data.HitPos
+          otherData.HitEntity = self
+          otherData.OurOldVelocity = data.TheirOldVelocity
+          otherData.HitObject = phys
+          otherData.DeltaTime = data.DeltaTime
+          otherData.TheirOldVelocity = data.OurOldVelocity
+          otherData.Speed = self:Speed()
+          otherData.HitNormal = -data.HitNormal
+          otherData.PhysObj = data.HitObject
+          data.HitEntity:PhysicsCollide(otherData, data.HitObject)
+        end]]
+      end)
+    end
   else self:SetIK(true) end
   self:AddFlags(FL_OBJECT + FL_NPC)
   self._DrGBaseBaseThinkDelay = 0
@@ -187,7 +206,7 @@ function ENT:Initialize()
   self:_BaseInitialize()
   self:CustomInitialize()
   if CLIENT then return end
-  --print(#DrGBase.GetNextbots())
+  --DrGBase.Print("Nextbots spawned: "..tostring(#DrGBase.GetNextbots()), {color = DrGBase.CLR_GREEN, chat = true})
   self:UpdateAI()
 end
 function ENT:_BaseInitialize() end
@@ -195,6 +214,7 @@ function ENT:CustomInitialize() end
 function ENT:_InitModules()
   if SERVER then
     self:_InitLocomotion()
+    self:_InitPath()
   end
   self:_InitHooks()
   self:_InitMisc()
@@ -214,6 +234,12 @@ function ENT:Think()
   self:_HandleAnimations()
   self:_HandleMovements()
   if SERVER then
+    -- update phys obj
+    local phys = self:GetPhysicsObject()
+    if IsValid(phys) then
+      phys:SetPos(self:GetPos())
+      phys:SetAngles(self:GetAngles())
+    end
     -- water level
     local waterLevel = self:WaterLevel()
     if self._DrGBaseWaterLevel ~= waterLevel then
@@ -249,7 +275,6 @@ function ENT:Think()
       else
 
       end
-
       self:UpdateAnimation()
       self:UpdateSpeed()
     end
@@ -270,9 +295,10 @@ function ENT:Think()
   if #self.OnIdleSounds > 0 then
     if (SERVER and not self.ClientIdleSounds) or
     (CLIENT and self.ClientIdleSounds) then
-      self._DrGBaseIdleSound = self.OnIdleSounds[math.random(#self.OnIdleSounds)]
-      local sound = self._DrGBaseIdleSound
-      self:EmitSlotSound("DrGBaseIdleSounds", SoundDuration(sound) + self.IdleSoundDelay, sound)
+      local sound = self.OnIdleSounds[math.random(#self.OnIdleSounds)]
+      if self:EmitSlotSound("DrGBaseIdleSounds", SoundDuration(sound) + self.IdleSoundDelay, sound) then
+        self._DrGBaseIdleSound = sound
+      end
     end
   end
   -- custom thinks
@@ -304,14 +330,6 @@ function ENT:_BaseThink() end
 function ENT:CustomThink() end
 function ENT:PossessionThink() end
 
--- Use --
-function ENT:Use(...)
-  self:_BaseUse(...)
-  self:CustomUse(...)
-end
-function ENT:_BaseUse() end
-function ENT:CustomUse() end
-
 if SERVER then
   AddCSLuaFile()
 
@@ -325,32 +343,11 @@ if SERVER then
         local msg = "Nextbots need a navmesh to navigate around the map. "
         if game.SinglePlayer() then msg = msg.."You can generate a navmesh using the command 'nav_generate' in the console."
         else msg = msg.."If you are the server owner you can generate a navmesh using the command 'nav_generate' in the server console." end
-        DrGBase.Error(msg.."\nSet 'drgbase_navmesh_error' to 0 to disable this message.", {
-          player = ply, color = DrGBase.CLR_GREEN, chat = true
-        })
+        DrGBase.Error(msg.."\nSet 'drgbase_navmesh_error' to 0 to disable this message.", {player = ply, color = DrGBase.CLR_GREEN, chat = true})
       end
     else ent:Remove() end
   end)
   function ENT:SpawnedBy() end
-
-  -- Behaviour tree --
-
-  function ENT:GetBehaviourTree()
-    if self.BehaviourTree == "" then return
-    else return DrGBase.GetBehaviourTree(self.BehaviourTree) end
-  end
-  function ENT:GetBT()
-    return self:GetBehaviourTree()
-  end
-
-  function ENT:BehaviourTreeEvent(event, ...)
-    local tree = self:GetBehaviourTree()
-    if not tree then return end
-    tree:Event(self, event, ...)
-  end
-  function ENT:BTEvent(...)
-    return self:BehaviourTreeEvent(...)
-  end
 
   -- Coroutine --
 
@@ -383,7 +380,8 @@ if SERVER then
     else coroutine.yield() end
   end
   function ENT:PauseCoroutine(duration, interrompt)
-    if isnumber(duration) and duration >= 0 then
+    if isnumber(duration) then
+      if duration <= 0 then return end
       local now = CurTime()
       while CurTime() < now + duration do
         self:YieldCoroutine(interrompt)
@@ -428,14 +426,15 @@ if SERVER then
       self:OnSpawn()
     end
     while true do
-      if self:IsPossessed() then
-        self:_HandlePossession(true)
-      elseif not self:IsAIDisabled() then
-        local tree = self:GetBehaviourTree()
-        if tree then tree:Run(self)
-        else self:AIBehaviour() end
-      end
+      self:_HandleBehaviour()
       self:YieldCoroutine(true)
+    end
+  end
+  function ENT:_HandleBehaviour()
+    if self:IsPossessed() then
+      self:_HandlePossession(true)
+    elseif not self:IsAIDisabled() then
+      self:AIBehaviour()
     end
   end
 
@@ -447,7 +446,6 @@ if SERVER then
 
   function ENT:OnSpawn() end
   function ENT:OnError() end
-  function ENT:AIBehaviour() end
 
   function ENT:OnHealthChange() end
   function ENT:OnExtinguish() end
@@ -462,6 +460,75 @@ if SERVER then
     function ENT:PercentageFrozen() return 0 end
   end
 
+  -- AI Behaviour --
+
+  function ENT:AIBehaviour()
+    if self:HasEnemy() then
+      self:ReactToEnemy()
+      if not self:HasEnemy() then self:UpdateEnemy() end
+    elseif isvector(self:GetPatrolPos(1)) then self:Patrol()
+    else self:OnIdle() end
+  end
+
+  function ENT:ReactToEnemy()
+    local enemy = self:GetEnemy()
+    local relationship = self:GetRelationship(enemy)
+    if relationship == D_HT then
+      local visible = self:Visible(enemy)
+      if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
+        if self:OnChaseEnemy(enemy) ~= true then
+          if self:FollowPath(enemy) == "unreachable" then
+            self:OnEnemyUnreachable(enemy)
+          end
+        end
+      elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible and
+      not self:IsInRange(enemy, self.MeleeAttackRange) then
+        if self:OnAvoidEnemy(enemy) ~= true then
+          local away = self:GetPos()*2 - enemy:GetPos()
+          self:FollowPath(away)
+        end
+      elseif self:OnWatchEnemy(enemy) ~= true then self:FaceTowards(enemy) end
+      if not IsValid(enemy) or not self:Visible(enemy) then return end
+      if self:IsInRange(enemy, self.MeleeAttackRange) and
+      self:OnMeleeAttack(enemy) ~= false then
+      elseif not self:IsInRange(enemy, self.AvoidEnemyRange) and
+      self:IsInRange(enemy, self.RangeAttackRange) then
+        self:OnRangeAttack(enemy)
+      end
+    elseif relationship == D_FR then
+      local visible = self:Visible(enemy)
+      if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
+        if self:OnAvoidAfraidOf(enemy) ~= true then
+          local away = self:GetPos()*2 - enemy:GetPos()
+          self:FollowPath(away)
+        end
+      elseif self:OnWatchAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
+      if not IsValid(enemy) or not self:Visible(enemy) then return end
+      if self:IsInRange(enemy, self.MeleeAttackRange) and
+      self:OnMeleeAttack(enemy) ~= false then
+      elseif not self:IsInRange(enemy, self.AvoidEnemyRange) and
+      self:IsInRange(enemy, self.RangeAttackRange) then
+        self:OnRangeAttack(enemy)
+      end
+    elseif isvector(self:GetPatrolPos(1)) then self:Patrol() end
+  end
+
+  function ENT:Patrol()
+    if not EnablePatrol:GetBool() then return end
+    local patrol = self:GetPatrolPos(1)
+    local res = self:OnPatrolling(patrol)
+    if not isbool(res) then
+      local follow = self:FollowPath(patrol)
+      if follow == "unreachable" then res = false
+      elseif follow == "reached" then res = true end
+    end
+    if isbool(res) then
+      if res then self:OnReachedPatrol(patrol)
+      else self:OnPatrolUnreachable(patrol) end
+      self:RemovePatrolPos(1)
+    end
+  end
+
 else
 
   local NavmeshMessage = CreateClientConVar("drgbase_navmesh_error", "1", true, true)
@@ -470,15 +537,16 @@ else
 
   function ENT:_HandleNetMessage(name, ...)
     local args, n = table.DrG_Pack(...)
-    if name == "DrGBaseHasSpotted" then
-      local ent = args[1]
-      self._DrGBaseSpotted[ent] = true
-      self:OnSpotted(ent)
+    if name == "DrGBasePickupWeapon" then
+      local weapon = args[1]
+      if not IsValid(weapon) then return end
+      self._DrGBaseWeapons[weapon:GetClass()] = weapon
+      self:OnPickupWeapon(weapon, weapon:GetClass())
       return true
-    elseif name == "DrGBaseHasLost" then
-      local ent = args[1]
-      self._DrGBaseSpotted[ent] = false
-      self:OnLost(ent)
+    elseif name == "DrGBaseDropWeapon" then
+      local class = args[1]
+      self._DrGBaseWeapons[class] = nil
+      self:OnDropWeapon(NULL, class)
       return true
     end
   end
@@ -489,10 +557,16 @@ else
   local DisplaySight = CreateClientConVar("drgbase_display_sight", "0")
 
   function ENT:Draw()
-    self:DrawModel()
+    if DrGBase.INFO_TOOL.Viewcam then
+      local selected = LocalPlayer():DrG_GetSelectedEntities()[1]
+      if selected == self then return end
+    end
+    if self:ShouldDraw() then
+      self:DrawModel()
+      self:_BaseDraw()
+      self:CustomDraw()
+    end
     self:_DrawDebug()
-    self:_BaseDraw()
-    self:CustomDraw()
     if self:IsPossessedByLocalPlayer() then
       self:PossessionDraw()
     end
@@ -500,6 +574,7 @@ else
   function ENT:_BaseDraw() end
   function ENT:CustomDraw() end
   function ENT:PossessionDraw() end
+  function ENT:ShouldDraw() return true end
 
   function ENT:_DrawDebug()
     if not GetConVar("developer"):GetBool() then return end

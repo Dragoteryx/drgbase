@@ -29,9 +29,9 @@ function ENT:GetShootPos()
   if not self:HasWeapon() then return self:GetPos()
   else
     local wep = self:GetWeapon()
-    local attach = wep:LookupAttachment("muzzle")
+    local attach = self:LookupAttachment(self.WeaponAttachment)
     if attach <= 0 then return wep:GetPos()
-    else return wep:GetAttachment(attach).Pos end
+    else return self:GetAttachment(attach).Pos end
   end
 end
 function ENT:GetAimVector()
@@ -49,25 +49,27 @@ end
 
 -- Hooks --
 
+function ENT:OnPickupWeapon() end
+function ENT:OnDropWeapon() end
+
 -- Handlers --
 
 function ENT:_InitWeapons()
-  if CLIENT then return end
-  self._DrGBaseWeaponDropClass = ""
-  if self.UseWeapons then
-    --[[local convarName = "gmod_npcweapon"
-    if ConVarExists(convarName) then
-      local weapon = GetConVar(convarName):GetString()
-      if weapon ~= "none" and weapon ~= "" and weapon == self.Equipment then
-        self:GiveWeapon(weapon)
-      elseif weapon == "" and #self.Weapons > 0 then
+  if SERVER then
+    self._DrGBaseWeaponDropClass = ""
+    if self.UseWeapons then
+      if isstring(self.Equipment) and self.AcceptPlayerWeapons and
+      GetConVar("drgbase_give_weapons"):GetBool() then
+        self:GiveWeapon(self.Equipment)
+      elseif #self.Weapons > 0 then
         self:GiveWeapon(self.Weapons[math.random(#self.Weapons)])
-      end]]
-    if isstring(self.Equipment) then
-      self:GiveWeapon(self.Equipment)
-    elseif #self.Weapons > 0 then
-      self:GiveWeapon(self.Weapons[math.random(#self.Weapons)])
+      end
     end
+  else
+    self:SetNW2VarProxy("DrGBaseWeapon", function(self, name, old, new)
+      if IsValid(old) then self:OnDropWeapon(old) end
+      if IsValid(new) then self:OnPickupWeapon(new) end
+    end)
   end
 end
 
@@ -243,8 +245,6 @@ if SERVER then
 
   function ENT:CanPickupWeapon() return true end
   function ENT:CanDropWeapon() return true end
-  function ENT:OnPickupWeapon() end
-  function ENT:OnDropWeapon() end
   function ENT:OnHolsterWeapon() end
   function ENT:OnUnholsterWeapon() end
 

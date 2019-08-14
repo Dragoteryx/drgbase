@@ -13,50 +13,6 @@ function ENT:GetSpotDuration()
   return self:GetNW2Float("DrGBaseSpotDuration")
 end
 
-function ENT:GetSpotted(disp)
-  if istable(disp) then
-    local entities = {}
-    for i, dis in ipairs(disp) do
-      entities = table.Merge(entities, self:GetSpotted(dis))
-    end
-    return entities
-  elseif isnumber(disp) then
-    local entities = {}
-    for ent in self:EntityIterator(disp, true) do
-      table.insert(entities, ent)
-    end
-    return entities
-  else return self:GetSpotted({D_LI, D_HT, D_FR, D_NU}) end
-end
-function ENT:GetLost(disp)
-  if istable(disp) then
-    local entities = {}
-    for i, dis in ipairs(disp) do
-      entities = table.Merge(entities, self:GetSpotted(dis))
-    end
-    return entities
-  elseif isnumber(disp) then
-    local entities = {}
-    for ent in self:EntityIterator(disp) do
-      if self:HasLost(ent) then table.insert(entities, ent) end
-    end
-    return entities
-  else return self:GetSpotted({D_LI, D_HT, D_FR, D_NU}) end
-end
-
-function ENT:HasSpotted(ent)
-  if not IsValid(ent) then return false end
-  if ent == self then return true end
-  if self:IsOmniscient() then return true end
-  return self._DrGBaseSpotted[ent] or false
-end
-function ENT:HasLost(ent)
-  if not IsValid(ent) then return false end
-  if ent == self then return false end
-  if self:IsOmniscient() then return false end
-  return self._DrGBaseSpotted[ent] == false
-end
-
 -- Hooks --
 
 function ENT:OnSpotted() end
@@ -74,8 +30,53 @@ function ENT:_InitAwareness()
 end
 
 if SERVER then
+  util.AddNetworkString("DrGBaseNextbotPlayerAwareness")
 
   -- Getters/setters --
+
+  function ENT:GetSpotted(disp)
+    if istable(disp) then
+      local entities = {}
+      for i, dis in ipairs(disp) do
+        entities = table.Merge(entities, self:GetSpotted(dis))
+      end
+      return entities
+    elseif isnumber(disp) then
+      local entities = {}
+      for ent in self:EntityIterator(disp, true) do
+        table.insert(entities, ent)
+      end
+      return entities
+    else return self:GetSpotted({D_LI, D_HT, D_FR, D_NU}) end
+  end
+  function ENT:GetLost(disp)
+    if istable(disp) then
+      local entities = {}
+      for i, dis in ipairs(disp) do
+        entities = table.Merge(entities, self:GetSpotted(dis))
+      end
+      return entities
+    elseif isnumber(disp) then
+      local entities = {}
+      for ent in self:EntityIterator(disp) do
+        if self:HasLost(ent) then table.insert(entities, ent) end
+      end
+      return entities
+    else return self:GetSpotted({D_LI, D_HT, D_FR, D_NU}) end
+  end
+
+  function ENT:HasSpotted(ent)
+    if not IsValid(ent) then return false end
+    if ent == self then return true end
+    if self:IsOmniscient() then return true end
+    return self._DrGBaseSpotted[ent] or false
+  end
+  function ENT:HasLost(ent)
+    if not IsValid(ent) then return false end
+    if ent == self then return false end
+    if self:IsOmniscient() then return false end
+    return self._DrGBaseSpotted[ent] == false
+  end
 
   function ENT:SetOmniscient(omniscient)
     self:SetNW2Bool("DrGBaseOmniscient", omniscient)
@@ -109,7 +110,12 @@ if SERVER then
     self:UpdateKnownPosition(ent)
     if not spotted then
       self:OnSpotted(ent)
-      self:NetMessage("DrGBaseHasSpotted", ent)
+      if ent:IsPlayer() then
+        net.Start("DrGBaseNextbotPlayerAwareness")
+        net.WriteEntity(self)
+        net.WriteBit(true)
+        net.Send(ent)
+      end
     end
     local timerName = self:_SpotTimerName(ent)
     timer.Remove(timerName)
@@ -123,7 +129,12 @@ if SERVER then
     if not IsValid(ent) then return end
     if not self:HasSpotted(ent) then return end
     if self:HasLost(ent) then return end
-    self:NetMessage("DrGBaseHasLost", ent)
+    if ent:IsPlayer() then
+      net.Start("DrGBaseNextbotPlayerAwareness")
+      net.WriteEntity(self)
+      net.WriteBit(false)
+      net.Send(ent)
+    end
     timer.Remove(self:_SpotTimerName(ent))
     self._DrGBaseSpotted[ent] = false
     self:OnLost(ent)
@@ -162,13 +173,46 @@ if SERVER then
 
 else
 
+  local function CallAwarenessHooks(self, spotted)
+    local ply = LocalPlayer()
+    if spotted then
+      if isfunction(self.OnSpotted) then
+        self:OnSpotted(ply)
+      else
+        timer.Simple(engine.TickInterval(), function()
+          if IsValid(self) and IsValid(ply) then
+            CallAwarenessHooks(self, spotted)
+          end
+        end)
+      end
+    elseif isfunction(self.OnLost) then
+      self:OnLost(ply)
+    else
+      timer.Simple(engine.TickInterval(), function()
+        if IsValid(self) and IsValid(ply) then
+          CallAwarenessHooks(self, spotted)
+        end
+      end)
+    end
+  end
+  net.Receive("DrGBaseNextbotPlayerAwareness", function()
+    local nextbot = net.ReadEntity()
+    local awareness = net.ReadBit()
+    if IsValid(nextbot) then
+      nextbot._DrGBaseLocalPlayerAwareness = awareness
+      CallAwarenessHooks(nextbot, awareness == 1)
+    end
+  end)
+
   -- Getters/setters --
 
   function ENT:HasSpottedLocalPlayer()
-    return self:HasSpotted(LocalPlayer())
+    if self:IsOmniscient() then return true end
+    return self._DrGBaseLocalPlayerAwareness == 1
   end
   function ENT:HasLostLocalPlayer()
-    return self:HasLost(LocalPlayer())
+    if self:IsOmniscient() then return false end
+    return self._DrGBaseLocalPlayerAwareness == 0
   end
 
 end

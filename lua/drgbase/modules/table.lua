@@ -28,10 +28,34 @@ function table.DrG_Unpack(tbl, size, i)
 end
 
 function table.DrG_Fetch(tbl, callback)
-  if #tbl == 0 then return end
-  local val = tbl[1]
-  for i = 1, #tbl do
-    if callback(tbl[i], val) then val = tbl[i] end
+  local fetched = nil
+  local fetchedKey = nil
+  for key, val in pairs(tbl) do
+    if fetched == nil or
+    callback(val, fetched, key, fetchedKey) then
+      fetched = val
+      fetchedKey = key
+    end
   end
-  return val
+  return fetched, fetchedKey
+end
+
+function table.DrG_Invert(tbl)
+  local inverted = {}
+  for key, val in pairs(tbl) do
+    inverted[val] = key
+  end
+  return inverted
+end
+
+function table.DrG_Copy(tbl, copied)
+  copied = copied or {}
+  local copy = {}
+  for key, val in pairs(tbl) do
+    if istable(val) and not istable(getmetatable(val)) then
+      copy[key] = copied[val] or table.DrG_Copy(val, copied)
+      copied[val] = copy[key]
+    else copy[key] = val end
+  end
+  return copy
 end

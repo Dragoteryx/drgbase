@@ -1,209 +1,180 @@
 ENT.Base = "drgbase_nextbot"
+ENT.IsDrGNextbotHuman = true
+
+-- Misc --
+ENT.PrintName = "Template"
+ENT.Category = "Other"
+ENT.Models = {"models/Kleiner.mdl"}
+ENT.Skins = {0}
+ENT.ModelScale = 1
+ENT.CollisionBounds = Vector(10, 10, 72)
+ENT.BloodColor = BLOOD_COLOR_RED
+ENT.RagdollOnDeath = true
 
 -- Stats --
-ENT.FallDamage = true
+ENT.SpawnHealth = 100
+ENT.HealthRegen = 0
+ENT.MinPhysDamage = 10
+ENT.MinFallDamage = 10
+
+-- Sounds --
+ENT.OnSpawnSounds = {}
+ENT.OnIdleSounds = {}
+ENT.IdleSoundDelay = 2
+ENT.ClientIdleSounds = false
+ENT.OnDamageSounds = {}
+ENT.DamageSoundDelay = 0.25
+ENT.OnDeathSounds = {}
+ENT.OnDownedSounds = {}
+ENT.Footsteps = {}
 
 -- AI --
-ENT.MeleeAttackRange = 0
-ENT.RangeAttackRange = 1500
-ENT.ReachEnemyRange = 750
-ENT.AvoidEnemyRange = 375
-ENT.AvoidFaceEnemy = true
-ENT.FollowPlayers = true
+ENT.BehaviourTree = "BaseAI"
+ENT.Omniscient = false
+ENT.SpotDuration = 30
+ENT.RangeAttackRange = 0
+ENT.MeleeAttackRange = 50
+ENT.ReachEnemyRange = 50
+ENT.AvoidEnemyRange = 0
 
--- Movements/animations --
+-- Relationships --
+ENT.Factions = {}
+ENT.Frightening = false
+ENT.AllyDamageTolerance = 0.33
+ENT.AfraidDamageTolerance = 0.33
+ENT.NeutralDamageTolerance = 0.33
+
+-- Locomotion --
+ENT.Acceleration = 1000
+ENT.Deceleration = 1000
+ENT.JumpHeight = 50
+ENT.StepHeight = 20
+ENT.MaxYawRate = 250
+ENT.DeathDropHeight = 200
+
+-- Animations --
 DrGBase.IncludeFile("animations.lua")
-DrGBase.IncludeFile("movements.lua")
-ENT.WalkSpeed = 100
+ENT.WalkAnimation = ACT_WALK
 ENT.WalkAnimRate = 1
-ENT.RunSpeed = 200
+ENT.RunAnimation = ACT_RUN
 ENT.RunAnimRate = 1
-ENT.CrouchSpeed = 50
-ENT.CrouchWalkAnimRate = 1
-ENT.CrouchIdleAnimRate = 1
+ENT.IdleAnimation = ACT_IDLE
 ENT.IdleAnimRate = 1
+ENT.JumpAnimation = ACT_JUMP
+ENT.JumpAnimRate = 1
+ENT.AnimMatchSpeed = true
+ENT.AnimMatchDirection = true
+
+-- Movements --
+ENT.UseWalkframes = false
+ENT.WalkSpeed = 100
+ENT.RunSpeed = 200
 
 -- Climbing --
-ENT.ClimbLadders = true
+ENT.ClimbLedges = false
+ENT.ClimbLedgesMaxHeight = math.huge
+ENT.ClimbLedgesMinHeight = 0
+ENT.LedgeDetectionDistance = 20
+ENT.ClimbProps = false
+ENT.ClimbLadders = false
+ENT.ClimbLaddersUp = true
+ENT.LaddersUpDistance = 20
+ENT.ClimbLaddersUpMaxHeight = math.huge
+ENT.ClimbLaddersUpMinHeight = 0
+ENT.ClimbLaddersDown = false
+ENT.LaddersDownDistance = 20
+ENT.ClimbLaddersDownMaxHeight = math.huge
+ENT.ClimbLaddersDownMinHeight = 0
 ENT.ClimbSpeed = 60
-ENT.ClimbUpAnimation = ACT_ZOMBIE_CLIMB_UP
-ENT.ClimbOffset = Vector(-14, 0, 0)
-
--- Weapons --
-DrGBase.IncludeFile("weapons.lua")
-ENT.UseWeapons = true
-ENT.DropWeaponOnDeath = true
-ENT.AcceptPlayerWeapons = true
+ENT.ClimbUpAnimation = ACT_CLIMB_UP
+ENT.ClimbDownAnimation = ACT_CLIMB_DOWN
+ENT.ClimbAnimRate = 1
+ENT.ClimbOffset = Vector(0, 0, 0)
 
 -- Detection --
 ENT.EyeBone = "ValveBiped.Bip01_Head1"
 ENT.EyeOffset = Vector(5, 0, 2.5)
+ENT.EyeAngle = Angle(0, 0, 0)
+ENT.SightFOV = 150
+ENT.SightRange = 15000
+ENT.MinLuminosity = 0
+ENT.MaxLuminosity = 1
+ENT.HearingCoefficient = 1
+
+-- Weapons --
+ENT.UseWeapons = false
+ENT.Weapons = {}
+ENT.WeaponAccuracy = 1
+ENT.WeaponAttachment = "Anim_Attachment_RH"
+ENT.DropWeaponOnDeath = false
+ENT.AcceptPlayerWeapons = true
 
 -- Possession --
-ENT.PossessionEnabled = true
+ENT.PossessionEnabled = false
+ENT.PossessionPrompt = true
+ENT.PossessionCrosshair = true
 ENT.PossessionMovement = POSSESSION_MOVE_8DIR
-ENT.PossessionViews = {
-  {
-    offset = Vector(0, 30, 20),
-    distance = 100
-  },
-  {
-    offset = Vector(7.5, 0, 2.5),
-    distance = 0,
-    eyepos = true
-  }
-}
-ENT.PossessionBinds = {
-  [IN_ATTACK] = {
-    {
-      coroutine = false,
-      onkeydown = function(self)
-        if not self:HasWeapon() then return end
-        if self:IsWeaponPrimaryEmpty() then
-          self:WeaponReload(self:GetReloadAnimation())
-        else self:WeaponPrimaryFire(self:GetShootAnimation()) end
-      end
-    }
-  },
-  [IN_ATTACK2] = {
-    {
-      coroutine = false,
-      onkeydown = function(self)
-        if not self:HasWeapon() then return end
-        if self:IsWeaponSecondaryEmpty() then
-          self:WeaponReload(self:GetReloadAnimation())
-        else self:WeaponSecondaryFire(self:GetShootAnimation()) end
-      end
-    }
-  },
-  [IN_RELOAD] = {
-    {
-      coroutine = false,
-      onkeypressed = function(self)
-        if not self:HasWeapon() then return end
-        self:ToggleWeaponHolstered()
-      end
-    }
-  },
-  [IN_JUMP] = {
-    {
-      coroutine = false,
-      onkeydown = function(self)
-        if not self:IsOnGround() then return end
-        self:EmitFootstep()
-        self:Jump()
-      end
-    }
-  },
-  [IN_DUCK] = {
-    {
-      coroutine = false,
-      onkeypressed = function(self)
-        self:ToggleCrouching()
-      end
-    }
-  }
-}
-
--- Other --
-DrGBase.IncludeFile("misc.lua")
+ENT.PossessionViews = {}
+ENT.PossessionBinds = {}
 
 if SERVER then
+  AddCSLuaFile()
 
-  -- Setup --
+  function ENT:CustomInitialize() end
+  function ENT:CustomThink() end
+  function ENT:CustomUse() end
 
-  function ENT:_BaseInitialize()
-    self.loco:SetJumpHeight(100)
-    for i, walk in ipairs({
-      self.RunAnimations,
-      self.WalkAnimations,
-      self.CrouchWalkAnimations
-    }) do
-      for holdtype, act in pairs(walk) do
-        self:SequenceEvent(self:SelectRandomSequence(act), {0.28, 0.78}, function(self)
-          self:EmitFootstep()
-        end)
-      end
-    end
+  -- These hooks are called when the nextbot has an enemy (inside the coroutine)
+  function ENT:OnMeleeAttack(enemy) end
+  function ENT:OnRangeAttack(enemy) end
+  function ENT:OnChaseEnemy(enemy) end
+  function ENT:OnAvoidEnemy(enemy) end
+
+  -- These hooks are called while the nextbot is patrolling (inside the coroutine)
+  function ENT:OnReachedPatrol(pos)
+    self:Wait(math.random(3, 7))
   end
-  function ENT:_BaseThink()
-    if not self:IsPossessed() then
-      if self:IsMoving() then self:SetCrouching(false) end
-      if self:HasEnemy() and not self:IsAIDisabled() then
-        local enemy = self:GetEnemy()
-        self:UnholsterWeapon()
-        if self:IsInSight(enemy) then
-          self:AimAt(enemy)
-        else self:AimAt() end
-      elseif self:HasWeapon() then
-        self:HolsterWeapon()
-        if not self:IsWeaponPrimaryFull() then
-          self:WeaponReload()
-        end
-      end
-    else
-      local tr = self:PossessorTrace()
-      self:LookAt(tr.HitPos)
-      if self:HasWeapon() and not self:IsWeaponHolstered() then
-        self:AimAt(tr.HitPos)
-      else self:AimAt() end
-    end
+  function ENT:OnPatrolUnreachable(pos) end
+  function ENT:OnPatrolling(pos) end
+
+  -- These hooks are called when the current enemy changes (outside the coroutine)
+  function ENT:OnNewEnemy(enemy) end
+  function ENT:OnEnemyChange(oldEnemy, newEnemy) end
+  function ENT:OnLastEnemy(enemy) end
+
+  -- Those hooks are called when the nextbots detects an entity (outside the coroutine)
+  function ENT:OnSpotted(ent) end
+  function ENT:OnLost(ent) end
+  function ENT:OnSight(ent)
+    self:SpotEntity(ent)
+  end
+  function ENT:OnLostSight(ent) end
+  function ENT:OnSound(ent, sound)
+    self:SpotEntity(ent)
   end
 
-  -- AI --
-
-  function ENT:OnRangeAttack(enemy)
-    if not self:IsMoving() then self:FaceTowards(enemy) end
-    if math.random(50) == 1 then self:SetCrouching(true) end
-    if not self:HasWeapon() then return end
-    if not self:IsInSight(enemy) then return end
-    local tr = util.TraceLine({
-        start = self:GetShootPos(),
-        endpos = self:GetShootPos() + self:GetAimVector()*999999999,
-        filter = {self, self:GetWeapon()}
-      })
-    if IsValid(tr.Entity) and self:IsAlly(tr.Entity) then return end
-    if self:IsWeaponPrimaryEmpty() then
-      self:WeaponReload(self:GetReloadAnimation())
-    else self:WeaponPrimaryFire(self:GetShootAnimation()) end
-  end
-  function ENT:OnAvoidEnemy(enemy)
-    if not self:HasWeapon() then return end
-    self:MoveAwayFrom(enemy, true)
-    return true
+  -- Those hooks are called inside the coroutine
+  function ENT:OnSpawn() end
+  function ENT:OnIdle()
+    self:AddPatrolPos(self:RandomPos(1500))
   end
 
-  -- Misc --
+  -- Called outside the coroutine
+  function ENT:OnTakeDamage(dmg, hitgroup)
+    self:SpotEntity(dmg:GetAttacker())
+  end
+  function ENT:OnFatalDamage(dmg, hitgroup) end
 
-  function ENT:OnLandOnGround()
-    self:EmitFootstep()
-  end
-  function ENT:OnClimbing(ladder, left, down)
-    if IsValid(ladder) then
-      self:EmitSlotSound("DrGBaseLadderClimbing", 0.3, "player/footsteps/ladder"..math.random(4)..".wav")
-    end
-    return not down and left < 112.5
-  end
-  function ENT:OnStopClimbing(ladder, height, down)
-    if down then return end
-    local footstep = false
-    self:PlayActivityAndMoveAbsolute(ACT_ZOMBIE_CLIMB_END, self.ClimbAnimRate, function(self, cycle)
-      if cycle >= 0.875 and not footstep then
-        footstep = true
-        self:EmitFootstep()
-      end
-      if cycle > 0.5 or not IsValid(ladder) then return end
-      self:EmitSlotSound("DrGBaseLadderClimbing", 0.3, "player/footsteps/ladder"..math.random(4)..".wav")
-    end)
-  end
+  -- Called inside the coroutine
+  function ENT:AfterTakeDamage(dmg, delay, hitgroup) end
+  function ENT:OnDeath(dmg, delay, hitgroup) end
+  function ENT:OnDowned(dmg, delay, hitgroup) end
 
 else
 
+  function ENT:CustomInitialize() end
+  function ENT:CustomThink() end
+  function ENT:CustomUse() end
+  function ENT:CustomDraw() end
 
-
-end
-
--- DO NOT TOUCH --
-if SERVER then
-  AddCSLuaFile("shared.lua")
 end

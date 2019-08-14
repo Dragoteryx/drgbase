@@ -26,6 +26,13 @@ ENT.ClimbOffset = Vector(-10, 0, 0)
 -- Detection --
 ENT.SightFOV = 360
 
+-- Misc --
+
+function ENT:IsAttack(anim)
+  if self:GetNW2Bool("DrGBaseAnimAttacks/"..anim) then return true
+  else return string.find(string.lower(anim), "attack") ~= nil end
+end
+
 if SERVER then
   AddCSLuaFile()
 
@@ -41,13 +48,8 @@ if SERVER then
   function ENT:IsAttacking()
     return self:IsAttack(self:GetSpriteAnim())
   end
-  function ENT:IsAttack(anim)
-    if self._DrGBaseAnimAttacks[anim] then return true
-    elseif self._DrGBaseAnimAttacks[anim] == false then return false
-    else return string.find(string.lower(anim), "attack") ~= nil end
-  end
   function ENT:SetAttack(anim, attack)
-    self._DrGBaseAnimAttacks[anim] = tobool(attack)
+    self:SetNW2Bool("DrGBaseAnimAttacks/"..anim, attack)
   end
 
   function ENT:SequenceAttack() end
@@ -74,17 +76,23 @@ else
   function ENT:ShouldFlipSprite() return false end
 
   function ENT:DrawTranslucent()
-    local anim = self:GetSpriteAnim()
-    if anim ~= "" then
-      if self:SpriteAnim8Dir(anim) then
-        DrawSprite(self, string.lower(self:CalcPosDirection(EyePos(), true)).."_"..anim)
-      elseif self:SpriteAnim4Dir(anim) then
-        DrawSprite(self, string.lower(self:CalcPosDirection(EyePos(), false)).."_"..anim)
-      else DrawSprite(self, anim) end
+    if DrGBase.INFO_TOOL.Viewcam then
+      local selected = LocalPlayer():DrG_GetSelectedEntities()[1]
+      if selected == self then return end
+    end
+    if self:ShouldDraw() then
+      local anim = self:GetSpriteAnim()
+      if anim ~= "" then
+        if self:SpriteAnim8Dir(anim) then
+          DrawSprite(self, string.lower(self:CalcPosDirection(EyePos(), true)).."_"..anim)
+        elseif self:SpriteAnim4Dir(anim) then
+          DrawSprite(self, string.lower(self:CalcPosDirection(EyePos(), false)).."_"..anim)
+        else DrawSprite(self, anim) end
+      end
+      self:_BaseDraw()
+      self:CustomDraw()
     end
     self:_DrawDebug()
-    self:_BaseDraw()
-    self:CustomDraw()
     if self:IsPossessedByLocalPlayer() then
       self:PossessionDraw()
     end
@@ -92,5 +100,6 @@ else
   function ENT:_BaseDraw() end
   function ENT:CustomDraw() end
   function ENT:PossessionDraw() end
+  function ENT:ShouldDraw() return true end
 
 end

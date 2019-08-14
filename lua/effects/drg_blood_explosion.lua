@@ -4,6 +4,7 @@ function EFFECT:Init(data)
   if not IsValid(ent) then return end
   local color = data:GetFlags()
   for i = 0, (ent:GetBoneCount()-1) do
+    if ent:GetBoneName(i) == "__INVALIDBONE__" then continue end
     local pos, angles = ent:GetBonePosition(i)
     if color == BLOOD_COLOR_RED then
       ParticleEffect("blood_impact_red_01_goop", pos, angles, ent)

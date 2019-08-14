@@ -33,6 +33,7 @@ ENT.EyeOffset = Vector(7.5, 0, 5)
 
 -- Possession --
 ENT.PossessionEnabled = true
+ENT.PossessionMovement = POSSESSION_MOVE_8DIR
 ENT.PossessionViews = {
   {
     offset = Vector(0, 30, 20),
@@ -45,15 +46,13 @@ ENT.PossessionViews = {
   }
 }
 ENT.PossessionBinds = {
-  [IN_ATTACK] = {
-    {
-      coroutine = true,
-      onkeydown = function(self)
-        self:EmitSound("Zombie.Attack")
-        self:PlayActivityAndMove(ACT_MELEE_ATTACK1, 1, self.PossessionFaceForward)
-      end
-    }
-  }
+  [IN_ATTACK] = {{
+    coroutine = true,
+    onkeydown = function(self)
+      self:EmitSound("Zombie.Attack")
+      self:PlayActivityAndMove(ACT_MELEE_ATTACK1, 1, self.PossessionFaceForward)
+    end
+  }}
 }
 
 if SERVER then
@@ -63,12 +62,6 @@ if SERVER then
   function ENT:CustomInitialize()
     self:SetDefaultRelationship(D_HT)
     self:SetBodygroup(1, 1)
-    self:SetAttack("attackA", true)
-    self:SetAttack("attackB", true)
-    self:SetAttack("attackC", true)
-    self:SetAttack("attackD", true)
-    self:SetAttack("attackE", true)
-    self:SetAttack("attackF", true)
   end
 
   -- AI --
@@ -87,11 +80,19 @@ if SERVER then
 
   -- Damage --
 
-  function ENT:OnTakeDamage(dmg, hitgroup)
+  function ENT:OnDeath(dmg, delay, hitgroup)
     if hitgroup == HITGROUP_HEAD then
-      local attacker = dmg:GetAttacker()
-      if self:HasSpotted(attacker) then return 2
-      else return 100 end
+
+    else
+      self:SetBodygroup(1, 0)
+      local headcrab = ents.Create("npc_drg_headcrab")
+      if not IsValid(headcrab) then return end
+      headcrab:SetPos(self:EyePos())
+      headcrab:SetAngles(self:GetAngles())
+      headcrab:Spawn()
+      if IsValid(self:GetCreator()) then
+        self:GetCreator():DrG_AddUndo(headcrab, "NPC", "Undone Headcrab")
+      end
     end
   end
 
@@ -101,7 +102,7 @@ if SERVER then
     self:EmitSound("Zombie.Alert")
   end
 
-  function ENT:HandleAnimEvent()
+  function ENT:OnAnimEvent()
     if self:IsAttacking() and self:GetCycle() > 0.3 then
       self:Attack({
         damage = 10,

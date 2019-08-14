@@ -3,6 +3,7 @@ local entMETA = FindMetaTable("Entity")
 
 -- Misc --
 
+
 function entMETA:DrG_IsSanic()
   --return self:IsNextBot() and
   return self.Type == "nextbot" and

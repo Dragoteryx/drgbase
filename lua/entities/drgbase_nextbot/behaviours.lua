@@ -64,6 +64,8 @@ if SERVER then
       self.loco:SetJumpHeight(height)
       LocoJump(self)
       self.loco:SetJumpHeight(jumpHeight)
+    elseif isvector(height) then
+      LocoJumpGap(self, height)
     else LocoJump(self) end
     if not coroutine.running() then return end
     self:SetNW2Bool("DrGBaseJumping", true)

@@ -12,6 +12,9 @@ end
 function ENT:IsDown()
   return self:GetNW2Bool("DrGBaseDown")
 end
+function ENT:IsDowned()
+  return self:IsDown()
+end
 function ENT:IsDying()
   return self:GetNW2Bool("DrGBaseDying")
 end
@@ -30,6 +33,10 @@ function ENT:GetDowned()
   return self:GetNW2Int("DrGBaseDowned")
 end
 
+function ENT:GetGodMode()
+  return self:GetNW2Bool("DrGBaseGodMode")
+end
+
 -- Functions --
 
 -- Hooks --
@@ -38,11 +45,6 @@ end
 
 function ENT:_InitStatus()
   if CLIENT then return end
-  self._DrGBaseDamageMultipliers = {}
-  for type, mult in pairs(self.DamageMultipliers) do
-    if not isnumber(type) then continue end
-    self:SetDamageMultiplier(type, mult)
-  end
   self:LoopTimer(1, self._RegenHealth)
 end
 
@@ -57,18 +59,21 @@ if SERVER then
   function ENT:SetScale(scale, delta)
     self:SetNW2Float("DrGBaseScale", scale)
     self:SetModelScale(self.ModelScale*scale, delta)
+    self:PhysicsInitShadow()
     self:UpdateSpeed()
   end
   function ENT:Scale(mult, delta)
     self:SetScale(self:GetScale()*mult, delta)
   end
 
-  function ENT:GetDamageMultiplier(type)
-    return self._DrGBaseDamageMultipliers[type] or 1
+  function ENT:SetGodMode(god)
+    return self:SetNW2Bool("DrGBaseGodMode", god)
   end
-  function ENT:SetDamageMultiplier(type, mult)
-    if mult == 1 then self._DrGBaseDamageMultipliers[type] = nil
-    else self._DrGBaseDamageMultipliers[type] = mult end
+  function ENT:EnableGodMode()
+    self:SetGodMode(true)
+  end
+  function ENT:DisableGodMode()
+    self:SetGodMode(false)
   end
 
   -- Functions --

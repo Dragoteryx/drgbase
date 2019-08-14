@@ -6,6 +6,8 @@ DrGBase.CLR_CYAN = Color(0, 200, 200)
 DrGBase.CLR_PURPLE = Color(220, 40, 115)
 DrGBase.CLR_BLUE = Color(50, 100, 255)
 DrGBase.CLR_ORANGE = Color(255, 150, 30)
+DrGBase.CLR_DARKGRAY = Color(20, 20, 20)
+DrGBase.CLR_LIGHTGRAY = Color(200, 200, 200)
 
 local function Transparent(color)
   color = color:ToVector():ToColor()

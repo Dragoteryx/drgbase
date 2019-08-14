@@ -16,7 +16,7 @@ ENT.OnDamageSounds = {"NPC_Antlion.Pain"}
 ENT.SpawnHealth = 40
 
 -- AI --
-ENT.RangeAttackRange = 0
+ENT.RangeAttackRange = 750
 ENT.MeleeAttackRange = 50
 ENT.ReachEnemyRange = 50
 ENT.AvoidEnemyRange = 0
@@ -26,8 +26,8 @@ ENT.FollowPlayers = true
 ENT.Factions = {FACTION_ANTLIONS}
 
 -- Movements/animations --
-ENT.JumpAnimation = ACT_GLIDE
 ENT.UseWalkframes = true
+ENT.JumpAnimation = ACT_GLIDE
 
 -- Detection --
 ENT.EyeBone = "Antlion.Head_Bone"
@@ -36,6 +36,7 @@ ENT.EyeAngle = Angle(0, 0, 0)
 
 -- Possession --
 ENT.PossessionEnabled = true
+ENT.PossessionMovement = POSSESSION_MOVE_8DIR
 ENT.PossessionCrosshair = true
 ENT.PossessionViews = {
   {
@@ -49,32 +50,26 @@ ENT.PossessionViews = {
   }
 }
 ENT.PossessionBinds = {
-  [IN_JUMP] = {
-    {
-      coroutine = false,
-      onkeypressed = function(self)
-        if not self:IsOnGround() then return end
-        self:LeaveGround()
-        self:SetVelocity(self:PossessorNormal()*1500)
-      end
-    }
-  },
-  [IN_ATTACK] = {
-    {
-      coroutine = true,
-      onkeydown = function(self)
-        self:PlaySequenceAndMove("attack"..math.random(6), 1, self.PossessionFaceForward)
-      end
-    }
-  },
-  [IN_ATTACK2] = {
-    {
-      coroutine = true,
-      onkeydown = function(self)
-        self:BurrowTo(self:PossessorTrace().HitPos)
-      end
-    }
-  }
+  [IN_JUMP] = {{
+    coroutine = false,
+    onkeypressed = function(self)
+      if not self:IsOnGround() then return end
+      self:LeaveGround()
+      self:SetVelocity(self:PossessorNormal()*1500)
+    end
+  }},
+  [IN_ATTACK] = {{
+    coroutine = true,
+    onkeydown = function(self)
+      self:PlaySequenceAndMove("attack"..math.random(6), 1, self.PossessionFaceForward)
+    end
+  }},
+  [IN_ATTACK2] = {{
+    coroutine = true,
+    onkeydown = function(self)
+      self:BurrowTo(self:PossessorTrace().HitPos)
+    end
+  }}
 }
 
 if SERVER then
@@ -87,6 +82,7 @@ if SERVER then
       pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
     end
     self:SetPos(pos)
+    self:DropToFloor()
     self:PlaySequenceAndMove("digout")
   end
 
@@ -94,11 +90,16 @@ if SERVER then
 
   function ENT:CustomInitialize()
     self:SetDefaultRelationship(D_HT)
-    for i = 1, 6 do self:SetAttack("attack"..i, true) end
   end
 
   -- AI --
 
+  function ENT:OnRangeAttack(enemy)
+    if not self:IsInRange(enemy, 500) then
+      self:Leap(enemy, 1000)
+      self:PauseCoroutine(0.25)
+    end
+  end
   function ENT:OnMeleeAttack(enemy)
     self:PlaySequenceAndMove("attack"..math.random(6), 1, self.FaceEnemy)
   end
@@ -125,8 +126,8 @@ if SERVER then
     end
   end
 
-  function ENT:HandleAnimEvent(...)
-    if string.StartWith(self:GetSequenceName(self:GetSequence()), "attack") then
+  function ENT:OnAnimEvent()
+    if self:IsAttacking() then
       if self:GetCycle() > 0.3 then
         self:Attack({
           damage = 5,
@@ -138,9 +139,7 @@ if SERVER then
         end)
       else self:EmitSound("NPC_Antlion.MeleeAttackSingle") end
     elseif self:IsOnGround() then
-      if math.random(2) == 1 then
-        self:EmitSound("NPC_Antlion.FootstepSoft")
-      else self:EmitSound("NPC_Antlion.Footstep") end
+      self:EmitSound("NPC_Antlion.Footstep")
     end
   end
 

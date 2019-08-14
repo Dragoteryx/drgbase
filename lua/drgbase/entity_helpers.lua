@@ -3,7 +3,7 @@ if not istable(ENT) then return end
 -- Print --
 
 function ENT:PrintPoseParameters()
-  for i = 0, self:GetNumPoseParameters() - 1 do
+  for i = 0, (self:GetNumPoseParameters()-1) do
   	local min, max = self:GetPoseParameterRange(i)
   	print(self:GetPoseParameterName(i).." "..min.." / "..max)
   end
@@ -19,7 +19,7 @@ function ENT:PrintAnimations()
   end
 end
 function ENT:PrintBones()
-  for i = 0, self:GetBoneCount() - 1 do
+  for i = 0, (self:GetBoneCount()-1) do
     local bonename = self:GetBoneName(i)
     if bonename == nil then continue end
     print(i.." => "..bonename)
@@ -60,8 +60,8 @@ function ENT:TraceLine(vec, data)
   trdata.endpos = data.endpos or trdata.start + vec
   trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
   if self.IsDrGNextbot then
-    trdata.mask = data.mask or self:GetSolidMask()
-    trdata.filter = data.filter or {self, self:GetWeapon()}
+    if SERVER then trdata.mask = data.mask or self:GetSolidMask() end
+    trdata.filter = data.filter or {self, self:GetWeapon(), self:GetPossessor()}
   else trdata.filter = data.filter or self end
   return util.DrG_TraceLine(trdata)
 end
@@ -81,8 +81,8 @@ function ENT:TraceHull(vec, data)
   trdata.endpos = data.endpos or trdata.start + vec
   trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
   if self.IsDrGNextbot then
-    trdata.mask = data.mask or self:GetSolidMask()
-    trdata.filter = data.filter or {self, self:GetWeapon()}
+    if SERVER then trdata.mask = data.mask or self:GetSolidMask() end
+    trdata.filter = data.filter or {self, self:GetWeapon(), self:GetPossessor()}
   else trdata.filter = data.filter or self end
   trdata.maxs = data.maxs or bound1
   trdata.mins = data.mins or bound2
@@ -105,7 +105,7 @@ function ENT:TraceHullRadial(distance, precision, data)
   for i = 1, precision do
     local normal = self:GetForward()*distance
     normal:Rotate(Angle(0, i*(360/precision), 0))
-    table.insert(traces, self:TraceHull(normal, steps, data))
+    table.insert(traces, self:TraceHull(normal, data))
   end
   table.sort(traces, function(tr1, tr2)
     return self:GetRangeSquaredTo(tr1.HitPos) < self:GetRangeSquaredTo(tr2.HitPos)
@@ -120,7 +120,7 @@ function ENT:ScreenShake(amplitude, frequency, duration, radius)
 end
 
 function ENT:GetCooldown(name)
-  local delay = self:GetNW2Float("DrGBaseCooldowns-"..tostring(name), false)
+  local delay = self:GetNW2Float("DrGBaseCooldowns/"..tostring(name), false)
   if delay ~= false then
     return math.Clamp(delay - CurTime(), 0, math.huge)
   else return 0 end
@@ -148,7 +148,7 @@ if SERVER then
   end
 
   function ENT:SetCooldown(name, delay)
-    self:SetNW2Float("DrGBaseCooldowns-"..tostring(name), CurTime() + delay)
+    self:SetNW2Float("DrGBaseCooldowns/"..tostring(name), CurTime() + delay)
   end
 
   function ENT:PushEntity(ent, force)
@@ -266,12 +266,8 @@ else
 
   local function ReceiveMessage(name, self, ...)
     if not IsValid(self) then return end
-    if not self.IsDrGEntity then return end
-    if isfunction(self._HandleNetMessage) then
-      if self:_HandleNetMessage(name, ...) then return end
-      if isfunction(self.OnNetMessage) then
-        self:OnNetMessage(name, ...)
-      end
+    if isfunction(self._HandleNetMessage) and isfunction(self.OnNetMessage) then
+      if not self:_HandleNetMessage(name, ...) then self:OnNetMessage(name, ...) end
     else timer.DrG_Simple(engine.TickInterval(), ReceiveMessage, name, self, ...) end
   end
   net.DrG_Receive("DrGBaseEntMessage", ReceiveMessage)
