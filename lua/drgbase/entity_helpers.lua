@@ -38,16 +38,11 @@ end
 
 -- Timers --
 
-function ENT:Timer(duration, callback, ...)
-  timer.DrG_Simple(duration, function(...)
-    if IsValid(self) then callback(self, ...) end
-  end, ...)
+function ENT:Timer(...)
+  return self:DrG_Timer(...)
 end
-function ENT:LoopTimer(delay, callback, ...)
-  timer.DrG_Loop(delay, function(...)
-    if not IsValid(self) then return false end
-    return callback(self, ...)
-  end, ...)
+function ENT:LoopTimer(...)
+  return self:DrG_LoopTimer(...)
 end
 
 -- Traces --

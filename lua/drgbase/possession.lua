@@ -1,5 +1,6 @@
 
 local PossessionEnabled = CreateConVar("drgbase_possession_enable", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local EnableLockOn = CreateConVar("drgbase_possession_allow_lockon", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 properties.Add("drgbasepossess", {
 	MenuLabel = "Possess",
@@ -83,6 +84,20 @@ if SERVER then
 	hook.Add("PlayerDeath", "DrGBasePossessionPlayerDeath", PlayerDeath)
 	hook.Add("PlayerSilentDeath", "DrGBasePossessionPlayerSilentDeath", PlayerDeath)
 
+	local function LockOnEntity(nextbot, ent)
+		nextbot._DrGBaseAutoLockOnID = nextbot._DrGBaseAutoLockOnID or 0
+		nextbot._DrGBaseAutoLockOnID = nextbot._DrGBaseAutoLockOnID+1
+		local id = nextbot._DrGBaseAutoLockOnID
+		nextbot:PossessionLockOn(ent)
+		ent:CallOnRemove("DrGBasePossessionSwitchLockOn", function()
+			if not IsValid(nextbot) then return end
+			if id == nextbot._DrGBaseAutoLockOnID then
+				local closest = nextbot:PossessionFetchLockOn()
+				if IsValid(closest) then LockOnEntity(nextbot, closest) end
+			end
+		end)
+	end
+
 	hook.Add("PlayerButtonDown", "DrGBasePossessionButtons", function(ply, button)
 		if not ply:DrG_IsPossessing() then return end
 		local possessing = ply:DrG_Possessing()
@@ -91,11 +106,11 @@ if SERVER then
 				possessing:CycleViewPresets()
 			elseif button == ply:GetInfoNum("drgbase_possession_exit", KEY_E) then
 				possessing:Dispossess()
-			elseif button == ply:GetInfoNum("drgbase_possession_lockon", KEY_L) then
+			elseif button == ply:GetInfoNum("drgbase_possession_lockon", KEY_L) and EnableLockOn:GetBool() then
 				local lockedOn = possessing:PossessionGetLockedOn()
 				local closest = possessing:PossessionFetchLockOn()
-				if closest ~= lockedOn then
-					possessing:PossessionLockOn(closest)
+				if closest ~= lockedOn and IsValid(closest) then
+					LockOnEntity(possessing, closest)
 				else possessing:PossessionLockOn(NULL) end
 			end
 		end
@@ -115,6 +130,12 @@ if SERVER then
 			AddOriginToPVS(possessing:GetPos())
 			local lockedOn = possessing:PossessionGetLockedOn()
 			if IsValid(lockedOn) then AddOriginToPVS(lockedOn:GetPos()) end
+		end
+	end)
+
+	hook.Add("EntityEmitSound", "DrGBasePossessionMutePlayerSounds", function(sound)
+		if IsValid(sound.Entity) and sound.Entity:IsPlayer() and sound.Entity:DrG_IsPossessing() then
+			return false
 		end
 	end)
 
@@ -162,13 +183,14 @@ else
 		if not isfunction(ply.DrG_IsPossessing) then return end
 		if not ply:DrG_IsPossessing() then return end
 		if HUD_HIDE[name] then return false end
-		--if name == "CHudCrosshair" and not ply:DrG_Possessing().PossessionCrosshair then return false end
+		if name == "CHudCrosshair" and not ply:DrG_Possessing().PossessionCrosshair then return false end
 	end)
 
 	hook.Add("CalcView", "DrGBasePossessionCalcView", function(ply, origin, angles, fov, znear, zfar)
 		if not isfunction(ply.DrG_IsPossessing) then return end
 		if not ply:DrG_IsPossessing() then return end
 		local possessing = ply:DrG_Possessing()
+		if not isfunction(possessing.PossessorView) then return end
 		local view = {}
 		view.origin, view.angles = possessing:PossessorView()
 		view.fov, view.znear, view.zfar = fov, znear, zfar
@@ -178,6 +200,11 @@ else
 
 	hook.Add("ContextMenuOpen", "DrGBasePossessionDisableCMenu", function()
 		local ply = LocalPlayer()
+		if not isfunction(ply.DrG_IsPossessing) then return end
+		if ply:DrG_IsPossessing() then return false end
+	end)
+
+	hook.Add("ShouldDrawLocalPlayer", "DrGBasePossessionDrawPlayer", function(ply)
 		if not isfunction(ply.DrG_IsPossessing) then return end
 		if ply:DrG_IsPossessing() then return false end
 	end)

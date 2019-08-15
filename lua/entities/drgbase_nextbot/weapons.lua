@@ -1,89 +1,105 @@
 
 -- Getters/setters --
 
-function ENT:GetWeapon()
+function ENT:GetActiveWeapon()
   return self:GetNW2Entity("DrGBaseWeapon")
 end
-function ENT:GetActiveWeapon()
-  return self:GetWeapon()
+function ENT:GetWeapon(class)
+  if isstring(class) then
+    return self._DrGBaseWeapons[class] or NULL
+  else return self:GetActiveWeapon() end
 end
-function ENT:HasWeapon()
-  return IsValid(self:GetWeapon())
+function ENT:HasWeapon(class)
+  return IsValid(self:GetWeapon(class))
 end
-function ENT:HaveWeapon()
-  return self:HasWeapon()
+function ENT:HaveWeapon(class)
+  return self:HasWeapon(class)
+end
+
+function ENT:GetWeapons()
+  return table.DrG_Copy(self._DrGBaseWeapons)
+end
+function ENT:GetWeaponCount()
+  return table.Count(self._DrGBaseWeapons)
 end
 
 function ENT:IsReloadingWeapon()
   if not self:HasWeapon() then return false end
   return self:GetNW2Bool("DrGBaseReloadWeapon")
 end
-function ENT:IsWeaponHolstered()
-  if not self:HasWeapon() then return false end
-  return self:GetNW2Bool("DrGBaseWeaponHolstered")
+
+function ENT:GetShootPos()
+  if self:HasWeapon() then
+    local bonepos = self:GetBonePosition(self:LookupBone("ValveBiped.Bip01_R_Hand"))
+    return bonepos
+    --[[local mergeBone = self:GetWeapon():GetBoneName(0)
+    if mergeBone == nil or mergeBone == "__INVALIDBONE__" then
+      return self:GetPos()
+    else
+      local bonepos = self:GetBonePosition(self:LookupBone(mergeBone))
+      return bonepos
+    end]]
+  else return self:GetPos() end
+end
+
+local function GetAimVector(self)
+  if self:IsPossessed() then
+    local lockedOn = self:PossessionGetLockedOn()
+    if IsValid(lockedOn) then
+      local aimAt = self:OnAimAtEntity(lockedOn) or lockedOn:WorldSpaceCenter()
+      return self:GetShootPos():DrG_Direction(aimAt):GetNormalized()
+    else return self:GetShootPos():DrG_Direction(self:PossessorTrace().HitPos):GetNormalized() end
+  elseif self:HasEnemy() then
+    local enemy = self:GetEnemy()
+    local aimAt = self:OnAimAtEntity(enemy) or enemy:WorldSpaceCenter()
+    return self:GetShootPos():DrG_Direction(aimAt):GetNormalized()
+  else return self:EyeAngles():Forward() end
+end
+function ENT:GetAimVector()
+  local dir = GetAimVector(self)
+  return dir
 end
 
 -- Functions --
-
-function ENT:GetShootPos()
-  if not self:HasWeapon() then return self:GetPos()
-  else
-    local wep = self:GetWeapon()
-    local attach = self:LookupAttachment(self.WeaponAttachment)
-    if attach <= 0 then return wep:GetPos()
-    else return self:GetAttachment(attach).Pos end
-  end
-end
-function ENT:GetAimVector()
-  local normal
-  if self:IsPossessed() then
-    return self:GetShootPos():DrG_Direction(self:PossessorTrace().HitPos)
-  elseif self:HasEnemy() then
-    return self:GetShootPos():DrG_Direction(self:GetEnemy():WorldSpaceCenter())
-  else normal = self:GetForward() end
-  local cap = 10
-  local acc = math.Clamp((1 - self.WeaponAccuracy)*cap, 0, cap)
-  normal:Rotate(Angle(math.random(-acc, acc), math.random(-acc, acc), 0))
-  return normal
-end
 
 -- Hooks --
 
 function ENT:OnPickupWeapon() end
 function ENT:OnDropWeapon() end
+function ENT:OnAimAtEntity() end
 
 -- Handlers --
 
 function ENT:_InitWeapons()
-  if SERVER then
-    self._DrGBaseWeaponDropClass = ""
-    if self.UseWeapons then
-      if isstring(self.Equipment) and self.AcceptPlayerWeapons and
-      GetConVar("drgbase_give_weapons"):GetBool() then
-        self:GiveWeapon(self.Equipment)
-      elseif #self.Weapons > 0 then
-        self:GiveWeapon(self.Weapons[math.random(#self.Weapons)])
-      end
+  self._DrGBaseWeapons = {}
+  if CLIENT then return end
+  if self.UseWeapons then
+    for i, class in ipairs(self.Weapons) do
+      self:GiveWeapon(class)
     end
-  else
-    self:SetNW2VarProxy("DrGBaseWeapon", function(self, name, old, new)
-      if IsValid(old) then self:OnDropWeapon(old) end
-      if IsValid(new) then self:OnPickupWeapon(new) end
-    end)
+    self:SwitchWeapon()
   end
 end
 
--- Compatibility --
-
-function ENT:ViewPunch() end
-
 if SERVER then
 
-  local REPLACE_WEAPONS = {
-    ["weapon_ar2"] = "weapon_drg_ar2"
-  }
+  -- Misc --
+
+  local function IsWeapon(ent)
+    return isentity(ent) and IsValid(ent) and ent:IsWeapon()
+  end
 
   -- Getters/setters --
+
+  function ENT:SetActiveWeapon(weapon)
+    if not IsWeapon(weapon) then return false end
+    if self._DrGBaseWeapons[weapon:GetClass()] ~= weapon then return false end
+    local active = self:GetActiveWeapon()
+    if IsValid(active) then active:SetNoDraw(true) end
+    weapon:SetNoDraw(false)
+    self:SetNW2Entity("DrGBaseWeapon", weapon)
+    return true
+  end
 
   function ENT:GetWeaponPrimaryAmmo()
     if not self:HasWeapon() then return 0 end
@@ -130,102 +146,139 @@ if SERVER then
 
   -- Functions --
 
-  function ENT:HolsterWeapon()
-    if not self:HasWeapon() then return end
-    self:SetNW2Bool("DrGBaseWeaponHolstered", true)
-    self:OnHolsterWeapon(self:GetWeapon())
-  end
-  function ENT:UnholsterWeapon()
-    if not self:HasWeapon() then return end
-    self:SetNW2Bool("DrGBaseWeaponHolstered", false)
-    self:OnUnholsterWeapon(self:GetWeapon())
-  end
-  function ENT:ToggleWeaponHolstered()
-    if not self:HasWeapon() then return end
-    if self:IsWeaponHolstered() then
-      self:UnholsterWeapon()
-    else self:HolsterWeapon() end
-  end
-
-  -- Pickup/drop weapon
   function ENT:GiveWeapon(class)
-    if self:HasWeapon() then return false end
-    local wep = ents.Create(REPLACE_WEAPONS[class] or class)
-    if not IsValid(wep) then return false end
-    wep:Spawn()
-    if not self:PickupWeapon(wep, class) then
-      wep:Remove()
-      return false
-    else return true, wep end
-  end
-  function ENT:PickupWeapon(wep, class)
-    if self:HasWeapon() then return false end
-    if not REPLACE_WEAPONS[wep:GetClass()] then
-      if not IsValid(wep) or not wep:IsWeapon() then return false end
-      if not self:CanPickupWeapon(wep) then return false end
-      local attach = self:GetAttachment(self:LookupAttachment(self.WeaponAttachment))
-      if attach == nil then return end
-      self._DrGBaseWeaponDropClass = class or wep:GetClass()
-      wep:SetPos(attach.Pos)
-      wep:SetMoveType(MOVETYPE_NONE)
-      wep:SetOwner(self)
-    	wep:SetParent(self, self.WeaponAttachmentRH)
-    	wep:AddEffects(EF_BONEMERGE)
-      wep:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
-      self:SetNW2Entity("DrGBaseWeapon", wep)
-      self:UnholsterWeapon()
-      self:OnPickupWeapon(wep)
-      return true, wep
+    local weapon = ents.Create(class)
+    if not IsValid(weapon) then return NULL end
+    if IsWeapon(weapon) then
+      weapon:Spawn()
+      if not self:PickupWeapon(weapon) then
+        weapon:Remove()
+        return NULL
+      else return weapon end
     else
-      wep:Remove()
-      return self:GiveWeapon(wep:GetClass())
+      weapon:Remove()
+      return NULL
     end
   end
-  function ENT:DropWeapon()
-    if not self:HasWeapon() then return false end
-    if not self:CanDropWeapon(self:GetWeapon()) then return false end
-    self:RemoveWeapon()
-    local wep = ents.Create(self._DrGBaseWeaponDropClass)
-    if not IsValid(wep) then return true, NULL end
-    wep:SetPos(self:WorldSpaceCenter())
-    self:OnDropWeapon(wep)
-    return true, wep
-  end
-  function ENT:RemoveWeapon()
-    if not self:HasWeapon() then return false end
-    self:GetWeapon():Remove()
-    self:SetNW2Entity("DrGBaseWeapon", nil)
+  function ENT:PickupWeapon(weapon)
+    if not IsWeapon(weapon) then return false end
+    if self:HasWeapon(weapon:GetClass()) then return false end
+    weapon:SetMoveType(MOVETYPE_NONE)
+    weapon:SetOwner(self)
+  	weapon:SetParent(self)
+  	weapon:AddEffects(EF_BONEMERGE)
+    self._DrGBaseWeapons[weapon:GetClass()] = weapon
+    self:OnPickupWeapon(weapon, weapon:GetClass())
+    self:NetMessage("DrGBasePickupWeapon", weapon)
+    if IsValid(self:GetActiveWeapon()) then
+      weapon:SetNoDraw(true)
+    else self:SetActiveWeapon(weapon) end
     return true
   end
 
+  function ENT:RemoveWeapon(weapon)
+    weapon = self:DropWeapon(weapon or self:GetActiveWeapon())
+    if IsValid(weapon) then
+      weapon:Remove()
+      return weapon
+    else return NULL end
+  end
+  function ENT:DropWeapon(weapon)
+    if weapon == nil then weapon = self:GetActiveWeapon() end
+    if isstring(weapon) then weapon = self:GetWeapon(weapon) end
+    if not IsWeapon(weapon) then return NULL end
+    if self._DrGBaseWeapons[weapon:GetClass()] ~= weapon then return NULL end
+    local active = self:GetActiveWeapon()
+    weapon:SetOwner(NULL)
+    weapon:SetParent(NULL)
+    weapon:RemoveEffects(EF_BONEMERGE)
+    weapon:SetMoveType(MOVETYPE_VPHYSICS)
+    weapon:SetPos(self:WorldSpaceCenter())
+    self._DrGBaseWeapons[weapon:GetClass()] = nil
+    self:OnDropWeapon(weapon, weapon:GetClass())
+    self:NetMessage("DrGBaseDropWeapon", weapon:GetClass())
+    if active == weapon then self:SwitchWeapon() end
+    weapon:SetNoDraw(false)
+    return weapon
+  end
+
+  function ENT:SelectWeapon(class)
+    local weapon = self:GetWeapon(class)
+    if not IsValid(weapon) then return NULL end
+    self:SetActiveWeapon(weapon)
+    return weapon
+  end
+  function ENT:SwitchWeapon()
+    local weapon = table.DrG_Fetch(self._DrGBaseWeapons, function(weap1, weap2)
+      if not IsValid(weap1) then return false end
+      if not IsValid(weap2) then return true end
+      local res = self:OnSwitchWeapon(weap1, weap2)
+      if isbool(res) then return res end
+      return weap1:GetWeight() > weap2:GetWeight()
+    end)
+    if not IsValid(weapon) then return NULL end
+    self:SetActiveWeapon(weapon)
+    return weapon
+  end
+
   -- Shoot/reload
+  local SUPPORTED_GUNS = {
+    ["weapon_ar2"] = {
+      Bullet = {Damage = 8, TracerName = "AR2Tracer", Spread = Vector(0.015, 0.015, 0)},
+      Sound = "Weapon_AR2.Single", Empty = "Weapon_AR2.Empty",
+      Delay = 0.1, Cost = 1, Spread = Vector(10, 10, 0)
+    },
+    ["weapon_smg1"] = {
+      Bullet = {Damage = 4, Spread = Vector(0.035, 0.035, 0)},
+      Sound = "Weapon_SMG1.Single", Empty = "Weapon_SMG1.Empty",
+      Delay = 0.075, Cost = 1
+    }
+  }
   function ENT:WeaponPrimaryFire(anim)
     if not self:HasWeapon() then return false end
-    if self:IsWeaponHolstered() then return false end
     if self:IsReloadingWeapon() then return false end
-    local wep = self:GetWeapon()
-    if not isfunction(wep.PrimaryAttack) then return false end
-    if CurTime() < wep:GetNextPrimaryFire() then return false end
-    self:PlayAnimation(anim)
-    wep:PrimaryAttack()
+    local weapon = self:GetWeapon()
+    if SUPPORTED_GUNS[weapon:GetClass()] then
+      if weapon:Clip1() > weapon:GetMaxClip1() then weapon:SetClip1(weapon:GetMaxClip1()) end
+      local data = SUPPORTED_GUNS[weapon:GetClass()]
+      if not weapon._DrGBaseLastShoot or CurTime() > weapon._DrGBaseLastShoot + data.Delay then
+        weapon._DrGBaseLastShoot = CurTime()
+        if weapon:Clip1() > 0 then
+          self:PlayAnimation(anim)
+          weapon:EmitSound(data.Sound)
+          data.Bullet.Src = self:GetShootPos()
+          data.Bullet.Dir = self:GetAimVector()
+          data.Bullet.Filter = {self, weapon, self:GetPossessor()}
+          self:FireBullets(data.Bullet)
+          weapon:SetClip1(weapon:Clip1() - data.Cost)
+        else
+          weapon:EmitSound(data.Empty)
+          return false
+        end
+      else return false end
+    elseif weapon:IsScripted() then
+      if CurTime() < weapon:GetNextPrimaryFire() then return false end
+      self:PlayAnimation(anim)
+      weapon:PrimaryAttack()
+    else return false end
     return true
   end
   function ENT:WeaponSecondaryFire(anim)
     if not self:HasWeapon() then return false end
-    if self:IsWeaponHolstered() then return false end
     if self:IsReloadingWeapon() then return false end
     local wep = self:GetWeapon()
-    if not isfunction(wep.SecondaryAttack) then return false end
     if CurTime() < wep:GetNextSecondaryFire() then return false end
     self:PlayAnimation(anim)
-    wep:SecondaryAttack()
+    if wep:IsScripted() then wep:SecondaryAttack()
+    elseif wep:GetClass() == "weapon_ar2" then
+
+    else return false end
     return true
   end
   function ENT:WeaponReload(anim)
     if not self:HasWeapon() then return false end
     if self:IsReloadingWeapon() then return false end
     local wep = self:GetWeapon()
-    if not isfunction(wep.Reload) then return false end
     self:SetNW2Bool("DrGBaseReloadWeapon", true)
     self:Timer(self:PlayAnimation(anim) or 0, function()
       self:SetNW2Bool("DrGBaseReloadWeapon", false)
@@ -243,20 +296,14 @@ if SERVER then
 
   -- Hooks --
 
-  function ENT:CanPickupWeapon() return true end
-  function ENT:CanDropWeapon() return true end
-  function ENT:OnHolsterWeapon() end
-  function ENT:OnUnholsterWeapon() end
+  function ENT:OnSwitchWeapon() end
 
   -- Handlers --
 
-  hook.Add("PlayerCanPickupWeapon", "DrGBaseWeaponsPlayerPickup", function(ply, wep)
-    if IsValid(wep:GetOwner()) and wep:GetOwner().IsDrGNextbot then return false end
+  hook.Add("PlayerCanPickupWeapon", "DrGBaseNextbotWeaponDisablePickup", function(ply, weapon)
+    local owner = weapon:GetOwner()
+    if IsValid(owner) and owner.IsDrGNextbot then return false end
   end)
-
-  -- Compatibility --
-
-  function ENT:LagCompensation() end
 
 else
 
@@ -267,7 +314,5 @@ else
   -- Hooks --
 
   -- Handlers --
-
-  -- Compatibility --
 
 end

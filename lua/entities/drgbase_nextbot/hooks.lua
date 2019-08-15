@@ -117,8 +117,8 @@ if SERVER then
     if self:IsDead() then return end
     local hitgroup = self._DrGBaseHitGroupToHandle and self:LastHitGroup() or HITGROUP_GENERIC
     self._DrGBaseHitGroupToHandle = false
-    self:SetNW2Bool("DrGBaseDying", true)
     self:SetHealth(0)
+    self:SetNW2Bool("DrGBaseDying", true)
     self:DrG_DeathNotice(dmg:GetAttacker(), dmg:GetInflictor())
     if #self.OnDeathSounds > 0 then
       self:EmitSound(self.OnDeathSounds[math.random(#self.OnDeathSounds)])
@@ -126,12 +126,12 @@ if SERVER then
     if dmg:IsDamageType(DMG_DISSOLVE) then self:DrG_Dissolve() end
     if isfunction(self.OnDeath) then
       local data = util.DrG_SaveDmg(dmg)
-      self:CallInCoroutine(function(self, delay)
+      local cor = self.BehaveThread
+      self.BehaveThread = coroutine.create(function()
         self:SetNW2Bool("DrGBaseDying", false)
-        self:SetHealth(0)
         self:SetNW2Bool("DrGBaseDead", true)
         local now = CurTime()
-        dmg = self:OnDeath(util.DrG_LoadDmg(data), delay, hitgroup)
+        dmg = self:OnDeath(util.DrG_LoadDmg(data), 0, hitgroup)
         if dmg == nil then
           dmg = util.DrG_LoadDmg(data)
           if CurTime() > now then
@@ -139,7 +139,9 @@ if SERVER then
           end
         end
         NextbotDeath(self, dmg)
-      end, true)
+        if not IsValid(self) then return end
+        self.BehaveThread = cor
+      end)
     else
       self:SetNW2Bool("DrGBaseDying", false)
       self:SetNW2Bool("DrGBaseDead", true)

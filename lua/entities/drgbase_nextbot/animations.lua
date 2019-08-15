@@ -97,7 +97,9 @@ function ENT:AddAnimEvent(seq, frames, event)
 end
 
 function ENT:DirectPoseParametersAt(pos, pitch, yaw, center)
-  if isentity(pos) then pos = pos:WorldSpaceCenter() end
+  if not isstring(yaw) then
+    return self:DirectPoseParametersAt(pos, pitch.."_pitch", pitch.."_yaw", yaw)
+  elseif isentity(pos) then pos = pos:WorldSpaceCenter() end
   if isvector(pos) then
     center = center or self:WorldSpaceCenter()
     local angle = (pos - center):Angle()
@@ -252,8 +254,11 @@ if SERVER then
         if not options.collisions or not self:TraceHull(vec, {step = true}).Hit then
           if not options.gravity then
             previousPos = previousPos + vec*self:GetModelScale()
-          else previousPos = self:GetPos() + vec*self:GetModelScale() end
-          self:SetPos(previousPos)
+            self:SetPos(previousPos)
+          elseif not vec:IsZero() then
+            previousPos = self:GetPos() + vec*self:GetModelScale()
+            self:SetPos(previousPos)
+          end
         elseif options.stoponcollide then return true
         elseif not options.gravity then
           self:SetPos(previousPos)
@@ -485,7 +490,8 @@ if SERVER then
             self:SetPoseParameter("move_yaw", math.AngleDifference(velocityAng.y, forwardAng.y))
           end
         end
-        if options.rate and self:IsOnGround() and not self:IsClimbing() then
+        if options.rate and not self:IsPlayingAnimation() and
+        self:IsOnGround() and not self:IsClimbing() then
           local velocity = self:GetVelocity()
           velocity.z = 0
           if not velocity:IsZero() then

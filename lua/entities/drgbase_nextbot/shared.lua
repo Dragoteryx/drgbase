@@ -33,6 +33,7 @@ ENT.Footsteps = {}
 
 -- AI --
 DrGBase.IncludeFile("ai.lua")
+ENT.BehaviourType = AI_BEHAV_BASE
 ENT.Omniscient = false
 ENT.SpotDuration = 30
 ENT.RangeAttackRange = 0
@@ -111,10 +112,9 @@ ENT.MaxLuminosity = 1
 ENT.HearingCoefficient = 1
 
 -- Weapons --
-DrGBase.IncludeFile("weapons2.lua")
+DrGBase.IncludeFile("weapons.lua")
 ENT.UseWeapons = false
 ENT.Weapons = {}
-ENT.WeaponAccuracy = 1
 ENT.DropWeaponOnDeath = false
 ENT.AcceptPlayerWeapons = true
 
@@ -351,20 +351,16 @@ if SERVER then
 
   -- Coroutine --
 
-  function ENT:CallInCoroutine(callback, force)
-    if force then
-      local cor = self.BehaveThread
-      self.BehaveThread = coroutine.create(function()
-        callback(self, 0)
-        if not IsValid(self) then return end
-        self.BehaveThread = cor
-      end)
-    else
-      table.insert(self._DrGBaseCorCalls, {
-        callback = callback,
-        now = CurTime()
-      })
-    end
+  function ENT:CallOutsideCoroutine(callback, ...)
+    self:Timer(0, callback, ...)
+  end
+  function ENT:CallInCoroutine(callback, ...)
+    local args, n = table.DrG_Pack(...)
+    table.insert(self._DrGBaseCorCalls, {
+      callback = callback,
+      now = CurTime(),
+      args = args, n = n
+    })
   end
   function ENT:YieldCoroutine(interrompt)
     if interrompt then
@@ -372,7 +368,7 @@ if SERVER then
         if #self._DrGBaseCorCalls > 0 and not self._DrGBaseRunningCorCall then
           local cor = table.remove(self._DrGBaseCorCalls, 1)
           self._DrGBaseRunningCorCall = true
-          cor.callback(self, CurTime() - cor.now)
+          cor.callback(self, CurTime() - cor.now, table.DrG_Unpack(cor.args, cor.n))
           self._DrGBaseRunningCorCall = false
         end
         coroutine.yield()
@@ -434,7 +430,13 @@ if SERVER then
     if self:IsPossessed() then
       self:_HandlePossession(true)
     elseif not self:IsAIDisabled() then
-      self:AIBehaviour()
+      if self.BehaviourType ~= AI_BEHAV_CUSTOM then
+        if self:HasEnemy() then
+          self:ReactToEnemy()
+          if not self:HasEnemy() then self:UpdateEnemy() end
+        elseif isvector(self:GetPatrolPos(1)) then self:Patrol()
+        else self:OnIdle() end
+      else self:AIBehaviour() end
     end
   end
 
@@ -462,55 +464,57 @@ if SERVER then
 
   -- AI Behaviour --
 
-  function ENT:AIBehaviour()
-    if self:HasEnemy() then
-      self:ReactToEnemy()
-      if not self:HasEnemy() then self:UpdateEnemy() end
-    elseif isvector(self:GetPatrolPos(1)) then self:Patrol()
-    else self:OnIdle() end
-  end
+  function ENT:AIBehaviour() end
 
   function ENT:ReactToEnemy()
     local enemy = self:GetEnemy()
     local relationship = self:GetRelationship(enemy)
-    if relationship == D_HT then
-      local visible = self:Visible(enemy)
-      if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
-        if self:OnChaseEnemy(enemy) ~= true then
-          if self:FollowPath(enemy) == "unreachable" then
-            self:OnEnemyUnreachable(enemy)
+    if self.BehaviourType == AI_BEHAV_BASE then
+      if relationship == D_HT then
+        local visible = self:Visible(enemy)
+        if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
+          if self:OnChaseEnemy(enemy) ~= true then
+            if self:FollowPath(enemy) == "unreachable" then
+              self:OnEnemyUnreachable(enemy)
+            end
           end
+        elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible and
+        not self:IsInRange(enemy, self.MeleeAttackRange) then
+          if self:OnAvoidEnemy(enemy) ~= true then
+            local away = self:GetPos()*2 - enemy:GetPos()
+            self:FollowPath(away)
+          end
+        elseif self:OnWatchEnemy(enemy) ~= true then self:FaceTowards(enemy) end
+        if not IsValid(enemy) or not self:Visible(enemy) then return end
+        if self:IsInRange(enemy, self.MeleeAttackRange) and
+        self:OnMeleeAttack(enemy) ~= false then
+        elseif not self:IsInRange(enemy, self.AvoidEnemyRange) and
+        self:IsInRange(enemy, self.RangeAttackRange) then
+          self:OnRangeAttack(enemy)
         end
-      elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible and
-      not self:IsInRange(enemy, self.MeleeAttackRange) then
-        if self:OnAvoidEnemy(enemy) ~= true then
-          local away = self:GetPos()*2 - enemy:GetPos()
-          self:FollowPath(away)
+      elseif relationship == D_FR then
+        local visible = self:Visible(enemy)
+        if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
+          if self:OnAvoidAfraidOf(enemy) ~= true then
+            local away = self:GetPos()*2 - enemy:GetPos()
+            self:FollowPath(away)
+          end
+        elseif self:OnWatchAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
+        if not IsValid(enemy) or not self:Visible(enemy) then return end
+        if self:IsInRange(enemy, self.MeleeAttackRange) and
+        self:OnMeleeAttack(enemy) ~= false then
+        elseif not self:IsInRange(enemy, self.AvoidEnemyRange) and
+        self:IsInRange(enemy, self.RangeAttackRange) then
+          self:OnRangeAttack(enemy)
         end
-      elseif self:OnWatchEnemy(enemy) ~= true then self:FaceTowards(enemy) end
-      if not IsValid(enemy) or not self:Visible(enemy) then return end
-      if self:IsInRange(enemy, self.MeleeAttackRange) and
-      self:OnMeleeAttack(enemy) ~= false then
-      elseif not self:IsInRange(enemy, self.AvoidEnemyRange) and
-      self:IsInRange(enemy, self.RangeAttackRange) then
-        self:OnRangeAttack(enemy)
-      end
-    elseif relationship == D_FR then
-      local visible = self:Visible(enemy)
-      if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
-        if self:OnAvoidAfraidOf(enemy) ~= true then
-          local away = self:GetPos()*2 - enemy:GetPos()
-          self:FollowPath(away)
-        end
-      elseif self:OnWatchAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
-      if not IsValid(enemy) or not self:Visible(enemy) then return end
-      if self:IsInRange(enemy, self.MeleeAttackRange) and
-      self:OnMeleeAttack(enemy) ~= false then
-      elseif not self:IsInRange(enemy, self.AvoidEnemyRange) and
-      self:IsInRange(enemy, self.RangeAttackRange) then
-        self:OnRangeAttack(enemy)
-      end
-    elseif isvector(self:GetPatrolPos(1)) then self:Patrol() end
+      elseif isvector(self:GetPatrolPos(1)) then self:Patrol() end
+    elseif self.BehaviourType == AI_BEHAV_HUMAN then
+      if relationship == D_HT then
+
+      elseif relationship == D_FR then
+
+      elseif isvector(self:GetPatrolPos(1)) then self:Patrol() end
+    end
   end
 
   function ENT:Patrol()

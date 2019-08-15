@@ -9,6 +9,10 @@ function ENT:IsFrightening()
   return self:GetNW2Bool("DrGBaseFrightening")
 end
 
+function ENT:Team()
+  return self:GetNW2Int("DrGBaseTeam", 0)
+end
+
 -- Handlers --
 
 local function EnumToString(disp)
@@ -211,6 +215,10 @@ if SERVER then
       self._DrGBaseRelationshipCaches[D_HT][ent] = nil
       self._DrGBaseRelationshipCaches[D_FR][ent] = nil
       self._DrGBaseRelationships[ent] = DEFAULT_DISP
+    end
+    if self:GetEnemy() == ent and
+    disp ~= D_HT and disp ~= D_FR then
+      self:UpdateEnemy()
     end
     self:OnRelationshipChange(ent, curr, disp)
     if DebugRelationship:GetBool() then
@@ -443,6 +451,13 @@ if SERVER then
     return factions
   end
 
+  -- Teams
+  function ENT:SetTeam(team)
+    local current = self:Team()
+    self:SetNW2Int("DrGBaseTeam", team)
+    if team ~= current then self:UpdateRelationships() end
+  end
+
   -- Update
   function ENT:UpdateRelationships()
     for i, ent in ipairs(ents.GetAll()) do
@@ -452,45 +467,51 @@ if SERVER then
   function ENT:UpdateRelationshipWith(ent)
     if not IsValid(ent) then return end
     if ent == self then return end
-    local default, defprio
-    if not DrGBase.IsTarget(ent) then
-      default = DEFAULT_DISP
-      defprio = DEFAULT_PRIO
-    else default, defprio = self:GetDefaultRelationship() end
-    local entdisp, entprio = self:GetEntityRelationship(ent)
-    local classdisp, classprio = self:GetClassRelationship(ent:GetClass())
-    local modeldisp, modelprio = self:GetModelRelationship(ent:GetModel())
-    local customdisp, customprio = self:CustomRelationship(ent)
-    local relationships = {HighestRelationship({
-      {disp = default, prio = defprio}, {disp = entdisp, prio = entprio},
-      {disp = classdisp, prio = classprio}, {disp = modeldisp, prio = modelprio},
-      {disp = customdisp or DEFAULT_DISP, prio = customprio or DEFAULT_PRIO}
-    })}
-    for faction, relationship in pairs(self._DrGBaseRelationshipDefiners["faction"]) do
-      if istable(faction) then continue end
-      if relationship.disp == D_ER or relationship.prio < relationships[1].prio then continue end
-      if ent:IsPlayer() then
-        if ent:DrG_IsInFaction(faction) then table.insert(relationships, relationship) end
-      elseif ent.IsDrGNextbot then
-        if ent:IsInFaction(faction) then table.insert(relationships, relationship) end
-      elseif ent:DrG_IsSanic() then
-        if faction == FACTION_SANIC then table.insert(relationships, relationship) end
-      elseif ent.IsVJBaseSNPC then
-        for i, class in ipairs(ent.VJ_NPC_Class) do
-          if string.upper(class) ~= faction then continue end
-          table.insert(relationships, relationship)
-          break
+    if (ent:IsPlayer() or ent.IsDrGNextbot) and
+    ent:Team() == self:Team() and self:Team() ~= 0 then
+      self:_SetRelationship(ent, D_LI)
+      self:_SetPriority(ent, DEFAULT_PRIO)
+    else
+      local default, defprio
+      if not DrGBase.IsTarget(ent) then
+        default = DEFAULT_DISP
+        defprio = DEFAULT_PRIO
+      else default, defprio = self:GetDefaultRelationship() end
+      local entdisp, entprio = self:GetEntityRelationship(ent)
+      local classdisp, classprio = self:GetClassRelationship(ent:GetClass())
+      local modeldisp, modelprio = self:GetModelRelationship(ent:GetModel())
+      local customdisp, customprio = self:CustomRelationship(ent)
+      local relationships = {HighestRelationship({
+        {disp = default, prio = defprio}, {disp = entdisp, prio = entprio},
+        {disp = classdisp, prio = classprio}, {disp = modeldisp, prio = modelprio},
+        {disp = customdisp or DEFAULT_DISP, prio = customprio or DEFAULT_PRIO}
+      })}
+      for faction, relationship in pairs(self._DrGBaseRelationshipDefiners["faction"]) do
+        if istable(faction) then continue end
+        if relationship.disp == D_ER or relationship.prio < relationships[1].prio then continue end
+        if ent:IsPlayer() then
+          if ent:DrG_IsInFaction(faction) then table.insert(relationships, relationship) end
+        elseif ent.IsDrGNextbot then
+          if ent:IsInFaction(faction) then table.insert(relationships, relationship) end
+        elseif ent:DrG_IsSanic() then
+          if faction == FACTION_SANIC then table.insert(relationships, relationship) end
+        elseif ent.IsVJBaseSNPC then
+          for i, class in ipairs(ent.VJ_NPC_Class) do
+            if string.upper(class) ~= faction then continue end
+            table.insert(relationships, relationship)
+            break
+          end
+        elseif ent.CPTBase_NPC or ent.IV04NextBot then
+          if string.upper(ent.Faction) == faction then table.insert(relationships, relationship) end
+        else
+          local def = DEFAULT_FACTIONS[ent:GetClass()]
+          if def == faction then table.insert(relationships, relationship) end
         end
-      elseif ent.CPTBase_NPC or ent.IV04NextBot then
-        if string.upper(ent.Faction) == faction then table.insert(relationships, relationship) end
-      else
-        local def = DEFAULT_FACTIONS[ent:GetClass()]
-        if def == faction then table.insert(relationships, relationship) end
       end
+      local relationship = HighestRelationship(relationships)
+      self:_SetRelationship(ent, relationship.disp)
+      self:_SetPriority(ent, relationship.prio)
     end
-    local relationship = HighestRelationship(relationships)
-    self:_SetRelationship(ent, relationship.disp)
-    self:_SetPriority(ent, relationship.prio)
   end
 
   -- Iterators

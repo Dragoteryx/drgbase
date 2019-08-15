@@ -61,12 +61,12 @@ if SERVER then
     if not self:IsOnGround() then return end
     if isnumber(height) then
       local jumpHeight = self.loco:GetJumpHeight()
-      self.loco:SetJumpHeight(height)
+      self.loco:SetJumpHeight(height*self:GetScale())
       LocoJump(self)
       self.loco:SetJumpHeight(jumpHeight)
     elseif isvector(height) then
       LocoJumpGap(self, height)
-    else LocoJump(self) end
+    else return self:Jump(self.loco:GetJumpHeight(), callback) end
     if not coroutine.running() then return end
     self:SetNW2Bool("DrGBaseJumping", true)
     local now = CurTime()

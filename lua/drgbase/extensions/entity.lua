@@ -31,6 +31,20 @@ function entMETA:DrG_AddListener(name, callback)
   return true
 end
 
+-- Timers --
+
+function entMETA:DrG_Timer(duration, callback, ...)
+  timer.DrG_Simple(duration, function(...)
+    if IsValid(self) then callback(self, ...) end
+  end, ...)
+end
+function entMETA:DrG_LoopTimer(delay, callback, ...)
+  timer.DrG_Loop(delay, function(...)
+    if not IsValid(self) then return false end
+    return callback(self, ...)
+  end, ...)
+end
+
 -- Doors --
 
 local DOORS = {
