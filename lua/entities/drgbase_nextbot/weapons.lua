@@ -226,7 +226,7 @@ if SERVER then
     ["weapon_ar2"] = {
       Bullet = {Damage = 8, TracerName = "AR2Tracer", Spread = Vector(0.015, 0.015, 0)},
       Sound = "Weapon_AR2.Single", Empty = "Weapon_AR2.Empty",
-      Delay = 0.1, Cost = 1, Spread = Vector(10, 10, 0)
+      Delay = 0.1, Cost = 1
     },
     ["weapon_smg1"] = {
       Bullet = {Damage = 4, Spread = Vector(0.035, 0.035, 0)},

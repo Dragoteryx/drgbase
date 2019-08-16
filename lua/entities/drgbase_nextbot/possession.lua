@@ -291,10 +291,6 @@ if SERVER then
     ply:Flashlight(false)
     ply:AllowFlashlight(false)
     ply:SetEyeAngles(self:EyeAngles())
-    ply:Give("drgbase_possession")
-    ply:SelectWeapon("drgbase_possession")
-    ply:Spectate(OBS_MODE_CHASE)
-	  ply:SpectateEntity(self)  
     self:UpdateEnemy()
     self:SetNW2Entity("DrGBasePossessionLockedOn", NULL)
     self:SetNW2Int("DrGBasePossessionView", 1)
@@ -315,7 +311,6 @@ if SERVER then
     ply:SetNoTarget(false)
     ply:SetNoDraw(false)
     ply:AllowFlashlight(true)
-    ply:UnSpectate()
     self:UpdateEnemy()
     self:OnDispossessed(ply)
     return "ok"

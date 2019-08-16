@@ -176,19 +176,6 @@ function ENT:Initialize()
     if self:PhysicsInitShadow() then
       self:AddCallback("PhysicsCollide", function(self, data)
         self:_HandleCollide(data, self:GetPhysicsObject())
-        --[[if isfunction(data.HitEntity.PhysicsCollide) then
-          local otherData = {}
-          otherData.HitPos = data.HitPos
-          otherData.HitEntity = self
-          otherData.OurOldVelocity = data.TheirOldVelocity
-          otherData.HitObject = phys
-          otherData.DeltaTime = data.DeltaTime
-          otherData.TheirOldVelocity = data.OurOldVelocity
-          otherData.Speed = self:Speed()
-          otherData.HitNormal = -data.HitNormal
-          otherData.PhysObj = data.HitObject
-          data.HitEntity:PhysicsCollide(otherData, data.HitObject)
-        end]]
       end)
     end
   else self:SetIK(true) end
@@ -237,7 +224,7 @@ function ENT:Think()
     -- update phys obj
     local phys = self:GetPhysicsObject()
     if IsValid(phys) then
-      phys:SetPos(self:GetPos())
+      phys:SetPos(self:GetPos(), true)
       phys:SetAngles(self:GetAngles())
     end
     -- water level

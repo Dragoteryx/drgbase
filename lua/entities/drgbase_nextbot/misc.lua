@@ -185,7 +185,7 @@ if SERVER then
       end
       if #areas == 0 then return self:GetPos()
       else return areas[math.random(#areas)]:GetRandomPoint() end
-    else return self:RandomPos(0, min) end    
+    else return self:RandomPos(0, min) end
   end
 
   function ENT:Attack(attack, callback)
@@ -506,6 +506,16 @@ if SERVER then
   function entMETA:Remove()
     if self.IsDrGNextbot then self._DrGBaseRemoved = true end
     return old_Remove(self)
+  end
+
+  DrGBase.OLD_SetPos = DrGBase.OLD_SetPos or entMETA.SetPos
+  function entMETA:SetPos(pos)
+    if self.IsDrGNextbot then
+      self:PhysicsDestroy()
+      local res = DrGBase.OLD_SetPos(self, pos)
+      self:PhysicsInitShadow()
+      return res
+    else return DrGBase.OLD_SetPos(self, pos) end
   end
 
   local nextbotMETA = FindMetaTable("NextBot")
