@@ -32,4 +32,5 @@ if SERVER then
         else table.RemoveByValue(self.VJ_AddCertainEntityAsFriendly, ent) end
       end
     end
+  end
 end
