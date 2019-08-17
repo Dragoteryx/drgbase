@@ -45,6 +45,7 @@ ENT.WatchAfraidOfRange = 750
 
 -- Relationships --
 DrGBase.IncludeFile("relationships.lua")
+ENT.DefaultRelationship = D_NU
 ENT.Factions = {}
 ENT.Frightening = false
 ENT.AllyDamageTolerance = 0.33
@@ -419,8 +420,9 @@ if SERVER then
     elseif not self:IsAIDisabled() then
       if self.BehaviourType ~= AI_BEHAV_CUSTOM then
         if self:HasEnemy() then
-          self:ReactToEnemy()
-          if not self:HasEnemy() then self:UpdateEnemy() end
+          local enemy = self:GetEnemy()
+          self:ReactToEnemy(enemy)
+          if not self:IsHostile(enemy) then self:UpdateEnemy() end
         elseif isvector(self:GetPatrolPos(1)) then self:Patrol()
         else self:OnIdle() end
       else self:AIBehaviour() end
@@ -453,8 +455,7 @@ if SERVER then
 
   function ENT:AIBehaviour() end
 
-  function ENT:ReactToEnemy()
-    local enemy = self:GetEnemy()
+  function ENT:ReactToEnemy(enemy)
     local relationship = self:GetRelationship(enemy)
     if self.BehaviourType == AI_BEHAV_BASE then
       if relationship == D_HT then
@@ -494,13 +495,18 @@ if SERVER then
         self:IsInRange(enemy, self.RangeAttackRange) then
           self:OnRangeAttack(enemy)
         end
-      elseif isvector(self:GetPatrolPos(1)) then self:Patrol() end
+      end
     elseif self.BehaviourType == AI_BEHAV_HUMAN then
       if relationship == D_HT then
-
+        self:FaceTowards(enemy)
+        if self:IsWeaponPrimaryEmpty() then
+          self:Reload()
+        elseif self:IsInSight(enemy) then
+          self:PrimaryFire(enemy)
+        end
       elseif relationship == D_FR then
 
-      elseif isvector(self:GetPatrolPos(1)) then self:Patrol() end
+      end
     end
   end
 

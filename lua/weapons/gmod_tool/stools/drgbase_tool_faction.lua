@@ -1,29 +1,42 @@
-TOOL.Category = "DrGBase"
+TOOL.Tab = "DrGBase"
+TOOL.Category = "Tools"
 TOOL.Name = "#tool.drgbase_tool_faction.name"
 TOOL.ClientConVar = {["list"] = "[[]]"}
 TOOL.BuildCPanel = function(panel)
   panel:Help("#tool.drgbase_tool_faction.desc")
-  panel:Help("Click on a faction to remove it from the list.")
+  panel:Help("Click on a faction to remove it from the list, or right click to copy it.")
   local dlist = DrGBase.CreateDListView({
     "Factions"
   }, {convar = "drgbase_tool_faction_list"})
-  dlist:SetSize(100, 300)
+  dlist:SetSize(10, 300)
   function dlist:OnRowSelected(row)
     self:RemoveLine(row)
   end
   panel:AddItem(dlist)
-  panel:Help("Press enter to add a faction to the list.")
+  panel:Help("Insert a custom faction here:")
   local entry = vgui.Create("DTextEntry")
-  function entry:OnEnter()
-    dlist:AddLine(string.upper(self:GetValue()))
+  function dlist:OnRowRightClick(id, line)
+    entry:SetValue(line:GetValue(1))
   end
   panel:AddItem(entry)
+  local insert = vgui.Create("DButton")
+  insert:SetText("Insert faction")
+  function insert:DoClick()
+    dlist:AddLine(string.upper(entry:GetValue()))
+  end
+  panel:AddItem(insert)
+  local clear = vgui.Create("DButton")
+  clear:SetText("Clear factions")
+  function clear:DoClick()
+    dlist:Clear()
+  end
+  panel:AddItem(clear)
 end
 
 function TOOL:ClearFactions()
   if CLIENT then return end
-  net.Start("DrGBaseFactionToolFetch")
-  net.WriteString(util.TableToJSON({{}}))
+  net.Start("DrGBaseFactionTool")
+  net.WriteString("[]")
   net.Send(self:GetOwner())
 end
 function TOOL:SetFactions(factions)
@@ -32,7 +45,7 @@ function TOOL:SetFactions(factions)
   for i, faction in ipairs(factions) do
     table.insert(list, {faction})
   end
-  net.Start("DrGBaseFactionToolFetch")
+  net.Start("DrGBaseFactionTool")
   net.WriteString(util.TableToJSON(list))
   net.Send(self:GetOwner())
 end
@@ -79,13 +92,13 @@ function TOOL:Reload()
 end
 
 if SERVER then
-  util.AddNetworkString("DrGBaseFactionToolFetch")
+  util.AddNetworkString("DrGBaseFactionTool")
 else
   language.Add("tool.drgbase_tool_faction.name", "Faction Tool")
 	language.Add("tool.drgbase_tool_faction.desc", "Edit your factions or a nextbot's.")
 	language.Add("tool.drgbase_tool_faction.0", "Right click to copy a nextbot/player's factions, left click to apply those factions to a nextbot. (aim at the ground to apply them to yourself)")
 
-  net.Receive("DrGBaseFactionToolFetch", function(len)
+  net.Receive("DrGBaseFactionTool", function(len)
     GetConVar("drgbase_tool_faction_list"):SetString(net.ReadString())
   end)
 end

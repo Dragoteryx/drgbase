@@ -1,4 +1,5 @@
-TOOL.Category = "DrGBase"
+TOOL.Tab = "DrGBase"
+TOOL.Category = "Tools"
 TOOL.Name = "#tool.drgbase_tool_scale.name"
 TOOL.BuildCPanel = function(panel)
 	panel:Help("#tool.drgbase_tool_scale.desc")

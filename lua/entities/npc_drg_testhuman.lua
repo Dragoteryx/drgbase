@@ -9,6 +9,9 @@ ENT.Models = {
   "models/player/magnusson.mdl"
 }
 
+-- Movements --
+ENT.UseWalkframes = true
+
 -- Weapons --
 ENT.Weapons = {
   "weapon_ar2",

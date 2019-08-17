@@ -1,6 +1,7 @@
 if SERVER then return end
 
 function DrGBase.CreateDListView(columns, options)
+  if not istable(options) then options = {} end
   local dlist = vgui.Create("DListView")
   for i, column in ipairs(columns) do dlist:AddColumn(column) end
   if isstring(options.convar) then
@@ -27,7 +28,7 @@ function DrGBase.CreateDListView(columns, options)
         convar:SetString(util.TableToJSON(tbl))
       end
       function dlist:Clear()
-        convar:SetString("[[]]")
+        convar:SetString("[]")
       end
     end
   end

@@ -1,4 +1,5 @@
-TOOL.Category = "DrGBase"
+TOOL.Tab = "DrGBase"
+TOOL.Category = "Tools"
 TOOL.Name = "#tool.drgbase_tool_mover.name"
 TOOL.BuildCPanel = function(panel)
 	panel:Help("#tool.drgbase_tool_mover.desc")
@@ -32,7 +33,7 @@ function TOOL:Reload(tr)
 end
 
 if CLIENT then
-  language.Add("tool.drgbase_tool_mover.name", "AI Mover")
+  language.Add("tool.drgbase_tool_mover.name", "Nextbot Mover")
 	language.Add("tool.drgbase_tool_mover.desc", "Force nextbots to move to a different position.")
 	language.Add("tool.drgbase_tool_mover.0", "Left click to select/deselect a nextbot (hold shift to select multiple nextbots), right click to set the position to go to and reload to clear the list of selected nextbots.")
 

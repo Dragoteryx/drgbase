@@ -1,4 +1,5 @@
-TOOL.Category = "DrGBase"
+TOOL.Tab = "DrGBase"
+TOOL.Category = "Tools"
 TOOL.Name = "#tool.drgbase_tool_omniscient.name"
 TOOL.BuildCPanel = function(panel)
 	panel:Help("#tool.drgbase_tool_omniscient.desc")
@@ -13,7 +14,7 @@ function TOOL:LeftClick(tr)
 end
 
 if CLIENT then
-  language.Add("tool.drgbase_tool_omniscient.name", "AI Omniscient")
+  language.Add("tool.drgbase_tool_omniscient.name", "Set Omniscient")
 	language.Add("tool.drgbase_tool_omniscient.desc", "Disable/enable omniscience for a nextbot.")
 	language.Add("tool.drgbase_tool_omniscient.0", "Left click to toggle omniscience. (Green => Enabled / Red => Disabled)")
 

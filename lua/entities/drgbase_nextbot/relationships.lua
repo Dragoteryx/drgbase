@@ -13,14 +13,26 @@ function ENT:Team()
   return self:GetNW2Int("DrGBaseTeam", 0)
 end
 
--- Handlers --
+-- Helpers --
 
 local function EnumToString(disp)
   if disp == D_LI then return "D_LI"
   elseif disp == D_HT then return "D_HT"
   elseif disp == D_FR then return "D_FR"
   elseif disp == D_NU then return "D_NU"
-  elseif disp == D_ER then return "D_ER" end
+  else return "D_ER" end
+end
+
+local CACHED_DISPS = {
+  [D_LI] = true,
+  [D_HT] = true,
+  [D_FR] = true
+}
+local function IsCachedDisp(disp)
+  return CACHED_DISPS[disp] or false
+end
+local function IsValidDisp(disp)
+  return IsCachedDisp(disp) or disp == D_NU
 end
 
 local DEFAULT_DISP = D_NU
@@ -32,7 +44,9 @@ function ENT:_InitRelationships()
   self._DrGBaseRelPriorities = table.DrG_Default({}, DEFAULT_PRIO)
   self._DrGBaseRelationshipCaches = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
   self._DrGBaseIgnoredEntities = {}
-  self._DrGBaseDefaultRelationship = DEFAULT_DISP
+  if IsValidDisp(self.DefaultRelationship) then
+    self._DrGBaseDefaultRelationship = self.DefaultRelationship
+  else self._DrGBaseDefaultRelationship = DEFAULT_DISP end
   self._DrGBaseRelationshipDefiners = {
     ["entity"] = table.DrG_Default({}, DEFAULT_REL),
     ["class"] = table.DrG_Default({}, DEFAULT_REL),
@@ -47,20 +61,6 @@ end
 
 if SERVER then
   util.AddNetworkString("DrGBaseNextbotPlayerRelationship")
-
-  -- Cache --
-
-  local CACHED_DISPS = {
-    [D_LI] = true,
-    [D_HT] = true,
-    [D_FR] = true
-  }
-  local function IsCachedDisp(disp)
-    return CACHED_DISPS[disp] or false
-  end
-  local function IsValidDisp(disp)
-    return IsCachedDisp(disp) or disp == D_NU
-  end
 
   -- Util --
 
@@ -242,11 +242,16 @@ if SERVER then
     else return nextbot:GetRelationship(ent) end
   end)
 
+  local NPC_STATES_IGNORED = {
+    [NPC_STATE_PLAYDEAD] = true,
+    [NPC_STATE_DEAD] = true
+  }
   function ENT:IsIgnored(ent)
     if ent:IsPlayer() and not ent:Alive() then return true end
     if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return true end
     if ent:IsFlagSet(FL_NOTARGET) then return true end
     if ent.CPTBase_NPC and ent.UseNotarget then return true end
+    if ent:IsNPC() and NPC_STATES_IGNORED[ent:GetNPCState()] then return true end
     if (ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot") and ent:Health() <= 0 then return true end
     --if (ent:IsPlayer() or ent:IsNPC() or ent:IsNextBot()) and ent:Health() <= 0 then return true end
     if ent.IsDrGNextbot and (ent:IsDown() or ent:IsDead()) then return true end
@@ -256,6 +261,11 @@ if SERVER then
   function ENT:SetIgnored(ent, bool)
     self._DrGBaseIgnoredEntities[ent] = tobool(bool)
   end
+
+  net.DrG_DefineCallback("DrGBaseIsIgnored", function(nextbot, ent)
+    if not IsValid(nextbot) or not IsValid(ent) then return false
+    else return nextbot:IsIgnored(ent) end
+  end)
 
   function ENT:SetFrightening(frightening)
     local old = self:IsFrightening()
@@ -776,32 +786,38 @@ else
   function ENT:GetRelationship(ent, callback)
     if IsValid(ent) then
       return self:NetCallback("DrGBaseGetRelationship", callback, ent)
-    elseif isfunction(callback) then callback(D_ER) end
+    elseif isfunction(callback) then callback(self, D_ER) end
   end
   function ENT:IsAlly(ent, callback)
-    return self:GetRelationship(ent, function(disp)
-      callback(disp == D_LI)
+    return self:GetRelationship(ent, function(self, disp)
+      callback(self, disp == D_LI)
     end)
   end
   function ENT:IsEnemy(ent, callback)
-    return self:GetRelationship(ent, function(disp)
-      callback(disp == D_HT)
+    return self:GetRelationship(ent, function(self, disp)
+      callback(self, disp == D_HT)
     end)
   end
   function ENT:IsAfraidOf(ent, callback)
-    return self:GetRelationship(ent, function(disp)
-      callback(disp == D_FR)
+    return self:GetRelationship(ent, function(self, disp)
+      callback(self, disp == D_FR)
     end)
   end
   function ENT:IsHostile(ent, callback)
-    return self:GetRelationship(ent, function(disp)
-      callback(disp == D_HT or disp == D_FR)
+    return self:GetRelationship(ent, function(self, disp)
+      callback(self, disp == D_HT or disp == D_FR)
     end)
   end
   function ENT:IsNeutral(ent, callback)
-    return self:GetRelationship(ent, function(disp)
-      callback(disp == D_NU)
+    return self:GetRelationship(ent, function(self, disp)
+      callback(self, disp == D_NU)
     end)
+  end
+
+  function ENT:IsIgnored(ent, callback)
+    if IsValid(ent) then
+      return self:NetCallback("DrGBaseIsIgnored", callback, ent)
+    elseif isfunction(callback) then callback(self, false) end
   end
 
   -- Functions --

@@ -12,6 +12,10 @@ ENT.MeleeAttackRange = 0
 ENT.ReachEnemyRange = 100
 ENT.AvoidEnemyRange = 25
 
+-- Relationships --
+ENT.DefaultRelationship = D_HT
+ENT.Factions = {FACTION_GMAN}
+
 -- Animations --
 ENT.WalkAnimation = ACT_HL2MP_WALK
 ENT.RunAnimation = ACT_HL2MP_RUN_FAST
@@ -88,7 +92,6 @@ if SERVER then
   -- Init/Think --
 
   function ENT:CustomInitialize()
-    self:SetDefaultRelationship(D_HT)
     self:SetSelfClassRelationship(D_LI)
     self:SetPlayersRelationship(D_HT, 2)
     for i, walk in ipairs({
@@ -99,8 +102,6 @@ if SERVER then
         self:EmitFootstep()
       end)
     end
-    --FProfiler.start(self.Think)
-    --timer.DrG_Simple(5, FProfiler.stop)
   end
 
   -- AI --

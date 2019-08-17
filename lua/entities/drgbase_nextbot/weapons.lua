@@ -231,7 +231,7 @@ if SERVER then
     ["weapon_smg1"] = {
       Bullet = {Damage = 4, Spread = Vector(0.035, 0.035, 0)},
       Sound = "Weapon_SMG1.Single", Empty = "Weapon_SMG1.Empty",
-      Delay = 0.075, Cost = 1
+      Delay = 0.065, Cost = 1
     }
   }
   function ENT:WeaponPrimaryFire(anim)

@@ -17,7 +17,6 @@ function ENT:_InitHooks()
   self._DrGBaseLastDmgInflicted = {}
   self:DrG_AddListener("OnTraceAttack", self._HandleTraceAttack)
   self:DrG_AddListener("OnNavAreaChanged", self._HandleNavAreaChanged)
-  self:DrG_AddListener("Use", self._HandleUse)
 end
 
 if SERVER then
@@ -247,8 +246,6 @@ if SERVER then
   end
 
   -- Misc --
-
-  function ENT:_HandleUse() end
 
   hook.Add("vFireEntityStartedBurning", "DrGBaseNextbotOnIgniteVFire", function(ent)
     if ent.IsDrGNextbot then ent:OnIgnite() end

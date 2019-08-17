@@ -195,7 +195,7 @@ if SERVER then
     if not isfunction(callback) then return end
     if not ply:IsPlayer() then return end
     return ply:DrG_NetCallback(name, function(...)
-      if IsValid(self) then callback(...) end
+      if IsValid(self) then callback(self, ...) end
     end, self, ...)
   end
 
@@ -269,7 +269,7 @@ else
   function ENT:NetCallback(name, callback, ...)
     if not isfunction(callback) then return end
     return net.DrG_UseCallback(name, function(...)
-      if IsValid(self) then callback(...) end
+      if IsValid(self) then callback(self, ...) end
     end, self, ...)
   end
 

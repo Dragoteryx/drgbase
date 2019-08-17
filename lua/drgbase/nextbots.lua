@@ -38,9 +38,6 @@ function DrGBase.AddNextbot(ENT)
         if isfunction(ENT.OnNavAreaChanged) then
           ent:DrG_AddListener("OnNavAreaChanged", ent._HandleNavAreaChanged)
         end
-        if isfunction(ENT.Use) then
-          ent:DrG_AddListener("Use", ent._HandleUse)
-        end
       end)
     end
   end

@@ -473,12 +473,10 @@ if SERVER then
       (self:IsMoving() or (self:IsTurning() and SeqHasTurningWalkframes(self, seq))) then
         if options.direction and self:IsMoving() then
           if self._DrGBasePoseParameters["move_x"] or
-          self._DrGBasePoseParameters["move_y"] or
-          self._DrGBasePoseParameters["move_z"] then
-            local movement = self:GetMovement()
+          self._DrGBasePoseParameters["move_y"] then
+            local movement = self:GetMovement(true)
             self:SetPoseParameter("move_x", movement.x)
             self:SetPoseParameter("move_y", movement.y)
-            self:SetPoseParameter("move_z", movement.z)
           end
           if self._DrGBasePoseParameters["move_yaw"] then
             local forward = self:GetForward()

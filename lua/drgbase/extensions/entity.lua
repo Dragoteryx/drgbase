@@ -3,7 +3,6 @@ local entMETA = FindMetaTable("Entity")
 
 -- Misc --
 
-
 function entMETA:DrG_IsSanic()
   --return self:IsNextBot() and
   return self.Type == "nextbot" and
@@ -29,6 +28,17 @@ function entMETA:DrG_AddListener(name, callback)
     else return old_function(...) end
   end
   return true
+end
+
+function entMETA:DrG_SearchBone(searchBone)
+  for boneId = 0, (self:GetBoneCount()-1) do
+    local boneName = self:GetBoneName(boneId)
+    if not boneName then return end
+    if boneName == "__INVALIDBONE__" then continue end
+    if string.find(string.lower(boneName), string.lower(searchBone)) then
+      return boneId
+    end
+  end
 end
 
 -- Timers --
@@ -143,17 +153,6 @@ if SERVER then
     if self:IsPlayer() then
       hook.Run("PlayerDeath", self, inflictor, attacker)
     else hook.Run("OnNPCKilled", self, attacker, inflictor) end
-  end
-
-  function entMETA:DrG_SearchBone(searchBone)
-    for boneId = 0, (self:GetBoneCount()-1) do
-      local boneName = self:GetBoneName(boneId)
-      if not boneName then return end
-      if boneName == "__INVALIDBONE__" then continue end
-      if string.find(string.lower(boneName), string.lower(searchBone)) then
-        return boneId
-      end
-    end
   end
 
   function entMETA:DrG_CreateRagdoll(dmg)

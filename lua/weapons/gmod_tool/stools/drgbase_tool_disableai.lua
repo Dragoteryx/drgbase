@@ -1,4 +1,5 @@
-TOOL.Category = "DrGBase"
+TOOL.Tab = "DrGBase"
+TOOL.Category = "Tools"
 TOOL.Name = "#tool.drgbase_tool_disableai.name"
 TOOL.BuildCPanel = function(panel)
 	panel:Help("#tool.drgbase_tool_disableai.desc")
@@ -13,7 +14,7 @@ function TOOL:LeftClick(tr)
 end
 
 if CLIENT then
-  language.Add("tool.drgbase_tool_disableai.name", "AI Disable")
+  language.Add("tool.drgbase_tool_disableai.name", "Disable AI")
 	language.Add("tool.drgbase_tool_disableai.desc", "Disable/enable AI for a nextbot.")
 	language.Add("tool.drgbase_tool_disableai.0", "Left click to toggle AI. (Green => Enabled / Red => Disabled)")
 

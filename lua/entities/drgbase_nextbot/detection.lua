@@ -221,11 +221,11 @@ else
   function ENT:IsInSight(ent, callback)
     if IsValid(ent) then
       return self:NetCallback("DrGBaseIsInSight", callback, ent)
-    elseif isfunction(callback) then callback(false) end
+    elseif isfunction(callback) then callback(self, false) end
   end
   function ENT:WasInSight(ent)
     if not IsValid(ent) then return false end
-    self:IsInSight(ent, function(insight)
+    self:IsInSight(ent, function(self, insight)
       if not IsValid(ent) then return end
       self._DrGBaseWasInSight[ent] = insight
     end)

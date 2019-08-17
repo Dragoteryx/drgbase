@@ -37,10 +37,11 @@ function ENT:IsSpeedLessEqual(speed, scale)
   return self:IsSpeedEqual(speed, scale) or self:IsSpeedLess(speed, scale)
 end
 
-function ENT:GetMovement()
+function ENT:GetMovement(ignoreZ)
   if not self:IsMoving() then return Vector(0, 0, 0) end
-  local dir = self:GetVelocity():Angle()
-  return (self:GetAngles()-dir):Forward()
+  local dir = self:GetVelocity()
+  if ignoreZ then dir.z = 0 end
+  return (self:GetAngles()-dir:Angle()):Forward()
 end
 
 function ENT:IsMoving()
