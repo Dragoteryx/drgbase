@@ -258,7 +258,7 @@ if SERVER then
           elseif not vec:IsZero() then
             previousPos = self:GetPos() + vec*self:GetModelScale()
             self:SetPos(previousPos)
-          end
+          else previousPos = self:GetPos() end
         elseif options.stoponcollide then return true
         elseif not options.gravity then
           self:SetPos(previousPos)

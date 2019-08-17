@@ -353,11 +353,13 @@ if SERVER then
   function ENT:YieldCoroutine(interrompt)
     if interrompt then
       repeat
-        if #self._DrGBaseCorCalls > 0 and not self._DrGBaseRunningCorCall then
-          local cor = table.remove(self._DrGBaseCorCalls, 1)
-          self._DrGBaseRunningCorCall = true
-          cor.callback(self, CurTime() - cor.now, table.DrG_Unpack(cor.args, cor.n))
-          self._DrGBaseRunningCorCall = false
+        if #self._DrGBaseCorCalls > 0 and not self._DrGBaseRunningCorCalls then
+          self._DrGBaseRunningCorCalls = true
+          while #self._DrGBaseCorCalls > 0 do
+            local cor = table.remove(self._DrGBaseCorCalls, 1)
+            cor.callback(self, CurTime() - cor.now, table.DrG_Unpack(cor.args, cor.n))
+          end
+          self._DrGBaseRunningCorCalls = false
         end
         coroutine.yield()
       until not self:IsAIDisabled() or self:IsPossessed() or self._DrGBaseRunningCorCall
@@ -419,10 +421,8 @@ if SERVER then
       self:_HandlePossession(true)
     elseif not self:IsAIDisabled() then
       if self.BehaviourType ~= AI_BEHAV_CUSTOM then
-        if self:HasEnemy() then
-          local enemy = self:GetEnemy()
-          self:ReactToEnemy(enemy)
-          if not self:IsHostile(enemy) then self:UpdateEnemy() end
+        if self:HasEnemy() then self:ReactToEnemy()
+        elseif self:HadEnemy() then self:UpdateEnemy()
         elseif isvector(self:GetPatrolPos(1)) then self:Patrol()
         else self:OnIdle() end
       else self:AIBehaviour() end
@@ -455,7 +455,8 @@ if SERVER then
 
   function ENT:AIBehaviour() end
 
-  function ENT:ReactToEnemy(enemy)
+  function ENT:ReactToEnemy()
+    local enemy = self:GetEnemy()
     local relationship = self:GetRelationship(enemy)
     if self.BehaviourType == AI_BEHAV_BASE then
       if relationship == D_HT then
