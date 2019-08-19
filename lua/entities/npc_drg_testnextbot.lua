@@ -109,10 +109,6 @@ if SERVER then
     self:EmitSlotSound("riseandshine", 7, "DrGBase.RiseAndShine")
   end
 
-  function ENT:AIBehaviour()
-    self:MoveTowards(Entity(1))
-  end
-
   function ENT:OnReachedPatrol()
     self:PlaySequenceAndWait("menu_gman")
   end

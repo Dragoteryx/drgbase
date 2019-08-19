@@ -222,15 +222,17 @@ end
 function ENT:Think()
   self:_HandleAnimations()
   self:_HandleMovements()
-  if SERVER then
-    -- update phys obj
-    local phys = self:GetPhysicsObject()
-    if IsValid(phys) then
-      phys:SetPos(self:GetPos(), true)
-      phys:SetAngles(self:GetAngles())
-    end
-    if CurTime() > self._DrGBaseThinkCooldown then
-      self._DrGBaseThinkCooldown = CurTime() + 0.05
+  if CurTime() > self._DrGBaseThinkCooldown then
+    self._DrGBaseThinkCooldown = CurTime() + 0.05
+    if SERVER then
+      -- update phys obj
+      local phys = self:GetPhysicsObject()
+      --debugoverlay.Sphere(phys:GetPos(), 2, 0.05, DrGBase.CLR_RED, true)
+      if IsValid(phys) then
+        phys:SetPos(self:GetPos(), true)
+        phys:SetAngles(self:GetAngles())
+      end
+      --debugoverlay.Sphere(phys:GetPos(), 2, 0.05, DrGBase.CLR_GREEN, true)
       -- water level
       local waterLevel = self:WaterLevel()
       if self._DrGBaseWaterLevel ~= waterLevel then
@@ -282,14 +284,14 @@ function ENT:Think()
         self:SetNW2Int("DrGBaseMaxHealth", maxHealth)
       end
     end
-  end
-  -- idle sounds
-  if #self.OnIdleSounds > 0 then
-    if (SERVER and not self.ClientIdleSounds) or
-    (CLIENT and self.ClientIdleSounds) then
-      local sound = self.OnIdleSounds[math.random(#self.OnIdleSounds)]
-      if self:EmitSlotSound("DrGBaseIdleSounds", SoundDuration(sound) + self.IdleSoundDelay, sound) then
-        self._DrGBaseIdleSound = sound
+    -- idle sounds
+    if #self.OnIdleSounds > 0 then
+      if (SERVER and not self.ClientIdleSounds) or
+      (CLIENT and self.ClientIdleSounds) then
+        local sound = self.OnIdleSounds[math.random(#self.OnIdleSounds)]
+        if self:EmitSlotSound("DrGBaseIdleSounds", SoundDuration(sound) + self.IdleSoundDelay, sound) then
+          self._DrGBaseIdleSound = sound
+        end
       end
     end
   end
@@ -311,6 +313,7 @@ function ENT:Think()
       self._DrGBasePossessionThinkDelay = CurTime() + delay
     end
   end
+  -- custom tickrate
   if CLIENT then return end
   local tickrate = NextbotTickrate:GetFloat()
   if tickrate > 0 then

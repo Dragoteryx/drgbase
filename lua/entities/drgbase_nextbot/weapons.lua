@@ -20,7 +20,11 @@ function ENT:GetWeapons()
   return table.DrG_Copy(self._DrGBaseWeapons)
 end
 function ENT:GetWeaponCount()
-  return table.Count(self._DrGBaseWeapons)
+  local count = 0
+  for class, weapon in pairs(self._DrGBaseWeapons) do
+    if IsValid(weapon) then count = count+1 end
+  end
+  return count
 end
 
 function ENT:IsReloadingWeapon()
@@ -253,11 +257,62 @@ if SERVER then
       Delay = 0.065, Cost = 1
     }
   }
+  local function UseToolgun(self, tr)
+    if IsValid(tr.Entity) then
+      local ent = tr.Entity
+      local res = self:OnUseToolgun(ent, tr)
+      if not isbool(res) then
+        local rand = math.random(6)
+        if rand == 1 then
+          ent:SetColor(Color(math.random(0, 255), math.random(0, 255), math.random(0, 255)))
+        elseif rand == 2 then
+          local materials = list.Get("OverrideMaterials")
+          ent:SetMaterial(materials[math.random(#materials)])
+        elseif rand == 3 then
+          local fx = EffectData()
+          fx:SetOrigin(ent:GetPos())
+          fx:SetEntity(ent)
+          util.Effect("entity_remove", fx, true, true)
+          if ent:IsPlayer() then ent:KillSilent()
+          else SafeRemoveEntity(ent) end
+        elseif rand == 4 then
+          local dmg = DamageInfo()
+          dmg:SetDamage(math.random(1, ent:Health()))
+          dmg:SetAttacker(self)
+          dmg:SetInflictor(weapon)
+          ent:DispatchTraceAttack(dmg, tr)
+        elseif rand == 5 then
+          ent:SetHealth(math.min(ent:Health() + math.random(1, ent:GetMaxHealth()), ent:GetMaxHealth()))
+        elseif rand == 6 then
+          local scale = math.Rand(0.1, 2)
+          if ent.IsDrGNextbot then ent:Scale(scale, 0.1)
+          else ent:SetModelScale(ent:GetModelScale()*scale, 0.1) end
+        elseif rand == 7 then
+
+        end
+        return true
+      else return res end
+    else return false end
+  end
   function ENT:WeaponPrimaryFire(anim)
     if not self:HasWeapon() then return false end
     if self:IsReloadingWeapon() then return false end
     local weapon = self:GetWeapon()
-    if SUPPORTED_GUNS[weapon:GetClass()] then
+    if weapon:GetClass() == "gmod_tool" then
+      if not weapon._DrGBaseLastShoot or CurTime() > weapon._DrGBaseLastShoot + 1.25 then
+        weapon._DrGBaseLastShoot = CurTime()
+        local shootPos = self:GetShootPos()
+        local tr = util.DrG_TraceLine({
+          start = shootPos, endpos = shootPos+self:GetAimVector()*99999,
+          filter = {self, weapon, self:GetPossessor()}
+        })
+        if UseToolgun(self, tr) then
+          weapon:DoShootEffect(tr.HitPos, tr.HitNormal, tr.Entity, tr.PhysicsBone, true)
+          self:PlayAnimation(anim)
+        end
+        return true
+      else return false end
+    elseif SUPPORTED_GUNS[weapon:GetClass()] then
       if weapon:Clip1() > weapon:GetMaxClip1() then weapon:SetClip1(weapon:GetMaxClip1()) end
       local data = SUPPORTED_GUNS[weapon:GetClass()]
       if not weapon._DrGBaseLastShoot or CurTime() > weapon._DrGBaseLastShoot + data.Delay then
@@ -317,6 +372,7 @@ if SERVER then
   -- Hooks --
 
   function ENT:OnSwitchWeapon() end
+  function ENT:OnUseToolgun() end
 
   -- Handlers --
 

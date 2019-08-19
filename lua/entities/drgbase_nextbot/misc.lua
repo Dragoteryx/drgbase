@@ -415,8 +415,10 @@ if SERVER then
     attach:Activate()
     self._DrGBaseGrabbedRagdolls[ragdoll] = self._DrGBaseGrabbedRagdolls[ragdoll] or {}
     self._DrGBaseGrabbedRagdolls[ragdoll][attach] = true
-    self._DrGBaseGrabbedRagdollsCollisionGroups[ragdoll] = ragdoll:GetCollisionGroup()
-    ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+    if not self._DrGBaseGrabbedRagdollsCollisionGroups[ragdoll] then
+      self._DrGBaseGrabbedRagdollsCollisionGroups[ragdoll] = ragdoll:GetCollisionGroup()
+      ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+    end  
     return ragdoll
   end
   function ENT:DropRagdoll(ragdoll)
