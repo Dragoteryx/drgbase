@@ -8,11 +8,8 @@ function table.DrG_ReadOnly(tbl)
   return readOnly
 end
 
-local default_key = {}
-local default_mt = {__index = function(tbl) return tbl[default_key] end}
 function table.DrG_Default(tbl, default)
-  tbl[default_key] = default
-  setmetatable(tbl, default_mt)
+  setmetatable(tbl, {__index = function() return default end})
   return tbl
 end
 

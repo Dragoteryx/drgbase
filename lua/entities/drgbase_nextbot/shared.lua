@@ -184,6 +184,7 @@ function ENT:Initialize()
   self._DrGBaseBaseThinkDelay = 0
   self._DrGBaseCustomThinkDelay = 0
   self._DrGBasePossessionThinkDelay = 0
+  self._DrGBaseThinkCooldown = 0
   self:_InitModules()
   table.insert(DrGBase._SpawnedNextbots, self)
   self:CallOnRemove("DrGBaseCallOnRemove", function(self)
@@ -228,55 +229,58 @@ function ENT:Think()
       phys:SetPos(self:GetPos(), true)
       phys:SetAngles(self:GetAngles())
     end
-    -- water level
-    local waterLevel = self:WaterLevel()
-    if self._DrGBaseWaterLevel ~= waterLevel then
-      self:OnWaterLevelChange(self._DrGBaseWaterLevel, waterLevel)
-      self._DrGBaseWaterLevel = waterLevel
-    end
-    -- on fire
-    if self._DrGBaseIsOnFire and not self:IsOnFire() then
-      self:OnExtinguish()
-    end
-    self._DrGBaseIsOnFire = self:IsOnFire()
-    -- update fall speed
-    local speed = -self:GetVelocity().z
-    self:Timer(0.1, function()
-      self._DrGBaseDownSpeed = speed
-    end)
-    -- on ground
-    local onGround = self:IsOnGround()
-    if self:GetNW2Bool("DrGBaseOnGround") ~= onGround then
-      self:SetNW2Bool("DrGBaseOnGround", onGround)
-      if onGround then
-        self:InvalidatePath()
-        local damage = math.floor(self:OnFallDamage(self._DrGBaseDownSpeed))
-        --print(damage)
-        if damage > math.max(0, self.MinFallDamage) then
-          local dmg = DamageInfo()
-          dmg:SetDamage(damage)
-          dmg:SetAttacker(self)
-          dmg:SetInflictor(self)
-          dmg:SetDamageType(DMG_FALL)
-          self:TakeDamageInfo(dmg)
-        end
-      else
-
+    if CurTime() > self._DrGBaseThinkCooldown then
+      self._DrGBaseThinkCooldown = CurTime() + 0.05
+      -- water level
+      local waterLevel = self:WaterLevel()
+      if self._DrGBaseWaterLevel ~= waterLevel then
+        self:OnWaterLevelChange(self._DrGBaseWaterLevel, waterLevel)
+        self._DrGBaseWaterLevel = waterLevel
       end
-      self:UpdateAnimation()
-      self:UpdateSpeed()
-    end
-    -- health
-    local health = self:Health()
-    local oldHealth = self:GetNW2Int("DrGBaseHealth")
-    if oldHealth ~= health then
-      self:OnHealthChange(oldHealth, health)
-      self:SetNW2Int("DrGBaseHealth", health)
-    end
-    -- max health
-    local maxHealth = self:GetMaxHealth()
-    if self:GetNW2Int("DrGBaseMaxHealth") ~= maxHealth then
-      self:SetNW2Int("DrGBaseMaxHealth", maxHealth)
+      -- on fire
+      if self._DrGBaseIsOnFire and not self:IsOnFire() then
+        self:OnExtinguish()
+      end
+      self._DrGBaseIsOnFire = self:IsOnFire()
+      -- update fall speed
+      local speed = -self:GetVelocity().z
+      self:Timer(0.1, function()
+        self._DrGBaseDownSpeed = speed
+      end)
+      -- on ground
+      local onGround = self:IsOnGround()
+      if self:GetNW2Bool("DrGBaseOnGround") ~= onGround then
+        self:SetNW2Bool("DrGBaseOnGround", onGround)
+        if onGround then
+          self:InvalidatePath()
+          local damage = math.floor(self:OnFallDamage(self._DrGBaseDownSpeed))
+          --print(damage)
+          if damage > math.max(0, self.MinFallDamage) then
+            local dmg = DamageInfo()
+            dmg:SetDamage(damage)
+            dmg:SetAttacker(self)
+            dmg:SetInflictor(self)
+            dmg:SetDamageType(DMG_FALL)
+            self:TakeDamageInfo(dmg)
+          end
+        else
+
+        end
+        self:UpdateAnimation()
+        self:UpdateSpeed()
+      end
+      -- health
+      local health = self:Health()
+      local oldHealth = self:GetNW2Int("DrGBaseHealth")
+      if oldHealth ~= health then
+        self:OnHealthChange(oldHealth, health)
+        self:SetNW2Int("DrGBaseHealth", health)
+      end
+      -- max health
+      local maxHealth = self:GetMaxHealth()
+      if self:GetNW2Int("DrGBaseMaxHealth") ~= maxHealth then
+        self:SetNW2Int("DrGBaseMaxHealth", maxHealth)
+      end
     end
   end
   -- idle sounds
@@ -470,8 +474,7 @@ if SERVER then
         elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible and
         not self:IsInRange(enemy, self.MeleeAttackRange) then
           if self:OnAvoidEnemy(enemy) ~= true then
-            local away = self:GetPos()*2 - enemy:GetPos()
-            self:FollowPath(away)
+            self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
           end
         elseif self:OnWatchEnemy(enemy) ~= true then self:FaceTowards(enemy) end
         if not IsValid(enemy) or not self:Visible(enemy) then return end
@@ -485,8 +488,7 @@ if SERVER then
         local visible = self:Visible(enemy)
         if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
           if self:OnAvoidAfraidOf(enemy) ~= true then
-            local away = self:GetPos()*2 - enemy:GetPos()
-            self:FollowPath(away)
+            self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
           end
         elseif self:OnWatchAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
         if not IsValid(enemy) or not self:Visible(enemy) then return end

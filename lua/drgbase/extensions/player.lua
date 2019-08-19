@@ -179,7 +179,6 @@ if SERVER then
     end
   end
   function plyMETA:DrG_IsInFaction(faction)
-    if string.upper(faction) == FACTION_PLAYERS then return true end
     self:DrG_InitFactions()
     return self._DrGBaseFactions[string.upper(faction)] or false
   end

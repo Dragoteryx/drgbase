@@ -35,6 +35,7 @@ if SERVER then
   function ENT:OnDealtDamage() end
 
   local function NextbotDeath(self, dmg)
+    if not IsValid(self) then return end
     if self:HasWeapon() and self.DropWeaponOnDeath then
       self:DropWeapon()
     end
@@ -48,7 +49,8 @@ if SERVER then
     self._DrGBaseHitGroupToHandle = true
   end
   function ENT:OnInjured(dmg)
-    if dmg:GetDamage() <= 0 then return end
+    if dmg:GetDamage() < 0 then dmg:ScaleDamage(0) end
+    if dmg:GetDamage() == 0 then return end
     if self:GetGodMode() then
       self._DrGBaseHitGroupToHandle = false
       return dmg:ScaleDamage(0)
@@ -125,7 +127,6 @@ if SERVER then
     if dmg:IsDamageType(DMG_DISSOLVE) then self:DrG_Dissolve() end
     if isfunction(self.OnDeath) then
       local data = util.DrG_SaveDmg(dmg)
-      local cor = self.BehaveThread
       self.BehaveThread = coroutine.create(function()
         self:SetNW2Bool("DrGBaseDying", false)
         self:SetNW2Bool("DrGBaseDead", true)
@@ -138,8 +139,6 @@ if SERVER then
           end
         end
         NextbotDeath(self, dmg)
-        if not IsValid(self) then return end
-        self.BehaveThread = cor
       end)
     else
       self:SetNW2Bool("DrGBaseDying", false)

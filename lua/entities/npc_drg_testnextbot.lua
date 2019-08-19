@@ -54,30 +54,24 @@ ENT.PossessionViews = {
   }
 }
 ENT.PossessionBinds = {
-  [IN_JUMP] = {
-    {
-      coroutine = false,
-      onkeydown = function(self)
-        self:Jump(100)
-      end
-    }
-  },
-  [IN_ATTACK] = {
-    {
-      coroutine = false,
-      onkeydown = function(self)
-        self:PlaySequence("gesture_wave")
-      end
-    }
-  },
-  [IN_ATTACK2] = {
-    {
-      coroutine = false,
-      onkeydown = function(self)
-        self:EmitSlotSound("riseandshine", 7, "DrGBase.RiseAndShine")
-      end
-    }
-  }
+  [IN_JUMP] = {{
+    coroutine = false,
+    onkeydown = function(self)
+      self:Jump(100)
+    end
+  }},
+  [IN_ATTACK] = {{
+    coroutine = false,
+    onkeydown = function(self)
+      self:PlaySequence("gesture_wave")
+    end
+  }},
+  [IN_ATTACK2] = {{
+    coroutine = false,
+    onkeydown = function(self)
+      self:EmitSlotSound("riseandshine", 7, "DrGBase.RiseAndShine")
+    end
+  }}
 }
 
 if SERVER then
@@ -102,6 +96,8 @@ if SERVER then
         self:EmitFootstep()
       end)
     end
+    --FProfiler.start(self.Think)
+    --timer.Simple(5, FProfiler.stop)
   end
 
   -- AI --

@@ -28,42 +28,38 @@ function ENT:IsReloadingWeapon()
   return self:GetNW2Bool("DrGBaseReloadWeapon")
 end
 
-function ENT:GetShootPos()
-  if self:HasWeapon() then
-    local bonepos = self:GetBonePosition(self:LookupBone("ValveBiped.Bip01_R_Hand"))
-    return bonepos
-    --[[local mergeBone = self:GetWeapon():GetBoneName(0)
-    if mergeBone == nil or mergeBone == "__INVALIDBONE__" then
-      return self:GetPos()
-    else
-      local bonepos = self:GetBonePosition(self:LookupBone(mergeBone))
-      return bonepos
-    end]]
+function ENT:GetShootPos(class)
+  if self:HasWeapon(class) then
+    local weapon = self:GetWeapon(class)
+    for boneId = 0, (weapon:GetBoneCount()-1) do
+      local boneName = weapon:GetBoneName(boneId)
+      local lookedUp = self:LookupBone(boneName)
+      if lookedUp then
+        local bonepos = self:GetBonePosition(lookedUp)
+        return bonepos
+      end
+    end
   else return self:GetPos() end
 end
-
-local function GetAimVector(self)
+function ENT:GetAimVector(class)
   if self:IsPossessed() then
     local lockedOn = self:PossessionGetLockedOn()
     if IsValid(lockedOn) then
       local aimAt = self:OnAimAtEntity(lockedOn) or lockedOn:WorldSpaceCenter()
-      return self:GetShootPos():DrG_Direction(aimAt):GetNormalized()
-    else return self:GetShootPos():DrG_Direction(self:PossessorTrace().HitPos):GetNormalized() end
+      return self:GetShootPos(class):DrG_Direction(aimAt):GetNormalized()
+    else return self:GetShootPos(class):DrG_Direction(self:PossessorTrace().HitPos):GetNormalized() end
   elseif self:HasEnemy() then
     local enemy = self:GetEnemy()
     local aimAt = self:OnAimAtEntity(enemy) or enemy:WorldSpaceCenter()
-    return self:GetShootPos():DrG_Direction(aimAt):GetNormalized()
+    return self:GetShootPos(class):DrG_Direction(aimAt):GetNormalized()
   else return self:EyeAngles():Forward() end
-end
-function ENT:GetAimVector()
-  local dir = GetAimVector(self)
-  return dir
 end
 
 -- Functions --
 
 -- Hooks --
 
+function ENT:OnWeaponChange() end
 function ENT:OnPickupWeapon() end
 function ENT:OnDropWeapon() end
 function ENT:OnAimAtEntity() end
@@ -72,12 +68,15 @@ function ENT:OnAimAtEntity() end
 
 function ENT:_InitWeapons()
   self._DrGBaseWeapons = {}
+  self:SetNW2VarProxy("DrGBaseWeapon", function(self, name, old, new)
+    self:OnWeaponChange(old, new)
+  end)
   if CLIENT then return end
   if self.UseWeapons then
     for i, class in ipairs(self.Weapons) do
       self:GiveWeapon(class)
     end
-    self:SwitchWeapon()
+    self:RandomWeapon()
   end
 end
 
@@ -101,64 +100,73 @@ if SERVER then
     return true
   end
 
-  function ENT:GetWeaponPrimaryAmmo()
-    if not self:HasWeapon() then return 0 end
-    local wep = self:GetWeapon()
+  function ENT:GetWeaponPrimaryAmmo(class)
+    if not self:HasWeapon(class) then return 0 end
+    local wep = self:GetWeapon(class)
     if wep:GetMaxClip1() > 0 then return wep:Clip1()
     elseif wep:GetPrimaryAmmoType() > -1 then
       return -1
     else return math.huge end
   end
-  function ENT:GetWeaponSecondaryAmmo()
-    if not self:HasWeapon() then return 0 end
-    local wep = self:GetWeapon()
+  function ENT:GetWeaponSecondaryAmmo(class)
+    if not self:HasWeapon(class) then return 0 end
+    local wep = self:GetWeapon(class)
     if wep:GetMaxClip2() > 0 then return wep:Clip2()
     elseif wep:GetSecondaryAmmoType() > -1 then
       return -1
     else return math.huge end
   end
 
-  function ENT:IsWeaponPrimaryFull()
-    if not self:HasWeapon() then return false end
-    local ammo = self:GetWeaponPrimaryAmmo()
+  function ENT:IsWeaponPrimaryFull(class)
+    if not self:HasWeapon(class) then return false end
+    local ammo = self:GetWeaponPrimaryAmmo(class)
     if ammo == math.huge or ammo == -1 then return true end
-    return ammo >= self:GetWeapon():GetMaxClip1()
+    return ammo >= self:GetWeapon(class):GetMaxClip1()
   end
-  function ENT:IsWeaponPrimaryEmpty()
-    if not self:HasWeapon() then return true end
-    local ammo = self:GetWeaponPrimaryAmmo()
+  function ENT:IsWeaponPrimaryEmpty(class)
+    if not self:HasWeapon(class) then return true end
+    local ammo = self:GetWeaponPrimaryAmmo(class)
     if ammo == -1 then return false end
     return ammo <= 0
   end
 
-  function ENT:IsWeaponSecondaryFull()
-    if not self:HasWeapon() then return false end
-    local ammo = self:GetWeaponSecondaryAmmo()
+  function ENT:IsWeaponSecondaryFull(class)
+    if not self:HasWeapon(class) then return false end
+    local ammo = self:GetWeaponSecondaryAmmo(class)
     if ammo == math.huge or ammo == -1 then return true end
-    return ammo >= self:GetWeapon():GetMaxClip2()
+    return ammo >= self:GetWeapon(class):GetMaxClip2()
   end
-  function ENT:IsWeaponSecondaryEmpty()
-    if not self:HasWeapon() then return true end
-    local ammo = self:GetWeaponSecondaryAmmo()
+  function ENT:IsWeaponSecondaryEmpty(class)
+    if not self:HasWeapon(class) then return true end
+    local ammo = self:GetWeaponSecondaryAmmo(class)
     if ammo == -1 then return false end
     return ammo <= 0
+  end
+
+  function ENT:IsWeaponFull(class)
+    return self:IsWeaponPrimaryFull(class) and self:IsWeaponSecondaryFull(class)
+  end
+  function ENT:IsWeaponEmpty(class)
+    return self:IsWeaponPrimaryEmpty(class) and self:IsWeaponSecondaryEmpty(class)
   end
 
   -- Functions --
 
   function ENT:GiveWeapon(class)
-    local weapon = ents.Create(class)
-    if not IsValid(weapon) then return NULL end
-    if IsWeapon(weapon) then
-      weapon:Spawn()
-      if not self:PickupWeapon(weapon) then
+    if not self:HasWeapon(class) then
+      local weapon = ents.Create(class)
+      if not IsValid(weapon) then return NULL end
+      if IsWeapon(weapon) then
+        weapon:Spawn()
+        if not self:PickupWeapon(weapon) then
+          weapon:Remove()
+          return NULL
+        else return weapon end
+      else
         weapon:Remove()
         return NULL
-      else return weapon end
-    else
-      weapon:Remove()
-      return NULL
-    end
+      end
+    else return self:GetWeapon(class) end
   end
   function ENT:PickupWeapon(weapon)
     if not IsWeapon(weapon) then return false end
@@ -220,11 +228,22 @@ if SERVER then
     self:SetActiveWeapon(weapon)
     return weapon
   end
+  function ENT:RandomWeapon()
+    local weapons = {}
+    for class, weapon in pairs(self._DrGBaseWeapons) do
+      if IsValid(weapon) then table.insert(weapons, weapon) end
+    end
+    if #weapons > 0 then
+      local weapon = weapons[math.random(#weapons)]
+      self:SetActiveWeapon(weapon)
+      return weapon
+    else return NULL end
+  end
 
   -- Shoot/reload
   local SUPPORTED_GUNS = {
     ["weapon_ar2"] = {
-      Bullet = {Damage = 8, TracerName = "AR2Tracer", Spread = Vector(0.015, 0.015, 0)},
+      Bullet = {Damage = 8, TracerName = "AR2Tracer", Spread = Vector(0.020, 0.020, 0)},
       Sound = "Weapon_AR2.Single", Empty = "Weapon_AR2.Empty",
       Delay = 0.1, Cost = 1
     },
@@ -256,7 +275,7 @@ if SERVER then
           return false
         end
       else return false end
-    elseif weapon:IsScripted() then
+    elseif weapon:IsScripted() and not self:IsWeaponPrimaryEmpty() then
       if CurTime() < weapon:GetNextPrimaryFire() then return false end
       self:PlayAnimation(anim)
       weapon:PrimaryAttack()
@@ -266,29 +285,30 @@ if SERVER then
   function ENT:WeaponSecondaryFire(anim)
     if not self:HasWeapon() then return false end
     if self:IsReloadingWeapon() then return false end
-    local wep = self:GetWeapon()
-    if CurTime() < wep:GetNextSecondaryFire() then return false end
-    self:PlayAnimation(anim)
-    if wep:IsScripted() then wep:SecondaryAttack()
-    elseif wep:GetClass() == "weapon_ar2" then
-
+    local weapon = self:GetWeapon()
+    if wep:GetClass() == "weapon_ar2" then
+      return true
+    elseif wep:IsScripted() and not self:IsWeaponSecondaryEmpty() then
+      if CurTime() < weapon:GetNextSecondaryFire() then return false end
+      self:PlayAnimation(anim)
+      weapon:SecondaryAttack()
     else return false end
     return true
   end
   function ENT:WeaponReload(anim)
     if not self:HasWeapon() then return false end
     if self:IsReloadingWeapon() then return false end
-    local wep = self:GetWeapon()
+    local weapon = self:GetWeapon()
     self:SetNW2Bool("DrGBaseReloadWeapon", true)
     self:Timer(self:PlayAnimation(anim) or 0, function()
       self:SetNW2Bool("DrGBaseReloadWeapon", false)
       if not self:HasWeapon() then return end
-      wep = self:GetWeapon()
+      weapon = self:GetWeapon()
       if not self:IsWeaponPrimaryFull() then
-        wep:SetClip1(wep:GetMaxClip1())
+        weapon:SetClip1(weapon:GetMaxClip1())
       end
       if not self:IsWeaponSecondaryFull() then
-        wep:SetClip2(wep:GetMaxClip2())
+        weapon:SetClip2(weapon:GetMaxClip2())
       end
     end)
     return true

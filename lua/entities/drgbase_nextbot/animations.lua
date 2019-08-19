@@ -170,6 +170,13 @@ if SERVER then
     end)
   end
 
+  local function ResetSequence(self, seq)
+    local len = self:SetSequence(seq)
+    self:ResetSequenceInfo()
+    self:SetCycle(0)
+    return len
+  end
+
   -- Getters/setters --
 
   function ENT:IsPlayingAnimation()
@@ -202,9 +209,7 @@ if SERVER then
       rate = isnumber(rate) and rate or 1
       local oldPlayingAnim = self._DrGBasePlayingAnimation
       self._DrGBasePlayingAnimation = seq
-      local len = self:SetSequence(seq)
-      self:ResetSequenceInfo()
-      self:SetCycle(0)
+      ResetSequence(self, seq)
       self:SetPlaybackRate(rate)
       local now = CurTime()
       local lastCycle = -1
@@ -412,7 +417,7 @@ if SERVER then
       if validAnim and (self:GetCycle() == 1 or anim ~= activity) then
         if CallOnAnimChange(self, current, seq) ~= false then
           CallAfterAnimChange(self, current, seq)
-          self:ResetSequence(seq)
+          ResetSequence(self, seq)
         end
       end
     elseif isstring(anim) then
@@ -421,7 +426,7 @@ if SERVER then
       if validAnim and (self:GetCycle() == 1 or seq ~= current) then
         if CallOnAnimChange(self, current, seq) ~= false then
           CallAfterAnimChange(self, current, seq)
-          self:ResetSequence(seq)
+          ResetSequence(self, seq)
         end
       end
     end

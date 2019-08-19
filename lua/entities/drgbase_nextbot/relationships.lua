@@ -250,6 +250,7 @@ if SERVER then
     if ent:IsPlayer() and not ent:Alive() then return true end
     if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return true end
     if ent:IsFlagSet(FL_NOTARGET) then return true end
+    if ent.IsVJBaseSNPC and ent.VJ_NoTarget then return true end
     if ent.CPTBase_NPC and ent.UseNotarget then return true end
     if ent:IsNPC() and NPC_STATES_IGNORED[ent:GetNPCState()] then return true end
     if (ent:IsPlayer() or ent:IsNPC() or ent.Type == "nextbot") and ent:Health() <= 0 then return true end
@@ -497,7 +498,6 @@ if SERVER then
         {disp = customdisp or DEFAULT_DISP, prio = customprio or DEFAULT_PRIO}
       })}
       for faction, relationship in pairs(self._DrGBaseRelationshipDefiners["faction"]) do
-        if istable(faction) then continue end
         if relationship.disp == D_ER or relationship.prio < relationships[1].prio then continue end
         if ent:IsPlayer() then
           if ent:DrG_IsInFaction(faction) then table.insert(relationships, relationship) end
@@ -671,11 +671,11 @@ if SERVER then
 
   function ENT:_UpdateNPCRelationship(ent, relationship)
     if not IsValid(ent) or not ent:IsNPC() then return end
-    if relationship == D_FR then relationship = D_HT
+    if relationship == D_FR then
+      ent:DrG_SetRelationship(self, D_HT)
     elseif relationship == D_HT and self:IsFrightening() then
-      relationship = D_FR
-    end
-    ent:DrG_SetRelationship(self, relationship)
+      ent:DrG_SetRelationship(self, D_FR)
+    else ent:DrG_SetRelationship(self, relationship) end
   end
 
   local function CPTBaseValidTarget(ent, nextbot)

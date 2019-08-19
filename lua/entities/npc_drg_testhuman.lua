@@ -27,12 +27,6 @@ if SERVER then
     self:SetDefaultRelationship(D_HT)
     self:SetSelfModelRelationship(D_LI)
     self:SetFactionRelationship(FACTION_REBELS, D_LI)
-    if self:GetModel() == "models/player/kleiner.mdl" then
-      self:SetModelRelationship("models/player/kleiner.mdl", D_LI)
-    elseif self:GetModel() == "models/player/magnusson.mdl" then
-      self:SetModelRelationship("models/player/magnusson.mdl", D_LI)
-    end
-    self:SelectWeapon(self.Weapons[math.random(#self.Weapons)])
   end
 
   -- AI --

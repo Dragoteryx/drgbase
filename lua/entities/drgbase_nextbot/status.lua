@@ -80,6 +80,7 @@ if SERVER then
 
   function ENT:RegenHealth(health, duration, callback)
     if self:Health() >= health then return end
+    if health > self:GetMaxHealth() then health = self:GetMaxHealth() end
     if duration > 0 then
       local regen = (health - self:Health())/duration
       local oldRegen = self:GetHealthRegen()

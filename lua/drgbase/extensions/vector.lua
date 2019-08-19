@@ -167,3 +167,6 @@ function vecMETA:DrG_Join(other, speed)
   return (self*(1-speed)+other*speed)
 end
 
+function vecMETA:DrG_Away(pos)
+  return self*2 - pos
+end

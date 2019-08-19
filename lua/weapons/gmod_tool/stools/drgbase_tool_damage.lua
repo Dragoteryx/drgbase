@@ -40,18 +40,25 @@ end
 
 function TOOL:LeftClick(tr)
 	local ent = tr.Entity
-	if not IsValid(ent) then return false end
-	if CLIENT then return true end
-	local dmg = DamageInfo()
-	dmg:SetDamage(self:GetClientNumber("value"))
-	dmg:SetDamageType(self:GetClientNumber("type"))
-	dmg:SetAttacker(self:GetOwner())
-	dmg:SetInflictor(self:GetOwner():GetActiveWeapon())
-	dmg:SetDamageForce(tr.Normal*self:GetClientNumber("value"))
-	dmg:SetDamagePosition(tr.HitPos)
-	dmg:SetReportedPosition(tr.HitPos)
-	ent:DispatchTraceAttack(dmg, tr)
+	if IsValid(ent) and SERVER then
+		local dmg = DamageInfo()
+		dmg:SetDamage(self:GetClientNumber("value"))
+		dmg:SetDamageType(self:GetClientNumber("type"))
+		dmg:SetAttacker(self:GetOwner())
+		dmg:SetInflictor(self:GetOwner():GetActiveWeapon())
+		dmg:SetDamageForce(tr.Normal*self:GetClientNumber("value"))
+		dmg:SetDamagePosition(tr.HitPos)
+		dmg:SetReportedPosition(tr.HitPos)
+		ent:DispatchTraceAttack(dmg, tr)
+	end
 	return true
+end
+function TOOL:Reload()
+	local owner = self:GetOwner()
+	return self:LeftClick({
+		Normal = -owner:EyeAngles():Forward(),
+		Entity = owner, HitPos = owner:GetPos()
+	})
 end
 
 if CLIENT then
