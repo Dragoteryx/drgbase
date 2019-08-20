@@ -418,7 +418,7 @@ if SERVER then
     if not self._DrGBaseGrabbedRagdollsCollisionGroups[ragdoll] then
       self._DrGBaseGrabbedRagdollsCollisionGroups[ragdoll] = ragdoll:GetCollisionGroup()
       ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-    end  
+    end
     return ragdoll
   end
   function ENT:DropRagdoll(ragdoll)
@@ -464,6 +464,9 @@ if SERVER then
       else return proj:AimAt(lockedOn, speed) end
     elseif self:HasEnemy() then
       return proj:AimAt(self:GetEnemy(), speed)
+    elseif self:HadEnemy() then
+      self:UpdateEnemy()
+      return self:AimProjectile(proj, speed)
     else
       local dir = self:GetForward()*speed
       proj:SetVelocity(dir)

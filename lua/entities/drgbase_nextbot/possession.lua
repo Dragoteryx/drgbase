@@ -223,7 +223,10 @@ function ENT:_HandlePossession(cor)
         local convar = GetConVar(key)
         if not convar then continue
         else key = convar:GetInt() end
-      else key = possessor:GetInfoNum(key, BUTTON_CODE_INVALID) end
+      else
+        key = possessor:GetInfoNum(key, BUTTON_CODE_INVALID)
+        if key == BUTTON_CODE_INVALID then continue end
+      end
     end
     for i, bind in ipairs(binds) do
       if CLIENT and not bind.client then continue end

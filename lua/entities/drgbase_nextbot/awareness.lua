@@ -177,6 +177,8 @@ else
     local ply = LocalPlayer()
     if spotted then
       if isfunction(self.OnSpotted) then
+        self._DrGBaseLastTimeSpotted = CurTime()
+        self._DrGBaseLastKnownPosition = ply:GetPos()
         self:OnSpotted(ply)
       else
         timer.Simple(engine.TickInterval(), function()
@@ -213,6 +215,13 @@ else
   function ENT:HasLostLocalPlayer()
     if self:IsOmniscient() then return false end
     return self._DrGBaseLocalPlayerAwareness == 0
+  end
+
+  function ENT:LastTimeSpotted()
+    return self._DrGBaseLastTimeSpotted or -1
+  end
+  function ENT:LastKnownPosition()
+    return self._DrGBaseLastKnownPosition
   end
 
 end

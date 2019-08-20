@@ -257,7 +257,7 @@ if SERVER then
       Delay = 0.065, Cost = 1
     }
   }
-  local function UseToolgun(self, tr)
+  local function UseToolgun(self, weapon, tr)
     if IsValid(tr.Entity) then
       local ent = tr.Entity
       local res = self:OnUseToolgun(ent, tr)
@@ -306,7 +306,7 @@ if SERVER then
           start = shootPos, endpos = shootPos+self:GetAimVector()*99999,
           filter = {self, weapon, self:GetPossessor()}
         })
-        if UseToolgun(self, tr) then
+        if UseToolgun(self, weapon, tr) then
           weapon:DoShootEffect(tr.HitPos, tr.HitNormal, tr.Entity, tr.PhysicsBone, true)
           self:PlayAnimation(anim)
         end
