@@ -257,7 +257,7 @@ if SERVER then
       Delay = 0.065, Cost = 1
     }
   }
-  local function UseToolgun(self, weapon, tr)
+  local function UseToolgun(self, toolgun, tr)
     if IsValid(tr.Entity) then
       local ent = tr.Entity
       local res = self:OnUseToolgun(ent, tr)
@@ -279,10 +279,12 @@ if SERVER then
           local dmg = DamageInfo()
           dmg:SetDamage(math.random(1, ent:Health()))
           dmg:SetAttacker(self)
-          dmg:SetInflictor(weapon)
+          dmg:SetInflictor(toolgun)
           ent:DispatchTraceAttack(dmg, tr)
         elseif rand == 5 then
-          ent:SetHealth(math.min(ent:Health() + math.random(1, ent:GetMaxHealth()), ent:GetMaxHealth()))
+          local health = ent:Health()
+          local maxHealth = ent:GetMaxHealth()
+          ent:SetHealth(math.min(health + math.random(maxHealth - health + 1), maxHealth))
         elseif rand == 6 then
           local scale = math.Rand(0.1, 2)
           if ent.IsDrGNextbot then ent:Scale(scale, 0.1)

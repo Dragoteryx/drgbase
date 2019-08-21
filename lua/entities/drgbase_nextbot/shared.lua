@@ -465,54 +465,59 @@ if SERVER then
   function ENT:ReactToEnemy()
     local enemy = self:GetEnemy()
     local relationship = self:GetRelationship(enemy)
-    if self.BehaviourType == AI_BEHAV_BASE then
-      if relationship == D_HT then
-        local visible = self:Visible(enemy)
-        if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
-          if self:OnChaseEnemy(enemy) ~= true then
-            if self:FollowPath(enemy) == "unreachable" then
-              self:OnEnemyUnreachable(enemy)
-            end
+    if relationship == D_HT then
+      local visible = self:Visible(enemy)
+      if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
+        if self:OnChaseEnemy(enemy) ~= true then
+          if self:FollowPath(enemy) == "unreachable" then
+            self:OnEnemyUnreachable(enemy)
           end
-        elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible and
-        not self:IsInRange(enemy, self.MeleeAttackRange) then
-          if self:OnAvoidEnemy(enemy) ~= true then
-            self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
-          end
-        elseif self:OnWatchEnemy(enemy) ~= true then self:FaceTowards(enemy) end
-        if not IsValid(enemy) or not self:Visible(enemy) then return end
-        if self:IsInRange(enemy, self.MeleeAttackRange) and
-        self:OnMeleeAttack(enemy) ~= false then
-        elseif not self:IsInRange(enemy, self.AvoidEnemyRange) and
-        self:IsInRange(enemy, self.RangeAttackRange) then
-          self:OnRangeAttack(enemy)
         end
-      elseif relationship == D_FR then
-        local visible = self:Visible(enemy)
-        if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
-          if self:OnAvoidAfraidOf(enemy) ~= true then
-            self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
-          end
-        elseif self:OnWatchAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
-        if not IsValid(enemy) or not self:Visible(enemy) then return end
-        if self:IsInRange(enemy, self.MeleeAttackRange) and
-        self:OnMeleeAttack(enemy) ~= false then
-        elseif not self:IsInRange(enemy, self.AvoidEnemyRange) and
-        self:IsInRange(enemy, self.RangeAttackRange) then
-          self:OnRangeAttack(enemy)
+      elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible and
+      not self:IsInRange(enemy, self.MeleeAttackRange) then
+        if self:OnAvoidEnemy(enemy) ~= true then
+          self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
         end
-      end
-    elseif self.BehaviourType == AI_BEHAV_HUMAN then
-      if relationship == D_HT then
-        self:FaceTowards(enemy)
-        if self:IsWeaponPrimaryEmpty() then
-          self:Reload()
-        elseif self:IsInSight(enemy) then
-          self:PrimaryFire(enemy)
+      elseif self:OnWatchEnemy(enemy) ~= true then self:FaceTowards(enemy) end
+      if not IsValid(enemy) or not self:Visible(enemy) then return end
+      self:AttackEntity(enemy)
+    elseif relationship == D_FR then
+      local visible = self:Visible(enemy)
+      if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
+        if self:OnAvoidAfraidOf(enemy) ~= true then
+          self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
         end
-      elseif relationship == D_FR then
+      elseif self:OnWatchAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
+      if not IsValid(enemy) or not self:Visible(enemy) then return end
+      self:AttackEntity(enemy)
+    end
+  end
 
+  function ENT:AttackEntity(ent)
+    if self.BehaviourType == AI_BEHAV_HUMAN and self:HasWeapon() then
+      local weapon = self:GetWeapon()
+      if weapon.DrGBase_Melee or string.find(weapon:GetHoldType(), "melee") then
+        if self:IsInRange(ent, self.MeleeAttackRange) then
+          if self:OnMeleeAttack(ent, weapon) ~= true  and self.IsDrGNextbotHuman then
+            -- todo: melee code
+          end
+        end
+      elseif self:IsInRange(ent, self.RangeAttackRange) then
+        if self:OnRangeAttack(ent, weapon) ~= true and self.IsDrGNextbotHuman then          
+          if self:IsWeaponPrimaryEmpty() then
+            self:Reload()
+          elseif self:IsInSight(ent) then
+            self:FaceTowards(ent)
+            self:FaceTowards(ent)
+            self:PrimaryFire(ent)
+          end
+        end
       end
+    elseif self:IsInRange(ent, self.MeleeAttackRange) and
+    self:OnMeleeAttack(ent) ~= false then
+    elseif not self:IsInRange(ent, self.AvoidEnemyRange) and
+    self:IsInRange(ent, self.RangeAttackRange) then
+      self:OnRangeAttack(ent)
     end
   end
 

@@ -214,7 +214,7 @@ if SERVER then
     ply._DrGBaseLuminosity = net.ReadFloat()
   end)
   function plyMETA:DrG_Luminosity()
-    return self._DrGBaseLuminosity
+    return self._DrGBaseLuminosity or 1
   end
 
   function plyMETA:DrG_Immobilize()

@@ -391,7 +391,7 @@ if SERVER then
     return self:GetModelRelationship(self:GetModel())
   end
   function ENT:SetSelfModelRelationship(disp, prio)
-    return self:GetModelRelationship(self:GetModel(), disp, prio)
+    return self:SetModelRelationship(self:GetModel(), disp, prio)
   end
   function ENT:AddSelfModelRelationship(disp, prio)
     return self:AddModelRelationship(self:GetModel(), disp, prio)

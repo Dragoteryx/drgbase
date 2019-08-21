@@ -18,6 +18,15 @@ function entMETA:DrG_IsSanic()
   self.UnstickFromCeiling ~= nil
 end
 
+local DOORS = {
+  ["prop_door_rotating"] = true,
+  ["func_door"] = true,
+  ["func_door_rotating"] = true
+}
+function entMETA:DrG_IsDoor()
+  return DOORS[self:GetClass()] or false
+end
+
 function entMETA:DrG_AddListener(name, callback)
   if not isfunction(callback) then return false end
   local old_function = self[name]
@@ -31,6 +40,8 @@ function entMETA:DrG_AddListener(name, callback)
 end
 
 function entMETA:DrG_SearchBone(searchBone)
+  local lookup = self:LookupBone(searchBone)
+  if lookup then return lookup end
   for boneId = 0, (self:GetBoneCount()-1) do
     local boneName = self:GetBoneName(boneId)
     if not boneName then return end
@@ -53,83 +64,6 @@ function entMETA:DrG_LoopTimer(delay, callback, ...)
     if not IsValid(self) then return false end
     return callback(self, ...)
   end, ...)
-end
-
--- Doors --
-
-local DOORS = {
-  ["prop_door_rotating"] = true,
-  ["func_door"] = true,
-  ["func_door_rotating"] = true,
-  ["prop_dynamic"] = true
-}
-function entMETA:DrG_IsDoor()
-  return DOORS[self:GetClass()] or false
-end
-
-local Door = {}
-Door.__index = Door
-function Door:New(nextbot, ent)
-  local door = {}
-  door._nextbot = nextbot
-  door._door = ent
-  setmetatable(door, self)
-  return door
-end
-function Door:IsValid()
-  return IsValid(self._nextbot) and IsValid(self._door)
-end
-function Door:Open(away)
-  if not self:IsValid() then return end
-  if self:IsDouble() then
-    local double = self:GetDouble()
-    if away then
-      self._door:Fire("openawayfrom", self._nextbot:GetName())
-      double:Fire("openawayfrom", self._nextbot:GetName())
-    else
-      self._door:Fire("open")
-      double:Fire("open")
-    end
-  else
-    if away then
-      self._door:Fire("openawayfrom", self._nextbot:GetName())
-    else self._door:Fire("open") end
-  end
-end
-function Door:Close()
-  if not self:IsValid() then return end
-  self._door:Fire("close")
-  if self:IsDouble() then
-    self:GetDouble():Fire("close")
-  end
-end
-function Door:GetDouble()
-  if not self:IsValid() then return end
-  local keyvalues = self._door:GetKeyValues()
-  if isstring(keyvalues.slavename) then
-    return ents.FindByName(keyvalues.slavename)[1]
-  end
-end
-function Door:IsDouble()
-  return IsValid(self:GetDouble())
-end
-function Door:SetSpeed(speed)
-  if not self:IsValid() then return end
-  door:Fire("setspeed", speed)
-  if self:IsDouble() then
-    self:GetDouble():Fire("setspeed", speed)
-  end
-end
-function Door:GetNextbot()
-  return self._nextbot
-end
-function Door:GetDoor()
-  return self._door
-end
-
-function entMETA:DrG_DoorOpener(ent)
-  if not ent.IsDrGNextbot then return end
-  return Door:New(ent, self)
 end
 
 if SERVER then
@@ -171,9 +105,6 @@ if SERVER then
         ragdoll:SetBodygroup(i-1, self:GetBodygroup(i-1))
       end
       ragdoll:Spawn()
-      if not GetConVar("ai_serverragdolls"):GetBool() then
-        ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-      end
       for i = 0, (ragdoll:GetPhysicsObjectCount()-1) do
         local bone = ragdoll:GetPhysicsObjectNum(i)
         if not IsValid(bone) then continue end

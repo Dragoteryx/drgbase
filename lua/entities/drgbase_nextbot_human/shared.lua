@@ -3,10 +3,10 @@ ENT.IsDrGNextbotHuman = true
 
 -- AI --
 ENT.BehaviourType = AI_BEHAV_HUMAN
-ENT.RangeAttackRange = 0
-ENT.MeleeAttackRange = 50
-ENT.ReachEnemyRange = 50
-ENT.AvoidEnemyRange = 0
+ENT.RangeAttackRange = 1000
+ENT.MeleeAttackRange = 30
+ENT.ReachEnemyRange = 900
+ENT.AvoidEnemyRange = 750
 ENT.AvoidAfraidOfRange = 500
 ENT.WatchAfraidOfRange = 750
 

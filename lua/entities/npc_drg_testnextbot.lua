@@ -96,8 +96,6 @@ if SERVER then
         self:EmitFootstep()
       end)
     end
-    --FProfiler.start(self.Think)
-    --timer.Simple(5, FProfiler.stop)
   end
 
   -- AI --

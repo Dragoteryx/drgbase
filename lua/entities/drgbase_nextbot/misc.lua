@@ -1,6 +1,7 @@
 
 -- Convars --
 
+local DisableRagCollisions = CreateConVar("drgbase_ragdoll_collisions_disabled", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local RemoveRagdolls = CreateConVar("drgbase_remove_ragdolls", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local RagdollFadeOut = CreateConVar("drgbase_ragdoll_fadeout", "3", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local PossessTargetAll = CreateConVar("drgbase_possession_targetall", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
@@ -542,6 +543,9 @@ if SERVER then
         if IsValid(ragdoll) then
           undo.ReplaceEntity(self, ragdoll)
           cleanup.ReplaceEntity(self, ragdoll)
+          if not GetConVar("ai_serverragdolls"):GetBool() or DisableRagCollisions:GetBool() then
+            ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+          end
           if not self.OnRagdoll(ragdoll, dmg) and RemoveRagdolls:GetFloat() >= 0 then
             ragdoll:Fire("fadeandremove", math.Clamp(RagdollFadeOut:GetFloat(), 0, math.huge), RemoveRagdolls:GetFloat())
           end
