@@ -499,6 +499,7 @@ if SERVER then
       if weapon.DrGBase_Melee or string.find(weapon:GetHoldType(), "melee") then
         if self:IsInRange(ent, self.MeleeAttackRange) then
           if self:OnMeleeAttack(ent, weapon) ~= true  and self.IsDrGNextbotHuman then
+            self:FaceTowards(ent)
             -- todo: melee code
           end
         end
@@ -509,6 +510,13 @@ if SERVER then
           if self:IsWeaponPrimaryEmpty() then
             self:Reload()
           elseif self:IsInSight(ent) then
+            local shootPos = self:GetShootPos()
+            local tr = util.DrG_TraceHull({
+              start = shootPos, endpos = shootPos + self:GetAimVector()*99999,
+              mins = Vector(-5, -5, -5), maxs = Vector(5, 5, 5),
+              filter = {self, self:GetWeapon(), self:GetPossessor()}
+            })
+            if IsValid(tr.Entity) and not self:IsHostile(tr.Entity) then return end
             self:PrimaryFire(ent)
           end
         end
