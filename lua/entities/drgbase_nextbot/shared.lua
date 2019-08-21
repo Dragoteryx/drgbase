@@ -503,12 +503,12 @@ if SERVER then
           end
         end
       elseif self:IsInRange(ent, self.RangeAttackRange) then
-        if self:OnRangeAttack(ent, weapon) ~= true and self.IsDrGNextbotHuman then          
+        if self:OnRangeAttack(ent, weapon) ~= true and self.IsDrGNextbotHuman then
+          self:FaceTowards(ent)
+          self:FaceTowards(ent)
           if self:IsWeaponPrimaryEmpty() then
             self:Reload()
           elseif self:IsInSight(ent) then
-            self:FaceTowards(ent)
-            self:FaceTowards(ent)
             self:PrimaryFire(ent)
           end
         end
