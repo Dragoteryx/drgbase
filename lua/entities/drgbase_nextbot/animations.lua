@@ -1,4 +1,8 @@
 
+-- Convars --
+
+local DebugAnims = CreateConVar("drgbase_debug_animations", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+
 -- Getters/setters --
 
 --[[function ENT:GetAnimInfoSequence(seq)
@@ -408,6 +412,7 @@ if SERVER then
 
   function ENT:UpdateAnimation()
     if self:IsPlayingAnimation() then return end
+    if self:IsAIDisabled() and DebugAnims:GetBool() then return end
     local anim, rate = self:OnUpdateAnimation()
     if isstring(anim) and string.StartWith(anim, "ACT_") then
       anim = self:GetActivityIDFromName(anim)
