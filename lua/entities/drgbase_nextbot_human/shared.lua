@@ -3,9 +3,9 @@ ENT.IsDrGNextbotHuman = true
 
 -- AI --
 ENT.BehaviourType = AI_BEHAV_HUMAN
-ENT.RangeAttackRange = 1000
-ENT.MeleeAttackRange = 30
-ENT.ReachEnemyRange = 900
+ENT.RangeAttackRange = 1500
+ENT.MeleeAttackRange = 0
+ENT.ReachEnemyRange = 1000
 ENT.AvoidEnemyRange = 750
 ENT.AvoidAfraidOfRange = 500
 ENT.WatchAfraidOfRange = 750
@@ -63,6 +63,12 @@ ENT.PossessionBinds = {
       self:PrimaryFire()
     end
   }},
+  [IN_ATTACK2] = {{
+    coroutine = true,
+    onkeydown = function(self)
+      self:SecondaryFire()
+    end
+  }},
   [IN_RELOAD] = {{
     coroutine = true,
     onkeydown = function(self)
@@ -89,7 +95,7 @@ if SERVER then
     else self:AimAt() end
   end
 
-  -- Misc --
+  -- Weapons --
 
   function ENT:PrimaryFire()
     if not self:HasWeapon() then return end

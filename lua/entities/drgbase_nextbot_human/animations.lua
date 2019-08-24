@@ -306,7 +306,7 @@ if SERVER then
 
   -- Getters/setters --
 
-  function ENT:_GetAnimList()
+  function ENT:GetAnimList()
     if self._DrGBasePoseParameters["move_x"] then
       return self.Animations.PlayerModel
     else return self.Animations.NPCModel end
@@ -314,11 +314,11 @@ if SERVER then
 
   function ENT:GetShootAnimation()
     if not self:HasWeapon() then return end
-    return self:_GetAnimList().ShootAnimations[self:GetWeapon():GetHoldType()]
+    return self:GetAnimList().ShootAnimations[self:GetWeapon():GetHoldType()]
   end
   function ENT:GetReloadAnimation()
     if not self:HasWeapon() then return end
-    return self:_GetAnimList().ReloadAnimations[self:GetWeapon():GetHoldType()]
+    return self:GetAnimList().ReloadAnimations[self:GetWeapon():GetHoldType()]
   end
 
   -- Functions --
@@ -346,7 +346,7 @@ if SERVER then
     ["duel"] = true
   }
   function ENT:OnUpdateAnimation()
-    local anims = self:_GetAnimList()
+    local anims = self:GetAnimList()
     if self:IsClimbingUp() then return anims.ClimbUpAnimation, self.ClimbAnimRate end
     if self:IsClimbingDown() then return anims.ClimbDownAnimation, self.ClimbAnimRate end
     local holdtype = self:HasWeapon() and self:GetWeapon():GetHoldType() or "normal"

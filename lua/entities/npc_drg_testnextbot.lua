@@ -123,14 +123,15 @@ if SERVER then
   -- Damage --
 
   function ENT:OnTakeDamage(dmg, hitgroup)
+    local attacker = dmg:GetAttacker()
     if hitgroup == HITGROUP_HEAD then
-      local attacker = dmg:GetAttacker()
       if not self:HasSpotted(attacker) then
         self:Kill(attacker, dmg:GetInflictor())
       end
     end
+    self:SpotEntity(attacker)
   end
-  function ENT:OnDeath(dmg, delay, hitgroup)
+  function ENT:OnDeath(dmg, hitgroup)
     if self:IsClimbing() then return end
     if hitgroup ~= HITGROUP_HEAD then
       local deaths = {"death_01", "death_02", "death_03"}

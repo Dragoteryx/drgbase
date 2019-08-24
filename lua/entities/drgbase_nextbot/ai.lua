@@ -62,6 +62,8 @@ function ENT:_InitAI()
     elseif self._DrGBaseHadEnemy and not IsValid(new) then
       self._DrGBaseHadEnemy = false
       self:OnLastEnemy(old)
+      if SERVER and self.IsDrGNextbotHuman and self:HasWeapon() and
+      not self:IsWeaponFull() then self:Reload() end
     else self:OnEnemyChange(old, new) end
   end)
 end

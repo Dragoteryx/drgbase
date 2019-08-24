@@ -25,11 +25,11 @@ function ENT:IsAttack(seq)
   elseif not isnumber(seq) then return false end
   if seq == -1 then return false end
   if self:GetNW2Bool("DrGBaseAnimAttack/"..tostring(seq)) then return true
-  elseif string.find(string.lower(self:GetSequenceName(seq)), "attack") ~= nil then
+  elseif string.find(string.lower(self:GetSequenceName(seq)), "attack") then
     return true
-  elseif string.find(self:GetSequenceActivityName(seq), "ATTACK") ~= nil then
+  elseif string.find(self:GetSequenceActivityName(seq), "ATTACK") then
     return true
-  else return  false end
+  else return false end
 end
 
 -- Functions --

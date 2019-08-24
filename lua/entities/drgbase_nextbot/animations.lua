@@ -22,8 +22,8 @@ function ENT:GetAnimInfoSequence(seq)
   for i = 0, 1600 do
     local info = self:GetAnimInfo(i)
     if info.label == "@"..seq or info.label == "a_"..seq then
-            return info
-        elseif i > 0 and info.label == first.label then
+      return info
+    elseif i > 0 and info.label == first.label then
       return {}
     end
   end
@@ -163,10 +163,10 @@ if SERVER then
   local function CallOnAnimChange(self, old, new)
     return self:OnAnimChange(self:GetSequenceName(old), self:GetSequenceName(new))
   end
-  local function CallAfterAnimChange(self, old, new)
-    if not isfunction(self.AfterAnimChange) then return end
-    self:CallInCoroutine(function(self, delay)
-      self:AfterAnimChange(self:GetSequenceName(old), self:GetSequenceName(new), delay)
+  local function CallOnAnimChanged(self, old, new)
+    if not isfunction(self.OnAnimChanged) then return end
+    self:ReactInCoroutine(function(self)
+      self:OnAnimChanged(self:GetSequenceName(old), self:GetSequenceName(new), delay)
     end)
   end
 
@@ -200,17 +200,16 @@ if SERVER then
   -- Functions --
 
   function ENT:PlaySequenceAndWait(seq, rate, callback)
+    if self._DrGBaseDisablePSAW then return end
     if isstring(seq) then seq = self:LookupSequence(seq)
     elseif not isnumber(seq) then return end
     if seq == -1 then return end
     local current = self:GetSequence()
     if seq == self:GetSequence() or CallOnAnimChange(self, current, seq) ~= false then
       --self:AfterAnimChange(self:GetSequenceName(current), self:GetSequenceName(seq), 0)
-      rate = isnumber(rate) and rate or 1
-      local oldPlayingAnim = self._DrGBasePlayingAnimation
       self._DrGBasePlayingAnimation = seq
       ResetSequence(self, seq)
-      self:SetPlaybackRate(rate)
+      self:SetPlaybackRate(rate or 1)
       local now = CurTime()
       local lastCycle = -1
       while seq == self:GetSequence() do
@@ -218,10 +217,15 @@ if SERVER then
         if lastCycle > cycle then break end
         if lastCycle == cycle and cycle == 1 then break end
         lastCycle = cycle
-        if isfunction(callback) and callback(self, cycle) then break end
+        if isfunction(callback) then
+          self._DrGBaseDisablePSAW = true
+          local res = callback(self, cycle)
+          self._DrGBaseDisablePSAW = false
+          if res then break end
+        end
         self:YieldCoroutine(false)
       end
-      self._DrGBasePlayingAnimation = oldPlayingAnim
+      self._DrGBasePlayingAnimation = nil
       self:Timer(0, function()
         self:UpdateAnimation()
         self:UpdateSpeed()
@@ -248,7 +252,7 @@ if SERVER then
     if options.collisions == nil then options.collisions = true end
     local previousCycle = 0
     local previousPos = self:GetPos()
-    local res = self:PlaySequenceAndWait(seq, options.rate or 1, function(self, cycle)
+    local res = self:PlaySequenceAndWait(seq, options.rate, function(self, cycle)
       local success, vec, angles = self:GetSequenceMovement(seq, previousCycle, cycle)
       if success then
         if isvector(options.multiply) then
@@ -416,7 +420,7 @@ if SERVER then
       local activity = self:GetSequenceActivity(current)
       if validAnim and (self:GetCycle() == 1 or anim ~= activity) then
         if CallOnAnimChange(self, current, seq) ~= false then
-          CallAfterAnimChange(self, current, seq)
+          CallOnAnimChanged(self, current, seq)
           ResetSequence(self, seq)
         end
       end
@@ -425,7 +429,7 @@ if SERVER then
       validAnim = seq ~= -1
       if validAnim and (self:GetCycle() == 1 or seq ~= current) then
         if CallOnAnimChange(self, current, seq) ~= false then
-          CallAfterAnimChange(self, current, seq)
+          CallOnAnimChanged(self, current, seq)
           ResetSequence(self, seq)
         end
       end
@@ -449,7 +453,7 @@ if SERVER then
   -- Hooks
 
   function ENT:OnAnimChange() end
-  --function ENT:AfterAnimChange() end
+  --function ENT:OnAnimChanged() end
 
   function ENT:BodyUpdate()
     self:BodyMoveXY()

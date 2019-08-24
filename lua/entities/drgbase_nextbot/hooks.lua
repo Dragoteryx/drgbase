@@ -26,7 +26,7 @@ if SERVER then
   function ENT:OnTakeDamage(dmg)
     self:SpotEntity(dmg:GetAttacker())
   end
-  --function ENT:AfterTakeDamage() end
+  --function ENT:OnTookDamage() end
 
   function ENT:OnFatalDamage() end
   function ENT:OnDowned() end
@@ -90,8 +90,8 @@ if SERVER then
             local noTarget = self:GetNoTarget()
             self:SetNoTarget(true)
             local data = util.DrG_SaveDmg(dmg)
-            self:CallInCoroutine(function(self, delay)
-              self:OnDowned(util.DrG_LoadDmg(data), delay, hitgroup)
+            self:CallInCoroutine(function(self)
+              self:OnDowned(util.DrG_LoadDmg(data), hitgroup)
               if self:Health() <= 0 then self:SetHealth(1) end
               self:SetNoTarget(noTarget)
               self:SetNW2Bool("DrGBaseDown", false)
@@ -103,11 +103,17 @@ if SERVER then
           if #self.OnDamageSounds > 0 then
             self:EmitSlotSound("DrGBaseDamageSounds", self.DamageSoundDelay, self.OnDamageSounds[math.random(#self.OnDamageSounds)])
           end
-          if isfunction(self.AfterTakeDamage) then
+          if isfunction(self.OnTookDamage) then
             local data = util.DrG_SaveDmg(dmg)
-            self:CallInCoroutine(function(self, delay)
+            self:ReactInCoroutine(function(self)
               dmg = util.DrG_LoadDmg(data)
-              self:AfterTakeDamage(dmg, delay, hitgroup)
+              self:OnTookDamage(dmg, hitgroup)
+            end)
+          elseif isfunction(self.AfterTakeDamage) then
+            local data = util.DrG_SaveDmg(dmg)
+            self:ReactInCoroutine(function(self)
+              dmg = util.DrG_LoadDmg(data)
+              self:AfterTakeDamage(dmg, 0, hitgroup)
             end)
           end
         end
@@ -150,6 +156,12 @@ if SERVER then
   hook.Add("EntityTakeDamage", "DrGBaseNextbotDealtDamage", function(ent, dmg)
     local attacker = dmg:GetAttacker()
     if IsValid(attacker) and attacker.IsDrGNextbot then
+      if attacker == ent then return true end
+      local inflictor = dmg:GetInflictor()
+      if IsValid(inflictor) and inflictor:GetClass() == "crossbow_bolt" then
+        dmg:SetDamageForce(inflictor:GetVelocity()*2)
+        dmg:SetDamage(100)
+      end
       if ent:IsPlayer() then dmg:ScaleDamage(MultDamagePlayer:GetFloat())
       else dmg:ScaleDamage(MultDamageNPC:GetFloat()) end
       local res = attacker:OnDealtDamage(ent, dmg)
@@ -169,7 +181,6 @@ if SERVER then
   -- Collisions --
 
   function ENT:OnCombineBall() end
-  --function ENT:AfterCombineBall() end
 
   function ENT:OnPhysDamage(ent, data)
     return (data.TheirOldVelocity:Length()*data.HitObject:GetMass())/1000
@@ -193,11 +204,6 @@ if SERVER then
           self:TakeDamageInfo(dmg)
         else self:DrG_Dissolve() end
         ent:EmitSound("NPC_CombineBall.KillImpact")
-      end
-      if isfunction(self.AfterCombineBall) then
-        self:CallInCoroutine(function(self, delay)
-          self:AfterCombineBall(ent, delay)
-        end)
       end
     elseif not ent:IsPlayerHolding() then
       local damage = math.floor(self:OnPhysDamage(ent, data))

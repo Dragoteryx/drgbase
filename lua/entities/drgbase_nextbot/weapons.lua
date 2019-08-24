@@ -70,10 +70,64 @@ function ENT:OnAimAtEntity() end
 
 -- Handlers --
 
+local LONG_RANGE = {
+  ["crossbow"] = true
+}
+local MEDIUM_RANGE = {
+  ["pistol"] = true,
+  ["revolver"] = true,
+  ["grenade"] = true,
+  ["duel"] = true
+}
+local CLOSE_RANGE = {
+  ["shotgun"] = true,
+  ["camera"] = true
+}
+local RANGE_MELEE = {
+  ["melee"] = true,
+  ["melee2"] = true,
+  ["fist"] = true,
+  ["knife"] = true
+}
+local function IsMeleeWeapon(weapon)
+  local holdType = weapon:GetHoldType()
+  if RANGE_MELEE[holdType] then return true end
+  return weapon.DrGBase_Melee or string.find(holdType, "melee") ~= nil
+end
+
 function ENT:_InitWeapons()
   self._DrGBaseWeapons = {}
   self:SetNW2VarProxy("DrGBaseWeapon", function(self, name, old, new)
-    self:OnWeaponChange(old, new)
+    if not self:OnWeaponChange(old, new) and SERVER and
+    self.BehaviourType == AI_BEHAV_HUMAN then
+      local holdType = new:GetHoldType()
+      if IsMeleeWeapon(new) then
+        self.RangeAttackRange = 0
+        self.MeleeAttackRange = 30
+        self.ReachEnemyRange = 25
+        self.AvoidEnemyRange = 0
+      elseif LONG_RANGE[holdType] then
+        self.RangeAttackRange = 3000
+        self.MeleeAttackRange = 0
+        self.ReachEnemyRange = 2000
+        self.AvoidEnemyRange = 750
+      elseif CLOSE_RANGE[holdType] then
+        self.RangeAttackRange = 325
+        self.MeleeAttackRange = 0
+        self.ReachEnemyRange = 250
+        self.AvoidEnemyRange = 175
+      elseif MEDIUM_RANGE[holdType] then
+        self.RangeAttackRange = 750
+        self.MeleeAttackRange = 0
+        self.ReachEnemyRange = 500
+        self.AvoidEnemyRange = 350
+      else
+        self.RangeAttackRange = 1500
+        self.MeleeAttackRange = 0
+        self.ReachEnemyRange = 1000
+        self.AvoidEnemyRange = 750
+      end
+    end
   end)
   if CLIENT then return end
   if self.UseWeapons then
@@ -255,8 +309,34 @@ if SERVER then
       Bullet = {Damage = 4, Spread = Vector(0.035, 0.035, 0)},
       Sound = "Weapon_SMG1.Single", Empty = "Weapon_SMG1.Empty",
       Delay = 0.065, Cost = 1
+    },
+    ["weapon_shotgun"] = {
+      Bullet = {Damage = 8, Spread = Vector(0.1, 0.1, 0), Num = 7},
+      Sound = "Weapon_Shotgun.Single", Empty = "Weapon_Shotgun.Empty",
+      Delay = 1.25, Cost = 1
     }
   }
+  local function ShootGun(self, weapon, data, anim)
+    if not weapon._DrGBaseNextShoot or CurTime() > weapon._DrGBaseNextShoot then
+      weapon._DrGBaseNextShoot = CurTime() + data.Delay
+      if weapon:Clip1() >= data.Cost then
+        self:PlayAnimation(anim)
+        weapon:EmitSound(data.Sound)
+        data.Bullet.Src = self:GetShootPos()
+        data.Bullet.Dir = self:GetAimVector()
+        data.Bullet.Filter = {self, weapon, self:GetPossessor()}
+        data.Bullet.Callback = function(self, tr, dmg)
+          dmg:SetInflictor(weapon)
+        end
+        self:FireBullets(data.Bullet)
+        weapon:SetClip1(weapon:Clip1() - data.Cost)
+        return true
+      else
+        weapon:EmitSound(data.Empty)
+        return false
+      end
+    else return false end
+  end
   local function UseToolgun(self, toolgun, tr)
     if IsValid(tr.Entity) then
       local ent = tr.Entity
@@ -296,13 +376,38 @@ if SERVER then
       else return res end
     else return false end
   end
+  local function FireCrossbow(self, crossbow, target)
+    local speed = 3500
+    local offset = self:GetAimVector()*10
+    if isentity(target) then
+      local shootPos = self:GetShootPos()+offset
+      local aimAt = self:OnAimAtEntity(target) or target:WorldSpaceCenter()
+      local dist = shootPos:Distance(aimAt)
+      if target:IsNPC() then
+        return FireCrossbow(self, crossbow, aimAt+target:GetGroundSpeedVelocity()*(dist/speed))
+      else return FireCrossbow(self, crossbow, aimAt+target:GetVelocity()*(dist/speed)) end
+    elseif isvector(target) then
+      local bolt = ents.Create("crossbow_bolt")
+      if not IsValid(bolt) then return NULL end
+      local shootPos = self:GetShootPos()+offset
+      local dir = shootPos:DrG_Direction(target)
+      bolt:SetOwner(self)
+      bolt:SetPos(shootPos)
+      bolt:SetAngles(dir:Angle())
+      bolt:Fire("SetDamage", 100)
+      bolt:Spawn()
+      bolt:SetVelocity(dir:GetNormalized()*speed)
+      return bolt
+    else return NULL end
+  end
   function ENT:WeaponPrimaryFire(anim)
     if not self:HasWeapon() then return false end
     if self:IsReloadingWeapon() then return false end
     local weapon = self:GetWeapon()
-    if weapon:GetClass() == "gmod_tool" then
-      if not weapon._DrGBaseLastShoot or CurTime() > weapon._DrGBaseLastShoot + 1.25 then
-        weapon._DrGBaseLastShoot = CurTime()
+    local class = weapon:GetClass()
+    if class == "gmod_tool" then
+      if not weapon._DrGBaseNextShoot or CurTime() > weapon._DrGBaseNextShoot then
+        weapon._DrGBaseNextShoot = CurTime() + 1.25
         local shootPos = self:GetShootPos()
         local tr = util.DrG_TraceLine({
           start = shootPos, endpos = shootPos+self:GetAimVector()*99999,
@@ -314,24 +419,34 @@ if SERVER then
         end
         return true
       else return false end
-    elseif SUPPORTED_GUNS[weapon:GetClass()] then
+    elseif class == "gmod_camera" then
+      if not weapon._DrGBaseNextShoot or CurTime() > weapon._DrGBaseNextShoot then
+        weapon._DrGBaseNextShoot = CurTime() + 2.5
+        weapon:EmitSound(weapon.ShootSound)
+      end
+    elseif class == "weapon_crossbow" then
+      if not weapon._DrGBaseNextShoot or CurTime() > weapon._DrGBaseNextShoot then
+        weapon._DrGBaseNextShoot = CurTime() + 2.5
+        if self:IsPossessed() then
+          local lockedOn = self:PossessionGetLockedOn()
+          if not IsValid(lockedOn) then
+            FireCrossbow(self, weapon, self:PossessorTrace().HitPos)
+          else FireCrossbow(self, weapon, lockedOn) end
+        elseif self:HasEnemy() then
+          FireCrossbow(self, weapon, self:GetEnemy())
+        elseif self:HadEnemy() then
+          self:UpdateEnemy()
+          return self:WeaponPrimaryFire(anim)
+        else FireCrossbow(self, weapon, self:GetPos()+self:GetForward()*3500) end
+        weapon:EmitSound("Weapon_Crossbow.Single")
+        weapon:EmitSound("Weapon_Crossbow.BoltFly")
+        self:PlayAnimation(anim)
+        return true
+      else return false end
+    elseif SUPPORTED_GUNS[class] then
       if weapon:Clip1() > weapon:GetMaxClip1() then weapon:SetClip1(weapon:GetMaxClip1()) end
       local data = SUPPORTED_GUNS[weapon:GetClass()]
-      if not weapon._DrGBaseLastShoot or CurTime() > weapon._DrGBaseLastShoot + data.Delay then
-        weapon._DrGBaseLastShoot = CurTime()
-        if weapon:Clip1() > 0 then
-          self:PlayAnimation(anim)
-          weapon:EmitSound(data.Sound)
-          data.Bullet.Src = self:GetShootPos()
-          data.Bullet.Dir = self:GetAimVector()
-          data.Bullet.Filter = {self, weapon, self:GetPossessor()}
-          self:FireBullets(data.Bullet)
-          weapon:SetClip1(weapon:Clip1() - data.Cost)
-        else
-          weapon:EmitSound(data.Empty)
-          return false
-        end
-      else return false end
+      return ShootGun(self, weapon, data, anim)
     elseif weapon:IsScripted() and not self:IsWeaponPrimaryEmpty() then
       if CurTime() < weapon:GetNextPrimaryFire() then return false end
       self:PlayAnimation(anim)
@@ -343,8 +458,15 @@ if SERVER then
     if not self:HasWeapon() then return false end
     if self:IsReloadingWeapon() then return false end
     local weapon = self:GetWeapon()
-    if wep:GetClass() == "weapon_ar2" then
+    local class = weapon:GetClass()
+    if class == "weapon_ar2" then
       return true
+    elseif class == "weapon_shotgun" then
+      return ShootGun(self, weapon, {
+        Bullet = {Damage = 8, Spread = Vector(0.1, 0.1, 0), Num = 14},
+        Sound = "Weapon_Shotgun.Double", Empty = "Weapon_Shotgun.Empty",
+        Delay = 1.25, Cost = 2
+      }, anim)
     elseif wep:IsScripted() and not self:IsWeaponSecondaryEmpty() then
       if CurTime() < weapon:GetNextSecondaryFire() then return false end
       self:PlayAnimation(anim)

@@ -534,8 +534,9 @@ if SERVER then
       return NextCachedEntity(self, cache, ent, spotted)
     else return ent end
   end
-  local function NextNeutralEntity(self, entities, previous, spotted)
-    local i, ent = next(entities, previous)
+  local function NextNeutralEntity(self, entities, j, spotted)
+    local i = j+1
+    local ent = entities[i]
     if ent == nil then return i, nil
     elseif not IsValid(ent) or
     self:GetRelationship(ent) ~= D_NU or
@@ -565,7 +566,7 @@ if SERVER then
         return NextCachedEntity(self, cache, previous, spotted)
       end
     elseif disp == D_NU then
-      local i
+      local i = 0
       local entities = ents.GetAll()
       return function()
         local j, ent = NextNeutralEntity(self, entities, i, spotted)

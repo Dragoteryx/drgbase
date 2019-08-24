@@ -170,6 +170,7 @@ function ENT:Initialize()
     self:SetUseType(SIMPLE_USE)
     self.VJ_AddEntityToSNPCAttackList = true
     self.vFireIsCharacter = true
+    self._DrGBaseCorReacts = {}
     self._DrGBaseCorCalls = {}
     self._DrGBaseWaterLevel = self:WaterLevel()
     self._DrGBaseDownSpeed = 0
@@ -229,7 +230,9 @@ function ENT:Think()
       local phys = self:GetPhysicsObject()
       --debugoverlay.Sphere(phys:GetPos(), 2, 0.05, DrGBase.CLR_RED, true)
       if IsValid(phys) then
-        phys:SetPos(self:GetPos(), true)
+        if self:IsMoving() then
+          phys:SetPos(self:GetPos(), true)
+        end
         phys:SetAngles(self:GetAngles())
       end
       --debugoverlay.Sphere(phys:GetPos(), 2, 0.05, DrGBase.CLR_GREEN, true)
@@ -305,8 +308,9 @@ function ENT:Think()
     self._DrGBaseCustomThinkDelay = CurTime() + delay
   end
   if self:IsPossessed() and (SERVER or self:IsPossessedByLocalPlayer()) then
-    local possessor = self:GetPossessor()
+    local possessor = self:GetPossessor()    
     if SERVER then possessor:SetPos(self:GetPos()) end
+    possessor:SetKeyValue("waterlevel", self:WaterLevel())
     self:_HandlePossession(false)
     if CurTime() > self._DrGBasePossessionThinkDelay then
       local delay = self:PossessionThink(possessor) or 0
@@ -346,31 +350,53 @@ if SERVER then
 
   -- Coroutine --
 
-  function ENT:CallOutsideCoroutine(callback, ...)
-    self:Timer(0, callback, ...)
+  function ENT:ReactInCoroutine(callback, ...)
+    local args, n = table.DrG_Pack(...)
+    table.insert(self._DrGBaseCorReacts, function(self)
+      callback(self, table.DrG_Unpack(args, n))
+    end)
   end
   function ENT:CallInCoroutine(callback, ...)
     local args, n = table.DrG_Pack(...)
-    table.insert(self._DrGBaseCorCalls, {
-      callback = callback,
-      now = CurTime(),
-      args = args, n = n
-    })
+    if n > 0 then
+      table.insert(self._DrGBaseCorCalls, function(self)
+        callback(self, table.DrG_Unpack(args, n))
+      end)
+    else
+      local now = CurTime()
+      table.insert(self._DrGBaseCorCalls, function(self)
+        callback(self, CurTime() - now)
+      end)
+    end
   end
+
   function ENT:YieldCoroutine(interrompt)
     if interrompt then
       repeat
-        if #self._DrGBaseCorCalls > 0 and not self._DrGBaseRunningCorCalls then
-          self._DrGBaseRunningCorCalls = true
-          while #self._DrGBaseCorCalls > 0 do
-            local cor = table.remove(self._DrGBaseCorCalls, 1)
-            cor.callback(self, CurTime() - cor.now, table.DrG_Unpack(cor.args, cor.n))
+        if not self._DrGBaseCorReacting then
+          if #self._DrGBaseCorReacts > 0 then
+            self._DrGBaseCorReacting = true
+            while #self._DrGBaseCorReacts > 0 do
+              local now = CurTime()
+              table.remove(self._DrGBaseCorReacts, 1)(self)
+              if now < CurTime() then self._DrGBaseCorReacts = {} end
+            end
+            self._DrGBaseCorReacting = false
+          elseif #self._DrGBaseCorCalls > 0 and
+          not self._DrGBaseCorCalling then
+            self._DrGBaseCorCalling = true
+            while #self._DrGBaseCorCalls > 0 do
+              table.remove(self._DrGBaseCorCalls, 1)(self)
+            end
+            self._DrGBaseCorCalling = false
           end
-          self._DrGBaseRunningCorCalls = false
         end
         coroutine.yield()
-      until not self:IsAIDisabled() or self:IsPossessed() or self._DrGBaseRunningCorCall
-    else coroutine.yield() end
+      until not self:IsAIDisabled() or self:IsPossessed() or self._DrGBaseCorReacting
+    else
+      self._DrGBaseCorReacts = {}
+      coroutine.yield()
+    end
   end
   function ENT:PauseCoroutine(duration, interrompt)
     if isnumber(duration) then
@@ -428,12 +454,15 @@ if SERVER then
       self:_HandlePossession(true)
     elseif not self:IsAIDisabled() then
       if self.BehaviourType ~= AI_BEHAV_CUSTOM then
-        if self:HasEnemy() then self:ReactToEnemy()
-        elseif self:HadEnemy() then self:UpdateEnemy()
-        elseif isvector(self:GetPatrolPos(1)) then self:Patrol()
-        else self:OnIdle() end
+        self:_DefaultBehaviour()
       else self:AIBehaviour() end
     end
+  end
+  function ENT:_DefaultBehaviour()
+    if self:HasEnemy() then self:ReactToEnemy()
+    elseif self:HadEnemy() then self:UpdateEnemy()
+    elseif isvector(self:GetPatrolPos(1)) then self:Patrol()
+    else self:OnIdle() end
   end
 
   -- Net --
@@ -479,8 +508,7 @@ if SERVER then
           self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
         end
       elseif self:OnWatchEnemy(enemy) ~= true then self:FaceTowards(enemy) end
-      if not IsValid(enemy) or not self:Visible(enemy) then return end
-      self:AttackEntity(enemy)
+      if IsValid(enemy) and self:Visible(enemy) then self:AttackEntity(enemy) end
     elseif relationship == D_FR then
       local visible = self:Visible(enemy)
       if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
@@ -488,8 +516,7 @@ if SERVER then
           self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
         end
       elseif self:OnWatchAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
-      if not IsValid(enemy) or not self:Visible(enemy) then return end
-      self:AttackEntity(enemy)
+      if IsValid(enemy) and self:Visible(enemy) then self:AttackEntity(enemy) end
     end
   end
 
@@ -505,8 +532,10 @@ if SERVER then
         end
       elseif self:IsInRange(ent, self.RangeAttackRange) then
         if self:OnRangeAttack(ent, weapon) ~= true and self.IsDrGNextbotHuman then
-          self:FaceTowards(ent)
-          self:FaceTowards(ent)
+          if self:IsMoving() then
+            self:FaceTowards(ent)
+            self:FaceTowards(ent)
+          end
           if self:IsWeaponPrimaryEmpty() then
             self:Reload()
           elseif self:IsInSight(ent) then
@@ -516,16 +545,15 @@ if SERVER then
               mins = Vector(-5, -5, -5), maxs = Vector(5, 5, 5),
               filter = {self, self:GetWeapon(), self:GetPossessor()}
             })
-            if IsValid(tr.Entity) and not self:IsHostile(tr.Entity) then return end
-            self:PrimaryFire(ent)
+            if tr.Entity == ent then self:PrimaryFire(ent) end
           end
         end
       end
     elseif self:IsInRange(ent, self.MeleeAttackRange) and
-    self:OnMeleeAttack(ent) ~= false then
+    self:OnMeleeAttack(ent, self:GetWeapon()) ~= false then
     elseif not self:IsInRange(ent, self.AvoidEnemyRange) and
     self:IsInRange(ent, self.RangeAttackRange) then
-      self:OnRangeAttack(ent)
+      self:OnRangeAttack(ent, self:GetWeapon())
     end
   end
 

@@ -159,14 +159,12 @@ if SERVER then
 
   function ENT:Blind(blind)
     if self:IsBlind() then return end
-    local res = self:OnBlinded(blind)
+    local res = self:OnBlind(blind)
     if res == true then return
     elseif isnumber(res) then blind:ScaleDuration(res) end
     self:SetCooldown("DrGBaseBlind", blind:GetDuration())
-    if not isfunction(self.AfterBlinded) then return end
-    self:CallInCoroutine(function(self, delay)
-      self:AfterBlinded(blind, delay)
-    end)
+    if not isfunction(self.OnBlinded) then return end
+    self:ReactInCoroutine(self.OnBlinded, blind)
   end
 
   -- Hooks --
@@ -181,8 +179,8 @@ if SERVER then
   function ENT:OnSound(ent, sound)
     self:SpotEntity(ent)
   end
-  function ENT:OnBlinded() end
-  --function ENT:AfterBlinded() end
+  function ENT:OnBlind() end
+  --function ENT:OnBlinded() end
 
   -- Handlers --
 

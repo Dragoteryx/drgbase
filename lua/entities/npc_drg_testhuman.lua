@@ -15,7 +15,9 @@ ENT.UseWalkframes = true
 -- Weapons --
 ENT.Weapons = {
   "weapon_ar2",
-  "weapon_smg1"
+  "weapon_smg1",
+  "weapon_crossbow",
+  "weapon_shotgun"
 }
 ENT.WeaponAccuracy = 0.75
 
