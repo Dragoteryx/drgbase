@@ -88,6 +88,8 @@ if SERVER then
   function ENT:CustomInitialize()
     self:SetSelfClassRelationship(D_LI)
     self:SetPlayersRelationship(D_HT, 2)
+    self:SetModelRelationship("models/props_c17/doll01.mdl", D_FR)
+    self:SetModelRelationship("models/props_borealis/bluebarrel001.mdl", D_HT)
     for i, walk in ipairs({
       self.RunAnimation,
       self.WalkAnimation
@@ -96,15 +98,42 @@ if SERVER then
         self:EmitFootstep()
       end)
     end
+    self.Mode = 0
+  end
+  function ENT:Use()
+    self.Mode = (self.Mode+1)%2
+    if self.Mode == 0 then
+      DrGBase.Print("Default mode", {chat = true, color = DrGBase.CLR_GREEN})
+      self.RangeAttackRange = 100
+      self.MeleeAttackRange = 0
+      self.ReachEnemyRange = 100
+      self.AvoidEnemyRange = 25
+    elseif self.Mode == 1 then
+      DrGBase.Print("Projectile mode", {chat = true, color = DrGBase.CLR_GREEN})
+      self.RangeAttackRange = 5000
+      self.MeleeAttackRange = 0
+      self.ReachEnemyRange = 4900
+      self.AvoidEnemyRange = 0
+    end
   end
 
   -- AI --
 
   function ENT:OnRangeAttack(enemy)
-    if self:IsMoving() then return end
-    self:FaceTowards(enemy)
-    self:PlaySequence("gesture_wave")
-    self:EmitSlotSound("riseandshine", 7, "DrGBase.RiseAndShine")
+    if self.Mode == 0 then
+      if self:IsMoving() then return end
+      self:FaceTowards(enemy)
+      self:PlaySequence("gesture_wave")
+      self:EmitSlotSound("riseandshine", 7, "DrGBase.RiseAndShine")
+    elseif self.Mode == 1 then
+      if self:GetCooldown("Throw") > 0 then return end
+      self:SetCooldown("Throw", 0.5)
+      local proj = self:CreateProp("models/props_junk/watermelon01.mdl")
+      if not IsValid(proj) then return end
+      proj:SetPos(self:GetPos() + Vector(0, 0, self:Height()*1.1))
+      proj:GetPhysicsObject():EnableGravity(true)
+      proj:DrG_AimAt(enemy, 3000)
+    end
   end
 
   function ENT:OnReachedPatrol()
@@ -112,12 +141,6 @@ if SERVER then
   end
   function ENT:OnIdle()
     self:AddPatrolPos(self:RandomPos(1500))
-  end
-
-  function ENT:CustomRelationship(ent)
-    if ent:GetClass() == "prop_physics" and ent:GetModel() == "models/props_c17/doll01.mdl" then
-      return D_FR, 2
-    end
   end
 
   -- Damage --

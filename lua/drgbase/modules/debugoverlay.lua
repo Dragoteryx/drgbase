@@ -1,6 +1,6 @@
 
 function debugoverlay.DrG_Trajectory(start, velocity, lifetime, color, ignoreZ, options)
-  local info = start:DrG_TrajectoryInfo(velocity)
+  local info = start:DrG_TrajectoryInfo(velocity, options.ballistic)
   options = options or {}
   options.from = options.from or 0
   options.to = options.to or 10
@@ -14,7 +14,7 @@ function debugoverlay.DrG_Trajectory(start, velocity, lifetime, color, ignoreZ, 
     else debugoverlay.Line(info.Predict(t), info.Predict(t+options.increments), lifetime, color, ignoreZ) end
     t = t+options.increments
   end
-  if options.height then
+  if info.ballistic and options.height then
     local highestPoint = info.Predict(info.highest)
     local tr = util.TraceLine({
       start = highestPoint,

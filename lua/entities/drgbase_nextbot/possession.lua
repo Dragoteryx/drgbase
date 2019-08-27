@@ -305,11 +305,13 @@ if SERVER then
     if not self:IsPossessed() then return "not possessed" end
     local ply = self:GetPossessor()
     if not self:CanDispossess(ply) then return "not allowed" end
+    if not tobool(ply:GetInfoNum("drgbase_possession_teleport", 0)) then
+      ply:SetPos(ply:GetNW2Vector("DrGBasePrePossessPos"))
+      ply:SetAngles(ply:GetNW2Angle("DrGBasePrePossessAngle"))
+      ply:SetEyeAngles(ply:GetNW2Angle("DrGBasePrePossessEyes"))
+    else ply:SetPos(ply:DrG_TraceHull(-self:PossessorForward()*self:Length()).HitPos) end
     self:SetNW2Entity("DrGBasePossessor", NULL)
     ply:SetNW2Entity("DrGBasePossessing", NULL)
-    ply:SetPos(ply:GetNW2Vector("DrGBasePrePossessPos"))
-    ply:SetAngles(ply:GetNW2Angle("DrGBasePrePossessAngle"))
-    ply:SetEyeAngles(ply:GetNW2Angle("DrGBasePrePossessEyes"))
     ply:SetCollisionGroup(COLLISION_GROUP_PLAYER)
     ply:SetNoTarget(false)
     ply:SetNoDraw(false)
@@ -381,6 +383,10 @@ if SERVER then
   end)
 
 else
+
+  -- Convars --
+
+  CreateClientConVar("drgbase_possession_teleport", "0", true, true)
 
   -- Getters/setters --
 

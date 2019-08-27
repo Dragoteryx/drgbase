@@ -1,6 +1,6 @@
 if SERVER then return end
 
-function DrGBase.CreateDListView(columns, options)
+function DrGBase.DListView(columns, options)
   if not istable(options) then options = {} end
   local dlist = vgui.Create("DListView")
   for i, column in ipairs(columns) do dlist:AddColumn(column) end

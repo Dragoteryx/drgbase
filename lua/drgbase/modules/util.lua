@@ -1,22 +1,6 @@
 
 -- Traces --
 
-function util.DrG_TrajectoryTrace(start, velocity, data)
-  data = data or {}
-  local info = start:DrG_TrajectoryInfo(velocity)
-  local tr = {HitPos = false}
-  local t = 0
-  while true do
-    data.start = info.Predict(t)
-    data.endpos = info.Predict(t + 0.01)
-    tr = util.TraceLine(data)
-    if tr.Hit then
-      tr.StartPos = start
-      return tr
-    else t = t + 0.01 end
-  end
-end
-
 local DebugTraces = CreateConVar("drgbase_debug_traces", "0")
 function util.DrG_TraceLine(data)
   local tr = util.TraceLine(data)

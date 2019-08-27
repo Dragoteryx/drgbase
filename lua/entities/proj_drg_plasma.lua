@@ -33,8 +33,10 @@ if SERVER then
   end
 
   function ENT:CustomThink()
-    local velocity = self:GetVelocity()
-    self:SetVelocity(velocity:GetNormalized()*500)
+    if not self:GetPhysicsObject():IsGravityEnabled() then
+      local velocity = self:GetVelocity()
+      self:SetVelocity(velocity:GetNormalized()*500)
+    end
   end
 
   function ENT:OnContact(ent)
@@ -42,6 +44,7 @@ if SERVER then
       self:Remove()
       ent:Remove()
     else self:DealDamage(ent, ent:Health(), DMG_SHOCK + DMG_DISSOLVE) end
+    if self:GetPhysicsObject():IsGravityEnabled() then self:Remove() end
   end
 
 end

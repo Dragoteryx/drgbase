@@ -79,34 +79,29 @@ if SERVER then
   end
 
   local function CalcTrajectory(self, pos, speed)
-    local options = {recursive = true}
-    if istable(speed) then
-      options.magnitude = speed[1]
-      options.maxmagnitude = speed[2]
-    else
-      options.magnitude = speed
-      options.maxmagnitude = speed
+    local dir, info = self:GetPos():DrG_CalcBallisticTrajectory(pos, {
+      speed = speed, recursive = true
+    })
+    if dir.z <= 0 then
+      dir, info = self:GetPos():DrG_CalcBallisticTrajectory(pos, {
+        speed = speed, recursive = true, highest = true
+      })
     end
-    local vec, info = self:GetPos():DrG_CalcTrajectory(pos, options)
-    if vec.z <= 0 then
-      options.highest = true
-      vec, info = self:GetPos():DrG_CalcTrajectory(pos, options)
-    end
-    return vec, info
+    return dir, info
   end
 
   function ENT:Leap(pos, speed, callback)
     if not self:IsOnGround() then return end
     if not coroutine.running() then return end
     if isentity(pos) then
-      local vec, info = CalcTrajectory(self, pos:GetPos(), speed)
+      local dir, info = CalcTrajectory(self, pos:GetPos(), speed)
       return self:Leap(pos:GetPos()+pos:GetVelocity()*info.duration, speed, callback)
     elseif isvector(pos) then
       if not isfunction(callback) then callback = function()
         self:FaceTowards(self:GetPos()+self:GetVelocity())
       end end
-      local vec, info = CalcTrajectory(self, pos, speed)
-      if self:TraceHull(vec:GetNormalized()).Hit then return false end
+      local dir, info = CalcTrajectory(self, pos, speed)
+      if self:TraceHull(dir:GetNormalized()).Hit then return false end
       local collided = NULL
       local now = CurTime()
       self:LeaveGround()
@@ -118,12 +113,12 @@ if SERVER then
         local hasCollided = IsValid(collided) or collided:IsWorld()
         if callback(self, left, hasCollided, collided) then break end
         if not hasCollided then
-          local pos, vec = info.Predict(time)
+          local pos, vel = info.Predict(time)
           collided = self:TraceHull(info.Predict(time+engine.TickInterval())-self:GetPos()).Entity
           hasCollided = IsValid(collided) or collided:IsWorld()
           if not hasCollided then
             self:SetPos(pos)
-            self:SetVelocity(vec)
+            self:SetVelocity(vel)
           end
         end
         self:YieldCoroutine(true)

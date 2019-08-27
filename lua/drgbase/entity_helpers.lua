@@ -12,9 +12,9 @@ function ENT:PrintAnimations()
   for i, seq in pairs(self:GetSequenceList()) do
     local act = self:GetSequenceActivity(i)
     if act ~= -1 then
-      print(i.." - "..seq.." / "..self:GetSequenceActivityName(i).." - "..act)
+      print(i.." => "..seq.." / "..act.." => "..self:GetSequenceActivityName(i))
     else
-      print(i.." - "..seq.." /")
+      print(i.." => "..seq.." / -1")
     end
   end
 end
@@ -48,64 +48,16 @@ end
 -- Traces --
 
 function ENT:TraceLine(vec, data)
-  local trdata = {}
-  data = data or {}
-  local center = self:OBBCenter()
-  trdata.start = data.start or self:GetPos() + center
-  trdata.endpos = data.endpos or trdata.start + vec
-  trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
-  if self.IsDrGNextbot then
-    if SERVER then trdata.mask = data.mask or self:GetSolidMask() end
-    trdata.filter = data.filter or {self, self:GetWeapon(), self:GetPossessor()}
-  else trdata.filter = data.filter or self end
-  return util.DrG_TraceLine(trdata)
+  return self:DrG_TraceLine(vec, data)
 end
 function ENT:TraceHull(vec, data)
-  local bound1, bound2 = self:GetCollisionBounds()
-  if bound1.z < bound2.z then
-    local temp = bound1
-    bound1 = bound2
-    bound2 = temp
-  end
-  local trdata = {}
-  data = data or {}
-  if self.IsDrGNextbot and data.step then
-    bound2.z = self.loco:GetStepHeight()
-  end
-  trdata.start = data.start or self:GetPos()
-  trdata.endpos = data.endpos or trdata.start + vec
-  trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
-  if self.IsDrGNextbot then
-    if SERVER then trdata.mask = data.mask or self:GetSolidMask() end
-    trdata.filter = data.filter or {self, self:GetWeapon(), self:GetPossessor()}
-  else trdata.filter = data.filter or self end
-  trdata.maxs = data.maxs or bound1
-  trdata.mins = data.mins or bound2
-  return util.DrG_TraceHull(trdata)
+  return self:DrG_TraceHull(vec, data)
 end
 function ENT:TraceLineRadial(distance, precision, data)
-  local traces = {}
-  for i = 1, precision do
-    local normal = self:GetForward()*distance
-    normal:Rotate(Angle(0, i*(360/precision), 0))
-    table.insert(traces, self:TraceLine(normal, data))
-  end
-  table.sort(traces, function(tr1, tr2)
-    return self:GetRangeSquaredTo(tr1.HitPos) < self:GetRangeSquaredTo(tr2.HitPos)
-  end)
-  return traces
+  return self:DrG_TraceLineRadial(distance, precision, data)
 end
 function ENT:TraceHullRadial(distance, precision, data)
-  local traces = {}
-  for i = 1, precision do
-    local normal = self:GetForward()*distance
-    normal:Rotate(Angle(0, i*(360/precision), 0))
-    table.insert(traces, self:TraceHull(normal, data))
-  end
-  table.sort(traces, function(tr1, tr2)
-    return self:GetRangeSquaredTo(tr1.HitPos) < self:GetRangeSquaredTo(tr2.HitPos)
-  end)
-  return traces
+  return self:DrG_TraceHullRadial(distance, precision, data)
 end
 
 -- Misc --
@@ -133,14 +85,6 @@ if SERVER then
   AddCSLuaFile()
 
   -- Misc --
-
-  function ENT:GetNoTarget()
-    return self:IsFlagSet(FL_NOTARGET)
-  end
-  function ENT:SetNoTarget(bool)
-    if bool then self:AddFlags(FL_NOTARGET)
-    else self:RemoveFlags(FL_NOTARGET) end
-  end
 
   function ENT:SetCooldown(name, delay)
     self:SetNW2Float("DrGBaseCooldowns/"..tostring(name), CurTime() + delay)
@@ -190,6 +134,10 @@ if SERVER then
       self:OnNetMessage(name, ply, ...)
     end
   end)
+  function ENT:CallOnClient(name, ...)
+    if not isstring(name) then return end
+    return self:NetMessage("DrGBaseCallOnClient", name, ...)
+  end
 
   function ENT:NetCallback(name, callback, ply, ...)
     if not isfunction(callback) then return end
@@ -202,57 +150,10 @@ if SERVER then
   -- Effects --
 
   function ENT:ParticleEffect(effect, ...)
-    local root = {parent = self}
-    local args, n = table.DrG_Pack(...)
-    local attachment = false
-    if n > 0 then
-      local data = root
-      for i = 1, n do
-        local arg = args[i]
-        if i == 1 and isstring(arg) then
-          root.attachment = arg
-          attachment = true
-        elseif isentity(arg) and IsValid(arg) then
-          data.cpoints = {{parent = arg}}
-          if isstring(args[i+1]) then
-            data.cpoints[1].attachment = args[i+1]
-          end
-          data = data.cpoints[1]
-        elseif isvector(arg) then
-          data.cpoints = {{pos = arg}}
-          data = data.cpoints[1]
-        else continue end
-      end
-      if data ~= root then
-        data.active = false
-      end
-    end
-    return DrGBase.ParticleEffect(effect, root)
+    return self:DrG_ParticleEffect(effect, ...)
   end
-
   function ENT:DynamicLight(color, radius, brightness, style, attachment)
-    if color == nil then color = Color(255, 255, 255) end
-    if not isnumber(radius) then radius = 1000 end
-    radius = math.Clamp(radius, 0, math.huge)
-    if not isnumber(brightness) then brightness = 1 end
-    brightness = math.Clamp(brightness, 0, math.huge)
-    local light = ents.Create("light_dynamic")
-  	light:SetKeyValue("brightness", tostring(brightness))
-  	light:SetKeyValue("distance", tostring(radius))
-    if isstring(style) then
-      light:SetKeyValue("style", tostring(style))
-    end
-    light:Fire("Color", tostring(color.r).." "..tostring(color.g).." "..tostring(color.b))
-  	light:SetLocalPos(self:GetPos())
-  	light:SetParent(self)
-    if isstring(attachment) then
-      light:Fire("setparentattachment", attachment)
-    end
-  	light:Spawn()
-  	light:Activate()
-  	light:Fire("TurnOn", "", 0)
-  	self:DeleteOnRemove(light)
-    return light
+    return self:DrG_DynamicLight(color, radius, brightness, style, attachment)
   end
 
 else
@@ -262,7 +163,13 @@ else
   local function ReceiveMessage(name, self, ...)
     if not IsValid(self) then return end
     if isfunction(self._HandleNetMessage) and isfunction(self.OnNetMessage) then
-      if not self:_HandleNetMessage(name, ...) then self:OnNetMessage(name, ...) end
+      if name == "DrGBaseCallOnClient" then
+        local args, n = table.DrG_Pack(...)
+        local functionName = table.remove(args, 1)
+        if isfunction(self[functionName]) then
+          self[functionName](self, table.DrG_Unpack(args, n-1))
+        end
+      elseif not self:_HandleNetMessage(name, ...) then self:OnNetMessage(name, ...) end
     else timer.DrG_Simple(engine.TickInterval(), ReceiveMessage, name, self, ...) end
   end
   net.DrG_Receive("DrGBaseEntMessage", ReceiveMessage)
@@ -276,29 +183,7 @@ else
   -- Effects --
 
   function ENT:DynamicLight(color, radius, brightness, style, attachment)
-    if color == nil then color = Color(255, 255, 255) end
-    if not isnumber(radius) then radius = 1000 end
-    radius = math.Clamp(radius, 0, math.huge)
-    if not isnumber(brightness) then brightness = 1 end
-    brightness = math.Clamp(brightness, 0, math.huge)
-    local light = DynamicLight(self:EntIndex())
-    light.r = color.r
-    light.g = color.g
-    light.b = color.b
-    light.size = radius
-    light.brightness = brightness
-    light.style = style
-    light.dieTime = CurTime() + 1
-    light.decay = 100000
-    if attachment then
-      if isstring(attachment) then
-        attachment = self:LookupAttachment(attachment)
-      end
-      if isnumber(attachment) and attachment > 0 then
-        light.pos = self:GetAttachment(attachment).Pos
-      else light.pos = self:GetPos() end
-    else light.pos = self:GetPos() end
-    return light
+    return self:DrG_DynamicLight(color, radius, brightness, style, attachment)
   end
 
 end

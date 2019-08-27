@@ -72,17 +72,11 @@ function ENT:BlacklistedNavAreas()
 end
 
 local ENABLE_JUMPING = false
-local function MultiplyCost(nextbot, callback, cost, dist, ...)
-  local res = callback(nextbot, ...)
-  local mult = math.Clamp(res, 0, math.huge)+1
-  return cost + dist*mult, res < 0
-end
 function ENT:GetPathGenerator()
   return function(area, fromArea, ladder, elevator, length)
     if not IsValid(fromArea) then return 0 end
     if self:IsNavAreaBlacklisted(area) then return -1 end
     if not self.loco:IsAreaTraversable(area) then return -1 end
-    --if not self.loco:DrG_IsAreaLargeEnough(area) then return -1 end
     local dist = 0
     if IsValid(ladder) then
       if not self.ClimbLadders then return -1 end
@@ -90,26 +84,26 @@ function ENT:GetPathGenerator()
     elseif length > 0 then dist = length
     else dist = fromArea:GetCenter():Distance(area:GetCenter()) end
     local unreach = false
-    local cost = dist + fromArea:GetCostSoFar()
+    local cost = fromArea:GetCostSoFar() + dist
     local height = fromArea:ComputeAdjacentConnectionHeightChange(area)
     if height > 0 then
       if IsValid(ladder) then
         if not self.ClimbLaddersUp then return -1 end
         if height < self.ClimbLaddersUpMinHeight then return -1 end
         if height > self.ClimbLaddersUpMaxHeight then return -1 end
-        cost, unreach = MultiplyCost(self, self.OnComputePathLadderUp, cost, dist, fromArea, area, ladder)
-        if unreach then return -1 end
+        local res = self:OnComputePathLadderUp(fromArea, area, ladder)
+        if res >= 0 then cost = cost + dist*res else return -1 end
       elseif height < self.loco:GetStepHeight() then
-        cost, unreach = MultiplyCost(self, self.OnComputePathStep, cost, dist, fromArea, area, height)
-        if unreach then return -1 end
+        local res = self:OnComputePathStep(fromArea, area, height)
+        if res >= 0 then cost = cost + dist*res else return -1 end
       elseif ENABLE_JUMPING and height < self.loco:GetJumpHeight() then
-        cost, unreach = MultiplyCost(self, self.OnComputePathJump, cost, dist, fromArea, area, height)
-        if unreach then return -1 end
+        local res = self:OnComputePathJump(fromArea, area, height)
+        if res >= 0 then cost = cost + dist*res else return -1 end
       elseif self.ClimbLedges then
         if height < self.ClimbLedgesMinHeight then return -1 end
         if height > self.ClimbLedgesMaxHeight then return -1 end
-        cost, unreach = MultiplyCost(self, self.OnComputePathLedge, cost, dist, fromArea, area, height)
-        if unreach then return -1 end
+        local res = self:OnComputePathLedge(fromArea, area, height)
+        if res >= 0 then cost = cost + dist*res else return -1 end
       else return -1 end
     elseif height < 0 then
       local drop = -height
@@ -117,20 +111,22 @@ function ENT:GetPathGenerator()
         if not self.ClimbLaddersDown then return -1 end
         if drop < self.ClimbLaddersDownMinHeight then return -1 end
         if drop > self.ClimbLaddersDownMaxHeight then return -1 end
-        cost, unreach = MultiplyCost(self, self.OnComputePathLadderDown, cost, dist, fromArea, area, ladder)
-        if unreach then return -1 end
+        local res = self:OnComputePathLadderDown(fromArea, area, ladder)
+        if res >= 0 then cost = cost + dist*res else return -1 end
       elseif drop < self.loco:GetDeathDropHeight() then
-        cost, unreach = MultiplyCost(self, self.OnComputePathDrop, cost, dist, fromArea, area, drop)
-        if unreach then return -1 end
+        local res = self:OnComputePathDrop(fromArea, area, drop)
+        if res >= 0 then cost = cost + dist*res else return -1 end
       else return -1 end
+    else
+      local res = self:OnComputePathFlat(fromArea, area)
+      if res >= 0 then cost = cost + dist*res else return -1 end
     end
     if area:IsUnderwater() then
-      cost, unreach = MultiplyCost(self, self.OnComputePathUnderwater, cost, dist, fromArea, area)
-      if unreach then return -1 end
+      local res = self:OnComputePathUnderwater(fromArea, area)
+      if res >= 0 then cost = cost + dist*res else return -1 end
     end
-    cost, unreach = MultiplyCost(self, self.OnComputePath, cost, dist, fromArea, area)
-    if unreach then return -1 end
-    return cost
+    local res = self:OnComputePath(fromArea, area)
+    if res >= 0 then return cost + dist*res else return -1 end
   end
 end
 
@@ -143,6 +139,7 @@ function ENT:OnComputePathLedge(from, to, height) return 1 end
 function ENT:OnComputePathStep(from, to, height) return 0 end
 function ENT:OnComputePathJump(from, to, height) return 1 end
 function ENT:OnComputePathDrop(from, to, drop) return 1 end
+function ENT:OnComputePathFlat(from, to) return 0 end
 function ENT:OnComputePathUnderwater(from, to) return 1 end
 
 -- Meta --
@@ -152,7 +149,7 @@ local pathMETA = FindMetaTable("PathFollower")
 DrGBase.OLD_Compute = DrGBase.OLD_Compute or pathMETA.Compute
 function pathMETA:Compute(nextbot, pos, generator)
   if nextbot.IsDrGNextbot then
-    --print("compute", nextbot)
+    --print(nextbot, "=> compute", CurTime())
     if not isfunction(generator) then generator = nextbot:GetPathGenerator() end
     nextbot._DrGBaseLastComputeSuccess = DrGBase.OLD_Compute(self, nextbot, pos, generator)
     return nextbot._DrGBaseLastComputeSuccess

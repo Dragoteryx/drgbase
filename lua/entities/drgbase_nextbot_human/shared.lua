@@ -95,6 +95,12 @@ if SERVER then
     else self:AimAt() end
   end
 
+  -- AI --
+
+  function ENT:OnLastEnemy()
+    if self:HasWeapon() and not self:IsWeaponFull() then self:Reload() end
+  end
+
   -- Weapons --
 
   function ENT:PrimaryFire()

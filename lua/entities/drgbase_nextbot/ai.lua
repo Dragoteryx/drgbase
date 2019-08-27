@@ -53,7 +53,6 @@ function ENT:_InitAI()
     self._DrGBaseAllyDamageTolerance = {}
     self._DrGBaseAfraidOfDamageTolerance = {}
     self._DrGBaseNeutralDamageTolerance = {}
-    self:LoopTimer(1, self.UpdateAI)
   end
   self:SetNW2VarProxy("DrGBaseEnemy", function(self, name, old, new)
     if not self._DrGBaseHadEnemy and IsValid(new) then
@@ -62,8 +61,6 @@ function ENT:_InitAI()
     elseif self._DrGBaseHadEnemy and not IsValid(new) then
       self._DrGBaseHadEnemy = false
       self:OnLastEnemy(old)
-      if SERVER and self.IsDrGNextbotHuman and self:HasWeapon() and
-      not self:IsWeaponFull() then self:Reload() end
     else self:OnEnemyChange(old, new) end
   end)
 end
@@ -103,11 +100,31 @@ if SERVER then
       table.insert(self._DrGBasePatrolPos, pos)
     end
   end
+  function ENT:SetPatrolPos(pos)
+    self:ClearPatrolPos()
+    self:AddPatrolPos(pos)
+  end
   function ENT:GetPatrolPos(i)
-    return self._DrGBasePatrolPos[i]
+    return self._DrGBasePatrolPos[i or 1]
+  end
+  function ENT:HasPatrolPos()
+    return isvector(self:GetPatrolPos())
   end
   function ENT:RemovePatrolPos(i)
     return table.remove(self._DrGBasePatrolPos, i)
+  end
+  function ENT:ClearPatrolPos()
+    self._DrGBasePatrolPos = {}
+  end
+  function ENT:ShufflePatrolPos()
+    table.sort(self._DrGBasePatrolPos, function()
+      return math.random(2) == 1
+    end)
+  end
+  function ENT:SortPatrolPos()
+    table.sort(self._DrGBasePatrolPos, function(pos1, pos2)
+      return self:GroundDistance(pos1) < self:GroundDistance(pos2)
+    end)
   end
 
   -- Functions --
@@ -136,10 +153,6 @@ if SERVER then
     return enemy
   end
   local function CompareEnemies(self, ent1, ent2)
-    if self:IsAfraidOf(ent1) and self:IsEnemy(ent2) and
-    not self:IsInRange(ent1, self.WatchAfraidOfRange) then return false end
-    if self:IsEnemy(ent1) and self:IsAfraidOf(ent2) and
-    not self:IsInRange(ent2, self.WatchAfraidOfRange) then return true end
     local res = self:OnFetchEnemy(ent1, ent2)
     if isbool(res) then return res end
     local prio1 = self:GetPriority(ent1)
@@ -159,20 +172,6 @@ if SERVER then
     return current
   end
 
-  function ENT:ClearPatrolPos()
-    self._DrGBasePatrolPos = {}
-  end
-  function ENT:ShufflePatrolPos()
-    table.sort(self._DrGBasePatrolPos, function()
-      return math.random(2) == 1
-    end)
-  end
-  function ENT:SortPatrolPos()
-    table.sort(self._DrGBasePatrolPos, function(pos1, pos2)
-      return self:GroundDistance(pos1) < self:GroundDistance(pos2)
-    end)
-  end
-
   -- Hooks --
 
   function ENT:OnRangeAttack() end
@@ -181,6 +180,8 @@ if SERVER then
   function ENT:OnAvoidEnemy() end
   function ENT:OnWatchEnemy() end
   function ENT:OnEnemyUnreachable() end
+  function ENT:OnAllyEnemy() end
+  function ENT:OnNeutralEnemy() end
 
   function ENT:OnAvoidAfraidOf() end
   function ENT:OnWatchAfraidOf() end

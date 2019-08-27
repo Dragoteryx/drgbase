@@ -31,6 +31,7 @@ ENT.OnRemoveEffects = {}
 DrGBase.IncludeFile("meta.lua")
 
 -- Convars --
+
 local ProjectileTickrate = CreateConVar("drgbase_projectile_tickrate", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Handlers --
@@ -167,47 +168,10 @@ if SERVER then
   -- Helpers --
 
   function ENT:AimAt(target, speed, feet)
-    local phys = self:GetPhysicsObject()
-    if not IsValid(phys) then return Vector(0, 0, 0) end
-    local pos = self:GetPos()
-    if phys:IsGravityEnabled() then
-      return self:ThrowAt(target, {magnitude = speed, maxmagnitude = speed}, feet)
-    elseif isentity(target) and IsValid(target) then
-      local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
-      local dist = pos:Distance(aimAt)
-      local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
-      return self:AimAt(aimAt + velocity*(dist/speed), speed, feet)
-    elseif isvector(target) then
-      local dir = pos:DrG_Direction(target):GetNormalized()*speed
-      phys:SetVelocity(dir)
-      local info = dir:DrG_Data()
-      local dist = pos:Distance(target)
-      info.duration = dist/speed
-      info.reached = true
-      info.Predict = function(t)
-        return pos+dir*t, dir
-      end
-      return dir, info
-    elseif IsValid(self:GetOwner()) then
-      local owner = self:GetOwner()
-      return self:AimAt(self:GetPos()+owner:GetForward(), speed, feet)
-    else return self:AimAt(self:GetPos()+self:GetForward(), speed, feet) end
+    return self:DrG_AimAt(target, speed, feet)
   end
   function ENT:ThrowAt(target, options, feet)
-    local phys = self:GetPhysicsObject()
-    if not IsValid(phys) then return Vector(0, 0, 0) end
-    if isentity(target) and IsValid(target) then
-      local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
-      local vec, info = self:GetPos():DrG_CalcTrajectory(aimAt, options)
-      if info.reached then
-        local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
-        return self:ThrowAt(aimAt + velocity*info.duration, options, feet)
-      else return self:ThrowAt(aimAt, options, feet) end
-    elseif isvector(target) then return phys:DrG_Trajectory(target, options)
-    elseif IsValid(self:GetOwner()) then
-      local owner = self:GetOwner()
-      return self:ThrowAt(self:GetPos()+owner:GetForward()*1000, options, feet)
-    else return self:ThrowAt(self:GetPos()+self:GetForward()*1000, options, feet) end
+    return self:DrG_ThrowAt(target, options, feet)
   end
 
   function ENT:DealDamage(ent, value, type)

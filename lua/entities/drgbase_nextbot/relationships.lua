@@ -701,8 +701,7 @@ if SERVER then
     return enemy
   end
   hook.Add("OnEntityCreated", "DrGBaseNextbotRelationshipsInit", function(ent)
-    timer.Simple(0, function()
-      if not IsValid(ent) then return end
+    ent:DrG_Timer(0, function()
       if ent.IsVJBaseSNPC and isfunction(ent.DoHardEntityCheck) then
         local old_DoHardEntityCheck = ent.DoHardEntityCheck
         ent.DoHardEntityCheck = function(ent, tbl)

@@ -111,9 +111,10 @@ if SERVER then
             end)
           elseif isfunction(self.AfterTakeDamage) then
             local data = util.DrG_SaveDmg(dmg)
+            local now = CurTime()
             self:ReactInCoroutine(function(self)
               dmg = util.DrG_LoadDmg(data)
-              self:AfterTakeDamage(dmg, 0, hitgroup)
+              self:AfterTakeDamage(dmg, CurTime()-now, hitgroup)
             end)
           end
         end
@@ -188,6 +189,7 @@ if SERVER then
 
   function ENT:_HandleCollide(data)
     local ent = data.HitEntity
+    if not IsValid(ent) then return end
     local class = ent:GetClass()
     local phys = data.HitObject
     if class == "prop_combine_ball" then

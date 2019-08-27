@@ -93,6 +93,11 @@ function ENT:Height()
   local bound1, bound2 = self:GetCollisionBounds()
   return math.max(bound1.z, bound2.z)
 end
+function ENT:Length()
+  local bound1, bound2 = self:GetCollisionBounds()
+  bound1.z, bound2.z = 0, 0
+  return bound1:Distance(bound2)
+end
 
 function ENT:RandomizeBodygroup(id)
   self:SetBodygroup(id, math.random(0, self:GetBodygroupCount(id)-1))
@@ -165,6 +170,14 @@ end
 if SERVER then
 
   -- Getters/setters --
+
+  function ENT:GetNoTarget()
+    return self:IsFlagSet(FL_NOTARGET)
+  end
+  function ENT:SetNoTarget(bool)
+    if bool then self:AddFlags(FL_NOTARGET)
+    else self:RemoveFlags(FL_NOTARGET) end
+  end
 
   -- Functions --
 
@@ -332,6 +345,14 @@ if SERVER then
   function ENT:CreateSmokeGrenade()
     return self:CreateProjectile("proj_drg_smoke_grenade")
   end
+  function ENT:CreateProp(model)
+    local prop = ents.Create("prop_physics")
+    if not IsValid(prop) then return NULL end
+    prop:SetModel(model)
+    prop:SetOwner(self)
+    prop:Spawn()
+    return prop
+  end
 
   function ENT:CollisionHulls(distance, forwardOnly)
     distance = distance or 5
@@ -461,18 +482,14 @@ if SERVER then
     if self:IsPossessed() then
       local lockedOn = self:PossessionGetLockedOn()
       if not IsValid(lockedOn) then
-        return proj:AimAt(self:PossessorTrace().HitPos, speed)
-      else return proj:AimAt(lockedOn, speed) end
+        return proj:DrG_AimAt(self:PossessorTrace().HitPos, speed)
+      else return proj:DrG_AimAt(lockedOn, speed) end
     elseif self:HasEnemy() then
-      return proj:AimAt(self:GetEnemy(), speed)
+      return proj:DrG_AimAt(self:GetEnemy(), speed)
     elseif self:HadEnemy() then
       self:UpdateEnemy()
       return self:AimProjectile(proj, speed)
-    else
-      local dir = self:GetForward()*speed
-      proj:SetVelocity(dir)
-      return dir, {}
-    end
+    else return proj:DrG_AimAt(nil, speed) end
   end
 
   -- Hooks --
@@ -480,6 +497,45 @@ if SERVER then
   function ENT:OnRagdoll() end
 
   -- Handlers --
+
+  local lastBarnacle = nil
+  DrGBase.BARNACLES = DrGBase.BARNACLES or {}
+  hook.Add("OnEntityCreated", "DrGBaseRegisterBarnacles", function(ent)
+    ent:DrG_Timer(0, function()
+      local class = ent:GetClass()
+      if class == "npc_barnacle" then
+        lastBarnacle = ent
+      elseif class == "npc_barnacle_tongue_tip" then
+        DrGBase.BARNACLES[lastBarnacle] = ent
+        lastBarnacle:CallOnRemove("DrGBaseRegisterBarnacles", function(ent)
+          DrGBase.BARNACLES[ent] = nil
+        end)
+      end
+    end)
+  end)
+  hook.Add("Think", "DrGBaseBarnacleTongues", function()
+    if GetConVar("ai_disabled"):GetBool() then return end
+    if #DrGBase.GetNextbots() == 0 then return end
+    for barnacle, tongue in pairs(DrGBase.BARNACLES) do
+      if not IsValid(barnacle) or not IsValid(tongue) then continue end
+      local dist = 2.5
+      local tr = util.DrG_TraceHull({
+        start = barnacle:GetPos() - Vector(0, 0, 5),
+        endpos = tongue:WorldSpaceCenter(),
+        mins = Vector(-dist, -dist, -dist),
+        maxs = Vector(dist, dist, dist),
+        filter = barnacle
+      })
+      local ent = tr.Entity
+      if IsValid(ent) and ent.IsDrGNextbot and not ent:IsAlly(barnacle) and
+      ent.RagdollOnDeath and util.IsValidRagdoll(ent:GetModel()) then
+        local dmg = DamageInfo()
+        dmg:SetAttacker(barnacle)
+        dmg:SetInflictor(barnacle)
+        ent:DrG_RagdollDeath(dmg)
+      end
+    end
+  end)
 
   -- Meta --
 
@@ -517,9 +573,10 @@ if SERVER then
   DrGBase.OLD_SetPos = DrGBase.OLD_SetPos or entMETA.SetPos
   function entMETA:SetPos(pos)
     if self.IsDrGNextbot then
-      self:PhysicsDestroy()
+      local singlePlayer = game.SinglePlayer()
+      if not singlePlayer then self:PhysicsDestroy() end
       local res = DrGBase.OLD_SetPos(self, pos)
-      self:PhysicsInitShadow()
+      if not singlePlayer then self:PhysicsInitShadow() end
       return res
     else return DrGBase.OLD_SetPos(self, pos) end
   end

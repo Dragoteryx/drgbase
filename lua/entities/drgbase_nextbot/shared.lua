@@ -175,16 +175,16 @@ function ENT:Initialize()
     self._DrGBaseWaterLevel = self:WaterLevel()
     self._DrGBaseDownSpeed = 0
     self:SetName("drgbase_nextbot_"..self:GetCreationID())
-    if self:PhysicsInitShadow() then
-      self:AddCallback("PhysicsCollide", function(self, data)
-        self:_HandleCollide(data, self:GetPhysicsObject())
-      end)
-    end
+    self:PhysicsInitShadow()
+    self:AddCallback("PhysicsCollide", function(self, data)
+      self:_HandleCollide(data, self:GetPhysicsObject())
+    end)
   else self:SetIK(true) end
   self:AddFlags(FL_OBJECT + FL_NPC)
   self._DrGBaseBaseThinkDelay = 0
   self._DrGBaseCustomThinkDelay = 0
   self._DrGBasePossessionThinkDelay = 0
+  self._DrGBaseThinkUpdate = 0
   self._DrGBaseThinkCooldown = 0
   self:_InitModules()
   table.insert(DrGBase._SpawnedNextbots, self)
@@ -223,19 +223,23 @@ end
 function ENT:Think()
   self:_HandleAnimations()
   self:_HandleMovements()
-  if CurTime() > self._DrGBaseThinkCooldown then
-    self._DrGBaseThinkCooldown = CurTime() + 0.05
-    if SERVER then
+  if SERVER then
+    -- update stuff
+    if CurTime() > self._DrGBaseThinkUpdate then
+      self._DrGBaseThinkUpdate = CurTime() + 0.1
+      self:UpdateAnimation()
+      self:UpdateSpeed()
+      self:UpdateAI()
       -- update phys obj
       local phys = self:GetPhysicsObject()
-      --debugoverlay.Sphere(phys:GetPos(), 2, 0.05, DrGBase.CLR_RED, true)
+      --debugoverlay.
       if IsValid(phys) then
-        if self:IsMoving() then
-          phys:SetPos(self:GetPos(), true)
-        end
-        phys:SetAngles(self:GetAngles())
+        phys:UpdateShadow(self:GetPos(), self:GetAngles(), 0)
       end
-      --debugoverlay.Sphere(phys:GetPos(), 2, 0.05, DrGBase.CLR_GREEN, true)
+    end
+    -- custom hooks
+    if CurTime() > self._DrGBaseThinkCooldown then
+      self._DrGBaseThinkCooldown = CurTime() + 0.05
       -- water level
       local waterLevel = self:WaterLevel()
       if self._DrGBaseWaterLevel ~= waterLevel then
@@ -287,14 +291,14 @@ function ENT:Think()
         self:SetNW2Int("DrGBaseMaxHealth", maxHealth)
       end
     end
-    -- idle sounds
-    if #self.OnIdleSounds > 0 then
-      if (SERVER and not self.ClientIdleSounds) or
-      (CLIENT and self.ClientIdleSounds) then
-        local sound = self.OnIdleSounds[math.random(#self.OnIdleSounds)]
-        if self:EmitSlotSound("DrGBaseIdleSounds", SoundDuration(sound) + self.IdleSoundDelay, sound) then
-          self._DrGBaseIdleSound = sound
-        end
+  end
+  -- idle sounds
+  if #self.OnIdleSounds > 0 then
+    if (SERVER and not self.ClientIdleSounds) or
+    (CLIENT and self.ClientIdleSounds) then
+      local sound = self.OnIdleSounds[math.random(#self.OnIdleSounds)]
+      if self:EmitSlotSound("DrGBaseIdleSounds", SoundDuration(sound) + self.IdleSoundDelay, sound) then
+        self._DrGBaseIdleSound = sound
       end
     end
   end
@@ -308,7 +312,7 @@ function ENT:Think()
     self._DrGBaseCustomThinkDelay = CurTime() + delay
   end
   if self:IsPossessed() and (SERVER or self:IsPossessedByLocalPlayer()) then
-    local possessor = self:GetPossessor()    
+    local possessor = self:GetPossessor()
     if SERVER then possessor:SetPos(self:GetPos()) end
     possessor:SetKeyValue("waterlevel", self:WaterLevel())
     self:_HandlePossession(false)
@@ -377,9 +381,7 @@ if SERVER then
           if #self._DrGBaseCorReacts > 0 then
             self._DrGBaseCorReacting = true
             while #self._DrGBaseCorReacts > 0 do
-              local now = CurTime()
               table.remove(self._DrGBaseCorReacts, 1)(self)
-              if now < CurTime() then self._DrGBaseCorReacts = {} end
             end
             self._DrGBaseCorReacting = false
           elseif #self._DrGBaseCorCalls > 0 and
@@ -390,7 +392,7 @@ if SERVER then
             end
             self._DrGBaseCorCalling = false
           end
-        end
+        else self._DrGBaseCorReacts = {} end
         coroutine.yield()
       until not self:IsAIDisabled() or self:IsPossessed() or self._DrGBaseCorReacting
     else
@@ -420,10 +422,29 @@ if SERVER then
 
   function ENT:BehaveStart()
     self.BehaveThread = coroutine.create(function()
-      self:RunBehaviour()
+      if not self._DrGBaseSpawned then
+        self._DrGBaseSpawned = true
+        if #self.OnSpawnSounds > 0 then
+          self:EmitSound(self.OnSpawnSounds[math.random(#self.OnSpawnSounds)])
+        end
+        self:OnSpawn()
+      end
+      while true do
+        if self:IsPossessed() then
+          self:_HandlePossession(true)
+        elseif not self:IsAIDisabled() then
+          if self.BehaviourType ~= AI_BEHAV_CUSTOM then
+            if self:HasEnemy() then self:HandleEnemy()
+            elseif self:HadEnemy() then self:UpdateEnemy()
+            elseif self:HasPatrolPos() then self:Patrol()
+            else self:OnIdle() end
+          else self:AIBehaviour() end
+        end
+        self:YieldCoroutine(true)
+      end
     end)
   end
-  function ENT:BehaveUpdate(interval)
+  function ENT:BehaveUpdate()
   	if not self.BehaveThread then return end
   	if coroutine.status(self.BehaveThread) ~= "dead" then
       local ok, args = coroutine.resume(self.BehaveThread)
@@ -434,35 +455,6 @@ if SERVER then
         else self:BehaveStart() end
     	end
   	else self.BehaveThread = nil end
-  end
-
-  function ENT:RunBehaviour()
-    if not self._DrGBaseSpawned then
-      self._DrGBaseSpawned = true
-      if #self.OnSpawnSounds > 0 then
-        self:EmitSound(self.OnSpawnSounds[math.random(#self.OnSpawnSounds)])
-      end
-      self:OnSpawn()
-    end
-    while true do
-      self:_HandleBehaviour()
-      self:YieldCoroutine(true)
-    end
-  end
-  function ENT:_HandleBehaviour()
-    if self:IsPossessed() then
-      self:_HandlePossession(true)
-    elseif not self:IsAIDisabled() then
-      if self.BehaviourType ~= AI_BEHAV_CUSTOM then
-        self:_DefaultBehaviour()
-      else self:AIBehaviour() end
-    end
-  end
-  function ENT:_DefaultBehaviour()
-    if self:HasEnemy() then self:ReactToEnemy()
-    elseif self:HadEnemy() then self:UpdateEnemy()
-    elseif isvector(self:GetPatrolPos(1)) then self:Patrol()
-    else self:OnIdle() end
   end
 
   -- Net --
@@ -491,7 +483,7 @@ if SERVER then
 
   function ENT:AIBehaviour() end
 
-  function ENT:ReactToEnemy()
+  function ENT:HandleEnemy()
     local enemy = self:GetEnemy()
     local relationship = self:GetRelationship(enemy)
     if relationship == D_HT then
@@ -517,12 +509,13 @@ if SERVER then
         end
       elseif self:OnWatchAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
       if IsValid(enemy) and self:Visible(enemy) then self:AttackEntity(enemy) end
-    end
+    elseif relationship == D_LI then self:OnAllyEnemy(enemy)
+    elseif relationship == D_NU then self:OnNeutralEnemy(enemy) end
   end
 
   function ENT:AttackEntity(ent)
+    local weapon = self:GetWeapon()
     if self.BehaviourType == AI_BEHAV_HUMAN and self:HasWeapon() then
-      local weapon = self:GetWeapon()
       if weapon.DrGBase_Melee or string.find(weapon:GetHoldType(), "melee") then
         if self:IsInRange(ent, self.MeleeAttackRange) then
           if self:OnMeleeAttack(ent, weapon) ~= true  and self.IsDrGNextbotHuman then
@@ -545,21 +538,27 @@ if SERVER then
               mins = Vector(-5, -5, -5), maxs = Vector(5, 5, 5),
               filter = {self, self:GetWeapon(), self:GetPossessor()}
             })
-            if tr.Entity == ent then self:PrimaryFire(ent) end
+            if tr.Entity == ent then
+              local class = weapon:GetClass()
+              if --(class == "weapon_ar2" and math.random(10) == 1) or
+              (class == "weapon_shotgun" and math.random(3) == 1 and weapon:Clip1() >= 2) then
+                self:SecondaryFire()
+              else self:PrimaryFire() end
+            end
           end
         end
       end
     elseif self:IsInRange(ent, self.MeleeAttackRange) and
-    self:OnMeleeAttack(ent, self:GetWeapon()) ~= false then
-    elseif not self:IsInRange(ent, self.AvoidEnemyRange) and
-    self:IsInRange(ent, self.RangeAttackRange) then
-      self:OnRangeAttack(ent, self:GetWeapon())
+    self:OnMeleeAttack(ent, weapon) ~= false then
+    elseif self:IsInRange(ent, self.RangeAttackRange) then
+      self:OnRangeAttack(ent, weapon)
     end
   end
 
   function ENT:Patrol()
     if not EnablePatrol:GetBool() then return end
-    local patrol = self:GetPatrolPos(1)
+    local patrol = self:GetPatrolPos()
+    if not isvector(patrol) then return end
     local res = self:OnPatrolling(patrol)
     if not isbool(res) then
       local follow = self:FollowPath(patrol)

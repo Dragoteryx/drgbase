@@ -283,4 +283,17 @@ if SERVER then
     end
   end)
 
+else
+
+  -- Misc --
+
+  local MATERIALS = {}
+  function DrGBase.Material(name, ...)
+    if not MATERIALS[name] then
+      local material = Material(name, ...)
+      MATERIALS[name] = material
+      return material
+    else return MATERIALS[name] end
+  end
+
 end

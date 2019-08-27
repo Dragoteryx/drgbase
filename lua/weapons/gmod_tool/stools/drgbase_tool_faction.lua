@@ -1,13 +1,11 @@
 TOOL.Tab = "DrGBase"
 TOOL.Category = "Tools"
 TOOL.Name = "#tool.drgbase_tool_faction.name"
-TOOL.ClientConVar = {["list"] = "[[]]"}
+TOOL.ClientConVar = {["list"] = "[]"}
 TOOL.BuildCPanel = function(panel)
   panel:Help("#tool.drgbase_tool_faction.desc")
   panel:Help("Click on a faction to remove it from the list, or right click to copy it.")
-  local dlist = DrGBase.CreateDListView({
-    "Factions"
-  }, {convar = "drgbase_tool_faction_list"})
+  local dlist = DrGBase.DListView({"Factions"}, {convar = "drgbase_tool_faction_list"})
   dlist:SetSize(10, 300)
   function dlist:OnRowSelected(row)
     self:RemoveLine(row)

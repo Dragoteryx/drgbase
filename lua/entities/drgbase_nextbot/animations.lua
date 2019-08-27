@@ -124,7 +124,6 @@ function ENT:OnAnimEvent() end
 function ENT:_InitAnimations()
   if SERVER then
     self._DrGBaseCurrentGestures = {}
-    self:LoopTimer(0.1, self.UpdateAnimation)
     self._DrGBasePoseParameters = {}
     for i = 0, (self:GetNumPoseParameters()-1) do
     	self._DrGBasePoseParameters[self:GetPoseParameterName(i)] = true

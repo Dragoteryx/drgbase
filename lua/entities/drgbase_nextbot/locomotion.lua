@@ -104,33 +104,3 @@ function locoMETA:SetDesiredSpeed(speed)
     return old_SetDesiredSpeed(self, speed)
   else return old_SetDesiredSpeed(self, speed) end
 end
-
-local AREA_LARGEENOUGH_CACHE = {}
-
-function locoMETA:DrG_IsAreaLargeEnough(area)
-  local nextbot = self:GetNextBot()
-  if not nextbot.IsDrGNextbot then return true end
-  local mins, maxs = nextbot:GetCollisionBounds()
-  local str = tostring(mins).." // "..tostring(maxs).." // "..tostring(self:GetStepHeight())
-  AREA_LARGEENOUGH_CACHE[str] = AREA_LARGEENOUGH_CACHE[str] or {}
-  local largeEnoughCache = AREA_LARGEENOUGH_CACHE[str]
-  local largeEnough = largeEnoughCache[area:GetID()]
-  if isbool(largeEnough) then return largeEnough
-  else
-    local mins, maxs = nextbot:GetCollisionBounds()
-    local sizeX = math.abs(mins.x-maxs.x)
-    local sizeY = math.abs(mins.y-maxs.y)
-    local info = area:GetExtentInfo()
-    if sizeX > info.SizeX or sizeY > info.SizeY then
-      local tr = nextbot:TraceHull(Vector(0, 0, 0), {
-        start = area:GetCenter()+Vector(0, 0, info.SizeZ),
-        collisiongroup = COLLISION_GROUP_DEBRIS, step = true
-      })
-      largeEnoughCache[area:GetID()] = not tr.HitWorld
-      return not tr.HitWorld
-    else
-      largeEnoughCache[area:GetID()] = true
-      return true
-    end
-  end
-end

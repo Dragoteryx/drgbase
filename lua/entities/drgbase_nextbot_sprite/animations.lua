@@ -240,6 +240,7 @@ if SERVER then
   function ENT:UpdateAnimation()
     if self:IsPlayingAnimation() then return end
     local anim, rate = self:OnUpdateAnimation()
+    if not isstring(anim) then return end
     if anim ~= self:GetSpriteAnim() then self:SetSpriteAnim(anim) end
     if rate ~= self:GetPlaybackRate() then
       self:SetPlaybackRate(rate or 1)

@@ -29,6 +29,11 @@ if SERVER then
     self:SetDefaultRelationship(D_HT)
     self:SetSelfModelRelationship(D_LI)
     self:SetFactionRelationship(FACTION_REBELS, D_LI)
+    if self:GetModel() == "models/player/kleiner.mdl" then
+      self:JoinFaction("FACTION_KLEINER")
+    elseif self:GetModel() == "models/player/magnusson.mdl" then
+      self:JoinFaction("FACTION_MAGNUSSON")
+    end
   end
 
   -- AI --

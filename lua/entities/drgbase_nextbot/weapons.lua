@@ -440,7 +440,8 @@ if SERVER then
         else FireCrossbow(self, weapon, self:GetPos()+self:GetForward()*3500) end
         weapon:EmitSound("Weapon_Crossbow.Single")
         weapon:EmitSound("Weapon_Crossbow.BoltFly")
-        self:PlayAnimation(anim)
+        if isstring(anim) then self:AddGestureSequence(anim)
+        elseif isnumber(anim) then self:AddGesture(anim) end
         return true
       else return false end
     elseif SUPPORTED_GUNS[class] then
@@ -449,7 +450,8 @@ if SERVER then
       return ShootGun(self, weapon, data, anim)
     elseif weapon:IsScripted() and not self:IsWeaponPrimaryEmpty() then
       if CurTime() < weapon:GetNextPrimaryFire() then return false end
-      self:PlayAnimation(anim)
+      if isstring(anim) then self:AddGestureSequence(anim)
+      elseif isnumber(anim) then self:AddGesture(anim) end
       weapon:PrimaryAttack()
     else return false end
     return true
@@ -460,16 +462,30 @@ if SERVER then
     local weapon = self:GetWeapon()
     local class = weapon:GetClass()
     if class == "weapon_ar2" then
+      if not weapon._DrGBaseNextShoot or CurTime() > weapon._DrGBaseNextShoot then
+        weapon._DrGBaseNextShoot = CurTime() + 1.5
+        local ball = ents.Create("prop_combine_ball")
+        if not IsValid(ball) then return false end
+        ball:SetOwner(self)
+        ball:SetPos(self:GetShootPos()+self:GetAimVector()*10)
+        ball:Spawn()
+        local phys = ball:GetPhysicsObject()
+        phys:Wake()
+        phys:SetVelocity(self:GetAimVector()*500)
+      else return false end
       return true
     elseif class == "weapon_shotgun" then
+      if isstring(anim) then self:AddGestureSequence(anim)
+      elseif isnumber(anim) then self:AddGesture(anim) end
       return ShootGun(self, weapon, {
         Bullet = {Damage = 8, Spread = Vector(0.1, 0.1, 0), Num = 14},
         Sound = "Weapon_Shotgun.Double", Empty = "Weapon_Shotgun.Empty",
         Delay = 1.25, Cost = 2
-      }, anim)
+      }, anim)      
     elseif wep:IsScripted() and not self:IsWeaponSecondaryEmpty() then
       if CurTime() < weapon:GetNextSecondaryFire() then return false end
-      self:PlayAnimation(anim)
+      if isstring(anim) then self:AddGestureSequence(anim)
+      elseif isnumber(anim) then self:AddGesture(anim) end
       weapon:SecondaryAttack()
     else return false end
     return true

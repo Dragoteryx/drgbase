@@ -82,7 +82,7 @@ end
 -- Autorun --
 
 DrGBase.IncludeFolder("drgbase")
-DrGBase.IncludeFolder("drgbase/extensions")
+DrGBase.IncludeFolder("drgbase/meta")
 DrGBase.IncludeFolder("drgbase/modules")
 
 if SERVER then
