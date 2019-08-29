@@ -50,6 +50,11 @@ hook.Add("StartCommand", "DrGBasePossessionStartCommand", function(ply, cmd)
 			local origin = possessing:PossessorView()
 			local forward = cmd:GetViewAngles():Forward()
 			local dir = origin:DrG_Direction(lockedOn:WorldSpaceCenter()):GetNormalized()
+			local bone = lockedOn.DrGBase_LockOnBone
+			if isstring(bone) then bone = lockedOn:LookupBone(bone) end
+			if isnumber(bone) then
+				dir = origin:DrG_Direction(lockedOn:GetBonePosition(bone)):GetNormalized()
+			end
 			if SERVER then
 				cmd:SetViewAngles(forward:DrG_Join(dir, ply:GetInfoNum("drgbase_possession_lockon_speed", 0.05)):Angle())
 			else

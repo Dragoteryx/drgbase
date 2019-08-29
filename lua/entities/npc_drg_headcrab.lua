@@ -5,7 +5,7 @@ ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
 ENT.PrintName = "Headcrab"
 ENT.Category = "DrGBase"
 ENT.Models = {"models/headcrabclassic.mdl"}
-ENT.CollisionBounds = Vector(10, 10, 15)
+ENT.CollisionBounds = Vector(12, 12, 24)
 ENT.BloodColor = BLOOD_COLOR_GREEN
 
 -- Stats --

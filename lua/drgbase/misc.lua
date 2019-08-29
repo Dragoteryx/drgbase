@@ -121,6 +121,20 @@ function DrGBase.GridAstar(pos, goal, grid, callback)
   return path, success
 end
 
+-- Misc --
+
+local RANGE_MELEE = {
+  ["melee"] = true,
+  ["melee2"] = true,
+  ["fist"] = true,
+  ["knife"] = true
+}
+function DrGBase.IsMeleeWeapon(weapon)
+  local holdType = weapon:GetHoldType()
+  if RANGE_MELEE[holdType] or RANGE_MELEE[weapon.HoldType] then return true end
+  return weapon.DrGBase_Melee or string.find(holdType, "melee") ~= nil
+end
+
 if SERVER then
 
   -- Misc --

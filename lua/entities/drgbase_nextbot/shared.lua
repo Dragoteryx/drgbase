@@ -33,6 +33,7 @@ ENT.Footsteps = {}
 
 -- AI --
 DrGBase.IncludeFile("ai.lua")
+DrGBase.IncludeFile("patrol.lua")
 ENT.BehaviourType = AI_BEHAV_BASE
 ENT.Omniscient = false
 ENT.SpotDuration = 30
@@ -196,7 +197,6 @@ function ENT:Initialize()
   self:_BaseInitialize()
   self:CustomInitialize()
   if CLIENT then return end
-  --DrGBase.Print("Nextbots spawned: "..tostring(#DrGBase.GetNextbots()), {color = DrGBase.CLR_GREEN, chat = true})
   self:UpdateAI()
 end
 function ENT:_BaseInitialize() end
@@ -216,6 +216,7 @@ function ENT:_InitModules()
   self:_InitRelationships()
   self:_InitAwareness()
   self:_InitDetection()
+  self:_InitPatrol()
   self:_InitAI()
 end
 
@@ -421,6 +422,7 @@ if SERVER then
   end
 
   function ENT:BehaveStart()
+    if self.BehaveThread then return end
     self.BehaveThread = coroutine.create(function()
       if not self._DrGBaseSpawned then
         self._DrGBaseSpawned = true
@@ -436,7 +438,7 @@ if SERVER then
           if self.BehaviourType ~= AI_BEHAV_CUSTOM then
             if self:HasEnemy() then self:HandleEnemy()
             elseif self:HadEnemy() then self:UpdateEnemy()
-            elseif self:HasPatrolPos() then self:Patrol()
+            elseif self:HasPatrol() then self:Patrol()
             else self:OnIdle() end
           else self:AIBehaviour() end
         end
@@ -499,7 +501,7 @@ if SERVER then
         if self:OnAvoidEnemy(enemy) ~= true then
           self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
         end
-      elseif self:OnWatchEnemy(enemy) ~= true then self:FaceTowards(enemy) end
+      elseif self:OnIdleEnemy(enemy) ~= true then self:FaceTowards(enemy) end
       if IsValid(enemy) and self:Visible(enemy) then self:AttackEntity(enemy) end
     elseif relationship == D_FR then
       local visible = self:Visible(enemy)
@@ -507,7 +509,7 @@ if SERVER then
         if self:OnAvoidAfraidOf(enemy) ~= true then
           self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
         end
-      elseif self:OnWatchAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
+      elseif self:OnIdleAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
       if IsValid(enemy) and self:Visible(enemy) then self:AttackEntity(enemy) end
     elseif relationship == D_LI then self:OnAllyEnemy(enemy)
     elseif relationship == D_NU then self:OnNeutralEnemy(enemy) end
@@ -557,18 +559,24 @@ if SERVER then
 
   function ENT:Patrol()
     if not EnablePatrol:GetBool() then return end
-    local patrol = self:GetPatrolPos()
-    if not isvector(patrol) then return end
-    local res = self:OnPatrolling(patrol)
+    if not self:HasPatrol() then return end
+    local patrol = self:GetPatrol()
+    local pos = patrol:FetchPos(self)
+    local res = self:OnPatrolling(pos, patrol)
     if not isbool(res) then
-      local follow = self:FollowPath(patrol)
+      local follow = self:FollowPath(pos)
       if follow == "unreachable" then res = false
       elseif follow == "reached" then res = true end
     end
     if isbool(res) then
-      if res then self:OnReachedPatrol(patrol)
-      else self:OnPatrolUnreachable(patrol) end
-      self:RemovePatrolPos(1)
+      self:RemovePatrol(patrol)
+      if res then
+        patrol:OnReached(self, pos)
+        self:OnReachedPatrol(pos, patrol)
+      else
+        patrol:OnUnreachable(self, pos)
+        self:OnPatrolUnreachable(pos, patrol)
+      end
     end
   end
 

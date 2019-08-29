@@ -86,6 +86,10 @@ if SERVER then
 
   -- Misc --
 
+  function ENT:RandomPos(min, max)
+    return self:DrG_RandomPos(min, max)
+  end
+
   function ENT:SetCooldown(name, delay)
     self:SetNW2Float("DrGBaseCooldowns/"..tostring(name), CurTime() + delay)
   end

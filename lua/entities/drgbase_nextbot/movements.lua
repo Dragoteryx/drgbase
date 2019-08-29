@@ -376,7 +376,7 @@ if SERVER then
         self:InvalidatePath()
         return "ledge", ledge
       elseif not self:AvoidObstacles(true) then
-        if self:GetHullRangeSquaredTo(pos) > tolerance^2 then
+        if self:GetRangeSquaredTo(pos) > tolerance^2 then
           self:MoveTowards(pos)
           if self.loco:IsStuck() then
             self:HandleStuck()
@@ -640,14 +640,12 @@ if SERVER then
 
   -- Update --
 
-  function ENT:OnWalkframes()
-    return self.UseWalkframes
-  end
-
   function ENT:UpdateSpeed()
     if self:IsPlayingAnimation() then return end
-    if self:OnWalkframes(self:GetSequenceName(self:GetSequence())) then
-      local speed = 0
+    local speed = self:OnUpdateSpeed()
+    if isnumber(speed) and speed >= 0 then
+      self:SetSpeed(math.Clamp(speed*MultSpeed:GetFloat(), 0, math.huge))
+    else
       local seq = self:GetSequence()
       if self:IsClimbing() then
         local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
@@ -659,15 +657,11 @@ if SERVER then
       else speed = self:GetSequenceGroundSpeed(seq) end
       if speed ~= 0 then self.loco:SetDesiredSpeed(speed*MultSpeed:GetFloat())
       else self.loco:SetDesiredSpeed(1) end
-    else
-      local speed = self:OnUpdateSpeed()
-      if isnumber(speed) then
-        self:SetSpeed(math.Clamp(speed*MultSpeed:GetFloat(), 0, math.huge))
-      end
     end
   end
   function ENT:OnUpdateSpeed()
     if self:IsClimbing() then return self.ClimbSpeed
+    elseif self.UseWalkframes then return -1
     elseif self:IsRunning() then return self.RunSpeed
     else return self.WalkSpeed end
   end

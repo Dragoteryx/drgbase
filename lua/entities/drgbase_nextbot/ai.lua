@@ -49,7 +49,6 @@ function ENT:OnLastEnemy() end
 
 function ENT:_InitAI()
   if SERVER then
-    self._DrGBasePatrolPos = {}
     self._DrGBaseAllyDamageTolerance = {}
     self._DrGBaseAfraidOfDamageTolerance = {}
     self._DrGBaseNeutralDamageTolerance = {}
@@ -90,41 +89,6 @@ if SERVER then
   function ENT:SetNemesis(nemesis)
     self:SetNW2Entity("DrGBaseEnemy", nemesis)
     self:SetNW2Bool("DrGBaseNemesis", true)
-  end
-
-  function ENT:AddPatrolPos(pos, i)
-    if not isvector(pos) then return end
-    if isnumber(i) then
-      table.insert(self._DrGBasePatrolPos, i, pos)
-    else
-      table.insert(self._DrGBasePatrolPos, pos)
-    end
-  end
-  function ENT:SetPatrolPos(pos)
-    self:ClearPatrolPos()
-    self:AddPatrolPos(pos)
-  end
-  function ENT:GetPatrolPos(i)
-    return self._DrGBasePatrolPos[i or 1]
-  end
-  function ENT:HasPatrolPos()
-    return isvector(self:GetPatrolPos())
-  end
-  function ENT:RemovePatrolPos(i)
-    return table.remove(self._DrGBasePatrolPos, i)
-  end
-  function ENT:ClearPatrolPos()
-    self._DrGBasePatrolPos = {}
-  end
-  function ENT:ShufflePatrolPos()
-    table.sort(self._DrGBasePatrolPos, function()
-      return math.random(2) == 1
-    end)
-  end
-  function ENT:SortPatrolPos()
-    table.sort(self._DrGBasePatrolPos, function(pos1, pos2)
-      return self:GroundDistance(pos1) < self:GroundDistance(pos2)
-    end)
   end
 
   -- Functions --
@@ -178,18 +142,18 @@ if SERVER then
   function ENT:OnMeleeAttack() end
   function ENT:OnChaseEnemy() end
   function ENT:OnAvoidEnemy() end
-  function ENT:OnWatchEnemy() end
+  function ENT:OnIdleEnemy() end
   function ENT:OnEnemyUnreachable() end
   function ENT:OnAllyEnemy() end
   function ENT:OnNeutralEnemy() end
 
   function ENT:OnAvoidAfraidOf() end
-  function ENT:OnWatchAfraidOf() end
+  function ENT:OnIdleAfraidOf() end
 
   function ENT:OnReachedPatrol() end
   function ENT:OnPatrolUnreachable() end
-  function ENT:OnPatrolling()
-    self:WhilePatrolling()
+  function ENT:OnPatrolling(...)
+    return self:WhilePatrolling(...)
   end
   function ENT:WhilePatrolling() end
 
@@ -201,7 +165,9 @@ if SERVER then
   function ENT:OnFetchEnemy() end
 
   function ENT:ShouldRun()
-    return self:HasEnemy()
+    if self:HasEnemy() then return true end
+    local patrol = self:GetPatrol()
+    return IsValid(patrol) and patrol:ShouldRun(self)
   end
 
   -- Handlers --

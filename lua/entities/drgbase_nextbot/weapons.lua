@@ -43,7 +43,8 @@ function ENT:GetShootPos(class)
         return bonepos
       end
     end
-  else return self:GetPos() end
+    return self:WorldSpaceCenter()
+  else return self:WorldSpaceCenter() end
 end
 function ENT:GetAimVector(class)
   if self:IsPossessed() then
@@ -83,17 +84,6 @@ local CLOSE_RANGE = {
   ["shotgun"] = true,
   ["camera"] = true
 }
-local RANGE_MELEE = {
-  ["melee"] = true,
-  ["melee2"] = true,
-  ["fist"] = true,
-  ["knife"] = true
-}
-local function IsMeleeWeapon(weapon)
-  local holdType = weapon:GetHoldType()
-  if RANGE_MELEE[holdType] then return true end
-  return weapon.DrGBase_Melee or string.find(holdType, "melee") ~= nil
-end
 
 function ENT:_InitWeapons()
   self._DrGBaseWeapons = {}
@@ -101,7 +91,7 @@ function ENT:_InitWeapons()
     if not self:OnWeaponChange(old, new) and SERVER and
     self.BehaviourType == AI_BEHAV_HUMAN then
       local holdType = new:GetHoldType()
-      if IsMeleeWeapon(new) then
+      if DrGBase.IsMeleeWeapon(new) then
         self.RangeAttackRange = 0
         self.MeleeAttackRange = 30
         self.ReachEnemyRange = 25
@@ -450,7 +440,7 @@ if SERVER then
       return ShootGun(self, weapon, data, anim)
     elseif weapon:IsScripted() and not self:IsWeaponPrimaryEmpty() then
       if CurTime() < weapon:GetNextPrimaryFire() then return false end
-      if isstring(anim) then self:AddGestureSequence(anim)
+      if isstring(anim) then self:AddGestureSequence(self:LookupSequence(anim))
       elseif isnumber(anim) then self:AddGesture(anim) end
       weapon:PrimaryAttack()
     else return false end
@@ -481,7 +471,7 @@ if SERVER then
         Bullet = {Damage = 8, Spread = Vector(0.1, 0.1, 0), Num = 14},
         Sound = "Weapon_Shotgun.Double", Empty = "Weapon_Shotgun.Empty",
         Delay = 1.25, Cost = 2
-      }, anim)      
+      }, anim)
     elseif wep:IsScripted() and not self:IsWeaponSecondaryEmpty() then
       if CurTime() < weapon:GetNextSecondaryFire() then return false end
       if isstring(anim) then self:AddGestureSequence(anim)

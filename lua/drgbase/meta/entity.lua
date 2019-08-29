@@ -55,6 +55,7 @@ end
 -- Traces --
 
 function entMETA:DrG_TraceLine(vec, data)
+  if not isvector(vec) then vec = Vector(0, 0, 0) end
   local trdata = {}
   data = data or {}
   local center = self:OBBCenter()
@@ -68,6 +69,7 @@ function entMETA:DrG_TraceLine(vec, data)
   return util.DrG_TraceLine(trdata)
 end
 function entMETA:DrG_TraceHull(vec, data)
+  if not isvector(vec) then vec = Vector(0, 0, 0) end
   local bound1, bound2 = self:GetCollisionBounds()
   if bound1.z < bound2.z then
     local temp = bound1
@@ -132,6 +134,24 @@ end
 if SERVER then
 
   -- Misc --
+
+  function entMETA:DrG_RandomPos(min, max)
+    if isnumber(max) then
+      local dir = Vector(math.random(-100, 100), math.random(-100, 100), math.random(0, 10))
+      dir = dir:GetNormalized()*math.random(min, max)
+      local pos = self:GetPos()+dir
+      if navmesh.IsLoaded() then
+        local area = navmesh.GetNearestNavArea(pos)
+        return self:DrG_TraceHull(nil, {
+          start = area:GetCenter(),
+          endpos = area:GetClosestPointOnArea(pos),
+          collisiongroup = COLLISION_GROUP_WORLD
+        }).HitPos
+      elseif util.IsInWorld(pos) then
+        return self:DrG_TraceHull(Vector(0, 0, -999999), {start = pos}).HitPos
+      else return self:DrG_RandomPos(min, max) end
+    else return self:RandomPos(0, min) end
+  end
 
   function entMETA:DrG_Dissolve(type)
     if self:IsFlagSet(FL_DISSOLVING) then return end

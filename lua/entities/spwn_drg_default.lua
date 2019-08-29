@@ -63,11 +63,8 @@ if SERVER then
         if self:BeforeSpawn(class) ~= false then
           local ent = ents.Create(class)
           if IsValid(ent) then
-            if navmesh.IsLoaded() then
-              local radius = self:GetRadius()
-              local pos = self:GetPos() + Vector(math.random(-radius, radius), math.random(-radius, radius), math.random(-radius, radius))
-              ent:SetPos(navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or self:GetPos())
-            else ent:SetPos(self:GetPos()) end
+            ent:SetPos(self:GetPos())
+            ent:SetPos(ent:DrG_RandomPos(self:GetRadius()))
             ent:Spawn()
             if self:AfterSpawn(ent) ~= false then
               table.insert(self._DrGBaseSpawnedEntities, ent)

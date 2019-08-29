@@ -177,24 +177,37 @@ if SERVER then
   end
   function ENT:OnLostSight() end
   function ENT:OnSound(ent, sound)
-    self:SpotEntity(ent)
+    if not self:IsHostile(ent) then return end
+    if not self:HasSpotted(ent) then
+      self:AddPatrolSound(sound)
+    else self:SpotEntity(ent) end
   end
   function ENT:OnBlind() end
   --function ENT:OnBlinded() end
 
   -- Handlers --
 
+  --[[local function ATTN_TO_SNDLVL(attn)
+    return (50+20)/attn
+  end
+  local function SNDLVL_TO_ATTN(sndlvl)
+    return sndlvl > 50 and 20/(sndlvl-50) or 4
+  end
+  local SOUND_NORMAL_CLIP_DIST = 1000]]
+
   local function HandleSound(ent, sound)
     if #DrGBase.GetNextbots() == 0 then return end
-    local pos = sound.Pos or ent:GetPos()
+    sound.Pos = sound.Pos or ent:GetPos()
+    --[[local attenuation = SNDLVL_TO_ATTN(sound.SoundLevel)
+    local distance = ((2*SOUND_NORMAL_CLIP_DIST)/attenuation*sound.Volume)/2]]
     local distance = math.pow(sound.SoundLevel/2, 2)*sound.Volume
     --print(distance)
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
       if ent == nextbot then continue end
       if nextbot:IsAIDisabled() then continue end
       if nextbot:IsDeaf() then continue end
-      local mult = nextbot:VisibleVec(pos) and 1 or 0.5
-      if (distance*nextbot:GetHearingCoefficient()*mult)^2 >= nextbot:GetRangeSquaredTo(pos) then
+      local mult = nextbot:VisibleVec(sound.Pos) and 1 or 0.5
+      if (distance*nextbot:GetHearingCoefficient()*mult)^2 >= nextbot:GetRangeSquaredTo(sound.Pos) then
         nextbot:Timer(0, nextbot.OnSound, ent, sound)
       end
     end
