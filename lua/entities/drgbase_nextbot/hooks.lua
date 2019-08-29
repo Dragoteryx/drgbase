@@ -106,6 +106,7 @@ if SERVER then
           if isfunction(self.OnTookDamage) then
             local data = util.DrG_SaveDmg(dmg)
             self:ReactInCoroutine(function(self)
+              if self:IsDown() then return end
               dmg = util.DrG_LoadDmg(data)
               self:OnTookDamage(dmg, hitgroup)
             end)
@@ -113,6 +114,7 @@ if SERVER then
             local data = util.DrG_SaveDmg(dmg)
             local now = CurTime()
             self:ReactInCoroutine(function(self)
+              if self:IsDown() then return end
               dmg = util.DrG_LoadDmg(data)
               self:AfterTakeDamage(dmg, CurTime()-now, hitgroup)
             end)
