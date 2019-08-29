@@ -396,8 +396,11 @@ if SERVER then
     dmg:SetDamage(math.huge)
     dmg:SetDamageType(type or DMG_DIRECT)
     dmg:SetDamageForce(Vector(0, 0, 1))
-    dmg:SetAttacker(attacker or game.GetWorld())
-    dmg:SetInflictor(inflictor or attacker or game.GetWorld())
+    if IsValid(attacker) then dmg:SetAttacker(attacker)
+    else dmg:SetAttacker(game.GetWorld()) end
+    if IsValid(inflictor) then dmg:SetInflictor(inflictor)
+    elseif IsValid(attacker) then dmg:SetInflictor(attacker)
+    else dmg:SetInflictor(game.GetWorld()) end
     self:OnKilled(dmg)
   end
   function ENT:Suicide(type)
