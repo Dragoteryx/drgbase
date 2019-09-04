@@ -38,6 +38,12 @@ function DrGBase.AddNextbot(ENT)
         if isfunction(ENT.OnNavAreaChanged) then
           ent:DrG_AddListener("OnNavAreaChanged", ent._HandleNavAreaChanged)
         end
+        if isfunction(ENT.OnLeaveGround) then
+          ent:DrG_AddListener("OnLeaveGround", ent._HandleLeaveGround)
+        end
+        if isfunction(ENT.OnLandOnGround) then
+          ent:DrG_AddListener("OnLandOnGround", ent._HandleLandOnGround)
+        end
       end)
     end
   end

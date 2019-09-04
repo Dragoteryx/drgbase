@@ -43,11 +43,6 @@ end
 
 -- Handlers --
 
-function ENT:_InitStatus()
-  if CLIENT then return end
-  self:LoopTimer(1, self._RegenHealth)
-end
-
 if SERVER then
 
   -- Getters/setters --
@@ -125,6 +120,21 @@ if SERVER then
     end
   end
 
+  function ENT:_UpdateHealth()
+    local health = self:Health()
+    local oldHealth = self:GetNW2Int("DrGBaseHealth")
+    if oldHealth ~= health then
+      self:OnHealthChange(oldHealth, health)
+      self:SetNW2Int("DrGBaseHealth", health)
+    end
+  end
+  function ENT:_UpdateMaxHealth()
+    local maxHealth = self:GetMaxHealth()
+    if self:GetNW2Int("DrGBaseMaxHealth") ~= maxHealth then
+      self:SetNW2Int("DrGBaseMaxHealth", maxHealth)
+    end
+  end
+
   -- Meta --
 
   local entMETA = FindMetaTable("Entity")
@@ -133,10 +143,21 @@ if SERVER then
   function entMETA:SetHealth(health, clamp)
     if self.IsDrGNextbot then
       if self:IsDead() then return end
-      if clamp then
-        return old_SetHealth(self, math.Clamp(health, 0, self:GetMaxHealth()))
-      else return old_SetHealth(self, health) end
+      if not clamp then
+        local res = old_SetHealth(self, health)
+        self:_UpdateHealth()
+        return res
+      else return self:SetHealth(math.Clamp(health, 0, self:GetMaxHealth()), false) end
     else return old_SetHealth(self, health) end
+  end
+
+  local old_SetMaxHealth = entMETA.SetMaxHealth
+  function entMETA:SetMaxHealth(maxHealth)
+    if self.IsDrGNextbot then
+      local res = old_SetMaxHealth(self, maxHealth)
+      self:_UpdateMaxHealth()
+      return res
+    else return old_SetMaxHealth(self, maxHealth) end
   end
 
 else

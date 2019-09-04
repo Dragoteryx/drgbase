@@ -30,7 +30,7 @@ local function NewWrapper(wrapper, ent)
     end})
     WRAPPERS[wrapper][ent] = self
     return self
-  else return WRAPPERS[ent] end
+  else return WRAPPERS[wrapper][ent] end
 end
 
 local DEFAULT_WRAPPER = {}
@@ -87,6 +87,10 @@ if SERVER then
     end
   end
 
+  function Door:GetSpeed()
+    if not IsValid(self) then return -1 end
+    return self:GetKeyValues()["speed"]
+  end
   function Door:SetSpeed(speed)
     if not IsValid(self) then return end
     self:Fire("SetSpeed", speed)

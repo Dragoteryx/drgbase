@@ -277,8 +277,7 @@ else
   end)
   function plyMETA:DrG_Luminosity()
     local ply = LocalPlayer()
-    local light = (render.GetLightColor(LocalPlayer():EyePos())*255):ToColor()
-    return ((light.r + light.g + light.b)/3)/255
+    return math.min(render.GetLightColor(ply:EyePos()):Length()*(1/0.7), 1)
   end
 
 end

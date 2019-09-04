@@ -7,6 +7,7 @@ ENT.Category = "DrGBase"
 ENT.Models = {"models/player/gman_high.mdl"}
 
 -- AI --
+ENT.BehaviourType = AI_BEHAV_BASE
 ENT.RangeAttackRange = 100
 ENT.MeleeAttackRange = 0
 ENT.ReachEnemyRange = 100
@@ -139,12 +140,10 @@ if SERVER then
   function ENT:OnReachedPatrol()
     self:PlaySequenceAndWait("menu_gman")
   end
-  function ENT:OnIdle()
-    self:AddPatrolPos(self:RandomPos(1500))
-  end
 
   -- Damage --
 
+  function ENT:OnTraceAttack() end
   function ENT:OnTakeDamage(dmg, hitgroup)
     local attacker = dmg:GetAttacker()
     if hitgroup == HITGROUP_HEAD then

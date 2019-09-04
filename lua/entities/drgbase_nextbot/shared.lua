@@ -20,17 +20,6 @@ ENT.HealthRegen = 0
 ENT.MinPhysDamage = 10
 ENT.MinFallDamage = 10
 
--- Sounds --
-ENT.OnSpawnSounds = {}
-ENT.OnIdleSounds = {}
-ENT.IdleSoundDelay = 2
-ENT.ClientIdleSounds = false
-ENT.OnDamageSounds = {}
-ENT.DamageSoundDelay = 0.25
-ENT.OnDeathSounds = {}
-ENT.OnDownedSounds = {}
-ENT.Footsteps = {}
-
 -- AI --
 DrGBase.IncludeFile("ai.lua")
 DrGBase.IncludeFile("patrol.lua")
@@ -53,6 +42,18 @@ ENT.AllyDamageTolerance = 0.33
 ENT.AfraidDamageTolerance = 0.33
 ENT.NeutralDamageTolerance = 0.33
 
+-- Detection --
+DrGBase.IncludeFile("awareness.lua")
+DrGBase.IncludeFile("detection.lua")
+ENT.EyeBone = ""
+ENT.EyeOffset = Vector(0, 0, 0)
+ENT.EyeAngle = Angle(0, 0, 0)
+ENT.SightFOV = 150
+ENT.SightRange = 15000
+ENT.MinLuminosity = 0
+ENT.MaxLuminosity = 1
+ENT.HearingCoefficient = 1
+
 -- Locomotion --
 DrGBase.IncludeFile("locomotion.lua")
 DrGBase.IncludeFile("path.lua")
@@ -63,19 +64,8 @@ ENT.StepHeight = 20
 ENT.MaxYawRate = 250
 ENT.DeathDropHeight = 200
 
--- Animations --
-DrGBase.IncludeFile("movements.lua")
-DrGBase.IncludeFile("animations.lua")
-ENT.WalkAnimation = ACT_WALK
-ENT.WalkAnimRate = 1
-ENT.RunAnimation = ACT_RUN
-ENT.RunAnimRate = 1
-ENT.IdleAnimation = ACT_IDLE
-ENT.IdleAnimRate = 1
-ENT.JumpAnimation = ACT_JUMP
-ENT.JumpAnimRate = 1
-
 -- Movements --
+DrGBase.IncludeFile("movements.lua")
 ENT.UseWalkframes = false
 ENT.WalkSpeed = 100
 ENT.RunSpeed = 200
@@ -101,17 +91,27 @@ ENT.ClimbDownAnimation = ACT_CLIMB_DOWN
 ENT.ClimbAnimRate = 1
 ENT.ClimbOffset = Vector(0, 0, 0)
 
--- Detection --
-DrGBase.IncludeFile("awareness.lua")
-DrGBase.IncludeFile("detection.lua")
-ENT.EyeBone = ""
-ENT.EyeOffset = Vector(0, 0, 0)
-ENT.EyeAngle = Angle(0, 0, 0)
-ENT.SightFOV = 150
-ENT.SightRange = 15000
-ENT.MinLuminosity = 0
-ENT.MaxLuminosity = 1
-ENT.HearingCoefficient = 1
+-- Animations --
+DrGBase.IncludeFile("animations.lua")
+ENT.WalkAnimation = ACT_WALK
+ENT.WalkAnimRate = 1
+ENT.RunAnimation = ACT_RUN
+ENT.RunAnimRate = 1
+ENT.IdleAnimation = ACT_IDLE
+ENT.IdleAnimRate = 1
+ENT.JumpAnimation = ACT_JUMP
+ENT.JumpAnimRate = 1
+
+-- Sounds --
+ENT.OnSpawnSounds = {}
+ENT.OnIdleSounds = {}
+ENT.IdleSoundDelay = 2
+ENT.ClientIdleSounds = false
+ENT.OnDamageSounds = {}
+ENT.DamageSoundDelay = 0.25
+ENT.OnDeathSounds = {}
+ENT.OnDownedSounds = {}
+ENT.Footsteps = {}
 
 -- Weapons --
 DrGBase.IncludeFile("weapons.lua")
@@ -156,6 +156,8 @@ function ENT:Initialize()
     elseif isnumber(self.Skins) then
       self:SetSkin(self.Skins)
     end
+    self:SetNW2Int("DrGBaseMaxHealth", self.SpawnHealth)
+    self:SetNW2Int("DrGBaseHealth", self.SpawnHealth)
     self:SetMaxHealth(self.SpawnHealth)
     self:SetHealth(self.SpawnHealth)
     self:ScaleHealth(MultHealth:GetFloat())
@@ -185,8 +187,9 @@ function ENT:Initialize()
   self._DrGBaseBaseThinkDelay = 0
   self._DrGBaseCustomThinkDelay = 0
   self._DrGBasePossessionThinkDelay = 0
-  self._DrGBaseThinkUpdate = 0
-  self._DrGBaseThinkCooldown = 0
+  self._DrGBaseThinkDelayLong = 0
+  self._DrGBaseThinkDelayMedium = 0
+  self._DrGBaseThinkDelayShort = 0
   self:_InitModules()
   table.insert(DrGBase._SpawnedNextbots, self)
   self:CallOnRemove("DrGBaseCallOnRemove", function(self)
@@ -197,6 +200,8 @@ function ENT:Initialize()
   self:_BaseInitialize()
   self:CustomInitialize()
   if CLIENT then return end
+  self:UpdateAnimation()
+  self:UpdateSpeed()
   self:UpdateAI()
 end
 function ENT:_BaseInitialize() end
@@ -208,7 +213,6 @@ function ENT:_InitModules()
   end
   self:_InitHooks()
   self:_InitMisc()
-  self:_InitStatus()
   self:_InitAnimations()
   self:_InitMovements()
   self:_InitWeapons()
@@ -225,22 +229,31 @@ function ENT:Think()
   self:_HandleAnimations()
   self:_HandleMovements()
   if SERVER then
-    -- update stuff
-    if CurTime() > self._DrGBaseThinkUpdate then
-      self._DrGBaseThinkUpdate = CurTime() + 0.1
+    -- long delays
+    if CurTime() > self._DrGBaseThinkDelayLong then
+      self._DrGBaseThinkDelayLong = CurTime() + 1
+      self:_RegenHealth()
+      self:UpdateAI()
+    end
+    -- medium delays
+    if CurTime() > self._DrGBaseThinkDelayMedium then
+      self._DrGBaseThinkDelayMedium = CurTime() + 0.1
       self:UpdateAnimation()
       self:UpdateSpeed()
-      self:UpdateAI()
       -- update phys obj
       local phys = self:GetPhysicsObject()
-      --debugoverlay.
       if IsValid(phys) then
-        phys:UpdateShadow(self:GetPos(), self:GetAngles(), 0)
+        if self:WaterLevel() == 0 then
+          phys:SetPos(self:GetPos())
+          phys:SetAngles(self:GetAngles())
+        else
+          phys:UpdateShadow(self:GetPos(), self:GetAngles(), 0)
+        end
       end
     end
-    -- custom hooks
-    if CurTime() > self._DrGBaseThinkCooldown then
-      self._DrGBaseThinkCooldown = CurTime() + 0.05
+    -- short delays
+    if CurTime() > self._DrGBaseThinkDelayShort then
+      self._DrGBaseThinkDelayShort = CurTime() + 0.05
       -- water level
       local waterLevel = self:WaterLevel()
       if self._DrGBaseWaterLevel ~= waterLevel then
@@ -257,40 +270,6 @@ function ENT:Think()
       self:Timer(0.1, function()
         self._DrGBaseDownSpeed = speed
       end)
-      -- on ground
-      local onGround = self:IsOnGround()
-      if self:GetNW2Bool("DrGBaseOnGround") ~= onGround then
-        self:SetNW2Bool("DrGBaseOnGround", onGround)
-        if onGround then
-          self:InvalidatePath()
-          local damage = math.floor(self:OnFallDamage(self._DrGBaseDownSpeed))
-          --print(damage)
-          if damage > math.max(0, self.MinFallDamage) then
-            local dmg = DamageInfo()
-            dmg:SetDamage(damage)
-            dmg:SetAttacker(self)
-            dmg:SetInflictor(self)
-            dmg:SetDamageType(DMG_FALL)
-            self:TakeDamageInfo(dmg)
-          end
-        else
-
-        end
-        self:UpdateAnimation()
-        self:UpdateSpeed()
-      end
-      -- health
-      local health = self:Health()
-      local oldHealth = self:GetNW2Int("DrGBaseHealth")
-      if oldHealth ~= health then
-        self:OnHealthChange(oldHealth, health)
-        self:SetNW2Int("DrGBaseHealth", health)
-      end
-      -- max health
-      local maxHealth = self:GetMaxHealth()
-      if self:GetNW2Int("DrGBaseMaxHealth") ~= maxHealth then
-        self:SetNW2Int("DrGBaseMaxHealth", maxHealth)
-      end
     end
   end
   -- idle sounds
@@ -471,10 +450,6 @@ if SERVER then
   function ENT:OnHealthChange() end
   function ENT:OnExtinguish() end
   function ENT:OnWaterLevelChange() end
-  function ENT:OnFallDamage(speed)
-    --return math.max(0, speed-self.loco:GetDeathDropHeight())/15
-    return 0
-  end
 
   -- SLVBase compatibility --
   if file.Exists("autorun/slvbase", "LUA") then
@@ -542,8 +517,8 @@ if SERVER then
             })
             if tr.Entity == ent then
               local class = weapon:GetClass()
-              if --(class == "weapon_ar2" and math.random(10) == 1) or
-              (class == "weapon_shotgun" and math.random(3) == 1 and weapon:Clip1() >= 2) then
+              if class == "weapon_shotgun" and
+              weapon:Clip1() >= 2 and math.random(3) == 1 then
                 self:SecondaryFire()
               else self:PrimaryFire() end
             end

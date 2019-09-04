@@ -50,8 +50,12 @@ end)
 
 function DrGBase.IncludeFile(fileName, serverOnly)
   DrGBase.Print("Include file '"..fileName.."'.")
-  if not serverOnly then AddCSLuaFile(fileName) end
-  return include(fileName)
+  if not serverOnly then
+    AddCSLuaFile(fileName)
+    return include(fileName)
+  elseif SERVER then
+    return include(fileName)
+  end
 end
 function DrGBase.IncludeFiles(files, serverOnly)
   local tbl = {}

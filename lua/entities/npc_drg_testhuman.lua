@@ -9,6 +9,9 @@ ENT.Models = {
   "models/player/magnusson.mdl"
 }
 
+-- Relationships --
+ENT.Factions = {FACTION_REBELS}
+
 -- Movements --
 ENT.UseWalkframes = true
 
@@ -17,7 +20,9 @@ ENT.Weapons = {
   "weapon_ar2",
   "weapon_smg1",
   "weapon_crossbow",
-  "weapon_shotgun"
+  "weapon_shotgun",
+  "weapon_pistol",
+  "weapon_357"
 }
 ENT.WeaponAccuracy = 0.75
 
@@ -28,21 +33,11 @@ if SERVER then
   function ENT:CustomInitialize()
     self:SetDefaultRelationship(D_HT)
     self:SetSelfModelRelationship(D_LI)
-    self:SetFactionRelationship(FACTION_REBELS, D_LI)
     if self:GetModel() == "models/player/kleiner.mdl" then
       self:JoinFaction("FACTION_KLEINER")
     elseif self:GetModel() == "models/player/magnusson.mdl" then
       self:JoinFaction("FACTION_MAGNUSSON")
     end
-  end
-
-  -- AI --
-
-  function ENT:OnIdle()
-    self:AddPatrolPos(self:RandomPos(1500))
-  end
-  function ENT:OnReachedPatrol()
-    self:Wait(math.random(3, 7))
   end
 
 end

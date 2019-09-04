@@ -150,14 +150,20 @@ if SERVER then
   function ENT:OnAvoidAfraidOf() end
   function ENT:OnIdleAfraidOf() end
 
-  function ENT:OnReachedPatrol() end
-  function ENT:OnPatrolUnreachable() end
+  function ENT:OnReachedPatrol()
+    self:Wait(math.random(3, 7))
+  end
+  function ENT:OnPatrolUnreachable()
+    self:Wait(math.random(3, 7))
+  end
   function ENT:OnPatrolling(...)
     return self:WhilePatrolling(...)
   end
   function ENT:WhilePatrolling() end
 
-  function ENT:OnIdle() end
+  function ENT:OnIdle()
+    self:AddPatrolPos(self:RandomPos(1500))
+  end
 
   function ENT:OnUpdateEnemy()
     return self:FetchEnemy()

@@ -177,10 +177,7 @@ if SERVER then
   end
   function ENT:OnLostSight() end
   function ENT:OnSound(ent, sound)
-    if not self:IsHostile(ent) then return end
-    if not self:HasSpotted(ent) then
-      self:AddPatrolSound(sound)
-    else self:SpotEntity(ent) end
+    self:SpotEntity(ent)
   end
   function ENT:OnBlind() end
   --function ENT:OnBlinded() end

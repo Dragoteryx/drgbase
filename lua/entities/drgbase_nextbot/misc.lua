@@ -363,15 +363,19 @@ if SERVER then
     end
   end
 
+  function ENT:IsInCone(ent, angle, distance)
+    if isnumber(distance) and
+    not self:IsInRange(ent, distance) then return false end
+    local selfpos = self:GetPos()
+    local forward = self:GetForward()
+    return (selfpos + forward):DrG_Degrees(ent:GetPos(), selfpos) <= angle/2
+  end
   function ENT:EntitiesInCone(angle, distance, disp, spotted)
     local entities = {}
     local selfpos = self:GetPos()
     local forward = self:GetForward()
     for ent in self:EntityIterator(disp, spotted) do
-      if not self:IsInRange(ent, distance) then continue end
-      if (selfpos + forward):DrG_Degrees(ent:GetPos(), selfpos) <= angle/2 then
-        table.insert(entities, ent)
-      end
+      if self:IsInCone(ent, angle, distance) then table.insert(entities, ent) end
     end
     return entities
   end
@@ -384,10 +388,10 @@ if SERVER then
   function ENT:AfraidOfInCone(angle, distance, spotted)
     return self:EntitiesInCone(angle, distance, D_FR, spotted)
   end
-  function ENT:HostileInCone(angle, distance, spotted)
+  function ENT:HostilesInCone(angle, distance, spotted)
     return self:EntitiesInCone(angle, distance, {D_HT, D_FR}, spotted)
   end
-  function ENT:NeutralInCone(angle, distance, spotted)
+  function ENT:NeutralsInCone(angle, distance, spotted)
     return self:EntitiesInCone(angle, distance, D_NU, spotted)
   end
 
@@ -481,6 +485,23 @@ if SERVER then
       return self:AimProjectile(proj, speed)
     else return proj:DrG_AimAt(nil, speed) end
   end
+
+  --[[function ENT:OpenDoor(door, speed)
+    if IsValid(door) and door:DrG_IsDoor() then
+      door = door:DrG_Wrap()
+      --local oldSpeed = door:GetSpeed()
+      --if isnumber(speed) then door:SetSpeed(speed) end
+      door:Open(self)
+    end
+  end
+  function ENT:CloseDoor(door, speed)
+    if IsValid(door) and door:DrG_IsDoor() then
+      door = door:DrG_Wrap()
+      --local oldSpeed = door:GetSpeed()
+      --if isnumber(speed) then door:SetSpeed(speed) end
+      door:Close()
+    end
+  end]]
 
   -- Hooks --
 

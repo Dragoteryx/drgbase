@@ -17,6 +17,8 @@ function ENT:_InitHooks()
   self._DrGBaseLastDmgInflicted = {}
   self:DrG_AddListener("OnTraceAttack", self._HandleTraceAttack)
   self:DrG_AddListener("OnNavAreaChanged", self._HandleNavAreaChanged)
+  self:DrG_AddListener("OnLeaveGround", self._HandleLeaveGround)
+  self:DrG_AddListener("OnLandOnGround", self._HandleLandOnGround)
 end
 
 if SERVER then
@@ -49,12 +51,11 @@ if SERVER then
     self._DrGBaseHitGroupToHandle = true
   end
   function ENT:OnInjured(dmg)
-    if dmg:GetDamage() < 0 then dmg:ScaleDamage(0) end
-    if dmg:GetDamage() == 0 then return end
-    if self:GetGodMode() then
+    if dmg:GetDamage() <= 0 or self:GetGodMode() then
       self._DrGBaseHitGroupToHandle = false
       return dmg:ScaleDamage(0)
     else
+      self:Timer(0, self._UpdateHealth)
       local hitgroup = self._DrGBaseHitGroupToHandle and self:LastHitGroup() or HITGROUP_GENERIC
       local attacker = dmg:GetAttacker()
       local res = self:OnTakeDamage(dmg, hitgroup)
@@ -140,7 +141,7 @@ if SERVER then
         self:SetNW2Bool("DrGBaseDying", false)
         self:SetNW2Bool("DrGBaseDead", true)
         local now = CurTime()
-        dmg = self:OnDeath(util.DrG_LoadDmg(data), 0, hitgroup)
+        dmg = self:OnDeath(util.DrG_LoadDmg(data), hitgroup)
         if dmg == nil then
           dmg = util.DrG_LoadDmg(data)
           if CurTime() > now then
@@ -160,11 +161,6 @@ if SERVER then
     local attacker = dmg:GetAttacker()
     if IsValid(attacker) and attacker.IsDrGNextbot then
       if attacker == ent then return true end
-      local inflictor = dmg:GetInflictor()
-      if IsValid(inflictor) and inflictor:GetClass() == "crossbow_bolt" then
-        dmg:SetDamageForce(inflictor:GetVelocity()*2)
-        dmg:SetDamage(100)
-      end
       if ent:IsPlayer() then dmg:ScaleDamage(MultDamagePlayer:GetFloat())
       else dmg:ScaleDamage(MultDamageNPC:GetFloat()) end
       local res = attacker:OnDealtDamage(ent, dmg)
@@ -230,8 +226,7 @@ if SERVER then
   end
 
   hook.Add("OnEntityCreated", "DrGBaseAddPhysicsCollideCallback", function(ent)
-    timer.Simple(0, function()
-      if not IsValid(ent) then return end
+    ent:DrG_Timer(0, function()
       ent:AddCallback("PhysicsCollide", function(ent, data)
         if not isfunction(ent.PhysicsCollide) then return end
         if IsValid(data.HitEntity) and data.HitEntity.IsDrGNextbot then
@@ -240,6 +235,43 @@ if SERVER then
       end)
     end)
   end)
+
+  -- Ground --
+
+  function ENT:OnFallDamage(speed)
+    --return math.max(0, speed-self.loco:GetDeathDropHeight())/15
+    return 0
+  end
+  -- function ENT:OnLeftGround() end
+  -- function ENT:OnLandedOnGround() end
+
+  function ENT:_HandleLeaveGround()
+    self:SetNW2Bool("DrGBaseOnGround", false)
+    self:UpdateAnimation()
+    self:UpdateSpeed()
+    if isfunction(self.OnLeftGround) then
+      self:ReactInCoroutine(self.OnLeftGround)
+    end
+  end
+  function ENT:_HandleLandOnGround()
+    self:SetNW2Bool("DrGBaseOnGround", true)
+    self:UpdateAnimation()
+    self:UpdateSpeed()
+    self:InvalidatePath()
+    local damage = math.floor(self:OnFallDamage(self._DrGBaseDownSpeed))
+    --print(damage)
+    if damage > math.max(0, self.MinFallDamage) then
+      local dmg = DamageInfo()
+      dmg:SetDamage(damage)
+      dmg:SetAttacker(self)
+      dmg:SetInflictor(self)
+      dmg:SetDamageType(DMG_FALL)
+      self:TakeDamageInfo(dmg)
+    end
+    if isfunction(self.OnLandedOnGround) then
+      self:ReactInCoroutine(self.OnLandedOnGround)
+    end
+  end
 
   -- OnNavAreaChanged --
 

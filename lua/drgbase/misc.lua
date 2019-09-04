@@ -175,10 +175,9 @@ if SERVER then
     if TARGET_BLACKLIST[class] then return false end
     if TARGET_WHITELIST[class] then return true end
     if ent.DrGBase_Target then return true end
+    if ent:IsNextBot() then return true end
     if ent:IsPlayer() then return true end
-    if ent:IsNPC() then return true end
-    if ent.Type == "nextbot" then return true end
-    --if ent:IsNextBot() then return true end
+    if ent:IsNPC() then return true end    
     return false
   end
 

@@ -304,13 +304,22 @@ if SERVER then
       Bullet = {Damage = 8, Spread = Vector(0.1, 0.1, 0), Num = 7},
       Sound = "Weapon_Shotgun.Single", Empty = "Weapon_Shotgun.Empty",
       Delay = 1.25, Cost = 1
+    },
+    ["weapon_pistol"] = {
+      Bullet = {Damage = 5, Spread = Vector(0.015, 0.015, 0)},
+      Sound = "Weapon_Pistol.Single", Empty = "Weapon_Pistol.Empty",
+      Delay = 0.75, Cost = 1
+    },
+    ["weapon_357"] = {
+      Bullet = {Damage = 40, Spread = Vector(0.015, 0.015, 0)},
+      Sound = "Weapon_Revolver.Single", Empty = "Weapon_Pistol.Empty",
+      Delay = 1.25, Cost = 1
     }
   }
-  local function ShootGun(self, weapon, data, anim)
+  local function ShootGun(self, weapon, data)
     if not weapon._DrGBaseNextShoot or CurTime() > weapon._DrGBaseNextShoot then
       weapon._DrGBaseNextShoot = CurTime() + data.Delay
       if weapon:Clip1() >= data.Cost then
-        self:PlayAnimation(anim)
         weapon:EmitSound(data.Sound)
         data.Bullet.Src = self:GetShootPos()
         data.Bullet.Dir = self:GetAimVector()
@@ -409,11 +418,6 @@ if SERVER then
         end
         return true
       else return false end
-    elseif class == "gmod_camera" then
-      if not weapon._DrGBaseNextShoot or CurTime() > weapon._DrGBaseNextShoot then
-        weapon._DrGBaseNextShoot = CurTime() + 2.5
-        weapon:EmitSound(weapon.ShootSound)
-      end
     elseif class == "weapon_crossbow" then
       if not weapon._DrGBaseNextShoot or CurTime() > weapon._DrGBaseNextShoot then
         weapon._DrGBaseNextShoot = CurTime() + 2.5
@@ -430,18 +434,24 @@ if SERVER then
         else FireCrossbow(self, weapon, self:GetPos()+self:GetForward()*3500) end
         weapon:EmitSound("Weapon_Crossbow.Single")
         weapon:EmitSound("Weapon_Crossbow.BoltFly")
-        if isstring(anim) then self:AddGestureSequence(anim)
-        elseif isnumber(anim) then self:AddGesture(anim) end
+        self:PlayAnimation(anim)
+        return true
+      else return false end
+    elseif class == "gmod_camera" then
+      if not weapon._DrGBaseNextShoot or CurTime() > weapon._DrGBaseNextShoot then
+        weapon._DrGBaseNextShoot = CurTime() + 2.5
+        weapon:EmitSound(weapon.ShootSound)
         return true
       else return false end
     elseif SUPPORTED_GUNS[class] then
       if weapon:Clip1() > weapon:GetMaxClip1() then weapon:SetClip1(weapon:GetMaxClip1()) end
       local data = SUPPORTED_GUNS[weapon:GetClass()]
-      return ShootGun(self, weapon, data, anim)
+      local res = ShootGun(self, weapon, data)
+      if res then self:PlayAnimation(anim) end
+      return res
     elseif weapon:IsScripted() and not self:IsWeaponPrimaryEmpty() then
       if CurTime() < weapon:GetNextPrimaryFire() then return false end
-      if isstring(anim) then self:AddGestureSequence(self:LookupSequence(anim))
-      elseif isnumber(anim) then self:AddGesture(anim) end
+      self:PlayAnimation(anim)
       weapon:PrimaryAttack()
     else return false end
     return true
@@ -454,14 +464,14 @@ if SERVER then
     if class == "weapon_ar2" then
       if not weapon._DrGBaseNextShoot or CurTime() > weapon._DrGBaseNextShoot then
         weapon._DrGBaseNextShoot = CurTime() + 1.5
-        local ball = ents.Create("prop_combine_ball")
+        --[[local ball = ents.Create("prop_combine_ball")
         if not IsValid(ball) then return false end
         ball:SetOwner(self)
         ball:SetPos(self:GetShootPos()+self:GetAimVector()*10)
         ball:Spawn()
         local phys = ball:GetPhysicsObject()
         phys:Wake()
-        phys:SetVelocity(self:GetAimVector()*500)
+        phys:SetVelocity(self:GetAimVector()*500)]]
       else return false end
       return true
     elseif class == "weapon_shotgun" then

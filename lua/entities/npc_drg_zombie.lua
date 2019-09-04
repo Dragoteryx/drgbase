@@ -81,9 +81,7 @@ if SERVER then
   -- Damage --
 
   function ENT:OnDeath(dmg, delay, hitgroup)
-    if hitgroup == HITGROUP_HEAD then
-
-    else
+    if hitgroup ~= HITGROUP_HEAD then
       self:SetBodygroup(1, 0)
       local headcrab = ents.Create("npc_drg_headcrab")
       if not IsValid(headcrab) then return end

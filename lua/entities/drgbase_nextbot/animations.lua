@@ -5,7 +5,7 @@ local DebugAnims = CreateConVar("drgbase_debug_animations", "0", {FCVAR_ARCHIVE,
 
 -- Getters/setters --
 
---[[function ENT:GetAnimInfoSequence(seq)
+function ENT:GetAnimInfoSequence(seq)
   if isstring(seq) then seq = self:LookupSequence(seq)
   elseif not isnumber(seq) then return {} end
   if seq == -1 then return {} end
@@ -15,20 +15,6 @@ local DebugAnims = CreateConVar("drgbase_debug_animations", "0", {FCVAR_ARCHIVE,
     local info = self:GetAnimInfo(anim)
     if info.label == "@"..seqName or info.label == "a_"..seqName then
       return info
-    end
-  end
-end]]
-function ENT:GetAnimInfoSequence(seq)
-  if isstring(seq) and self:LookupSequence(seq) == -1 then return {}
-  elseif isnumber(seq) then seq = self:GetSequenceName(seq) end
-  if seq == "Unknown" then return {} end
-  local first = self:GetAnimInfo(0)
-  for i = 0, 1600 do
-    local info = self:GetAnimInfo(i)
-    if info.label == "@"..seq or info.label == "a_"..seq then
-      return info
-    elseif i > 0 and info.label == first.label then
-      return {}
     end
   end
 end
@@ -209,7 +195,6 @@ if SERVER then
     if seq == -1 then return end
     local current = self:GetSequence()
     if seq == self:GetSequence() or CallOnAnimChange(self, current, seq) ~= false then
-      --self:AfterAnimChange(self:GetSequenceName(current), self:GetSequenceName(seq), 0)
       self._DrGBasePlayingAnimation = seq
       ResetSequence(self, seq)
       self:SetPlaybackRate(rate or 1)
@@ -320,7 +305,6 @@ if SERVER then
     elseif not isnumber(seq) then return end
     if seq == -1 then return end
     rate = isnumber(rate) and rate or 1
-    if callback == nil then callback = function() end end
     if self._DrGBaseCurrentGestures[seq] then return end
     local duration = self:SequenceDuration(seq)/rate
     local layerID = self:AddGestureSequence(seq)
@@ -335,12 +319,15 @@ if SERVER then
         if cycle < lastCycle then break end
         --if cycle == lastCycle and cycle == 1 then break end
         self:_PlaySequenceEvents(seq, cycle, lastCycle)
-        if not callback(self, cycle, layerID) then
+        if not isfunction(callback) or
+        not callback(self, cycle, layerID) then
           lastCycle = cycle
           coroutine.yield()
         else break end
       end
-      self._DrGBaseCurrentGestures[seq] = false
+      if IsValid(self) then
+        self._DrGBaseCurrentGestures[seq] = nil
+      end
     end)
     return duration
   end
@@ -381,7 +368,6 @@ if SERVER then
       end
     end
   end
-
   function ENT:PlayClimbSequence(seq, height, rate, callback)
     if not istable(seq) then
       if isstring(seq) then seq = self:LookupSequence(seq)
@@ -411,7 +397,9 @@ if SERVER then
 
   function ENT:UpdateAnimation()
     if self:IsPlayingAnimation() then return end
-    if self:IsAIDisabled() and DebugAnims:GetBool() then return end
+    if self:IsAIDisabled() and
+    not self:IsPossessed() and
+    DebugAnims:GetBool() then return end
     local anim, rate = self:OnUpdateAnimation()
     if isstring(anim) and string.StartWith(anim, "ACT_") then
       anim = self:GetActivityIDFromName(anim)
@@ -473,7 +461,7 @@ if SERVER then
 
   local nextbotMETA = FindMetaTable("NextBot")
 
-  DrGBase.OLD_BodyMoveXY = DrGBase.OLD_BodyMoveXY or nextbotMETA.BodyMoveXY
+  local old_BodyMoveXY = nextbotMETA.BodyMoveXY
   function nextbotMETA:BodyMoveXY(options)
     if self.IsDrGNextbot then
       if self.IsDrGNextbotSprite then return end
@@ -519,7 +507,7 @@ if SERVER then
           end
         end
       end
-    else return DrGBase.OLD_BodyMoveXY(self) end
+    else return old_BodyMoveXY(self) end
   end
 
   local old_GetActivity = nextbotMETA.GetActivity
