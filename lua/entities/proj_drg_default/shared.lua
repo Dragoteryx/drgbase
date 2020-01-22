@@ -126,10 +126,8 @@ if SERVER then
   function ENT:PhysicsCollide(data)
     local ent = data.HitEntity
     if not IsValid(ent) and not ent:IsWorld() then return end
-    if ent:IsWorld() then
-      if #self.OnContactDecals > 0 then
-        util.Decal(self.OnContactDecals[math.random(#self.OnContactDecals)], data.HitPos+data.HitNormal, data.HitPos-data.HitNormal)
-      end
+    if ent:IsWorld() and #self.OnContactDecals > 0 then
+      util.Decal(self.OnContactDecals[math.random(#self.OnContactDecals)], data.HitPos+data.HitNormal, data.HitPos-data.HitNormal)
     end
     self:Contact(ent)
   end
@@ -140,20 +138,19 @@ if SERVER then
   function ENT:Contact(ent)
     if not IsValid(ent) and not ent:IsWorld() then return end
     if ent:GetClass() == "trigger_soundscape" then return end
-    if not isnumber(self._DrGBaseLastContact) or CurTime() > self._DrGBaseLastContact + self.OnContactDelay then
-      if self:OnContact(ent) ~= false then
-        self._DrGBaseLastContact = CurTime()
-        if #self.OnContactSounds > 0 then
-          self:EmitSound(self.OnContactSounds[math.random(#self.OnContactSounds)])
-        end
-        if #self.OnContactEffects > 0 then
-          ParticleEffect(self.OnContactEffects[math.random(#self.OnContactEffects)], self:GetPos(), self:GetAngles())
-        end
-        if self.OnContactDelete == 0 then
-          self:Remove()
-        elseif self.OnContactDelete > 0 then
-          self:Timer(self.OnContactDelete, self.Remove)
-        end
+    if (not isnumber(self._DrGBaseLastContact) or CurTime() > self._DrGBaseLastContact + self.OnContactDelay) and
+    self:OnContact(ent) ~= false then
+      self._DrGBaseLastContact = CurTime()
+      if #self.OnContactSounds > 0 then
+        self:EmitSound(self.OnContactSounds[math.random(#self.OnContactSounds)])
+      end
+      if #self.OnContactEffects > 0 then
+        ParticleEffect(self.OnContactEffects[math.random(#self.OnContactEffects)], self:GetPos(), self:GetAngles())
+      end
+      if self.OnContactDelete == 0 then
+        self:Remove()
+      elseif self.OnContactDelete > 0 then
+        self:Timer(self.OnContactDelete, self.Remove)
       end
     end
   end
