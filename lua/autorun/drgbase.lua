@@ -38,13 +38,15 @@ function DrGBase.Error(msg, options)
   options._error = true
   return DrGBase.Print(msg, options)
 end
-net.Receive("DrGBaseChatPrint", function()
-  local msg = net.ReadString()
-  local error = net.ReadBool()
-  local options = {_server = true, _error = error, chat = true}
-  if net.ReadBool() then options.color = net.ReadColor() end
-  DrGBase.Print(msg, options)
-end)
+if CLIENT then
+  net.Receive("DrGBaseChatPrint", function()
+    local msg = net.ReadString()
+    local error = net.ReadBool()
+    local options = {_server = true, _error = error, chat = true}
+    if net.ReadBool() then options.color = net.ReadColor() end
+    DrGBase.Print(msg, options)
+  end)
+end
 
 -- Manage files --
 
