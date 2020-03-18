@@ -111,11 +111,6 @@ function ENT:_InitWeapons()
         self.MeleeAttackRange = 0
         self.ReachEnemyRange = 500
         self.AvoidEnemyRange = 350
-      else
-        self.RangeAttackRange = 1500
-        self.MeleeAttackRange = 0
-        self.ReachEnemyRange = 1000
-        self.AvoidEnemyRange = 750
       end
     end
   end)
