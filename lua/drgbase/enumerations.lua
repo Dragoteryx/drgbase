@@ -1,4 +1,3 @@
-
 NODE_TYPE_GROUND = 2
 NODE_TYPE_AIR = 3
 NODE_TYPE_CLIMB = 4
@@ -34,11 +33,7 @@ PATROL_SOUND = 200
 
 IN_ATTACK3 = 33554432
 
-if SERVER then
-
-
-
-else
+if CLIENT then
 
   D_ER = 0
   D_HT = 1

@@ -1,4 +1,3 @@
-
 -- NODES TABLE --
 
 local DRG_NODES = {}

@@ -136,7 +136,7 @@ if SERVER then
 
   function entMETA:DrG_RandomPos(min, max)
     if isnumber(max) then
-      local dir = Vector(math.random(-100, 100), math.random(-100, 100), math.random(0, 10))
+      local dir = Vector(math.random(-100, 100), math.random(-100, 100), 0)
       dir = dir:GetNormalized()*math.random(min, max)
       local pos = self:GetPos()+dir
       if navmesh.IsLoaded() then
@@ -144,12 +144,15 @@ if SERVER then
         return self:DrG_TraceHull(nil, {
           start = area:GetCenter(),
           endpos = area:GetClosestPointOnArea(pos),
-          collisiongroup = COLLISION_GROUP_WORLD
+          collisiongroup = COLLISION_GROUP_WORLD,
+          step = true
         }).HitPos
       elseif util.IsInWorld(pos) then
-        return self:DrG_TraceHull(Vector(0, 0, -999999), {start = pos}).HitPos
+        return self:DrG_TraceHull(Vector(0, 0, -999999), {
+          collisiongroup = COLLISION_GROUP_WORLD, start = pos
+        }).HitPos
       else return self:DrG_RandomPos(min, max) end
-    else return self:RandomPos(0, min) end
+    else return self:DrG_RandomPos(0, min) end
   end
 
   function entMETA:DrG_Dissolve(type)

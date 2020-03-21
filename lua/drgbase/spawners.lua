@@ -69,7 +69,7 @@ if SERVER then
     spawner:SetQuantity(quantity)
     if istable(tospawn) then
       for class, nb in pairs(tospawn) do
-        self:AddToSpawn(class, nb)
+        spawner:AddToSpawn(class, nb)
       end
     else spawner:AddToSpawn(tospawn) end
     return spawner

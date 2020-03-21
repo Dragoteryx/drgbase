@@ -1,16 +1,13 @@
 
 function table.DrG_ReadOnly(tbl)
-  local readOnly = {}
-  setmetatable(readOnly, {
+  return setmetatable({}, {
     __index = tbl,
     __newindex = function() end
   })
-  return readOnly
 end
 
 function table.DrG_Default(tbl, default)
-  setmetatable(tbl, {__index = function() return default end})
-  return tbl
+  return setmetatable(tbl, {__index = function() return default end})
 end
 
 function table.DrG_Pack(...)

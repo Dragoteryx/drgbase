@@ -3,7 +3,6 @@ if SERVER then return end
 function render.DrG_DrawSprite(sprite, pos, size, options)
   options = options or {}
   size = isnumber(size) and math.Clamp(size, 0, math.huge) or 100
-  local half = size/2
   local normal = pos:DrG_Direction(isvector(options.origin) and options.origin or EyePos())
   normal.z = 0
   local material = DrGBase.Material(sprite)

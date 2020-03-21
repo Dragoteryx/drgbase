@@ -17,7 +17,7 @@ function vecMETA:DrG_TrajectoryInfo(direction, ballistic)
       pos.z = magnitude*t*math.sin(pitch)-(gravity*t*t)/2
       local velocity = forward*magnitude*math.cos(pitch)
       velocity.z = magnitude*math.sin(pitch)-gravity*t
-      return (self + pos), velocity
+      return self + pos, velocity
     end
     return {
       normal = data.normal,
@@ -71,7 +71,7 @@ function vecMETA:DrG_CalcLineTrajectory(target, speed, feet)
 end
 
 function vecMETA:DrG_CalcBallisticTrajectory(target, options, feet)
-  options = options or {}
+  options = istable(options) and options or {}
   if isentity(target) and IsValid(target) then
     local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
     local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
@@ -156,7 +156,7 @@ end
 -- Misc --
 
 function vecMETA:DrG_ManhattanDistance(pos)
-  return math.abs(math.abs(self.x - pos.x) + math.abs(self.y - pos.y) + math.abs(self.z - pos.z))
+  return math.abs(self.x - pos.x) + math.abs(self.y - pos.y) + math.abs(self.z - pos.z)
 end
 
 function vecMETA:DrG_Direction(pos)
@@ -193,7 +193,7 @@ function vecMETA:DrG_Copy()
 end
 
 function vecMETA:DrG_Join(other, ratio)
-  return (self*(1-ratio)+other*ratio)
+  return self*(1-ratio)+other*ratio
 end
 
 function vecMETA:DrG_Away(pos)

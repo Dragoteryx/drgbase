@@ -1,4 +1,3 @@
-
 function EFFECT:Init(data)
   local ent = data:GetEntity()
   if not IsValid(ent) then return end

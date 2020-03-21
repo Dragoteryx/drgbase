@@ -83,7 +83,6 @@ function ENT:GetPathGenerator()
       dist = ladder:GetLength()
     elseif length > 0 then dist = length
     else dist = fromArea:GetCenter():Distance(area:GetCenter()) end
-    local unreach = false
     local cost = fromArea:GetCostSoFar() + dist
     local height = fromArea:ComputeAdjacentConnectionHeightChange(area)
     if height > 0 then

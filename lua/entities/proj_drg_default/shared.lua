@@ -138,8 +138,7 @@ if SERVER then
   function ENT:Contact(ent)
     if not IsValid(ent) and not ent:IsWorld() then return end
     if ent:GetClass() == "trigger_soundscape" then return end
-    if (not isnumber(self._DrGBaseLastContact) or CurTime() > self._DrGBaseLastContact + self.OnContactDelay) and
-    self:OnContact(ent) ~= false then
+    if (not isnumber(self._DrGBaseLastContact) or CurTime() > self._DrGBaseLastContact + self.OnContactDelay) and self:OnContact(ent) ~= false then
       self._DrGBaseLastContact = CurTime()
       if #self.OnContactSounds > 0 then
         self:EmitSound(self.OnContactSounds[math.random(#self.OnContactSounds)])

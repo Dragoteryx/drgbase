@@ -6,8 +6,9 @@ hook.Add("Think", "DrGBaseCoroutines", function()
     local status = coroutine.status(todo.cor)
     if status == "suspended" then
 			local ok, args = coroutine.resume(todo.cor)
-      if coroutine.status(todo.cor) == "dead" then
-        if isfunction(todo.call) then todo.call(ok, args) end
+      if coroutine.status(todo.cor) == "dead" and
+      isfunction(todo.call) then
+        todo.call(ok, args)
       end
 		elseif status == "dead" then
 			coroutine.DrG_Remove(id)

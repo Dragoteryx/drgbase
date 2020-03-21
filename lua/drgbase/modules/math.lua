@@ -1,4 +1,3 @@
-
 -- Misc --
 
 function math.DrG_Cycle(min, max, rate, offset)

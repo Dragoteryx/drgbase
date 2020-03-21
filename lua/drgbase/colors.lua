@@ -1,3 +1,4 @@
+-- Opaque --
 
 DrGBase.CLR_WHITE = Color(255, 255, 255)
 DrGBase.CLR_GREEN = Color(150, 255, 40)
@@ -9,11 +10,14 @@ DrGBase.CLR_ORANGE = Color(255, 150, 30)
 DrGBase.CLR_DARKGRAY = Color(20, 20, 20)
 DrGBase.CLR_LIGHTGRAY = Color(200, 200, 200)
 
+-- Transparent --
+
 local function Transparent(color)
   color = color:ToVector():ToColor()
   color.a = 0
   return color
 end
+
 DrGBase.CLR_WHITE_TR = Transparent(DrGBase.CLR_WHITE)
 DrGBase.CLR_GREEN_TR = Transparent(DrGBase.CLR_GREEN)
 DrGBase.CLR_RED_TR = Transparent(DrGBase.CLR_RED)

@@ -1,4 +1,3 @@
-
 -- Util --
 
 local function IsPlayer(arg)
