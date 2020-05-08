@@ -1,7 +1,7 @@
 TOOL.Tab = "DrGBase"
 TOOL.Category = "Tools"
 TOOL.Name = "#tool.drgbase_tool_notarget.name"
-TOOL.BuildCPanel = function(panel)
+function TOOL.BuildCPanel(panel)
 	panel:Help("#tool.drgbase_tool_notarget.desc")
 	panel:Help("#tool.drgbase_tool_notarget.0")
 end

@@ -1,4 +1,3 @@
-
 -- Traces --
 
 local DebugTraces = CreateConVar("drgbase_debug_traces", "0")

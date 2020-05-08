@@ -1,4 +1,3 @@
-
 function string.DrG_Number(nb, size)
   nb = tostring(nb)
   while #nb < size do

@@ -4,21 +4,27 @@ DrGBase.Icon = "drgbase/icon16.png"
 -- Print --
 
 function DrGBase.Print(msg, options)
-  options = options or {}
+  options = istable(options) and options or {}
   if SERVER and options.chat then
+    local ply = options.player
+    if ply and (
+      not IsEntity(ply) or
+      not IsValid(ply) or
+      not ply:IsPlayer()
+    ) then return false end
     net.Start("DrGBaseChatPrint")
     net.WriteString(msg)
-    net.WriteBool(options.title ~= nil)
-    if options.title ~= nil then
+    net.WriteBool(IsColor(options.title))
+    if IsColor(options.title) then
       net.WriteColor(options.title)
     end
-    net.WriteBool(options.color ~= nil)
-    if options.color ~= nil then
+    net.WriteBool(IsColor(options.color))
+    if IsColor(options.color) then
       net.WriteColor(options.color)
     end
-    if IsValid(options.player) then
-      net.Send(options.player)
+    if ply then net.Send(ply)
     else net.Broadcast() end
+    return true
   else
     local title = DrGBase.CLR_GREEN
     if options.title then title = options.title
@@ -29,25 +35,28 @@ function DrGBase.Print(msg, options)
     if options.chat and CLIENT then
       chat.AddText(title, "[DrGBase] ", color, msg)
     else MsgC(title, "[DrGBase] ", color, msg, "\n") end
+    return true
   end
 end
 function DrGBase.Info(msg, options)
-  options = options or {}
+  options = istable(options) and options or {}
   options.title = DrGBase.CLR_GREEN
   return DrGBase.Print(msg, options)
 end
 function DrGBase.Error(msg, options)
-  options = options or {}
+  options = istable(options) and options or {}
   options.color = DrGBase.CLR_RED
   return DrGBase.Print(msg, options)
 end
 function DrGBase.ErrorInfo(msg, options)
-  options = options or {}
+  options = istable(options) and options or {}
   options.title = DrGBase.CLR_GREEN
   options.color = DrGBase.CLR_RED
   return DrGBase.Print(msg, options)
 end
-if CLIENT then
+if SERVER then
+  util.AddNetworkString("DrGBaseChatPrint")
+else
   net.Receive("DrGBaseChatPrint", function()
     local msg = net.ReadString()
     local options = {_server = true, chat = true}
@@ -64,7 +73,7 @@ end
 -- Manage files --
 
 local function IncludeFile(fileName)
-  DrGBase.Print("Include file '"..fileName.."'.")
+  DrGBase.Print("Include file '"..fileName.."'")
   return include(fileName)
 end
 function DrGBase.IncludeFile(fileName)
@@ -73,6 +82,7 @@ function DrGBase.IncludeFile(fileName)
   if string.StartWith(last, "sv_") then
     if SERVER then return IncludeFile(fileName) end
   elseif string.StartWith(last, "cl_") then
+    AddCSLuaFile(fileName)
     if CLIENT then return IncludeFile(fileName) end
   else
     AddCSLuaFile(fileName)
@@ -87,7 +97,7 @@ function DrGBase.IncludeFiles(fileNames)
   return tbl
 end
 function DrGBase.IncludeFolder(folder)
-  DrGBase.Print("Include folder '"..folder.."'.")
+  DrGBase.Print("Include folder '"..folder.."'")
   local tbl = {}
   for i, fileName in ipairs(file.Find(folder.."/*.lua", "LUA")) do
     tbl[folder.."/"..fileName] = DrGBase.IncludeFile(folder.."/"..fileName)
@@ -103,18 +113,17 @@ function DrGBase.RecursiveInclude(folder)
   return tbl
 end
 
+-- Misc --
+
+if CLIENT then
+  hook.Add("Initialize", "DrGBaseHello", function()
+    DrGBase.Info("Hi! :)")
+  end)
+end
+
 -- Autorun --
 
 DrGBase.IncludeFolder("drgbase")
 DrGBase.IncludeFolder("drgbase/meta")
 DrGBase.IncludeFolder("drgbase/modules")
-
-if SERVER then
-  util.AddNetworkString("DrGBaseChatPrint")
-else
-
-  hook.Add("Initialize", "DrGBaseHello", function()
-    DrGBase.Info("Hi! :)")
-  end)
-
-end
+DrGBase.IncludeFolder("drgbase/addons")

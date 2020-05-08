@@ -3,8 +3,7 @@
 local function IsPlayer(arg)
   if not isentity(arg) then return false end
   if not IsValid(arg) then return false end
-  if not arg:IsPlayer() then return false end
-  return true
+  return arg:IsPlayer()
 end
 
 function net.DrG_WriteMessage(...)

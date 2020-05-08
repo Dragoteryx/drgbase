@@ -1,4 +1,3 @@
-
 local INCR_ID = 0
 local COROUTINES = {}
 hook.Add("Think", "DrGBaseCoroutines", function()

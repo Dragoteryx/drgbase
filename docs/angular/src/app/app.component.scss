@@ -1,0 +1,11 @@
+:host {
+  display: flex;
+  flex-direction: row;
+
+  > nav {
+    flex: 1;
+  }
+  > div {
+    flex: 3;
+  }
+}

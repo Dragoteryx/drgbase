@@ -1,13 +1,14 @@
-
 function table.DrG_ReadOnly(tbl)
   return setmetatable({}, {
-    __index = tbl,
-    __newindex = function() end
+    __newindex = function() end,
+    __index = tbl
   })
 end
 
 function table.DrG_Default(tbl, default)
-  return setmetatable(tbl, {__index = function() return default end})
+  return setmetatable(tbl, {
+    __index = function() return default end
+  })
 end
 
 function table.DrG_Pack(...)
@@ -19,19 +20,6 @@ function table.DrG_Unpack(tbl, size, i)
   if i < size then
     return tbl[i], table.DrG_Unpack(tbl, size, i+1)
   elseif i == size then return tbl[i] end
-end
-
-function table.DrG_Fetch(tbl, callback)
-  local fetched = nil
-  local fetchedKey = nil
-  for key, val in pairs(tbl) do
-    if fetched == nil or
-    callback(val, fetched, key, fetchedKey) then
-      fetched = val
-      fetchedKey = key
-    end
-  end
-  return fetched, fetchedKey
 end
 
 function table.DrG_Invert(tbl)
@@ -52,4 +40,17 @@ function table.DrG_Copy(tbl, copied)
     else copy[key] = val end
   end
   return copy
+end
+
+function table.DrG_Fetch(tbl, callback)
+  local fetched = nil
+  local fetchedKey = nil
+  for key, val in pairs(tbl) do
+    if fetched == nil or
+    callback(val, fetched, key, fetchedKey) then
+      fetched = val
+      fetchedKey = key
+    end
+  end
+  return fetched, fetchedKey
 end

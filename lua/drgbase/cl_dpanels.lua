@@ -1,5 +1,3 @@
-if SERVER then return end
-
 function DrGBase.DListView(columns, options)
   if not istable(options) then options = {} end
   local dlist = vgui.Create("DListView")

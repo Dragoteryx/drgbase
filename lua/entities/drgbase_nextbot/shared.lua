@@ -326,7 +326,7 @@ if SERVER then
         local msg = "Nextbots need a navmesh to navigate around the map. "
         if game.SinglePlayer() then msg = msg.."You can generate a navmesh using the command 'nav_generate' in the console."
         else msg = msg.."If you are the server owner you can generate a navmesh using the command 'nav_generate' in the server console." end
-        DrGBase.Error(msg.."\nSet 'drgbase_navmesh_error' to 0 to disable this message.", {player = ply, color = DrGBase.CLR_GREEN, chat = true})
+        DrGBase.ErrorInfo(msg.."\nSet 'drgbase_navmesh_error' to 0 to disable this message.", {player = ply, chat = true})
       end
     else ent:Remove() end
   end)

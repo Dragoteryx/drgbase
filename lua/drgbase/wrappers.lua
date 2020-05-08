@@ -1,4 +1,3 @@
-
 -- Wrapper --
 
 local entMETA = FindMetaTable("Entity")

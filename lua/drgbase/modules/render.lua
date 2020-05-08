@@ -1,7 +1,7 @@
 if SERVER then return end
 
 function render.DrG_DrawSprite(sprite, pos, size, options)
-  options = options or {}
+  options = istable(options) and options or {}
   size = isnumber(size) and math.Clamp(size, 0, math.huge) or 100
   local normal = pos:DrG_Direction(isvector(options.origin) and options.origin or EyePos())
   normal.z = 0

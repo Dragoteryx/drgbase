@@ -1,3 +1,23 @@
+-- Misc --
+
+if SERVER then
+
+  function DrGBase.CreateSpawner(pos, tospawn, radius, quantity, class)
+    local spawner = ents.Create(class or "spwn_drg_default")
+    if not IsValid(spawner) then return NULL end
+    if isvector(pos) then spawner:SetPos(pos) end
+    spawner:Spawn()
+    spawner:SetRadius(radius)
+    spawner:SetQuantity(quantity)
+    if istable(tospawn) then
+      for class, nb in pairs(tospawn) do
+        spawner:AddToSpawn(class, nb)
+      end
+    else spawner:AddToSpawn(tospawn) end
+    return spawner
+  end
+
+end
 
 -- Registry --
 
@@ -15,9 +35,11 @@ function DrGBase.AddSpawner(ENT)
     list.Set("NPC", class, spawner)
     list.Set("DrGBaseSpawners", class, spawner)
   end
-  DrGBase.Print("Spawner '"..class.."': loaded.")
+  DrGBase.Print("Spawner '"..class.."' loaded")
   return true
 end
+
+-- Spawnmenu --
 
 hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseSpawners", function(pnlContent, tree, node)
 	local list = list.Get("DrGBaseSpawners")
@@ -57,22 +79,3 @@ hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseSpawners", function(pnlContent, 
 		firstNode:InternalDoClick()
 	end
 end)
-
-if SERVER then
-
-  function DrGBase.CreateSpawner(pos, tospawn, radius, quantity, class)
-    local spawner = ents.Create(class or "spwn_drg_default")
-    if not IsValid(spawner) then return NULL end
-    if isvector(pos) then spawner:SetPos(pos) end
-    spawner:Spawn()
-    spawner:SetRadius(radius)
-    spawner:SetQuantity(quantity)
-    if istable(tospawn) then
-      for class, nb in pairs(tospawn) do
-        spawner:AddToSpawn(class, nb)
-      end
-    else spawner:AddToSpawn(tospawn) end
-    return spawner
-  end
-
-end

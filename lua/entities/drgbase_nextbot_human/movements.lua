@@ -1,4 +1,3 @@
-
 -- Getters/setters --
 
 function ENT:IsCrouching()

@@ -1,4 +1,3 @@
-
 function debugoverlay.DrG_Trajectory(start, velocity, lifetime, color, ignoreZ, options)
   local info = start:DrG_TrajectoryInfo(velocity, options.ballistic)
   options = options or {}

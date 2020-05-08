@@ -1,12 +1,25 @@
+-- Misc --
+
+DrGBase._SpawnedNextbots = DrGBase._SpawnedNextbots or {}
+function DrGBase.GetNextbots()
+  return DrGBase._SpawnedNextbots
+end
+
 -- Registry --
 
 function DrGBase.AddNextbot(ENT)
   local class = string.Replace(ENT.Folder, "entities/", "")
   if ENT.PrintName == nil or ENT.Category == nil then return false end
-  for i, model in ipairs(ENT.Models or {}) do
-    if not isstring(model) then continue end
-    util.PrecacheModel(model)
+
+  -- precache models
+  if istable(ENT.Models) then
+    for i, model in ipairs(ENT.Models) do
+      if not isstring(model) then continue end
+      util.PrecacheModel(model)
+    end
   end
+
+  -- precache sounds
   for i, sounds in ipairs({
     ENT.OnSpawnSounds,
     ENT.OnIdleSounds,
@@ -19,14 +32,9 @@ function DrGBase.AddNextbot(ENT)
       util.PrecacheSound(soundName)
     end
   end
-  if CLIENT then
-    language.Add(class, ENT.PrintName)
-    ENT.Killicon = ENT.Killicon or {
-      icon = "HUD/killicons/default",
-      color = Color(255, 80, 0, 255)
-    }
-    killicon.Add(class, ENT.Killicon.icon, ENT.Killicon.color)
-  else
+
+  -- resources
+  if SERVER then
     resource.AddFile("materials/entities/"..class..".png")
     for i, ent in ipairs(ents.FindByClass(class)) do
       if not ent.IsDrGNextbot then continue end
@@ -46,6 +54,18 @@ function DrGBase.AddNextbot(ENT)
       end)
     end
   end
+
+  -- language & killicon
+  if CLIENT then
+    language.Add(class, ENT.PrintName)
+    ENT.Killicon = ENT.Killicon or {
+      icon = "HUD/killicons/default",
+      color = Color(255, 80, 0, 255)
+    }
+    killicon.Add(class, ENT.Killicon.icon, ENT.Killicon.color)
+  end
+
+  -- register nextbot
   local nextbot = {
     Name = ENT.PrintName,
     Class = class,
@@ -55,9 +75,11 @@ function DrGBase.AddNextbot(ENT)
     list.Set("NPC", class, nextbot)
     list.Set("DrGBaseNextbots", class, nextbot)
   end
-  DrGBase.Print("Nextbot '"..class.."': loaded.")
+  DrGBase.Print("Nextbot '"..class.."' loaded")
   return true
 end
+
+-- Spawnmenu --
 
 hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseNextbots", function(pnlContent, tree, node)
 	local list = list.Get("DrGBaseNextbots")
@@ -98,12 +120,7 @@ hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseNextbots", function(pnlContent, 
 	end
 end)
 
--- Misc --
-
-DrGBase._SpawnedNextbots = DrGBase._SpawnedNextbots or {}
-function DrGBase.GetNextbots()
-  return DrGBase._SpawnedNextbots
-end
+-- Footsteps --
 
 DrGBase.DefaultFootsteps = {
   [MAT_ANTLION] = {

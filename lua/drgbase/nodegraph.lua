@@ -224,10 +224,10 @@ else
     end
   end)
 
-  local DisplayNodegraph = CreateConVar("drgbase_nodegraph_display", "0")
-  local DisplayDistance = CreateConVar("drgbase_nodegraph_distance", "1500")
-  local DisplayType = CreateConVar("drgbase_nodegraph_type", "2")
-  local DisplayTransparent = CreateConVar("drgbase_nodegraph_transparent", "0")
+  local DisplayNodegraph = CreateClientConVar("drgbase_nodegraph_display", "0")
+  local DisplayDistance = CreateClientConVar("drgbase_nodegraph_distance", "1500")
+  local DisplayType = CreateClientConVar("drgbase_nodegraph_type", "2")
+  local DisplayTransparent = CreateClientConVar("drgbase_nodegraph_transparent", "0")
   local COLORS = {
     [NODE_TYPE_GROUND] = DrGBase.CLR_GREEN,
     [NODE_TYPE_AIR] = DrGBase.CLR_CYAN,

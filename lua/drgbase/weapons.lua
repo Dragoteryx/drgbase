@@ -1,9 +1,8 @@
-
 -- Registry --
 
 function DrGBase.AddWeapon(SWEP)
   local class = string.Replace(SWEP.Folder, "weapons/", "")
-  if SWEP.PrintName == nil or SWEP.Category == nil then return end
+  if SWEP.PrintName == nil or SWEP.Category == nil then return false end
   if CLIENT then
     language.Add(class, SWEP.PrintName)
     SWEP.Killicon = SWEP.Killicon or {
@@ -17,8 +16,11 @@ function DrGBase.AddWeapon(SWEP)
     Class = class,
     Category = SWEP.Category
   })
-  DrGBase.Print("Weapon '"..class.."': loaded.")
+  DrGBase.Print("Weapon '"..class.."' loaded")
+	return true
 end
+
+-- Spawnmenu --
 
 hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseWeapons", function(pnlContent, tree, node)
 	local list = list.Get("DrGBaseWeapons")
