@@ -1,4 +1,3 @@
-
 local physMETA = FindMetaTable("PhysObj")
 
 local DebugTrajectories = CreateConVar("drgbase_debug_trajectories", "0")

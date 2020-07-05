@@ -1,7 +1,7 @@
 -- Getters --
 
 function ENT:GetHealthRegen()
-  return self:GetNW2Float("DrGBaseHealthRegen", 0)
+  return self:GetNW2Float("DrGBaseHealthRegen", self.HealthRegen)
 end
 
 function ENT:GetGodMode()
@@ -64,28 +64,69 @@ if SERVER then
     self:SetMaxHealth(self:GetMaxHealth()*scale)
   end
 
-  function ENT:_DrGBaseThink_HealthRegen()
+  --[[function ENT:_DrGBaseThink_HealthRegen()
     self:SetHealth(math.Clamp(self:Health() + self:GetHealthRegen(), 0, self:GetMaxHealth()))
     return 1
-  end
+  end]]
 
   -- Take damage hooks --
 
-  function ENT:_DrGBaseOnTraceAttack(dmg, dir, tr)
+  function ENT:_DrGBaseOnTraceAttack(_, _, tr)
     self:SetNW2Int("DrGBaseLastHitGroup", tr.HitGroup)
     self._DrGBaseHitGroupToHandle = true
   end
+  function ENT:OnTraceAttack() end
+
   function ENT:_DrGBaseOnInjured(dmg)
+    local hitgroup = self._DrGBaseHitGroupToHandle and self:LastHitGroup() or nil
 
   end
+  function ENT:OnInjured() end
+
   function ENT:_DrGBaseOnKilled(dmg)
+    local hitgroup = self._DrGBaseHitGroupToHandle and self:LastHitGroup() or nil
 
   end
+  function ENT:OnKilled() end
 
   function ENT:OnTakeDamage() end
   function ENT:OnTookDamage() end
   function ENT:OnFatalDamage() end
   function ENT:OnDowned() end
   function ENT:OnDeath() end
+
+  -- Meta --
+
+  local entMETA = FindMetaTable("Entity")
+
+  local old_SetHealth = entMETA.SetHealth
+  function entMETA:SetHealth(health, ...)
+    if self.IsDrGNextbot2 then self:SetNW2Int("DrGBaseHealth", health) end
+    return old_SetHealth(self, health, ...)
+  end
+
+  local old_SetMaxHealth = entMETA.SetMaxHealth
+  function entMETA:SetMaxHealth(health, ...)
+    if self.IsDrGNextbot2 then self:SetNW2Int("DrGBaseMaxHealth", health) end
+    return old_SetMaxHealth(self, health, ...)
+  end
+
+else
+
+  -- Meta --
+
+  local entMETA = FindMetaTable("Entity")
+
+  local old_Health = entMETA.Health
+  function entMETA:Health(...)
+    if self.IsDrGNextbot2 then return self:GetNW2Int("DrGBaseHealth", self.SpawnHealth)
+    else return old_Health(self, ...) end
+  end
+
+  local old_GetMaxHealth = entMETA.GetMaxHealth
+  function entMETA:GetMaxHealth(...)
+    if self.IsDrGNextbot2 then return self:GetNW2Int("DrGBaseMaxHealth", self.SpawnHealth)
+    else return old_GetMaxHealth(self, ...) end
+  end
 
 end

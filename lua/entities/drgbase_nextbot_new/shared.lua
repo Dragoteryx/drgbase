@@ -21,8 +21,8 @@ ENT.MinPhysDamage = 10
 ENT.MinFallDamage = 10
 
 -- AI --
-local AIBehaviour = DrGBase.IncludeFile("ai.lua")
-local UpdateEnemy = DrGBase.IncludeFile("enemy.lua")
+DrGBase.IncludeFile("ai.lua")
+DrGBase.IncludeFile("enemy.lua")
 ENT.BehaviourType = AI_BEHAV_BASE
 ENT.Omniscient = false
 ENT.SpotDuration = 30
@@ -43,9 +43,19 @@ ENT.AfraidDamageTolerance = 0.33
 ENT.NeutralDamageTolerance = 0.33
 
 -- Detection --
+DrGBase.IncludeFile("awareness.lua")
+DrGBase.IncludeFile("detection.lua")
+ENT.EyeBone = ""
+ENT.EyeOffset = Vector(0, 0, 0)
+ENT.EyeAngle = Angle(0, 0, 0)
+ENT.SightFOV = 150
+ENT.SightRange = 15000
+ENT.MinLuminosity = 0
+ENT.MaxLuminosity = 1
+ENT.HearingCoefficient = 1
 
 -- Movements --
-local UpdateMovement = DrGBase.IncludeFile("movements.lua")
+DrGBase.IncludeFile("movements.lua")
 ENT.UseWalkframes = false
 ENT.WalkSpeed = 100
 ENT.RunSpeed = 200
@@ -56,7 +66,7 @@ ENT.RunSpeed = 200
 -- Locomotion --
 
 
--- Animations
+-- Animations --
 DrGBase.IncludeFile("animations.lua")
 ENT.WalkAnimation = ACT_WALK
 ENT.WalkAnimRate = 1
@@ -68,7 +78,7 @@ ENT.JumpAnimation = ACT_JUMP
 ENT.JumpAnimRate = 1
 
 -- Possession --
-local PossessedBehaviour = DrGBase.IncludeFile("possession.lua")
+DrGBase.IncludeFile("possession.lua")
 
 -- Misc --
 DrGBase.IncludeFile("misc.lua")
@@ -76,7 +86,6 @@ DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("deprecated.lua")
 
 -- Convars --
---local NextbotTickrate = CreateConVar("drgbase_nextbot_tickrate", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local MultHealth = CreateConVar("drgbase_multiplier_health", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 --local EnablePatrol = CreateConVar("drgbase_ai_patrol", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
@@ -84,8 +93,11 @@ local MultHealth = CreateConVar("drgbase_multiplier_health", "1", {FCVAR_ARCHIVE
 
 function ENT:_DrGBaseInitialize()
   if SERVER then
+    -- model
     if istable(self.Models) and #self.Models > 0 then
       self:SetModel(self.Models[math.random(#self.Models)])
+    elseif isstring(self.Models) then
+      self:SetModel(self.Models)
     end
     if istable(self.ModelScale) and #self.ModelScale == 2 then
       self:SetModelScale(self.ModelScale[math.random(2)])
@@ -97,13 +109,11 @@ function ENT:_DrGBaseInitialize()
     elseif isnumber(self.Skins) then
       self:SetSkin(self.Skins)
     end
-    self:SetNW2Int("DrGBaseMaxHealth", self.SpawnHealth)
-    self:SetNW2Int("DrGBaseHealth", self.SpawnHealth)
+    -- status
     self:SetMaxHealth(self.SpawnHealth)
     self:SetHealth(self.SpawnHealth)
     self:ScaleHealth(MultHealth:GetFloat())
-    self:SetHealthRegen(self.HealthRegen)
-    self:SetBloodColor(self.BloodColor)
+    -- collisions
     self:SetCollisionGroup(COLLISION_GROUP_NPC)
     if isvector(self.CollisionBounds) then
       self:SetCollisionBounds(
@@ -111,38 +121,59 @@ function ENT:_DrGBaseInitialize()
         Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0)
       )
     else self:SetCollisionBounds(self:GetModelBounds()) end
-    self._DrGBaseCorReacts = {}
-    self._DrGBaseCorCalls = {}
+    -- misc
+    self:SetBloodColor(self.BloodColor)
+    self.VJ_AddEntityToSNPCAttackList = true
+    self.vFireIsCharacter = true
+    -- relationships
+    self:JoinFactions(self.Factions)
+    self:UpdateRelationships()
   else self:SetIK(true) end
+  self:AddFlags(FL_OBJECT + FL_NPC)
+  --table.insert(DrGBase._NEXTBOTS, self)
 end
 
-function ENT:Initialize() self:CustomInitialize() end
-function ENT:CustomInitialize() end
+function ENT:Initialize(...) self:CustomInitialize(...) end
+function ENT:CustomInitialize() end -- backwards compatibility
 
 -- Think --
 
-function ENT:_DrGBaseThink()
-  if self:IsPossessed() then
-    self:PossessionThink()
+function ENT:_DrGBaseThink(...)
+  if SERVER and (not self._DrGBaseThinkOneSecDelay
+  or CurTime() > self._DrGBaseThinkOneSecDelay) then
+    self._DrGBaseThinkOneSecDelay = CurTime() + 1
+    self:UpdateHostilesSight()
+    self:UpdateEnemy()
   end
+  if self:IsPossessed() then self:PossessionThink(...) end
 end
+function ENT:PossessionThink() end
 
-function ENT:Think() self:CustomThink() end
-function ENT:CustomThink() end
+function ENT:Think(...) self:CustomThink(...) end
+function ENT:CustomThink() end -- backwards compatibility
+
+-- OnRemove --
+
+function ENT:_DrGBaseOnRemove()
+  if SERVER and self:IsPossessed() then self:StopPossession() end
+  --table.RemoveByValue(DrGBase._NEXTBOTS, self)
+end
+function ENT:OnRemove() end
 
 if SERVER then
   AddCSLuaFile()
 
   -- Coroutine --
 
+  ENT._DrGBaseCorReacts = {}
+  ENT._DrGBaseCorCalls = {}
+
   local function Behave(self)
     while true do
-      self:YieldCoroutine(true)
       if self:IsPossessed() then
         self:_DrGBasePossessedBehaviour()
-      elseif not self:IsAIDisabled() then
-        self:_DrGBaseAIBehaviour()
-      end
+      else self:AIBehaviour() end
+      self:YieldCoroutine(true)
     end
   end
 
@@ -180,8 +211,12 @@ if SERVER then
   end
 
   function ENT:YieldCoroutine(interrupt)
-    self:_DrGBaseUpdateAnimation()
-    UpdateMovement(self)
+    if not self._DrGBaseNextUpdate
+    or CurTime() > self._DrGBaseNextUpdate then
+      self._DrGBaseNextUpdate = CurTime() + 0.1
+      self:UpdateAnimation()
+      self:UpdateSpeed()
+    end
     return self:YieldCoroutineNoUpdate(interrupt)
   end
   function ENT:YieldCoroutineNoUpdate(interrupt)
@@ -217,6 +252,7 @@ if SERVER then
   end
 
   function ENT:ReactInCoroutine(fn, ...)
+    if not isfunction(fn) then return end
     if not self:InCoroutine() then
       local args, n = table.DrG_Pack(...)
       table.insert(self._DrGBaseCorReacts, function(self)
@@ -225,22 +261,28 @@ if SERVER then
     else fn(self, ...) end
   end
   function ENT:CallInCoroutine(fn, ...)
-    local args, n = table.DrG_Pack(...)
-    if n > 0 then
-      if not self:InCoroutine() then
-        table.insert(self._DrGBaseCorCalls, function(self)
-          fn(self, table.DrG_Unpack(args, n))
-        end)
-      else fn(self, ...) end
-    else
-      if not self:InCoroutine() then
-        local now = CurTime()
-        table.insert(self._DrGBaseCorCalls, function(self)
-          fn(self, CurTime() - now)
-        end)
-      else fn(self, 0) end
-    end
+    if not isfunction(fn) then return end
+    if not self:InCoroutine() then
+      local args, n = table.DrG_Pack(...)
+      table.insert(self._DrGBaseCorCalls, function(self)
+        fn(self, table.DrG_Unpack(args, n))
+      end)
+    else fn(self, ...) end
   end
+
+  function ENT:OverrideCoroutine(fn, ...)
+    if not isfunction(fn) then return end
+    if not self:InCoroutine() then
+      local args, n = table.DrG_Pack(...)
+      local old_BehaveThread = self.BehaveThread
+      self.BehaveThread = coroutine.create(function()
+        fn(self, table.DrG_Unpack(args, n))
+        self.BehaveThread = old_BehaveThread
+      end)
+    else fn(self, ...) end
+  end
+  -- imo CallInCoroutineOverride is an ugly name, but there you go Roach
+  ENT.CallInCoroutineOverride = ENT.OverrideCoroutine
 
   -- SLVBase compatibility --
   if file.Exists("autorun/slvbase", "LUA") then
@@ -259,7 +301,7 @@ else
     self:DrawModel()
     self:CustomDraw()
   end
-  function ENT:CustomDraw() end
+  function ENT:CustomDraw() end -- backwards compatibility
 
 end
 

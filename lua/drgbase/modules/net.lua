@@ -29,8 +29,9 @@ if SERVER then
 end
 
 local NET_MESSAGES = {}
-function net.DrG_Receive(name, callback)
-  if isfunction(callback) then NET_MESSAGES[name] = callback
+function net.DrG_Receive(name, fn)
+  if not isstring(name) then return end
+  if isfunction(fn) then NET_MESSAGES[name] = fn
   else NET_MESSAGES[name] = nil end
 end
 function net.DrG_Send(name, ...)
@@ -42,7 +43,7 @@ function net.DrG_Send(name, ...)
   else net.SendToServer() end
   return true
 end
-net.Receive("DrGBaseNetMessage", function(len, ply)
+net.Receive("DrGBaseNetMessage", function(_, ply)
   local name = net.ReadString()
   if not isfunction(NET_MESSAGES[name]) then return end
   local args, n = net.DrG_ReadMessage()
@@ -101,7 +102,7 @@ function net.DrG_UseCallback(name, callback, ...)
   end
   return true
 end
-net.Receive("DrGBaseNetCallbackReq", function(len, ply)
+net.Receive("DrGBaseNetCallbackReq", function(_, ply)
   local id = net.ReadUInt(32)
   local name = net.ReadString()
   if not isfunction(NET_CALLBACKS[name]) then return end

@@ -1,8 +1,8 @@
 -- Misc --
 
-DrGBase._SpawnedNextbots = DrGBase._SpawnedNextbots or {}
+DrGBase._NEXTBOTS = DrGBase._NEXTBOTS or {}
 function DrGBase.GetNextbots()
-  return DrGBase._SpawnedNextbots
+  return DrGBase._NEXTBOTS
 end
 
 -- Registry --
@@ -13,21 +13,21 @@ function DrGBase.AddNextbot(ENT)
 
   -- precache models
   if istable(ENT.Models) then
-    for i, model in ipairs(ENT.Models) do
+    for _, model in ipairs(ENT.Models) do
       if not isstring(model) then continue end
       util.PrecacheModel(model)
     end
   end
 
   -- precache sounds
-  for i, sounds in ipairs({
+  for _, sounds in ipairs({
     ENT.OnSpawnSounds,
     ENT.OnIdleSounds,
     ENT.OnDamageSounds,
     ENT.OnDeathSounds
   }) do
     if not istable(sounds) then continue end
-    for h, soundName in ipairs(sounds) do
+    for _, soundName in ipairs(sounds) do
       if not isstring(soundName) then continue end
       util.PrecacheSound(soundName)
     end
@@ -36,23 +36,6 @@ function DrGBase.AddNextbot(ENT)
   -- resources
   if SERVER then
     resource.AddFile("materials/entities/"..class..".png")
-    for i, ent in ipairs(ents.FindByClass(class)) do
-      if not ent.IsDrGNextbot then continue end
-      ent:Timer(0, function()
-        if isfunction(ENT.OnTraceAttack) then
-          ent:DrG_AddListener("OnTraceAttack", ent._HandleTraceAttack)
-        end
-        if isfunction(ENT.OnNavAreaChanged) then
-          ent:DrG_AddListener("OnNavAreaChanged", ent._HandleNavAreaChanged)
-        end
-        if isfunction(ENT.OnLeaveGround) then
-          ent:DrG_AddListener("OnLeaveGround", ent._HandleLeaveGround)
-        end
-        if isfunction(ENT.OnLandOnGround) then
-          ent:DrG_AddListener("OnLandOnGround", ent._HandleLandOnGround)
-        end
-      end)
-    end
   end
 
   -- language & killicon
@@ -66,22 +49,19 @@ function DrGBase.AddNextbot(ENT)
   end
 
   -- register nextbot
-  local nextbot = {
-    Name = ENT.PrintName,
-    Class = class,
-    Category = ENT.Category
-  }
+  local NPC = {Name = ENT.PrintName, Class = class, Category = ENT.Category}
   if ENT.Spawnable ~= false then
-    list.Set("NPC", class, nextbot)
-    list.Set("DrGBaseNextbots", class, nextbot)
+    list.Set("NPC", class, NPC)
+    list.Set("DrGBaseNextbots", class, NPC)
   end
+
   DrGBase.Print("Nextbot '"..class.."' loaded")
   return true
 end
 
 -- Spawnmenu --
 
-hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseNextbots", function(pnlContent, tree, node)
+hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseNextbots", function(pnlContent, tree)
 	local list = list.Get("DrGBaseNextbots")
 	local categories = {}
 	for class, ent in pairs(list) do

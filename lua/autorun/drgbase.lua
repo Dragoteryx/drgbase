@@ -54,9 +54,7 @@ function DrGBase.ErrorInfo(msg, options)
   options.color = DrGBase.CLR_RED
   return DrGBase.Print(msg, options)
 end
-if SERVER then
-  util.AddNetworkString("DrGBaseChatPrint")
-else
+if CLIENT then
   net.Receive("DrGBaseChatPrint", function()
     local msg = net.ReadString()
     local options = {_server = true, chat = true}
@@ -68,7 +66,7 @@ else
     end
     DrGBase.Print(msg, options)
   end)
-end
+else util.AddNetworkString("DrGBaseChatPrint") end
 
 -- Manage files --
 
@@ -91,7 +89,7 @@ function DrGBase.IncludeFile(fileName)
 end
 function DrGBase.IncludeFiles(fileNames)
   local tbl = {}
-  for i, fileName in ipairs(fileNames) do
+  for _, fileName in ipairs(fileNames) do
     tbl[fileName] = DrGBase.IncludeFile(fileName)
   end
   return tbl
@@ -99,15 +97,15 @@ end
 function DrGBase.IncludeFolder(folder)
   DrGBase.Print("Include folder '"..folder.."'")
   local tbl = {}
-  for i, fileName in ipairs(file.Find(folder.."/*.lua", "LUA")) do
+  for _, fileName in ipairs(file.Find(folder.."/*.lua", "LUA")) do
     tbl[folder.."/"..fileName] = DrGBase.IncludeFile(folder.."/"..fileName)
   end
   return tbl
 end
 function DrGBase.RecursiveInclude(folder)
   local tbl = DrGBase.IncludeFolder(folder)
-  local files, folders = file.Find(folder.."/*", "LUA")
-  for i, folderName in ipairs(folders) do
+  local _, folders = file.Find(folder.."/*", "LUA")
+  for _, folderName in ipairs(folders) do
     table.Merge(tbl, DrGBase.RecursiveInclude(folder.."/"..folderName))
   end
   return tbl

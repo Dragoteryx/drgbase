@@ -14,7 +14,7 @@ ENT.ReachEnemyRange = 100
 ENT.AvoidEnemyRange = 25
 
 -- Relationships --
-ENT.DefaultRelationship = D_HT
+ENT.DefaultRelationship = D_LI
 ENT.Factions = {FACTION_GMAN}
 
 -- Animations --
@@ -37,7 +37,17 @@ if SERVER then
   })
 
   function ENT:Initialize()
-    
+    self:SetPlayersRelationship(D_HT, 2)
+    self.loco:SetDesiredSpeed(300)
+    print(self:GetRelationship(Entity(1)))
+  end
+
+  function ENT:Think()
+    print(self:GetEnemy())
+  end
+
+  function ENT:ShouldRun()
+    return true
   end
 
 end

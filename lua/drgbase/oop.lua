@@ -1,4 +1,4 @@
-local CLASSES = setmetatable({}, {__mode = "k"})
+local CLASSES = table.DrG_Weak()
 
 function DrGBase.Class(superclass)
   if superclass and not CLASSES[superclass] then return end
@@ -15,12 +15,10 @@ function DrGBase.Class(superclass)
   })
 
   function IsInstance(obj)
-    if CLASSES[obj] then return false end
     local meta = getmetatable(obj)
     if not istable(meta) then return false end
-    local super = meta.__index
-    if not istable(super) then return false end
-    return super == class or IsInstance(super)
+    if not istable(meta.__index) then return false end
+    return meta.__index == class or IsInstance(meta.__index)
   end
 
   return class, IsInstance

@@ -4,26 +4,21 @@ if SERVER then
 
   hook.Add("OnEntityWaterLevelChanged", "DrGBaseNextbotWaterLevel", function(ent, old, new)
     if not ent.IsDrGNextbot2 then return end
-    if isfunction(ent.OnWaterLevelChange) then
-      ent:OnWaterLevelChange(old, new)
-    end
-    if isfunction(ent.OnWaterLevelChanged) then
-      ent:ReactInCoroutine(ent.OnWaterLevelChanged, old, new)
-    end
+    ent:OnWaterLevelChange(old, new)
+    ent:ReactInCoroutine(ent.OnWaterLevelChanged, old, new)
   end)
+  function ENT:OnWaterLevelChange() end
 
   -- Touch/leave ground --
 
   function ENT:_DrGBaseOnLandOnGround(...)
-    if isfunction(self.OnLandedOnGround) then
-      self:ReactInCoroutine(self.OnLandedOnGround, ...)
-    end
+    self:ReactInCoroutine(self.OnLandedOnGround, ...)
   end
+  function ENT:OnLandOnGround() end
 
   function ENT:_DrGBaseOnLeaveGround(...)
-    if isfunction(self.OnLeftGround) then
-      self:ReactInCoroutine(self.OnLeftOnGround, ...)
-    end
+    self:ReactInCoroutine(self.OnLeftOnGround, ...)
   end
+  function ENT:OnLeaveGround() end
 
 end

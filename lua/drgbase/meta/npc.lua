@@ -1,4 +1,3 @@
-
 local npcMETA = FindMetaTable("NPC")
 
 if SERVER then

@@ -1,4 +1,3 @@
-
 local entMETA = FindMetaTable("Entity")
 
 if SERVER then

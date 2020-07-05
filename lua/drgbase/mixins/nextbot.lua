@@ -70,25 +70,12 @@ return function(ENT)
 
   else
 
-    -- Draw --
-
-    if isfunction(ENT.Draw) then
-      local old_Draw = ENT.Draw
-      function ENT:Draw(...)
-        local res = old_Draw(self, ...)
-        if self.IsDrGNextbot2 then
-          self:_DrGBaseDraw(...)
-        end
-        return res
-      end
-    end
-
     -- FireAnimationEvent --
 
     if isfunction(ENT.FireAnimationEvent) then
       local old_FireAnimationEvent = ENT.FireAnimationEvent
       function ENT:FireAnimationEvent(pos, angle, event, name)
-        if self.IsDrGNextbot2 and isfunction(self.OnAnimEvent) then
+        if self.IsDrGNextbot2 then
           self:OnAnimEvent(name, event, pos, angle)
         end
         return old_FireAnimationEvent(self, pos, angle, event, name)

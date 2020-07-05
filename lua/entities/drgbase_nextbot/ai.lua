@@ -1,4 +1,3 @@
-
 -- Convars --
 
 local EnemyRadius = CreateConVar("drgbase_ai_radius", "5000", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})

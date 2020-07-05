@@ -41,7 +41,7 @@ end
 
 -- Spawnmenu --
 
-hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseSpawners", function(pnlContent, tree, node)
+hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseSpawners", function(pnlContent, tree)
 	local list = list.Get("DrGBaseSpawners")
 	local categories = {}
 	for class, ent in pairs(list) do

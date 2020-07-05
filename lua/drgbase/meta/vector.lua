@@ -77,7 +77,7 @@ function vecMETA:DrG_CalcBallisticTrajectory(target, options, feet)
     local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
     local options2 = table.Copy(options)
     options2.recursive = true
-    local dir, info = self:DrG_CalcBallisticTrajectory(aimAt, options2)
+    local _, info = self:DrG_CalcBallisticTrajectory(aimAt, options2)
     return self:DrG_CalcBallisticTrajectory(aimAt+velocity*info.duration, options)
   elseif isvector(target) then
     local dir = Vector(target.x - self.x, target.y - self.y, 0)

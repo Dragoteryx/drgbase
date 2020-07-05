@@ -1,6 +1,13 @@
-local function Deprecated(self, oldFunction, newFunction)
+local function Deprecated(nextbot, oldFunction, newFunction)
   if not GetConVar("developer"):GetBool() then return end
-  ErrorNoHalt(self, " Deprecation: 'ENT:" + oldFunction + "' is deprecated, you should use 'ENT:" + newFunction + "' instead", "\n")
+  ErrorNoHalt(nextbot, " Deprecation: 'ENT:" + oldFunction + "' is deprecated, you should use 'ENT:" + newFunction + "' instead", "\n")
+end
+
+-- AI --
+
+function ENT:HadEnemy()
+  Deprecated(self, "HadEnemy", "HasEnemy")
+  return self:HasEnemy()
 end
 
 if SERVER then
@@ -14,11 +21,11 @@ if SERVER then
   -- Possession --
 
   function ENT:Possess(ply)
-    Deprecated(self, "Possess", "SetPossessor")
+    Deprecated(self, "Possess(player)", "SetPossessor(player | NULL)")
     self:SetPossessor(ply)
   end
   function ENT:Dispossess()
-    Deprecated(self, "Dispossess", "StopPossession")
+    Deprecated(self, "Dispossess()", "StopPossession()")
     self:StopPossession()
   end
 

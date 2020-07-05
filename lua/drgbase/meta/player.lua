@@ -162,8 +162,12 @@ if SERVER then
 
   -- Factions --
 
+  local function InitFactions(ply)
+    ply._DrGBaseFactions =ply._DrGBaseFactions or {}
+  end
+
   function plyMETA:DrG_JoinFaction(faction)
-    self:DrG_InitFactions()
+    InitFactions(self)
     if self:DrG_IsInFaction(faction) then return end
     self._DrGBaseFactions[string.upper(faction)] = true
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
@@ -171,7 +175,7 @@ if SERVER then
     end
   end
   function plyMETA:DrG_LeaveFaction(faction)
-    self:DrG_InitFactions()
+    InitFactions(self)
     if not self:DrG_IsInFaction(faction) then return end
     self._DrGBaseFactions[string.upper(faction)] = false
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
@@ -179,29 +183,22 @@ if SERVER then
     end
   end
   function plyMETA:DrG_IsInFaction(faction)
-    self:DrG_InitFactions()
+    InitFactions(self)
     return self._DrGBaseFactions[string.upper(faction)] or false
   end
   function plyMETA:DrG_GetFactions()
-    self:DrG_InitFactions()
+    InitFactions(self)
     local factions = {}
     for faction, joined in pairs(self._DrGBaseFactions) do
       if joined then table.insert(factions, faction) end
     end
     return factions
   end
-  function plyMETA:DrG_InitFactions()
-    self._DrGBaseFactions = self._DrGBaseFactions or {}
-  end
   function plyMETA:DrG_JoinFactions(factions)
-    for i, faction in ipairs(factions) do
-      self:DrG_JoinFaction(faction)
-    end
+    for _, faction in ipairs(factions) do self:DrG_JoinFaction(faction) end
   end
   function plyMETA:DrG_LeaveFactions(factions)
-    for i, faction in ipairs(factions) do
-      self:DrG_LeaveFaction(faction)
-    end
+    for _, faction in ipairs(factions) do self:DrG_LeaveFaction(faction) end
   end
   function plyMETA:DrG_LeaveAllFactions()
     self:DrG_LeaveFactions(self:DrG_GetFactions())

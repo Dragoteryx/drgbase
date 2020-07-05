@@ -1,5 +1,3 @@
-if SERVER then return end
-
 function render.DrG_DrawSprite(sprite, pos, size, options)
   options = istable(options) and options or {}
   size = isnumber(size) and math.Clamp(size, 0, math.huge) or 100

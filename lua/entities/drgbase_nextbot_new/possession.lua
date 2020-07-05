@@ -10,12 +10,11 @@ if SERVER then
   -- Setters --
 
   function ENT:SetPossessor(ply)
-    if isentity(ply) and IsValid(ply) and IsPlayer(ply) then
-      
+    if IsValid(ply) and ply:IsPlayer() then
+
     else
-      
+
     end
-    return self
   end
   function ENT:StopPossession()
     return self:SetPossessor(nil)
@@ -26,7 +25,7 @@ if SERVER then
   -- Internal --
 
   function ENT:_DrGBasePossessedBehaviour()
-    
+
   end
 
 else

@@ -30,9 +30,9 @@ function entMETA:DrG_AddListener(name, callback)
   local old_function = self[name]
   if not isfunction(old_function) then return false end
   self[name] = function(...)
-    local res = callback(...)
-    if res ~= nil then return res
-    else return old_function(...) end
+    local res = old_function(...)
+    callback(..., res)
+    return res
   end
   return true
 end
@@ -48,6 +48,7 @@ function entMETA:DrG_SearchBone(searchBone)
       return boneId
     end
   end
+  return -1
 end
 
 -- Traces --
@@ -155,7 +156,7 @@ if SERVER then
   end
 
   function entMETA:DrG_Dissolve(type)
-    if self:IsFlagSet(FL_DISSOLVING) then return end
+    if self:IsFlagSet(FL_DISSOLVING) then return true end
     local dissolver = ents.Create("env_entity_dissolver")
     if not IsValid(dissolver) then return false end
     if self:GetName() == "" then

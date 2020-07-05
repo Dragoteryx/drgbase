@@ -1,17 +1,17 @@
 function DrGBase.DListView(columns, options)
   if not istable(options) then options = {} end
   local dlist = vgui.Create("DListView")
-  for i, column in ipairs(columns) do dlist:AddColumn(column) end
+  for _, column in ipairs(columns) do dlist:AddColumn(column) end
   if isstring(options.convar) then
     local convar = GetConVar(options.convar)
     if convar then
       local old_AddLine = dlist.AddLine
       local old_Clear = dlist.Clear
-      cvars.AddChangeCallback(options.convar, function(convar, old, new)
+      cvars.AddChangeCallback(options.convar, function(_, old, new)
         if old == new then return end
         new = util.JSONToTable(new)
         old_Clear(dlist)
-        for i, line in ipairs(new) do
+        for _, line in ipairs(new) do
           old_AddLine(dlist, unpack(line))
         end
       end)
