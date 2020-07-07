@@ -1,12 +1,16 @@
-local CLASSES = table.DrG_Weak()
-
-function DrGBase.Class(superclass)
-  if superclass and not CLASSES[superclass] then return end
+function DrGBase.CreateClass(superclass)
   local class = {}
-  CLASSES[class] = true
-  class.__index = class
+  if istable(superclass) then
+    class.__index = setmetatable({}, superclass)
+    class.__index.__super = setmetatable({}, {
+      __index = superclass.__index,
+      __call = function(_, ...)
+        if isfunction(superclass.__new) then superclass.__new(...) end
+      end
+    })
+  else class.__index = {} end
+
   setmetatable(class, {
-    __index = superclass,
     __call = function(_, ...)
       local obj = setmetatable({}, class)
       if isfunction(class.__new) then class.__new(obj, ...) end
@@ -14,11 +18,11 @@ function DrGBase.Class(superclass)
     end
   })
 
-  function IsInstance(obj)
-    local meta = getmetatable(obj)
-    if not istable(meta) then return false end
-    if not istable(meta.__index) then return false end
-    return meta.__index == class or IsInstance(meta.__index)
+  function IsInstance(tbl)
+    local meta = getmetatable(tbl)
+    if not meta then return false
+    elseif meta == class then return true
+    else return IsInstance(class.__index) end
   end
 
   return class, IsInstance

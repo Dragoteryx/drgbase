@@ -8,7 +8,7 @@ local pathMETA = FindMetaTable("PathFollower")
 
 DrGBase.OLD_Compute = DrGBase.OLD_Compute or pathMETA.Compute
 function pathMETA:Compute(nextbot, pos, ...)
-  if nextbot.IsDrGNextbot2 then
+  if nextbot.IsDrGNextbot then
     nextbot._DrGBaseLastComputeResult = DrGBase.OLD_Compute(self, nextbot, pos, function(...)
       return nextbot:PathGenerator(...)
     end)

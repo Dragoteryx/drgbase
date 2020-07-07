@@ -7,9 +7,7 @@ return function(ENT)
     if isfunction(ENT.OnTraceAttack) then
       local old_OnTraceAttack = ENT.OnTraceAttack
       function ENT:OnTraceAttack(...)
-        if self.IsDrGNextbot2 then
-          self:_DrGBaseOnTraceAttack(...)
-        end
+        if self.IsDrGNextbot then self:_DrGBaseOnTraceAttack(...) end
         return old_OnTraceAttack(self, ...)
       end
     end
@@ -17,9 +15,7 @@ return function(ENT)
     if isfunction(ENT.OnInjured) then
       local old_OnInjured = ENT.OnInjured
       function ENT:OnInjured(...)
-        if self.IsDrGNextbot2 then
-          self:_DrGBaseOnInjured(...)
-        end
+        if self.IsDrGNextbot then self:_DrGBaseOnInjured(...) end
         return old_OnInjured(self, ...)
       end
     end
@@ -27,9 +23,7 @@ return function(ENT)
     if isfunction(ENT.OnKilled) then
       local old_OnKilled = ENT.OnKilled
       function ENT:OnKilled(...)
-        if self.IsDrGNextbot2 then
-          self:_DrGBaseOnKilled(...)
-        end
+        if self.IsDrGNextbot then self:_DrGBaseOnKilled(...) end
         return old_OnKilled(self, ...)
       end
     end
@@ -39,9 +33,7 @@ return function(ENT)
     if isfunction(ENT.OnLandOnGround) then
       local old_OnLandOnGround = ENT.OnLandOnGround
       function ENT:OnLandOnGround(...)
-        if self.IsDrGNextbot2 then
-          self:_DrGBaseOnLandOnGround(...)
-        end
+        if self.IsDrGNextbot then self:_DrGBaseOnLandOnGround(...) end
         return old_OnLandOnGround(self, ...)
       end
     end
@@ -49,9 +41,7 @@ return function(ENT)
     if isfunction(ENT.OnLeaveGround) then
       local old_OnLeaveGround = ENT.OnLeaveGround
       function ENT:OnLeaveGround(...)
-        if self.IsDrGNextbot2 then
-          self:_DrGBaseOnLeaveGround(...)
-        end
+        if self.IsDrGNextbot then self:_DrGBaseOnLeaveGround(...) end
         return old_OnLeaveGround(self, ...)
       end
     end
@@ -61,9 +51,7 @@ return function(ENT)
     if isfunction(ENT.HandleAnimEvent) then
       local old_HandleAnimEvent = ENT.HandleAnimEvent
       function ENT:HandleAnimEvent(event, time, cycle, type, options)
-        if self.IsDrGNextbot2 then
-          self:OnAnimEvent(options, event, self:GetPos(), self:GetAngles())
-        end
+        if self.IsDrGNextbot then self:OnAnimEvent(options, event, self:GetPos(), self:GetAngles()) end
         return old_HandleAnimEvent(self, event, time, cycle, type, options)
       end
     end
@@ -75,9 +63,7 @@ return function(ENT)
     if isfunction(ENT.FireAnimationEvent) then
       local old_FireAnimationEvent = ENT.FireAnimationEvent
       function ENT:FireAnimationEvent(pos, angle, event, name)
-        if self.IsDrGNextbot2 then
-          self:OnAnimEvent(name, event, pos, angle)
-        end
+        if self.IsDrGNextbot then self:OnAnimEvent(name, event, pos, angle) end
         return old_FireAnimationEvent(self, pos, angle, event, name)
       end
     end

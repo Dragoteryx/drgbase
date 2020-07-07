@@ -68,7 +68,7 @@ hook.Add("PopulateToolMenu", "DrGBaseToolMenu", function()
 
   end)]]
   -- Nextbot Settings --
-  spawnmenu.AddToolMenuOption("DrGBase", "#drgbase.spawnmenu.settings.nextbots", "drgbase_nb_settings_ai", "#drgbase.spawnmenu.settings.nextbots.ai", "", "", function(panel)
+  --[[spawnmenu.AddToolMenuOption("DrGBase", "#drgbase.spawnmenu.settings.nextbots", "drgbase_nb_settings_ai", "#drgbase.spawnmenu.settings.nextbots.ai", "", "", function(panel)
     panel:ClearControls()
     panel:ControlHelp("\nDetection")
     panel:NumSlider("Target distance", "drgbase_ai_radius", 0, 50000, 0)
@@ -113,5 +113,5 @@ hook.Add("PopulateToolMenu", "DrGBaseToolMenu", function()
     panel:ControlHelp("\nPathfinding")
     panel:NumSlider("Compute delay", "drgbase_compute_delay", 0.01, 3, 2)
     panel:CheckBox("Avoid obstacles", "drgbase_avoid_obstacles")
-  end)
+  end)]]
 end)

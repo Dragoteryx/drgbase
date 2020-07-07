@@ -124,4 +124,4 @@ end
 DrGBase.IncludeFolder("drgbase")
 DrGBase.IncludeFolder("drgbase/meta")
 DrGBase.IncludeFolder("drgbase/modules")
-DrGBase.IncludeFolder("drgbase/addons")
+DrGBase.IncludeFolder("drgbase/autorun")

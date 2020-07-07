@@ -1,5 +1,5 @@
 if not DrGBase then return end -- return if DrGBase isn't installed
-ENT.Base = "drgbase_nextbot_new" -- DO NOT TOUCH (obviously)
+ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
 
 -- Misc --
 ENT.PrintName = "NEW Test Nextbot"
@@ -14,7 +14,7 @@ ENT.ReachEnemyRange = 100
 ENT.AvoidEnemyRange = 25
 
 -- Relationships --
-ENT.DefaultRelationship = D_LI
+ENT.DefaultRelationship = D_HT
 ENT.Factions = {FACTION_GMAN}
 
 -- Animations --
@@ -37,13 +37,18 @@ if SERVER then
   })
 
   function ENT:Initialize()
-    self:SetPlayersRelationship(D_HT, 2)
     self.loco:SetDesiredSpeed(300)
-    print(self:GetRelationship(Entity(1)))
   end
 
   function ENT:Think()
-    print(self:GetEnemy())
+    
+  end
+
+  function ENT:OnSight(ent)
+    print("sight", ent)
+  end
+  function ENT:OnLostSight(ent)
+    print("lostsight", ent)
   end
 
   function ENT:ShouldRun()

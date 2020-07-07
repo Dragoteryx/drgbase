@@ -1,243 +1,319 @@
-
 -- Convars --
 
-local EnableSight = CreateConVar("drgbase_ai_sight", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
-local EnableHearing = CreateConVar("drgbase_ai_hearing", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local AllOmniscient = DrGBase.ConVar("drgbase_ai_omniscient", "0")
+local EnableHearing = DrGBase.ConVar("drgbase_ai_hearing", "1")
 
--- Getters/setters --
+-- Detection --
 
-function ENT:GetSightFOV()
-  return self:GetNW2Int("DrGBaseSightFOV")
+function ENT:IsOmniscient()
+  return AllOmniscient:GetBool() or self:GetNW2Bool("DrGBaseOmniscient", tobool(self.Omniscient))
 end
-function ENT:GetSightRange()
-  return self:GetNW2Int("DrGBaseSightRange")
-end
-function ENT:GetSightLuminosityRange()
-  return self:GetNW2Float("DrGBaseMinLuminosity"), self:GetNW2Float("DrGBaseMaxLuminosity")
-end
-function ENT:IsBlind()
-  if not EnableSight:GetBool() then return true end
-  if self:GetCooldown("DrGBaseBlind") > 0 then return true end
-  return self:GetSightFOV() <= 0 or self:GetSightRange() <= 0
-end
-
-function ENT:GetHearingCoefficient()
-  return self:GetNW2Int("DrGBaseHearingCoefficient")
-end
-function ENT:IsDeaf()
-  if not EnableHearing:GetBool() then return true
-  else return self:GetHearingCoefficient() <= 0 end
-end
-
--- Functions --
 
 -- Hooks --
 
--- Handlers --
-
-function ENT:_InitDetection()
-  self._DrGBaseWasInSight = {}
-  if CLIENT then return end
-  self:SetSightFOV(self.SightFOV)
-  self:SetSightRange(self.SightRange)
-  self:SetSightLuminosityRange(self.MinLuminosity, self.MaxLuminosity)
-  self:SetHearingCoefficient(self.HearingCoefficient)
-end
+function ENT:OnDetect() end
+function ENT:OnForget() end
 
 if SERVER then
+  util.AddNetworkString("DrGBaseNextbotPlayerDetection")
 
-  -- Getters/setters --
+  -- Detection --
 
-  function ENT:SetSightFOV(angle)
-    if angle > 360 then angle = 360 end
-    if angle < 0 then angle = 0 end
-    self:SetNW2Int("DrGBaseSightFOV", angle)
-  end
-  function ENT:SetSightRange(range)
-    if range < 0 then range = 0 end
-    self:SetNW2Int("DrGBaseSightRange", range)
-  end
-  function ENT:SetSightLuminosityRange(min, max)
-    if isnumber(max) then
-      self:SetNW2Float("DrGBaseMinLuminosity", math.Clamp(min, 0, 1))
-      self:SetNW2Float("DrGBaseMaxLuminosity", math.Clamp(max, 0, 1))
-    else self:SetSightLuminosityRange(0, min) end
+  function ENT:SetOmniscient(omniscient)
+    self:SetNW2Bool("DrGBaseOmniscient", tobool(omniscient))
   end
 
-  function ENT:SetHearingCoefficient(coeff)
-    if coeff < 0 then coeff = 0 end
-    self:SetNW2Int("DrGBaseHearingCoefficient", coeff)
-  end
+  ENT._DrGBaseDetected = {}
+  ENT._DrGBaseForgotten = {}
+  ENT._DrGBaseLastTimeDetected = {}
+  ENT._DrGBaseLastKnownPosition = {}
+  ENT._DrGBaseDetectedRecently = {}
 
-  -- Functions --
-
-  function ENT:IsInSight(ent)
-    if self:IsBlind() then return false end
+  function ENT:HasDetected(ent)
+    if not IsValid(ent) then return false end
     if ent == self then return true end
-    local eyepos = self:EyePos()
-    if eyepos:DistToSqr(ent:GetPos()) > self:GetSightRange()^2 then return false end
-    if ent:IsPlayer() then
-      if ent:DrG_IsPossessing() then return self:IsInSight(ent:DrG_GetPossessing()) end
-      local luminosity = ent:FlashlightIsOn() and 1 or ent:DrG_Luminosity()
-      local min, max = self:GetSightLuminosityRange()
-      if luminosity < min or luminosity > max then return false end
+    if self:IsOmniscient() then return true end
+    return self._DrGBaseDetected[ent] or false
+  end
+  function ENT:HasDetectedRecently(ent)
+    if not self:HasDetected(ent) then return false end
+    if ent == self then return true end
+    if self:IsOmniscient() then return true end
+    return CurTime() < self._DrGBaseDetectedRecently[ent]
+  end
+  function ENT:HasForgotten(ent)
+    if not IsValid(ent) then return false end
+    if ent == self then return false end
+    if self:IsOmniscient() then return false end
+    return self._DrGBaseForgotten[ent] or false
+  end
+
+  function ENT:LastTimeDetected(ent)
+    if self:IsOmniscient() or ent == self then return CurTime()
+    else return self._DrGBaseLastTimeDetected[ent] end
+  end
+  function ENT:LastKnownPosition(ent)
+    if self:IsOmniscient() or ent == self then return ent:GetPos()
+    else return self._DrGBaseLastKnownPosition[ent] end
+  end
+  function ENT:SetKnownPosition(ent, pos)
+    if self:IsOmniscient() or ent == self then return end
+    self._DrGBaseLastKnownPosition[ent] = pos
+  end
+  function ENT:LastDetectedEntity()
+    return self._DrGBaseLastDetectedEntity or NULL
+  end
+
+  function ENT:DetectEntity(ent, recent)
+    if self:IsOmniscient() or ent == self then return end
+    local detected = self:HasDetected(ent)
+    self._DrGBaseDetected[ent] = true
+    self._DrGBaseForgotten[ent] = nil
+    self._DrGBaseLastTimeDetected[ent] = CurTime()
+    self._DrGBaseLastKnownPosition[ent] = ent:GetPos()
+    self._DrGBaseLastDetectedEntity = ent
+    local recently = CurTime() + (isnumber(recent) and math.Clamp(recent, 0, math.huge) or 0)
+    if not self._DrGBaseDetectedRecently or recently > self._DrGBaseDetectedRecently then
+      self._DrGBaseDetectedRecently = recently
     end
-    local angle = (eyepos + self:EyeAngles():Forward()):DrG_Degrees(ent:WorldSpaceCenter(), eyepos)
-    if angle > self:GetSightFOV()/2 then return false end
-    return self:Visible(ent)
-  end
-
-  net.DrG_DefineCallback("DrGBaseIsInSight", function(nextbot, ent)
-    if not IsValid(nextbot) or not IsValid(ent) then return false
-    else return nextbot:IsInSight(ent) end
-  end)
-
-  -- Get entities in sight
-  function ENT:GetInSight(disp, spotted)
-    if istable(disp) then
-      local insight = {}
-      for i, dis in ipairs(disp) do
-        table.Merge(insight, self:GetInSight(dis, spotted))
+    if not detected then
+      local disp = self:GetRelationship(ent, true)
+      if disp == D_LI or disp == D_HT or disp == D_FR then
+        self._DrGBaseRelationshipCachesDetected[D_LI][ent] = nil
+        self._DrGBaseRelationshipCachesDetected[D_HT][ent] = nil
+        self._DrGBaseRelationshipCachesDetected[D_FR][ent] = nil
+        self._DrGBaseRelationshipCachesDetected[disp][ent] = true
       end
-      return insight
-    elseif isnumber(disp) then
-      local insight = {}
-      for ent in self:EntityIterator(disp, spotted) do
-        if self:IsInSight(ent) then table.insert(insight, ent) end
+      self:OnDetect(ent)
+      self:ReactInCoroutine(self.DoOnDetect, ent)
+    end
+    ent:CallOnRemove("DrGBaseRemoveFromDrGNextbot"..self:GetCreationID().."DetectionCache", function()
+      if not IsValid(self) then return end
+      self._DrGBaseDetected[ent] = nil
+      self._DrGBaseForgotten[ent] = nil
+      self._DrGBaseLastTimeDetected[ent] = nil
+      self._DrGBaseLastKnownPosition[ent] = nil
+      self._DrGBaseDetectedRecently[ent] = nil
+    end)
+  end
+  function ENT:ForgetEntity(ent)
+    if self:IsOmniscient() or ent == self then return end
+    if not self:HasDetected(ent) then return end
+    self._DrGBaseDetected[ent] = nil
+    self._DrGBaseForgotten[ent] = true
+    self._DrGBaseDetectedHostiles[ent] = nil
+    self._DrGBaseRelationshipCachesDetected[D_LI][ent] = nil
+    self._DrGBaseRelationshipCachesDetected[D_HT][ent] = nil
+    self._DrGBaseRelationshipCachesDetected[D_FR][ent] = nil
+    self:OnForget(ent)
+    self:ReactInCoroutine(self.DoOnForget, ent)
+  end
+  function ENT:ForgetAllEntities()
+    if self:IsOmniscient() then return end
+    for ent in self:DetectedEntities() do
+      self:ForgetEntity(ent)
+    end
+  end
+
+  function ENT:DetectedEntities()
+    local cor
+    if self:IsOmniscient() then
+      cor = coroutine.create(function()
+        for _, ent in ipairs(ents.GetAll()) do
+          if not IsValid(ent) then continue end
+          coroutine.yield(ent)
+        end
+      end)
+    else
+      cor = coroutine.create(function()
+        for ent in pairs(self._DrGBaseDetected) do
+          if not IsValid(ent) then continue end
+          coroutine.yield(ent)
+        end
+      end)
+    end
+    return function()
+      local _, res = coroutine.resume(cor)
+      return res
+    end
+  end
+  function ENT:GetDetectedEntities()
+    local entities = {}
+    for ent in self:DetectedEntities() do
+      table.insert(entities, ent)
+    end
+    return entities
+  end
+  function ENT:GetClosestDetectedEntity()
+    local closest = NULL
+    for ent in self:DetectedEntities() do
+      if not IsValid(closest) or
+      self:GetRangeSquaredTo(ent) < self:GetRangeSquaredTo(closest) then
+        closest = ent
       end
-      return insight
-    else return self:GetInSight({D_LI, D_HT, D_FR, D_NU}, spotted) end
+    end
+    return closest
   end
-  function ENT:GetAlliesInSight(spotted)
-    return self:GetInSight(D_LI, spotted)
-  end
-  function ENT:GetEnemiesInSight(spotted)
-    return self:GetInSight(D_HT, spotted)
-  end
-  function ENT:GetAfraidOfInSight(spotted)
-    return self:GetInSight(D_FR, spotted)
-  end
-  function ENT:GetHostilesInSight(spotted)
-    return self:GetInSight({D_HT, D_FR}, spotted)
-  end
-  function ENT:GetNeutralInSight(spotted)
-    return self:GetInSight(D_NU, spotted)
+  function ENT:GetNumberOfDetectedEntities()
+    return #self:GetDetectedEntities()
   end
 
-  -- Check if entities are in sight
-  function ENT:UpdateSight(disp, spotted)
-    if self:IsAIDisabled() then return end
-    if istable(disp) then
-      for i, dis in ipairs(disp) do self:UpdateSight(dis, spotted) end
-    elseif isnumber(disp) then
-      for ent in self:EntityIterator(disp, spotted) do
-        local insight = self:IsInSight(ent)
-        if not insight and self._DrGBaseWasInSight[ent] then
-          self:OnLostSight(ent)
-        elseif insight then self:OnSight(ent) end
-        self._DrGBaseWasInSight[ent] = insight
+  function ENT:ForgottenEntities()
+    if not self:IsOmniscient() then
+      local cor = coroutine.create(function()
+        for ent in pairs(self._DrGBaseForgotten) do
+          if not IsValid(ent) then continue end
+          coroutine.yield(ent)
+        end
+      end)
+      return function()
+        local _, res = coroutine.resume(cor)
+        return res
       end
-    else self:UpdateSight({
-      D_LI, D_HT, D_FR, D_NU
-    }, spotted) end
+    else return function() end end
   end
-  function ENT:UpdateAlliesSight(spotted)
-    return self:UpdateSight(D_LI, spotted)
+  function ENT:GetForgottenEntities()
+    local entities = {}
+    for ent in self:ForgottenEntities() do
+      table.insert(entities, ent)
+    end
+    return entities
   end
-  function ENT:UpdateEnemiesSight(spotted)
-    return self:UpdateSight(D_HT, spotted)
+  function ENT:GetClosestForgottenEntity()
+    local closest = NULL
+    for ent in self:ForgottenEntities() do
+      if not IsValid(closest) or
+      self:GetRangeSquaredTo(ent) < self:GetRangeSquaredTo(closest) then
+        closest = ent
+      end
+    end
+    return closest
   end
-  function ENT:UpdateAfraidOfSight(spotted)
-    return self:UpdateSight(D_FR, spotted)
-  end
-  function ENT:UpdateHostilesSight(spotted)
-    return self:UpdateSight({D_HT, D_FR}, spotted)
-  end
-  function ENT:UpdateNeutralSight(spotted)
-    return self:UpdateSight(D_NU, spotted)
-  end
-
-  function ENT:Blind(blind)
-    if self:IsBlind() then return end
-    local res = self:OnBlind(blind)
-    if res == true then return
-    elseif isnumber(res) then blind:ScaleDuration(res) end
-    self:SetCooldown("DrGBaseBlind", blind:GetDuration())
-    if not isfunction(self.OnBlinded) then return end
-    self:ReactInCoroutine(self.OnBlinded, blind)
+  function ENT:GetNumberOfForgottenEntities()
+    return #self:GetForgottenEntities()
   end
 
-  -- Hooks --
+  -- Vision --
 
-  function ENT:OnContact(ent)
-    self:SpotEntity(ent)
+  function ENT:IsBlind()
+    return GetConVar("nb_blind"):GetBool() or self:GetFOV() <= 0 or self:GetMaxVisionRange() <= 0
   end
-  function ENT:OnSight(ent)
-    self:SpotEntity(ent)
+
+  function ENT:UpdateSight(detected)
+    self:UpdateAlliesSight(detected)
+    self:UpdateEnemiesSight(detected)
+    self:UpdateAfraidOfSight(detected)
+    self:UpdateNeutralSight(detected)
   end
+  function ENT:UpdateAlliesSight(detected)
+    for ent in self:AllyIterator(detected) do self:IsAbleToSee(ent) end
+  end
+  function ENT:UpdateEnemiesSight(detected)
+    for ent in self:EnemyIterator(detected) do self:IsAbleToSee(ent) end
+  end
+  function ENT:UpdateAfraidOfSight(detected)
+    for ent in self:AfraidOfIterator(detected) do self:IsAbleToSee(ent) end
+  end
+  function ENT:UpdateHostilesSight(detected)
+    for ent in self:HostileIterator(detected) do self:IsAbleToSee(ent) end
+  end
+  function ENT:UpdateNeutralSight(detected)
+    for ent in self:NeutralIterator(detected) do self:IsAbleToSee(ent) end
+  end
+
+  -- meta
+
+  local nextbotMETA = FindMetaTable("NextBot")
+
+  ENT._DrGBaseInSight = {}
+
+  local function UsesCPPSightSystem(ent)
+    return false
+  end
+
+  local old_IsAbleToSee = nextbotMETA.IsAbleToSee
+  function nextbotMETA:IsAbleToSee(ent, ...)
+    local res = old_IsAbleToSee(self, ent, ...)
+    if self.IsDrGNextbot and not UsesCPPSightSystem(ent) then
+      if res and self._DrGBaseInSight[ent] ~= res then
+        self._DrGBaseInSight[ent] = true
+        self:OnSight(ent)
+      elseif not res and self._DrGBaseInSight[ent] then
+        self._DrGBaseInSight[ent] = false
+        self:OnLostSight(ent)
+      end
+    end
+    return res
+  end
+
+  -- hooks
+
+  function ENT:OnSight(ent) self:DetectEntity(ent, 15) end
   function ENT:OnLostSight() end
-  function ENT:OnSound(ent, sound)
-    self:SpotEntity(ent)
-  end
-  function ENT:OnBlind() end
-  --function ENT:OnBlinded() end
 
-  -- Handlers --
+  -- Sounds --
 
-  --[[local function ATTN_TO_SNDLVL(attn)
-    return (50+20)/attn
+  function ENT:GetHearingCoefficient()
+    return math.Clamp(self.HearingCoefficient, 0, math.huge)
   end
-  local function SNDLVL_TO_ATTN(sndlvl)
-    return sndlvl > 50 and 20/(sndlvl-50) or 4
+  function ENT:SetHearingCoefficient(coeff)
+    self.HearingCoefficient = coeff
   end
-  local SOUND_NORMAL_CLIP_DIST = 1000]]
+  function ENT:IsDeaf()
+    return not EnableHearing:GetBool() or self:GetHearingCoefficient() == 0
+  end
 
-  local function HandleSound(ent, sound)
-    if #DrGBase.GetNextbots() == 0 then return end
-    sound.Pos = sound.Pos or ent:GetPos()
-    --[[local attenuation = SNDLVL_TO_ATTN(sound.SoundLevel)
-    local distance = ((2*SOUND_NORMAL_CLIP_DIST)/attenuation*sound.Volume)/2]]
-    local distance = math.pow(sound.SoundLevel/2, 2)*sound.Volume
-    --print(distance)
-    for i, nextbot in ipairs(DrGBase.GetNextbots()) do
-      if ent == nextbot then continue end
-      if nextbot:IsAIDisabled() then continue end
-      if nextbot:IsDeaf() then continue end
-      local mult = nextbot:VisibleVec(sound.Pos) and 1 or 0.5
-      if (distance*nextbot:GetHearingCoefficient()*mult)^2 >= nextbot:GetRangeSquaredTo(sound.Pos) then
-        nextbot:Timer(0, nextbot.OnSound, ent, sound)
-      end
-    end
+  -- hooks
+
+  function ENT:OnSound(ent)
+    self:DetectEntity(ent)
   end
-  hook.Add("EntityEmitSound", "DrGBaseNextbotHearing", function(sound)
-    if not EnableHearing:GetBool() then return end
-    if not IsValid(sound.Entity) then return end
-    if sound.Entity:IsPlayer() then
-      HandleSound(sound.Entity, sound)
-    elseif sound.Entity:IsVehicle() then
-      local driver = sound.Entity:GetDriver()
-      if IsValid(driver) and driver:IsPlayer() then
-        HandleSound(driver, sound)
-      end
-    end
-  end)
 
 else
 
-  -- Getters/setters --
-
-  function ENT:IsInSight(ent, callback)
-    if IsValid(ent) then
-      return self:NetCallback("DrGBaseIsInSight", callback, ent)
-    elseif isfunction(callback) then callback(self, false) end
+  local function CallAwarenessHooks(self, spotted)
+    local ply = LocalPlayer()
+    if spotted then
+      if isfunction(self.OnSpotEntity) then
+        self._DrGBaseLastTimeSpotted = CurTime()
+        self._DrGBaseLastKnownPosition = ply:GetPos()
+        self:OnSpotEntity(ply)
+      else
+        timer.Simple(engine.TickInterval(), function()
+          if IsValid(self) then CallAwarenessHooks(self, spotted) end
+        end)
+      end
+    elseif not isfunction(self.OnLoseEntity) then
+      timer.Simple(engine.TickInterval(), function()
+        if IsValid(self) then CallAwarenessHooks(self, spotted) end
+      end)
+    else self:OnLostEntity(ply) end
   end
-  function ENT:WasInSight(ent)
-    if not IsValid(ent) then return false end
-    self:IsInSight(ent, function(self, insight)
-      if not IsValid(ent) then return end
-      self._DrGBaseWasInSight[ent] = insight
-    end)
-    return self._DrGBaseWasInSight[ent] or false
+  net.Receive("DrGBaseNextbotPlayerAwareness", function()
+    local nextbot = net.ReadEntity()
+    local awareness = net.ReadBit()
+    if IsValid(nextbot) then
+      nextbot._DrGBaseLocalPlayerAwareness = awareness
+      CallAwarenessHooks(nextbot, awareness == 1)
+    end
+  end)
+
+  -- Getters --
+
+  function ENT:HasDetectedLocalPlayer()
+    if self:IsOmniscient() then return true end
+    return self._DrGBaseLocalPlayerAwareness == 1
+  end
+  function ENT:HasForgottenLocalPlayer()
+    if self:IsOmniscient() then return false end
+    return self._DrGBaseLocalPlayerAwareness == 0
+  end
+
+  function ENT:LastTimeSpotted()
+    return self._DrGBaseLastTimeSpotted or -1
+  end
+  function ENT:LastKnownPosition()
+    return self._DrGBaseLastKnownPosition
   end
 
 end
