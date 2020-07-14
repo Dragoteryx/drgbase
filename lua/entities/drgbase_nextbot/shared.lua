@@ -199,10 +199,13 @@ function ENT:Initialize()
   end)
   self:_BaseInitialize()
   self:CustomInitialize()
-  if CLIENT then return end
-  self:UpdateAnimation()
-  self:UpdateSpeed()
-  self:UpdateAI()
+  if SERVER then
+    self._DrGBaseRelationshipReady = true
+    self:UpdateRelationships()
+    self:UpdateAnimation()
+    self:UpdateSpeed()
+    self:UpdateAI()
+  end
 end
 function ENT:_BaseInitialize() end
 function ENT:CustomInitialize() end

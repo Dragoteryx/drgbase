@@ -43,6 +43,7 @@ function ENT:_InitRelationships()
   self._DrGBaseRelationships = table.DrG_Default({}, DEFAULT_DISP)
   self._DrGBaseRelPriorities = table.DrG_Default({}, DEFAULT_PRIO)
   self._DrGBaseRelationshipCaches = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
+  self._DrGBaseRelationshipCachesSpotted = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
   self._DrGBaseIgnoredEntities = {}
   if IsValidDisp(self.DefaultRelationship) then
     self._DrGBaseDefaultRelationship = self.DefaultRelationship
@@ -55,7 +56,6 @@ function ENT:_InitRelationships()
   }
   self:SetNW2Bool("DrGBaseFrightening", self.Frightening)
   self._DrGBaseFactions = {}
-  self:UpdateRelationships()
   self:JoinFactions(self.Factions)
 end
 
@@ -206,6 +206,12 @@ if SERVER then
       self._DrGBaseRelationshipCaches[D_HT][ent] = nil
       self._DrGBaseRelationshipCaches[D_FR][ent] = nil
       self._DrGBaseRelationshipCaches[disp][ent] = true
+      self._DrGBaseRelationshipCachesSpotted[D_LI][ent] = nil
+      self._DrGBaseRelationshipCachesSpotted[D_HT][ent] = nil
+      self._DrGBaseRelationshipCachesSpotted[D_FR][ent] = nil
+      if self:HasSpotted(ent, true) then
+        self._DrGBaseRelationshipCachesSpotted[disp][ent] = true
+      end
       self._DrGBaseRelationships[ent] = disp
       ent:CallOnRemove("DrGBaseRemoveFromDrGNextbot"..self:GetCreationID().."RelationshipCache", function()
         if IsValid(self) then self._DrGBaseRelationshipCaches[disp][ent] = nil end
@@ -214,6 +220,9 @@ if SERVER then
       self._DrGBaseRelationshipCaches[D_LI][ent] = nil
       self._DrGBaseRelationshipCaches[D_HT][ent] = nil
       self._DrGBaseRelationshipCaches[D_FR][ent] = nil
+      self._DrGBaseRelationshipCachesSpotted[D_LI][ent] = nil
+      self._DrGBaseRelationshipCachesSpotted[D_HT][ent] = nil
+      self._DrGBaseRelationshipCachesSpotted[D_FR][ent] = nil
       self._DrGBaseRelationships[ent] = DEFAULT_DISP
     end
     if self:GetEnemy() == ent and
@@ -470,11 +479,13 @@ if SERVER then
 
   -- Update
   function ENT:UpdateRelationships()
+    if not self._DrGBaseRelationshipReady then return end
     for i, ent in ipairs(ents.GetAll()) do
       self:UpdateRelationshipWith(ent)
     end
   end
   function ENT:UpdateRelationshipWith(ent)
+    if not self._DrGBaseRelationshipReady then return end
     if not IsValid(ent) then return end
     if ent == self then return end
     if (ent:IsPlayer() or ent.IsDrGNextbot) and
@@ -560,7 +571,7 @@ if SERVER then
         end
       end
     elseif IsCachedDisp(disp) then
-      local cache = self._DrGBaseRelationshipCaches[disp]
+      local cache = (spotted and not self:IsOmniscient()) and self._DrGBaseRelationshipCachesSpotted[disp] or self._DrGBaseRelationshipCaches[disp]
       return function(inv, previous)
         return NextCachedEntity(self, cache, previous, spotted)
       end

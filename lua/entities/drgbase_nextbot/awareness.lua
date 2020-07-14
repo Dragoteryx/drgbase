@@ -40,16 +40,16 @@ if SERVER then
     self:SetNW2Float("DrGBaseSpotDuration", duration)
   end
 
-  function ENT:HasSpotted(ent)
+  function ENT:HasSpotted(ent, absolute)
     if not IsValid(ent) then return false end
     if ent == self then return true end
-    if self:IsOmniscient() then return true end
+    if not absolute and self:IsOmniscient() then return true end
     return self._DrGBaseSpotted[ent] or false
   end
-  function ENT:HasLost(ent)
+  function ENT:HasLost(ent, absolute)
     if not IsValid(ent) then return false end
     if ent == self then return false end
-    if self:IsOmniscient() then return false end
+    if not absolute and self:IsOmniscient() then return false end
     return self._DrGBaseSpotted[ent] == false
   end
 
@@ -120,6 +120,10 @@ if SERVER then
     local spotted = self:HasSpotted(ent)
     self._DrGBaseLastTimeSpotted[ent] = CurTime()
     self._DrGBaseSpotted[ent] = true
+    local disp = self:GetRelationship(ent, true)
+    if disp == D_HT or disp == D_LI or disp == D_FR then
+      self._DrGBaseRelationshipCachesSpotted[disp][ent] = true
+    end
     self:UpdateKnownPosition(ent)
     if self._DrGBasePatrolSound and
     self._DrGBasePatrolSound:GetSound().Entity == ent then
@@ -154,6 +158,9 @@ if SERVER then
     end
     timer.Remove(SpotTimerName(self, ent))
     self._DrGBaseSpotted[ent] = false
+    self._DrGBaseRelationshipCachesSpotted[D_LI][ent] = nil
+    self._DrGBaseRelationshipCachesSpotted[D_HT][ent] = nil
+    self._DrGBaseRelationshipCachesSpotted[D_FR][ent] = nil
     self:OnLost(ent)
   end
 
