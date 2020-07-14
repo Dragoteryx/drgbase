@@ -235,7 +235,7 @@ if SERVER then
   function nextbotMETA:IsAbleToSee(ent, ...)
     local res = old_IsAbleToSee(self, ent, ...)
     if self.IsDrGNextbot and not UsesCPPSightSystem(ent) then
-      if res and self._DrGBaseInSight[ent] ~= res then
+      if res and not self._DrGBaseInSight[ent] then
         self._DrGBaseInSight[ent] = true
         self:OnSight(ent)
       elseif not res and self._DrGBaseInSight[ent] then
@@ -248,7 +248,7 @@ if SERVER then
 
   -- hooks
 
-  function ENT:OnSight(ent) self:DetectEntity(ent, 15) end
+  function ENT:OnSight(ent) self:DetectEntity(ent, 5) end
   function ENT:OnLostSight() end
 
   -- Sounds --

@@ -41,7 +41,7 @@ if SERVER then
   end
 
   function ENT:Think()
-    
+
   end
 
   function ENT:OnSight(ent)

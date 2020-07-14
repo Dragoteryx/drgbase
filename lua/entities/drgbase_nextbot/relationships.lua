@@ -1,9 +1,3 @@
--- Convars --
-
-local RelationshipWithPlayers = DrGBase.ConVar("drgbase_relationships_players", "1")
-local RelationshipWithNPCs = DrGBase.ConVar("drgbase_relationships_npcs", "1")
-local RelationshipWithOther = DrGBase.ConVar("drgbase_relationships_other", "1")
-
 -- Getters --
 
 function ENT:Team()

@@ -68,8 +68,7 @@ end
 
 function ENT:GetCooldown(name)
   local delay = self:GetNW2Float("DrGBaseCooldowns/"..tostring(name), false)
-  if delay ~= false then
-    return math.Clamp(delay - CurTime(), 0, math.huge)
+  if delay ~= false then return math.Clamp(delay - CurTime(), 0, math.huge)
   else return 0 end
 end
 

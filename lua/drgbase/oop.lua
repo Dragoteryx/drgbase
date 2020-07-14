@@ -5,7 +5,10 @@ function DrGBase.CreateClass(superclass)
     class.__index.__super = setmetatable({}, {
       __index = superclass.__index,
       __call = function(_, ...)
-        if isfunction(superclass.__new) then superclass.__new(...) end
+        if isfunction(superclass.__new) then
+          local res = superclass.__new(...)
+          if res then return res end
+        end
       end
     })
   else class.__index = {} end
@@ -13,7 +16,10 @@ function DrGBase.CreateClass(superclass)
   setmetatable(class, {
     __call = function(_, ...)
       local obj = setmetatable({}, class)
-      if isfunction(class.__new) then class.__new(obj, ...) end
+      if isfunction(class.__new) then
+        local res = class.__new(obj, ...)
+        if res then return obj, res end
+      end
       return obj
     end
   })

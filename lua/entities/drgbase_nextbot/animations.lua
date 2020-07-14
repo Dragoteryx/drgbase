@@ -23,6 +23,7 @@ if SERVER then
   -- PSAW and friends --
 
   function ENT:PlaySequenceAndWait(sequence, options, fn)
+    if isfunction(options) then return self:PlaySequenceAndWait(sequence, 1, options) end
     if isnumber(options) then return self:PlaySequenceAndWait(sequence, {rate = options}, fn) end
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if not isnumber(seq) or seq == -1 then return false end
@@ -67,6 +68,7 @@ if SERVER then
   end
 
   function ENT:PlaySequenceAndMove(sequence, options, fn)
+    if isfunction(options) then return self:PlaySequenceAndMove(sequence, 1, options) end
     if isnumber(options) then return self:PlaySequenceAndMove(sequence, {rate = options}, fn) end
     if not istable(options) then options = {} end
     if not isbool(options.gravity) then options.gravity = true end
@@ -90,6 +92,7 @@ if SERVER then
   end
 
   function ENT:PlaySequenceAndMoveAbsolute(sequence, options, fn)
+    if isfunction(options) then return self:PlaySequenceAndMoveAbsolute(sequence, 1, options) end
     if isnumber(options) then return self:PlaySequenceAndMoveAbsolute(sequence, {rate = options}, fn) end
     if not istable(options) then options = {} end
     options.gravity = false
