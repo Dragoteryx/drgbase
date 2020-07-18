@@ -344,9 +344,10 @@ if SERVER then
     local old = self:IsFrightening()
     self.Frightening = tobool(frightening)
     if old == self.Frightening then return end
-    for _, ent in ipairs(ents.GetAll()) do
-      if not ent:IsNPC() then continue end
-      self:UpdateRelationshipWith(ent)
+    local entities = ents.GetAll()
+    for i = 1, #entities do
+      if not entities[i]:IsNPC() then continue end
+      self:UpdateRelationshipWith(entities[i])
     end
   end
 
@@ -386,13 +387,15 @@ if SERVER then
     if self:IsInFaction(faction) then return end
     self._DrGBaseFactions[string.upper(faction)] = true
     self:AddFactionRelationship(faction, D_LI, 1)
-    for _, nextbot in ipairs(DrGBase.GetNextbots()) do
+    local nextbots = DrGBase.GetNextbots()
+    for i = 1, #nextbots do
+      local nextbot = nextbots[i]
       if nextbot == self then continue end
       nextbot:UpdateRelationshipWith(self)
     end
   end
   function ENT:JoinFactions(factions)
-    for _, faction in ipairs(factions) do self:JoinFaction(faction) end
+    for i = 1, #factions do self:JoinFaction(factions[i]) end
   end
 
   function ENT:LeaveFaction(faction)
@@ -400,13 +403,15 @@ if SERVER then
     self._DrGBaseFactions[string.upper(faction)] = nil
     local disp, prio = self:GetFactionRelationship(faction)
     if disp == D_LI and prio == 1 then self:ResetFactionRelationship(faction) end
-    for _, nextbot in ipairs(DrGBase.GetNextbots()) do
+    local nextbots = DrGBase.GetNextbots()
+    for i = 1, #nextbots do
+      local nextbot = nextbots[i]
       if nextbot == self then continue end
       nextbot:UpdateRelationshipWith(self)
     end
   end
   function ENT:LeaveFactions(factions)
-    for _, faction in ipairs(factions) do self:LeaveFaction(faction) end
+    for i = 1, #factions do self:LeaveFaction(factions[i]) end
   end
   function ENT:LeaveAllFactions()
     return self:LeaveFactions(self:GetFactions())
@@ -429,16 +434,18 @@ if SERVER then
   hook.Add("OnEntityCreated", "DrGBase_UpdateRelationshipWithNew", function(ent)
     timer.Simple(0, function()
       if not IsValid(ent) then return end
-      for _, nextbot in ipairs(DrGBase.GetNextbots()) do
-        nextbot:UpdateRelationshipWith(ent)
+      local nextbots = DrGBase.GetNextbots()
+      for i = 1, #nextbots do
+        nextbots[i]:UpdateRelationshipWith(ent)
       end
     end)
   end)
 
   function ENT:UpdateRelationships()
     if not self._DrGBaseRelationshipSystemReady then return end
-    for _, ent in ipairs(ents.GetAll()) do
-      self:UpdateRelationshipWith(ent)
+    local entities = ents.GetAll()
+    for i = 1, #entities do
+      self:UpdateRelationshipWith(entities[i])
     end
   end
   function ENT:UpdateRelationshipWith(ent)
@@ -469,8 +476,8 @@ if SERVER then
       elseif ent:DrG_IsSanic() then
         if faction == FACTION_SANIC then table.insert(relationships, rel) end
       elseif ent.IsVJBaseSNPC then
-        for _, class in ipairs(ent.VJ_NPC_Class) do
-          if string.upper(class) == faction then
+        for i = 1, #ent.VJ_NPC_Class do
+          if string.upper(ent.VJ_NPC_Class[i]) == faction then
             table.insert(relationships, rel)
             break
           end
@@ -541,7 +548,9 @@ if SERVER then
       end
     else
       cor = coroutine.create(function()
-        for _, ent in ipairs(ents.GetAll()) do
+        local entities = ents.GetAll()
+        for i = 1, #entities do
+          local ent = entities[i]
           if not IsValid(ent) then continue end
           if isbool(detected) and self:HasDetected(ent) ~= detected then continue end
           if self:GetRelationship(ent) ~= disp then continue end

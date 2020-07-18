@@ -119,9 +119,10 @@ if SERVER then
     local cor
     if self:IsOmniscient() then
       cor = coroutine.create(function()
-        for _, ent in ipairs(ents.GetAll()) do
-          if not IsValid(ent) then continue end
-          coroutine.yield(ent)
+        local entities = #ents.GetAll()
+        for i = 1, #entities do
+          if not IsValid(entities[i]) then continue end
+          coroutine.yield(entities[i])
         end
       end)
     else
