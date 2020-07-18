@@ -72,6 +72,7 @@ if SERVER then
   -- Functions --
 
   function ENT:IsInSight(ent)
+    if not IsValid(ent) then return false end
     if self:IsBlind() then return false end
     if ent == self then return true end
     local eyepos = self:EyePos()

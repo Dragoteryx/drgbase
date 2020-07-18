@@ -503,6 +503,12 @@ if SERVER then
     end
   end]]
 
+  function ENT:SafeSetPos(pos)
+    if self:TraceHull(nil, {start = pos, endpos = pos}).Hit then return false end
+    self:SetPos(pos)
+    return true
+  end
+
   -- Hooks --
 
   function ENT:OnRagdoll() end

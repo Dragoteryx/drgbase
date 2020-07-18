@@ -292,6 +292,7 @@ if SERVER then
   end
   function ENT:FollowPath(pos, tolerance, generator)
     if isentity(pos) then
+      if not IsValid(pos) then return "unreachable" end
       if pos:GetClass() == "npc_barnacle" then
         pos = util.DrG_TraceLine({
           start = pos:GetPos(), endpos = pos:GetPos()-Vector(0, 0, 999999),

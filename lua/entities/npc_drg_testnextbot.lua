@@ -172,7 +172,7 @@ if SERVER then
   function ENT:OnStopClimbing(ladder, height, down)
     if down then return end
     local footstep = false
-    self:PlayActivityAndMoveAbsolute(ACT_ZOMBIE_CLIMB_END, self.ClimbAnimRate, function(self, cycle)
+    self:PlayClimbActivity(ACT_ZOMBIE_CLIMB_END, height, self.ClimbAnimRate, function(self, cycle)
       if cycle >= 0.875 and not footstep then
         footstep = true
         self:EmitFootstep()

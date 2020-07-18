@@ -23,7 +23,7 @@ function ENT:GetActivityIDFromName(name)
   if isnumber(self._DrGBaseActIDsFromNames[name]) then
     return self._DrGBaseActIDsFromNames[name]
   else
-    for i, seq in pairs(self:GetSequenceList()) do
+    for i in pairs(self:GetSequenceList()) do
       if self:GetSequenceActivityName(i) == name then
         local id = self:GetSequenceActivity(i)
         self._DrGBaseActIDsFromNames[name] = id
@@ -131,13 +131,13 @@ function ENT:_HandleAnimations()
   self._DrGBaseLastAnimCycle = self:GetCycle()
 end
 
-function ENT:_PlaySequenceEvents(seq, currCycle, lastcycle)
+function ENT:_PlaySequenceEvents(seq, currCycle)
   local events = self._DrGBaseSequenceEvents[seq]
   for cycle, event in pairs(istable(events) and events or {}) do
     if (currCycle > cycle and self._DrGBaseLastAnimCycle <= cycle) or
     (currCycle < self._DrGBaseLastAnimCycle and currCycle >= cycle) or
     (currCycle < self._DrGBaseLastAnimCycle and self._DrGBaseLastAnimCycle <= cycle) then
-      for i, todo in ipairs(event) do todo.callback(self, table.DrG_Unpack(todo.args, todo.n)) end
+      for _, todo in ipairs(event) do todo.callback(self, table.DrG_Unpack(todo.args, todo.n)) end
     end
   end
 end
@@ -145,7 +145,7 @@ end
 if SERVER then
 
   local function SeqHasTurningWalkframes(self, seq)
-    local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
+    local success, _, angles = self:GetSequenceMovement(seq, 0, 1)
     return success and angles.y ~= 0
   end
 
@@ -248,7 +248,7 @@ if SERVER then
         end
         vec:Rotate(self:GetAngles() + angles)
         self:SetAngles(self:LocalToWorldAngles(angles))
-        if not options.collisions or not self:TraceHull(vec, {step = true}).Hit then
+        if not options.collisions or not self:TraceHull(vec, {step = self:IsOnGround()}).Hit then
           if not options.gravity then
             previousPos = previousPos + vec*self:GetModelScale()
             self:SetPos(previousPos)
@@ -312,7 +312,6 @@ if SERVER then
     self._DrGBaseCurrentGestures[seq] = true
     self:SetLayerPlaybackRate(layerID, rate)
     coroutine.DrG_Create(function()
-      local first = true
       local lastCycle = 0
       while IsValid(self) do
         local cycle = self:GetLayerCycle(layerID)
@@ -333,7 +332,7 @@ if SERVER then
   end
   function ENT:PlayActivity(act, rate, callback)
     local seq = self:SelectRandomSequence(act)
-    return self:PlaySequence(seq, options, callback)
+    return self:PlaySequence(seq, rate, callback)
   end
   function ENT:PlayAnimation(anim, rate, callback)
     if isstring(anim) then return self:PlaySequence(anim, rate, callback)
@@ -342,11 +341,11 @@ if SERVER then
 
   local function PlayClosestClimbSequence(self, seqs, height, rate, callback)
     local climbs = {}
-    for i, seq in ipairs(seqs) do
+    for _, seq in ipairs(seqs) do
       if isstring(seq) then seq = self:LookupSequence(seq)
       elseif not isnumber(seq) then continue end
       if seq == -1 then continue end
-      local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
+      local success, vec = self:GetSequenceMovement(seq, 0, 1)
       if not success then continue end
       table.insert(climbs, {seq = seq, height = vec.z})
     end
@@ -373,7 +372,7 @@ if SERVER then
       if isstring(seq) then seq = self:LookupSequence(seq)
       elseif not isnumber(seq) then return end
       if seq == -1 then return end
-      local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
+      local success, vec = self:GetSequenceMovement(seq, 0, 1)
       if not success then return end
       return self:PlaySequenceAndMoveAbsolute(seq, {
         rate = rate,
@@ -386,7 +385,7 @@ if SERVER then
   end
   function ENT:PlayClimbActivity(act, height, rate, callback)
     local seq = self:SelectRandomSequence(act)
-    return self:PlayClimbSequence(seq, options, callback)
+    return self:PlayClimbSequence(seq, height, rate, callback)
   end
   function ENT:PlayClimbAnimation(anim, height, rate, callback)
     if isstring(anim) then self:PlayClimbSequence(anim, height, rate, callback)
@@ -451,7 +450,7 @@ if SERVER then
     self:BodyMoveXY()
   end
 
-  function ENT:HandleAnimEvent(event, time, cycle, type, options)
+  function ENT:HandleAnimEvent(event, _, _, _, options)
     self:OnAnimEvent(options, event, self:GetPos(), self:GetAngles())
   end
 
@@ -498,7 +497,7 @@ if SERVER then
             local seqspeed = self:GetSequenceGroundSpeed(seq)
             if seqspeed ~= 0 then self:SetPlaybackRate(speed/seqspeed) end
           elseif self:IsTurning() then
-            local success, vec, angles = self:GetSequenceMovement(seq, 0, 1)
+            local success, _, angles = self:GetSequenceMovement(seq, 0, 1)
             if success and angles.y ~= 0 then
               local seqspeed = math.abs(angles.y)/self:SequenceDuration(seq)
               local turnspeed = math.abs(self:GetAngles().y-self._DrGBaseLastAngle.y)/0.1
