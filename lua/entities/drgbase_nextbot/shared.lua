@@ -463,35 +463,41 @@ if SERVER then
 
   function ENT:AIBehaviour() end
 
-  function ENT:HandleEnemy()
-    local enemy = self:GetEnemy()
-    local relationship = self:GetRelationship(enemy)
-    if relationship == D_HT then
-      local visible = self:Visible(enemy)
-      if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
-        if self:OnChaseEnemy(enemy) ~= true then
-          if self:FollowPath(enemy) == "unreachable" then
-            self:OnEnemyUnreachable(enemy)
-          end
-        end
-      elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible and
-      not self:IsInRange(enemy, self.MeleeAttackRange) then
-        if self:OnAvoidEnemy(enemy) ~= true then
-          self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
-        end
-      elseif self:OnIdleEnemy(enemy) ~= true then self:FaceTowards(enemy) end
-      if IsValid(enemy) and self:Visible(enemy) then self:AttackEntity(enemy) end
-    elseif relationship == D_FR then
-      local visible = self:Visible(enemy)
-      if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
-        if self:OnAvoidAfraidOf(enemy) ~= true then
-          self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
-        end
-      elseif self:OnIdleAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
-      if IsValid(enemy) and self:Visible(enemy) then self:AttackEntity(enemy) end
-    elseif relationship == D_LI then self:OnAllyEnemy(enemy)
-    elseif relationship == D_NU then self:OnNeutralEnemy(enemy) end
-  end
+    function ENT:HandleEnemy()
+        local enemy = self:GetEnemy()
+        local relationship = self:GetRelationship(enemy)
+        if relationship == D_HT then
+        local visible = self:Visible(enemy)
+        if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
+            local condition = self:OnChaseEnemy(enemy)
+            if condition != false then
+                if self:FollowPath(enemy) == "unreachable" then
+                    self:OnEnemyUnreachable(enemy)
+                end
+            end
+            if !isfunction(self:OnChaseEnemy(enemy)) and !isbool(self:OnChaseEnemy(enemy) ) then
+                if self:FollowPath(enemy) == "unreachable" then
+                    self:OnEnemyUnreachable(enemy)
+                end
+            end
+        elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible and
+        not self:IsInRange(enemy, self.MeleeAttackRange) then
+            if self:OnAvoidEnemy(enemy) ~= true then
+            self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
+            end
+        elseif self:OnIdleEnemy(enemy) ~= true then self:FaceTowards(enemy) end
+        if IsValid(enemy) and self:Visible(enemy) then self:AttackEntity(enemy) end
+        elseif relationship == D_FR then
+        local visible = self:Visible(enemy)
+        if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
+            if self:OnAvoidAfraidOf(enemy) ~= true then
+            self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
+            end
+        elseif self:OnIdleAfraidOf(enemy) ~= true then self:FaceTowards(enemy) end
+        if IsValid(enemy) and self:Visible(enemy) then self:AttackEntity(enemy) end
+        elseif relationship == D_LI then self:OnAllyEnemy(enemy)
+        elseif relationship == D_NU then self:OnNeutralEnemy(enemy) end
+    end
 
   function ENT:AttackEntity(ent)
     local weapon = self:GetWeapon()
