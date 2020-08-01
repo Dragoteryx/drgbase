@@ -586,7 +586,7 @@ else
   local DisplaySight = CreateClientConVar("drgbase_display_sight", "0")
 
   function ENT:Draw()
-    if DrGBase.INFO_TOOL.Viewcam then
+    if DrGBase.INFO_TOOL and DrGBase.INFO_TOOL.Viewcam then
       local selected = LocalPlayer():DrG_GetSelectedEntities()[1]
       if selected == self then return end
     end
