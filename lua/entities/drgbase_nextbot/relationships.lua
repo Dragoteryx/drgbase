@@ -656,4 +656,26 @@ if SERVER then
   function ENT:ShouldIgnore() end
   function ENT:OnRelationshipChange() end
 
+  -- NPC Aliases --
+
+  function ENT:Disposition(ent)
+    local disp = self:GetRelationship(ent)
+    return disp
+  end
+  function ENT:AddRelationship(str)
+    local split = string.Explode("[%s]+", str, true)
+    if #split ~= 3 then return end
+    local class = split[1]
+    local relationship = split[2]
+    if relationship == "D_ER" then relationship = D_ER
+    elseif relationship == "D_HT" then relationship = D_HT
+    elseif relationship == "D_FR" then relationship = D_FR
+    elseif relationship == "D_LI" then relationship = D_LI
+    elseif relationship == "D_NU" then relationship = D_NU
+    else return end
+    local val = tonumber(split[3])
+    if val ~= val then return end
+    self:AddClassRelationship(class, relationship, val)
+  end
+
 end

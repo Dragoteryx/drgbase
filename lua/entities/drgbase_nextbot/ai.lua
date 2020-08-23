@@ -5,7 +5,7 @@ local EnablePatrol = DrGBase.ConVar("drgbase_ai_patrol", "1")
 -- Getters --
 
 function ENT:IsAIDisabled()
-  return GetConVar("ai_disabled"):GetBool() or self:GetNW2Bool("DrGBaseAIDisabled")
+  return GetConVar("ai_disabled"):GetBool() or self:GetNW2Bool("DrGBaseAIDisabled") or (SERVER and not self:IsInWorld())
 end
 
 if SERVER then
@@ -49,4 +49,19 @@ if SERVER then
     else self:DoOnNoEnemy() end
   end
 
+  -- refresh sight/enemy
+  coroutine.DrG_Create(function()
+    while true do
+      local nextbots = DrGBase.GetNextbots()
+      if #nextbots > 0 then
+        for i = 1, #nextbots do
+          local nextbot = nextbots[i]
+          if not IsValid(nextbot) then continue end
+          nextbot:UpdateHostileSight()
+          nextbot:UpdateEnemy()
+          coroutine.yield()
+        end
+      else coroutine.yield() end
+    end
+  end)
 end

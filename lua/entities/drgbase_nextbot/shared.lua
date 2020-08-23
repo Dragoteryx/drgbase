@@ -142,12 +142,6 @@ function ENT:CustomInitialize() end -- backwards compatibility
 -- Think --
 
 function ENT:_DrGBasePreThink(...)
-  if SERVER and (not self._DrGBaseThinkOneSecDelay
-  or CurTime() > self._DrGBaseThinkOneSecDelay) then
-    self._DrGBaseThinkOneSecDelay = CurTime() + 1
-    self:UpdateHostilesSight()
-    self:UpdateEnemy()
-  end
   if self:IsPossessed() then self:PossessionThink(...) end
 end
 function ENT:PossessionThink() end
@@ -192,13 +186,14 @@ if SERVER then
     end)
   end
 
-  local IN_COROUTINE
+  local IN_COROUTINE = nil
   function ENT:BehaveUpdate()
     if not self.BehaveThread then return end
     if coroutine.status(self.BehaveThread) ~= "dead" then
+      local old_IN_COROUTINE = IN_COROUTINE
       IN_COROUTINE = self
       local ok, args = coroutine.resume(self.BehaveThread)
-      IN_COROUTINE = nil
+      IN_COROUTINE = old_IN_COROUTINE
       if not ok then
         ErrorNoHalt(self, " Error: ", args, "\n")
         if self:OnError(args) then self:BehaveRestart() end
@@ -309,4 +304,3 @@ else
   function ENT:CustomDraw() end -- backwards compatibility
 
 end
-

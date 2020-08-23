@@ -74,7 +74,7 @@ if SERVER then
     self._DrGBaseLastDetectedEntity = ent
     local recently = CurTime() + (isnumber(recent) and math.Clamp(recent, 0, math.huge) or 0)
     if not self._DrGBaseDetectedRecently or recently > self._DrGBaseDetectedRecently then
-      self._DrGBaseDetectedRecently = recently
+      self._DrGBaseDetectedRecently[ent] = recently
     end
     if not detected then
       local disp = self:GetRelationship(ent, true)
@@ -119,10 +119,11 @@ if SERVER then
     local cor
     if self:IsOmniscient() then
       cor = coroutine.create(function()
-        local entities = #ents.GetAll()
+        local entities = ents.GetAll()
         for i = 1, #entities do
-          if not IsValid(entities[i]) then continue end
-          coroutine.yield(entities[i])
+          local ent = entities[i]
+          if not IsValid(ent) then continue end
+          coroutine.yield(ent)
         end
       end)
     else
