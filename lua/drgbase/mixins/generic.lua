@@ -5,9 +5,9 @@ return function(ENT)
   if isfunction(ENT.Initialize) then
     local old_Initialize = ENT.Initialize
     function ENT:Initialize(...)
-      if self._DrGBasePreInitialize then self:_DrGBasePreInitialize(...) end
+      if self.DrG_PreInitialize then self:DrG_PreInitialize(...) end
       local res = old_Initialize(self, ...)
-      if self._DrGBasePostInitialize then self:_DrGBasePostInitialize(...) end
+      if self.DrG_PostInitialize then self:DrG_PostInitialize(...) end
       return res
     end
   end
@@ -17,10 +17,18 @@ return function(ENT)
   if isfunction(ENT.Think) then
     local old_Think = ENT.Think
     function ENT:Think(...)
-      if self._DrGBasePreThink then self:_DrGBasePreThink(...) end
+      if self.DrG_PreThink then self:DrG_PreThink(...) end
       local res = old_Think(self, ...)
-      if self._DrGBasePostThink then self:_DrGBasePostThink(...) end
+      if self.DrG_PostThink then self:DrG_PostThink(...) end
       return res
+    end
+  end
+
+  if isfunction(ENT.Use) then
+    local old_Use = ENT.Use
+    function ENT:Use(...)
+      if self.DrG_Use then self:DrG_Use(...) end
+      return old_Use(self, ...)
     end
   end
 
@@ -29,9 +37,8 @@ return function(ENT)
   if isfunction(ENT.OnRemove) then
     local old_OnRemove = ENT.OnRemove
     function ENT:OnRemove(...)
-      local res = old_OnRemove(self, ...)
-      if self._DrGBaseOnRemove then self:_DrGBaseOnRemove(...) end
-      return res
+      if self.DrG_OnRemove then self:DrG_OnRemove(...) end
+      return old_OnRemove(self, ...)
     end
   end
 
@@ -40,9 +47,9 @@ return function(ENT)
   if CLIENT and isfunction(ENT.Draw) then
     local old_Draw = ENT.Draw
     function ENT:Draw(...)
-      if self._DrGBasePreDraw then self:_DrGBasePreDraw(...) end
+      if self.DrG_PreDraw then self:DrG_PreDraw(...) end
       local res = old_Draw(self, ...)
-      if self._DrGBasePostDraw then self:_DrGBasePostDraw(...) end
+      if self.DrG_PostDraw then self:DrG_PostDraw(...) end
       return res
     end
   end

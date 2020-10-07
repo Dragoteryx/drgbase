@@ -1,5 +1,5 @@
 function ENT:GetPossessor()
-  return self:GetNW2Entity("DrGBasePossessor")
+  return self:GetNW2Entity("DrG/Possessor")
 end
 function ENT:IsPossessed()
   return IsValid(self:GetPossessor())
@@ -24,7 +24,7 @@ if SERVER then
 
   -- Internal --
 
-  function ENT:_DrGBasePossessedBehaviour()
+  function ENT:DrG_PossessedBehaviour()
 
   end
 

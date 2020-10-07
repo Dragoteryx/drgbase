@@ -13,14 +13,7 @@ end
 
 -- special tables
 
-function table.DrG_ReadOnly(tbl)
-  return setmetatable({}, {
-    __newindex = function() end,
-    __index = tbl
-  })
-end
-
-function table.DrG_Default(tbl, default)
+function table.DrG_Default(default, tbl)
   return setmetatable(istable(tbl) and tbl or {}, {
     __index = function() return default end
   })

@@ -11,7 +11,7 @@ function DrGBase.AddWeapon(SWEP)
     }
     killicon.Add(class, SWEP.Killicon.icon, SWEP.Killicon.color)
   else resource.AddFile("materials/weapons/"..class..".png") end
-  list.Set("DrGBaseWeapons", class, {
+  list.Set("DrG/Weapons", class, {
     Name = SWEP.PrintName,
     Class = class,
     Category = SWEP.Category
@@ -22,43 +22,8 @@ end
 
 -- Spawnmenu --
 
-hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseWeapons", function(pnlContent, tree, node)
-	local list = list.Get("DrGBaseWeapons")
-	local categories = {}
-	for class, ent in pairs(list) do
-		local category = ent.Category or "Other"
-		local tab = categories[category] or {}
-		tab[class] = ent
-		categories[category] = tab
-	end
-	local weaponsTree = tree:AddNode("Weapons", "icon16/gun.png")
-	for categoryName, category in SortedPairs(categories) do
-		local icon = DrGBase.GetIcon(categoryName) or "icon16/gun.png"
-		if categoryName == "DrGBase" then icon = DrGBase.Icon end
-		local node = weaponsTree:AddNode(categoryName, icon)
-		node.DoPopulate = function(self)
-			if self.PropPanel then return end
-			self.PropPanel = vgui.Create("ContentContainer", pnlContent)
-			self.PropPanel:SetVisible(false)
-			self.PropPanel:SetTriggerSpawnlistChange(false)
-			for class, ent in SortedPairsByMemberValue(category, "Name") do
-				spawnmenu.CreateContentIcon("weapon", self.PropPanel, {
-					nicename	= ent.Name or class,
-					spawnname	= class,
-					material	= "entities/"..class..".png",
-					admin	= ent.AdminOnly or false
-				})
-			end
-		end
-		node.DoClick = function(self)
-			self:DoPopulate()
-			pnlContent:SwitchPanel(self.PropPanel)
-		end
-	end
-	local firstNode = tree:Root():GetChildNode(0)
-	if IsValid(firstNode) then
-		firstNode:InternalDoClick()
-	end
+hook.Add("DrG/PopulateSpawnmenu", "AddWeapons", function(panel, tree)
+	--
 end)
 
 -- Misc --

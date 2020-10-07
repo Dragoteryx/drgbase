@@ -2,41 +2,6 @@ local entMETA = FindMetaTable("Entity")
 
 -- Misc --
 
-function entMETA:DrG_IsSanic()
-  return self:IsNextBot() and
-  self.OnReloaded ~= nil and
-  self.GetNearestTarget ~= nil and
-  self.AttackNearbyTargets ~= nil and
-  self.IsHidingSpotFull ~= nil and
-  self.GetNearestUsableHidingSpot ~= nil and
-  self.ClaimHidingSpot ~= nil and
-  self.AttemptJumpAtTarget ~= nil and
-  self.LastPathingInfraction ~= nil and
-  self.RecomputeTargetPath ~= nil and
-  self.UnstickFromCeiling ~= nil
-end
-
-local DOORS = {
-  ["prop_door_rotating"] = true,
-  ["func_door"] = true,
-  ["func_door_rotating"] = true
-}
-function entMETA:DrG_IsDoor()
-  return DOORS[self:GetClass()] or false
-end
-
-function entMETA:DrG_AddListener(name, callback)
-  if not isfunction(callback) then return false end
-  local old_function = self[name]
-  if not isfunction(old_function) then return false end
-  self[name] = function(...)
-    local res = old_function(...)
-    callback(..., res)
-    return res
-  end
-  return true
-end
-
 function entMETA:DrG_SearchBone(searchBone)
   local lookup = self:LookupBone(searchBone)
   if lookup then return lookup end
@@ -178,7 +143,6 @@ if SERVER then
     if not util.IsValidRagdoll(self:GetModel()) then return NULL end
     local ragdoll = ents.Create("prop_ragdoll")
     if IsValid(ragdoll) then
-      if not dmg then dmg = DamageInfo() end
       ragdoll:SetPos(self:GetPos())
       ragdoll:SetAngles(self:GetAngles())
       ragdoll:SetModel(self:GetModel())
@@ -197,38 +161,49 @@ if SERVER then
         bone:SetPos(pos)
         bone:SetAngles(angles)
       end
-      local phys = ragdoll:GetPhysicsObject()
-      phys:SetVelocity(self:GetVelocity())
-      local force = dmg:GetDamageForce()
-      local position = dmg:GetDamagePosition()
-      if IsValid(phys) and isvector(force) and isvector(position) then
-        phys:ApplyForceOffset(force, position)
-      end
-      if dmg:IsDamageType(DMG_DISSOLVE) then ragdoll:DrG_Dissolve()
-      elseif self:IsOnFire() then ragdoll:Ignite(10) end
-      local attacker = dmg:GetAttacker()
-      if IsValid(attacker) and attacker.IsDrGNextbot then
-        attacker:SpotEntity(ragdoll)
+      if dmg then
+        local phys = ragdoll:GetPhysicsObject()
+        phys:SetVelocity(self:GetVelocity())
+        local force = dmg:GetDamageForce()
+        local position = dmg:GetDamagePosition()
+        if IsValid(phys) and isvector(force) and isvector(position) then
+          phys:ApplyForceOffset(force, position)
+        end
+        if dmg:IsDamageType(DMG_DISSOLVE) then ragdoll:DrG_Dissolve() end
+        if dmg:IsDamageType(DMG_BURN) then ragdoll:Ignite(10) end
+        local attacker = dmg:GetAttacker()
+        if IsValid(attacker) and attacker.IsDrGNextbot then
+          attacker:DetectEntity(ragdoll)
+        end
       end
       ragdoll.EntityClass = self:GetClass()
+      ragdoll:SetOwner(self)
+      return ragdoll
+    else return NULL end
+  end
+  function entMETA:DrG_BecomeRagdoll(dmg)
+    if self:IsPlayer() then
+      if not self:Alive() then return NULL
+      else self:KillSilent() end
+    else self:Remove() end
+    if not self:IsFlagSet(FL_TRANSRAGDOLL) and
+    not (dmg and dmg:IsDamageType(DMG_REMOVENORAGDOLL)) then
+      self:AddFlags(FL_TRANSRAGDOLL)
+      local ragdoll = self:DrG_CreateRagdoll(dmg)
+      if IsValid(ragdoll) and not self:IsPlayer() then
+        undo.ReplaceEntity(self, ragdoll)
+        cleanup.ReplaceEntity(self, ragdoll)
+      end
+      if self.IsDrGNextbot then
+        if not dmg then dmg = DamageInfo() end
+        self.DrG_OnRagdollRes = self:OnRagdoll(ragdoll, dmg)
+      end
       return ragdoll
     else return NULL end
   end
   function entMETA:DrG_RagdollDeath(dmg)
-    if self:IsPlayer() then
-      if not self:Alive() then return NULL end
-      self:KillSilent()
-    else
-      self:AddFlags(FL_TRANSRAGDOLL)
-      self:Remove()
-    end
     if dmg then self:DrG_DeathNotice(dmg:GetAttacker(), dmg:GetInflictor()) end
-    local ragdoll = self:DrG_CreateRagdoll(dmg)
-    if not self:IsPlayer() and IsValid(ragdoll) then
-      undo.ReplaceEntity(self, ragdoll)
-      cleanup.ReplaceEntity(self, ragdoll)
-    end
-    return ragdoll
+    return self:DrG_BecomeRagdoll(dmg)
   end
 
   function entMETA:DrG_AimAt(target, speed, feet)
@@ -242,10 +217,10 @@ if SERVER then
       else return self:DrG_AimAt(self:GetPos()+self:GetForward()*speed, speed) end
     else return dir, info end
   end
-  function entMETA:DrG_ThrowAt(target, options, feet)
+  function entMETA:DrG_ThrowAt(target, options)
     local phys = self:GetPhysicsObject()
     if not IsValid(phys) then return end
-    local dir, info = phys:DrG_ThrowAt(target, options, feet)
+    local dir, info = phys:DrG_ThrowAt(target, options)
     if dir:IsZero() then
       local speed = options.magnitude or 1000
       local owner = self:GetOwner()

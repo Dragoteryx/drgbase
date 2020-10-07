@@ -1,10 +1,21 @@
 
 local vecMETA = FindMetaTable("Vector")
 
+local function VecData(vec)
+  local forward = Vector(vec.x, vec.y, 0)
+  local pitch = math.atan(vec.z/forward:Length())
+  return {
+    normal = vec:GetNormalized(),
+    forward = forward:GetNormalized(),
+    length = vec:Length(),
+    pitch = math.deg(pitch)
+  }
+end
+
 -- Ballistic stuff --
 
 function vecMETA:DrG_TrajectoryInfo(direction, ballistic)
-  local data = direction:DrG_Data()
+  local data = VecData(self)
   if ballistic then
     local gravity = physenv.GetGravity():Length()
     local magnitude = data.length
@@ -26,8 +37,8 @@ function vecMETA:DrG_TrajectoryInfo(direction, ballistic)
       pitch = data.pitch,
       highest = highest,
       height = Predict(highest).z - self.z,
-      Predict = Predict,
-      ballistic = true
+      ballistic = true,
+      Predict = Predict
     }
   else
     return {
@@ -35,43 +46,35 @@ function vecMETA:DrG_TrajectoryInfo(direction, ballistic)
       forward = data.forward,
       magnitude = data.length,
       pitch = data.pitch,
+      ballistic = false,
       Predict = function(t)
         return self+direction*t, direction
-      end,
-      ballistic = false
+      end
     }
   end
 end
-function vecMETA:DrG_Data()
-  local forward = Vector(self.x, self.y, 0)
-  local pitch = math.atan(self.z/forward:Length())
-  return {
-    normal = self:GetNormalized(),
-    forward = forward:GetNormalized(),
-    length = self:Length(),
-    pitch = math.deg(pitch)
-  }
-end
 
-function vecMETA:DrG_CalcLineTrajectory(target, speed, feet)
-  if isentity(target) and IsValid(target) then
-    local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
-    local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
-    local dist = self:Distance(aimAt)
-    return self:DrG_CalcLineTrajectory(aimAt+velocity*(dist/speed), speed)
-  elseif isvector(target) then
-    local dir = self:DrG_Dir(target):GetNormalized()*speed
-    local info = self:DrG_TrajectoryInfo(dir, false)
-    info.duration = self:Distance(target)/speed
-    return dir, info
-  else
-    local dir = Vector(0, 0, 0)
-    return dir, self:DrG_TrajectoryInfo(dir, false)
+function vecMETA:DrG_CalcLineTrajectory(target, options)
+  if isnumber(options) then return self:DrG_CalcLineTrajectory(target, {speed = options}) end
+  if istable(options) and isnumber(options.speed) and options.speed > 0 then
+    if isentity(target) and IsValid(target) then
+      local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
+      local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
+      local dist = self:Distance(aimAt)
+      return self:DrG_CalcLineTrajectory(aimAt+velocity*(dist/speed), speed)
+    elseif isvector(target) then
+      local dir = self:DrG_Dir(target):GetNormalized()*speed
+      local info = self:DrG_TrajectoryInfo(dir, false)
+      info.duration = self:Distance(target)/speed
+      return dir, info
+    end
   end
+  local dir = Vector(0, 0, 0)
+  return dir, self:DrG_TrajectoryInfo(dir, false)
 end
 
 function vecMETA:DrG_CalcBallisticTrajectory(target, options, feet)
-  options = istable(options) and options or {}
+  if not istable(options) then options = {} end
   if isentity(target) and IsValid(target) then
     local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
     local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
@@ -81,37 +84,32 @@ function vecMETA:DrG_CalcBallisticTrajectory(target, options, feet)
     return self:DrG_CalcBallisticTrajectory(aimAt+velocity*info.duration, options)
   elseif isvector(target) then
     local dir = Vector(target.x - self.x, target.y - self.y, 0)
-    local g = options._g or physenv.GetGravity():Length()
-    local x = options._x or dir:Length()
+    local g = physenv.GetGravity():Length()
+    local x = dir:Length()
     local y = target.z - self.z
     local pitch = nil
     local magnitude = nil
-    local pitchnumber = isnumber(options.pitch)
-    local magnitudenumber = isnumber(options.magnitude)
-    if pitchnumber and not magnitudenumber then
+    if isnumber(options.pitch) and not isnumber(options.magnitude) then
       pitch = math.rad(math.Clamp(options.pitch, -90, 90))
-      if y >= math.tan(pitch)*x then
+      local n = math.tan(pitch)*x
+      if y >= n then
         if options.recursive then
-          options._g = g
-          options._x = x
           options.pitch = math.deg(pitch)+1
           return self:DrG_CalcBallisticTrajectory(target, options)
         else
-          dir.z = math.tan(pitch)*x
+          dir.z = n
           local velocity = dir:GetNormalized()
           local info = self:DrG_TrajectoryInfo(velocity)
           info.duration = -1
           return velocity, info
         end
       else magnitude = math.sqrt((-g*x*x)/(2*(math.cos(pitch)^2)*(y-x*math.tan(pitch)))) end
-    elseif magnitudenumber and not pitchnumber then
+    elseif isnumber(options.magnitude) and not isnumber(options.pitch) then
       magnitude = math.abs(options.magnitude)
       local v = magnitude
-      local calc = math.sqrt(v^4-g*(g*x*x+2*y*v*v))
-      if calc ~= calc then
+      local n = math.sqrt(v^4-g*(g*x*x+2*y*v*v))
+      if n ~= n then
         if options.recursive then
-          options._g = g
-          options._x = x
           options.magnitude = v*1.05
           return self:DrG_CalcBallisticTrajectory(target, options)
         else
@@ -121,15 +119,13 @@ function vecMETA:DrG_CalcBallisticTrajectory(target, options, feet)
           return velocity, info
         end
       else
-        local s1 = math.atan((v*v+calc)/(g*x))
-        local s2 = math.atan((v*v-calc)/(g*x))
+        local s1 = math.atan((v*v+n)/(g*x))
+        local s2 = math.atan((v*v-n)/(g*x))
         if options.highest then
           pitch = s1 < s2 and s2 or s1
         else pitch = s1 > s2 and s2 or s1 end
       end
-    elseif not pitchnumber and not magnitudenumber then
-      options._g = g
-      options._x = x
+    elseif not isnumber(options.pitch) and not isnumber(options.magnitude) then
       options.pitch = 45
       return self:DrG_CalcBallisticTrajectory(target, options)
     else

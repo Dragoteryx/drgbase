@@ -24,37 +24,84 @@ if SERVER then
   end
 
   local function FetchEnemy(self)
-    local current
-    for enemy in self:HostileIterator(true) do
-      if not IsValid(enemy) then continue end
-      if not current or CompareEnemies(self, enemy, current) then
-        current = enemy
+    local enemy
+    for hostile in self:HostileIterator(true) do
+      if not IsValid(hostile) then continue end
+      if not enemy or CompareEnemies(self, hostile, enemy) then
+        enemy = hostile
       end
     end
-    return current
-  end
-
-  -- Getters --
-
-  function ENT:UpdateEnemy()
-    local enemy
-    if not self:IsPossessed() then
-      enemy = self:OnUpdateEnemy() or FetchEnemy(self)
-
-
-    else enemy = NULL end
-    self:SetNW2Entity("DrGBaseEnemy", enemy)
     return enemy
   end
 
-  function ENT:GetEnemy()
-    local enemy = self:GetNW2Entity("DrGBaseEnemy")
-    if IsValid(enemy) then return enemy end
-    if not self._DrGBaseHadEnemy then return NULL end
-    local newEnemy = self:UpdateEnemy()
-    self._DrGBaseHadEnemy = IsValid(newEnemy)
-    return newEnemy
+  -- Getters/setters --
+
+  function ENT:UpdateEnemy()
+    if not self:IsPossessed() then
+      local enemy = self.DrG_SetEnemy
+      if not IsValid(enemy) then enemy = self:OnUpdateEnemy() end
+      if not IsValid(enemy) then enemy = FetchEnemy(self) end
+      if IsValid(enemy) then
+        self:SetNW2Entity("DrG/Enemy", enemy)
+        self.DrG_HadEnemy = true
+        return enemy
+      end
+    end
+    self:SetNW2Entity("DrG/Enemy", NULL)
+    self.DrG_HadEnemy = false
+    return NULL
   end
+
+  function ENT:GetEnemy()
+    local enemy = self:GetNW2Entity("DrG/Enemy")
+    if IsValid(enemy) then return enemy end
+    if not self.DrG_HadEnemy then return NULL
+    else return self:UpdateEnemy() end
+  end
+  function ENT:SetEnemy(enemy)
+    self.DrG_SetEnemy = enemy
+    self:UpdateEnemy()
+  end
+
+  -- Thread --
+
+  function ENT:DoHandleEnemy(enemy)
+    if self:HasDetectedRecently(enemy) then
+      local visible = self:Visible(enemy)
+      local disp = self:GetRelationship(enemy)
+      if disp == D_HT then
+        if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
+          if self:DoApproachEnemy(enemy) ~= true and self:FollowPath(enemy) == "unreachable" then
+            self:DoEnemyUnreachable(enemy)
+          end
+        elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible then
+          if self:DoMoveAwayFromEnemy(enemy) ~= true then
+            self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
+          end
+        elseif self:DoObserveEnemy(enemy) ~= true then self:FaceTowards(enemy) end
+        if IsValid(enemy) then self:DoAttack(enemy) end
+      elseif disp == D_FR then
+
+      else self:DoNoEnemy() end
+    elseif self:FollowPath(self:LastKnowPos(enemy)) == "reached" then
+      self:ForgetAllEntities()
+    end
+  end
+  function ENT:DoAttack(enemy)
+    local weapon = self:GetWeapon()
+    if self:IsInRange(enemy, self.MeleeAttackRange) and
+    self:DoMeleeAttack(enemy, weapon) ~= false then
+      -- do nothing
+    elseif self:IsInRange(enemy, self.RangeAttackRange) then
+      self:DoRangeAttack(enemy, weapon)
+    end
+  end
+
+  function ENT:DoApproachEnemy(enemy) if isfunction(self.OnChaseEnemy) then return self:OnChaseEnemy(enemy) end end
+  function ENT:DoMoveAwayFromEnemy(enemy) if isfunction(self.OnAvoidEnemy) then return self:OnAvoidEnemy(enemy) end end
+  function ENT:DoObserveEnemy(enemy) if isfunction(self.OnIdleEnemy) then return self:OnIdleEnemy(enemy) end end
+  function ENT:DoMeleeAttack(enemy, weapon) if isfunction(self.OnMeleeAttack) then return self:OnChaseEnemy(enemy, weapon) end end
+  function ENT:DoRangeAttack(enemy, weapon) if isfunction(self.OnRangeAttack) then return self:OnChaseEnemy(enemy, weapon) end end
 
   -- Hooks --
 
@@ -66,7 +113,7 @@ else
   -- Getters --
 
   function ENT:GetEnemy()
-    return self:GetNW2Entity("DrGBaseEnemy")
+    return self:GetNW2Entity("DrG/Enemy")
   end
 
 end

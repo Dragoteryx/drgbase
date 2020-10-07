@@ -21,11 +21,11 @@ local function DebugTrajectory(self, dir, info)
   })
 end
 function physMETA:DrG_AimAt(target, speed, feet)
+  if self:IsDragEnabled() then self:EnableDrag(false) end
   if self:IsGravityEnabled() then
-    if self:IsDragEnabled() then self:EnableDrag(false) end
     local dir, info = self:GetPos():DrG_CalcBallisticTrajectory(target, {
-      magnitude = speed, recursive = true
-    }, feet)
+      magnitude = speed, recursive = true, feet = feet
+    })
     if math.Round(dir:Length(), 1) > math.Round(speed, 1) then
       dir = dir:GetNormalized()*speed
       info.duration = -1
@@ -34,16 +34,17 @@ function physMETA:DrG_AimAt(target, speed, feet)
     DebugTrajectory(self, dir, info)
     return dir, info
   else
-    if self:IsDragEnabled() then self:EnableDrag(false) end
-    local dir, info = self:GetPos():DrG_CalcLineTrajectory(target, speed, feet)
+    local dir, info = self:GetPos():DrG_CalcLineTrajectory(target, {
+      speed = speed, feet = feet
+    })
     self:SetVelocity(dir)
     DebugTrajectory(self, dir, info)
     return dir, info
   end
 end
-function physMETA:DrG_ThrowAt(target, options, feet)
+function physMETA:DrG_ThrowAt(target, options)
   if self:IsDragEnabled() then self:EnableDrag(false) end
-  local dir, info = self:GetPos():DrG_CalcBallisticTrajectory(target, options, feet)
+  local dir, info = self:GetPos():DrG_CalcBallisticTrajectory(target, options)
   self:SetVelocity(dir)
   DebugTrajectory(self, dir, info)
   return dir, info

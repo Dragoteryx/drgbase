@@ -25,7 +25,6 @@ DrGBase.IncludeFile("ai.lua")
 DrGBase.IncludeFile("enemy.lua")
 ENT.BehaviourType = AI_BEHAV_BASE
 ENT.Omniscient = false
-ENT.SpotDuration = 30
 ENT.RangeAttackRange = 0
 ENT.MeleeAttackRange = 50
 ENT.ReachEnemyRange = 50
@@ -53,12 +52,32 @@ ENT.HearingCoefficient = 1
 
 -- Movements --
 DrGBase.IncludeFile("movements.lua")
+DrGBase.IncludeFile("sv_locomotion.lua")
+DrGBase.IncludeFile("sv_path.lua")
 ENT.UseWalkframes = false
 ENT.WalkSpeed = 100
 ENT.RunSpeed = 200
 
 -- Climbing --
-
+ENT.ClimbLedges = false
+ENT.ClimbLedgesMaxHeight = math.huge
+ENT.ClimbLedgesMinHeight = 0
+ENT.LedgeDetectionDistance = 20
+ENT.ClimbProps = false
+ENT.ClimbLadders = false
+ENT.ClimbLaddersUp = true
+ENT.LaddersUpDistance = 20
+ENT.ClimbLaddersUpMaxHeight = math.huge
+ENT.ClimbLaddersUpMinHeight = 0
+ENT.ClimbLaddersDown = false
+ENT.LaddersDownDistance = 20
+ENT.ClimbLaddersDownMaxHeight = math.huge
+ENT.ClimbLaddersDownMinHeight = 0
+ENT.ClimbSpeed = 60
+ENT.ClimbUpAnimation = ACT_CLIMB_UP
+ENT.ClimbDownAnimation = ACT_CLIMB_DOWN
+ENT.ClimbAnimRate = 1
+ENT.ClimbOffset = Vector(0, 0, 0)
 
 -- Locomotion --
 
@@ -74,6 +93,9 @@ ENT.IdleAnimRate = 1
 ENT.JumpAnimation = ACT_JUMP
 ENT.JumpAnimRate = 1
 
+-- Weapons --
+DrGBase.IncludeFile("weapons.lua")
+
 -- Possession --
 DrGBase.IncludeFile("possession.lua")
 
@@ -82,12 +104,12 @@ DrGBase.IncludeFile("misc.lua")
 DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("deprecated.lua")
 
--- Convars --
+-- ConVars --
 local MultHealth = CreateConVar("drgbase_multiplier_health", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Initialize --
 
-function ENT:_DrGBasePreInitialize()
+function ENT:DrG_PreInitialize()
   if SERVER then
     -- model
     if istable(self.Models) and #self.Models > 0 then
@@ -122,18 +144,16 @@ function ENT:_DrGBasePreInitialize()
     else self:SetCollisionBounds(self:GetModelBounds()) end
     -- misc
     self:SetBloodColor(self.BloodColor)
+    self:SetUseType(SIMPLE_USE)
     self:JoinFactions(self.Factions)
     self.VJ_AddEntityToSNPCAttackList = true
     self.vFireIsCharacter = true
   else self:SetIK(true) end
   self:AddFlags(FL_OBJECT + FL_NPC)
-  table.insert(DrGBase._NEXTBOTS, self)
+  table.insert(DrG_Nextbots, self)
 end
-function ENT:_DrGBasePostInitialize()
-  if SERVER then
-    self._DrGBaseRelationshipSystemReady = true
-    self:UpdateRelationships()
-  end
+function ENT:DrG_PostInitialize()
+  if SERVER then self:InitRelationships() end
 end
 
 function ENT:Initialize(...) return self:CustomInitialize(...) end
@@ -141,7 +161,16 @@ function ENT:CustomInitialize() end -- backwards compatibility
 
 -- Think --
 
-function ENT:_DrGBasePreThink(...)
+function ENT:DrG_PreThink()
+  if CLIENT then return end
+  if self:IsOnGround() then self:SetAngles(Angle(0, self:GetAngles().y, 0)) end
+  if self.DrG_OnFire and not self:IsOnFire() then
+    self.DrG_OnFire = false
+    self:OnExtinguish()
+    self:ReactInThread(self.DoExtinguish)
+  end
+end
+function ENT:DrG_PostThink(...)
   if self:IsPossessed() then self:PossessionThink(...) end
 end
 function ENT:PossessionThink() end
@@ -151,32 +180,47 @@ function ENT:CustomThink() end -- backwards compatibility
 
 -- OnRemove --
 
-function ENT:_DrGBaseOnRemove()
+function ENT:DrG_OnRemove()
   if SERVER and self:IsPossessed() then self:StopPossession() end
-  table.RemoveByValue(DrGBase._NEXTBOTS, self)
+  table.RemoveByValue(DrG_Nextbots, self)
 end
 function ENT:OnRemove() end
 
 if SERVER then
   AddCSLuaFile()
 
+  -- Update behaviours --
+
+  coroutine.DrG_RunThread("DrG/UpdateNextbots", function()
+    while true do
+      for nextbot in DrGBase.NextbotIterator() do
+        if IsValid(nextbot) then
+          nextbot:UpdateHostilesSight()
+          nextbot:UpdateEnemy()
+          coroutine.yield()
+        end
+      end
+      coroutine.yield()
+    end
+  end)
+
   -- Coroutine --
 
-  ENT._DrGBaseCorReacts = {}
-  ENT._DrGBaseCorCalls = {}
+  ENT.DrG_ThrReacts = {}
+  ENT.DrG_ThrCalls = {}
 
   local function Behave(self)
     while true do
       if self:IsPossessed() then
-        self:_DrGBasePossessedBehaviour()
+        self:DrG_PossessedBehaviour()
       else self:AIBehaviour() end
-      self:YieldCoroutine(true)
+      self:YieldThread(true)
     end
   end
 
   function ENT:BehaveStart()
     self.BehaveThread = coroutine.create(function()
-      self:DoOnSpawn()
+      self:DoSpawn()
       Behave(self)
     end)
   end
@@ -186,14 +230,10 @@ if SERVER then
     end)
   end
 
-  local IN_COROUTINE = nil
   function ENT:BehaveUpdate()
     if not self.BehaveThread then return end
     if coroutine.status(self.BehaveThread) ~= "dead" then
-      local old_IN_COROUTINE = IN_COROUTINE
-      IN_COROUTINE = self
       local ok, args = coroutine.resume(self.BehaveThread)
-      IN_COROUTINE = old_IN_COROUTINE
       if not ok then
         ErrorNoHalt(self, " Error: ", args, "\n")
         if self:OnError(args) then self:BehaveRestart() end
@@ -204,84 +244,70 @@ if SERVER then
     return self.RestartOnError
   end
 
-  function ENT:InCoroutine()
-    return IN_COROUTINE == self
-  end
-
-  function ENT:YieldCoroutine(interrupt)
-    if not self._DrGBaseNextUpdate
-    or CurTime() > self._DrGBaseNextUpdate then
-      self._DrGBaseNextUpdate = CurTime() + 0.1
+  function ENT:YieldThread(cancellable)
+    --if not self.DrG_NextUpdate
+    --or CurTime() > self.DrG_NextUpdate then
+      --self.DrG_NextUpdate = CurTime() + 0.1
       self:UpdateAnimation()
       self:UpdateSpeed()
-    end
-    return self:YieldCoroutineNoUpdate(interrupt)
+    --end
+    return self:YieldNoUpdate(cancellable)
   end
-  function ENT:YieldCoroutineNoUpdate(interrupt)
-    if interrupt then
+  function ENT:YieldNoUpdate(cancellable)
+    if cancellable then
       local now = CurTime()
-      if self._DrGBaseCorReacting or
-      self._DrGBaseCorCalling then
-        self._DrGBaseCorReacts = {}
-      else
-        if #self._DrGBaseCorCalls > 0 then
-          self._DrGBaseCorCalling = true
-          while #self._DrGBaseCorCalls > 0 do
-            table.remove(self._DrGBaseCorCalls, 1)(self)
-          end
-          self._DrGBaseCorCalling = false
+      while true do
+        local innerNow = CurTime()
+        while #self.DrG_ThrCalls > 0 do
+          table.remove(self.DrG_ThrCalls, 1)(self)
         end
-        if #self._DrGBaseCorReacts > 0 then
-          self._DrGBaseCorReacting = true
-          while #self._DrGBaseCorReacts > 0 do
-            table.remove(self._DrGBaseCorReacts, 1)(self)
-          end
-          self._DrGBaseCorReacting = false
+        self:DoThink()
+        if CurTime() > innerNow then self.DrG_ThrReacts = {} end
+        while #self.DrG_ThrReacts > 0 do
+          local reactNow = CurTime()
+          table.remove(self.DrG_ThrReacts, 1)(self)
+          if CurTime() > reactNow then self.DrG_ThrReacts = {} end
         end
+        if not self:IsAIDisabled() or self:IsPossessed() then break
+        else coroutine.yield() end
       end
       local yielded = CurTime() > now
-      coroutine.yield()
+      if not yielded then coroutine.yield() end
       return yielded
     else
-      self._DrGBaseCorReacts = {}
+      self.DrG_ThrReacts = {}
       coroutine.yield()
       return false
     end
   end
 
-  function ENT:ReactInCoroutine(fn, ...)
+  function ENT:ReactInThread(fn, ...)
     if not isfunction(fn) then return end
-    if not self:InCoroutine() then
-      local args, n = table.DrG_Pack(...)
-      table.insert(self._DrGBaseCorReacts, function(self)
-        fn(self, table.DrG_Unpack(args, n))
-      end)
-    else fn(self, ...) end
+    local args, n = table.DrG_Pack(...)
+    table.insert(self.DrG_ThrReacts, function(self)
+      fn(self, table.DrG_Unpack(args, n))
+    end)
   end
-  function ENT:CallInCoroutine(fn, ...)
+  function ENT:CallInThread(fn, ...)
     if not isfunction(fn) then return end
-    if not self:InCoroutine() then
-      local args, n = table.DrG_Pack(...)
-      table.insert(self._DrGBaseCorCalls, function(self)
-        fn(self, table.DrG_Unpack(args, n))
-      end)
-    else fn(self, ...) end
+    local args, n = table.DrG_Pack(...)
+    table.insert(self.DrG_ThrCalls, function(self)
+      fn(self, table.DrG_Unpack(args, n))
+    end)
+  end
+  function ENT:OverrideThread(fn, ...)
+    if not isfunction(fn) then return end
+    local args, n = table.DrG_Pack(...)
+    local old_BehaveThread = self.BehaveThread
+    self.BehaveThread = coroutine.create(function()
+      fn(self, table.DrG_Unpack(args, n))
+      self.BehaveThread = old_BehaveThread
+    end)
   end
 
-  function ENT:OverrideCoroutine(fn, ...)
-    if not isfunction(fn) then return end
-    if not self:InCoroutine() then
-      local args, n = table.DrG_Pack(...)
-      local old_BehaveThread = self.BehaveThread
-      self.BehaveThread = coroutine.create(function()
-        fn(self, table.DrG_Unpack(args, n))
-        self.BehaveThread = old_BehaveThread
-      end)
-    else fn(self, ...) end
-  end
   -- imo CallInCoroutineOverride is an ugly name, but there you go Roach
   function ENT:CallInCoroutineOverride(fn, ...)
-    return self:OverrideCoroutine(fn, ...)
+    return self:OverrideThread(fn, ...)
   end
 
   -- SLVBase compatibility --
@@ -289,12 +315,22 @@ if SERVER then
     function ENT:PercentageFrozen() return 0 end
   end
 
+  -- Hooks --
+
+  function ENT:DoThink() end
+  function ENT:DoSpawn(...) return self:OnSpawn(...) end
+  function ENT:OnSpawn() end
+
+  function ENT:HandleAnimEvent() end
+
 else
+
+  function ENT:FireAnimationEvent() end
 
   -- Draw --
 
-  function ENT:_DrGBasePostDraw()
-
+  function ENT:DrG_PostDraw()
+    -- draw debug stuff
   end
 
   function ENT:Draw()

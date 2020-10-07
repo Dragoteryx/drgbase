@@ -6,7 +6,7 @@ local EnableHearing = DrGBase.ConVar("drgbase_ai_hearing", "1")
 -- Detection --
 
 function ENT:IsOmniscient()
-  return AllOmniscient:GetBool() or self:GetNW2Bool("DrGBaseOmniscient", tobool(self.Omniscient))
+  return AllOmniscient:GetBool() or self:GetNW2Bool("DrG/Omniscient", tobool(self.Omniscient))
 end
 
 -- Hooks --
@@ -15,98 +15,98 @@ function ENT:OnDetect() end
 function ENT:OnForget() end
 
 if SERVER then
-  util.AddNetworkString("DrGBaseNextbotPlayerDetection")
+  util.AddNetworkString("DrG/NextbotPlayerDetection")
 
   -- Detection --
 
   function ENT:SetOmniscient(omniscient)
-    self:SetNW2Bool("DrGBaseOmniscient", tobool(omniscient))
+    self:SetNW2Bool("DrG/Omniscient", tobool(omniscient))
   end
 
-  ENT._DrGBaseDetected = {}
-  ENT._DrGBaseForgotten = {}
-  ENT._DrGBaseLastTimeDetected = {}
-  ENT._DrGBaseLastKnownPosition = {}
-  ENT._DrGBaseDetectedRecently = {}
+  ENT.DrG_Detected = {}
+  ENT.DrG_Forgotten = {}
+  ENT.DrG_LastTimeDetected = {}
+  ENT.DrG_LastKnownPosition = {}
+  ENT.DrG_DetectedRecently = {}
 
   function ENT:HasDetected(ent)
     if not IsValid(ent) then return false end
     if ent == self then return true end
     if self:IsOmniscient() then return true end
-    return self._DrGBaseDetected[ent] or false
+    return self.DrG_Detected[ent] or false
   end
   function ENT:HasDetectedRecently(ent)
     if not self:HasDetected(ent) then return false end
     if ent == self then return true end
     if self:IsOmniscient() then return true end
-    return CurTime() < self._DrGBaseDetectedRecently[ent]
+    return CurTime() < self.DrG_DetectedRecently[ent]
   end
   function ENT:HasForgotten(ent)
     if not IsValid(ent) then return false end
     if ent == self then return false end
     if self:IsOmniscient() then return false end
-    return self._DrGBaseForgotten[ent] or false
+    return self.DrG_Forgotten[ent] or false
   end
 
   function ENT:LastTimeDetected(ent)
     if self:IsOmniscient() or ent == self then return CurTime()
-    else return self._DrGBaseLastTimeDetected[ent] end
+    else return self.DrG_LastTimeDetected[ent] end
   end
   function ENT:LastKnownPosition(ent)
     if self:IsOmniscient() or ent == self then return ent:GetPos()
-    else return self._DrGBaseLastKnownPosition[ent] end
+    else return self.DrG_LastKnownPosition[ent] end
   end
   function ENT:SetKnownPosition(ent, pos)
     if self:IsOmniscient() or ent == self then return end
-    self._DrGBaseLastKnownPosition[ent] = pos
+    self.DrG_LastKnownPosition[ent] = pos
   end
   function ENT:LastDetectedEntity()
-    return self._DrGBaseLastDetectedEntity or NULL
+    return self.DrG_LastDetectedEntity or NULL
   end
 
   function ENT:DetectEntity(ent, recent)
     if self:IsOmniscient() or ent == self then return end
     local detected = self:HasDetected(ent)
-    self._DrGBaseDetected[ent] = true
-    self._DrGBaseForgotten[ent] = nil
-    self._DrGBaseLastTimeDetected[ent] = CurTime()
-    self._DrGBaseLastKnownPosition[ent] = ent:GetPos()
-    self._DrGBaseLastDetectedEntity = ent
+    self.DrG_Detected[ent] = true
+    self.DrG_Forgotten[ent] = nil
+    self.DrG_LastTimeDetected[ent] = CurTime()
+    self.DrG_LastKnownPosition[ent] = ent:GetPos()
+    self.DrG_LastDetectedEntity = ent
     local recently = CurTime() + (isnumber(recent) and math.Clamp(recent, 0, math.huge) or 0)
-    if not self._DrGBaseDetectedRecently or recently > self._DrGBaseDetectedRecently then
-      self._DrGBaseDetectedRecently[ent] = recently
+    if not self.DrG_DetectedRecently or recently > self.DrG_DetectedRecently then
+      self.DrG_DetectedRecently[ent] = recently
     end
     if not detected then
       local disp = self:GetRelationship(ent, true)
       if disp == D_LI or disp == D_HT or disp == D_FR then
-        self._DrGBaseRelationshipCachesDetected[D_LI][ent] = nil
-        self._DrGBaseRelationshipCachesDetected[D_HT][ent] = nil
-        self._DrGBaseRelationshipCachesDetected[D_FR][ent] = nil
-        self._DrGBaseRelationshipCachesDetected[disp][ent] = true
+        self.DrG_RelationshipCachesDetected[D_LI][ent] = nil
+        self.DrG_RelationshipCachesDetected[D_HT][ent] = nil
+        self.DrG_RelationshipCachesDetected[D_FR][ent] = nil
+        self.DrG_RelationshipCachesDetected[disp][ent] = true
       end
       self:OnDetect(ent)
-      self:ReactInCoroutine(self.DoOnDetect, ent)
+      self:ReactInThread(self.DoDetect, ent)
     end
-    ent:CallOnRemove("DrGBaseRemoveFromDrGNextbot"..self:GetCreationID().."DetectionCache", function()
+    ent:CallOnRemove("DrG/RemoveFromDrGNextbot"..self:GetCreationID().."DetectionCache", function()
       if not IsValid(self) then return end
-      self._DrGBaseDetected[ent] = nil
-      self._DrGBaseForgotten[ent] = nil
-      self._DrGBaseLastTimeDetected[ent] = nil
-      self._DrGBaseLastKnownPosition[ent] = nil
-      self._DrGBaseDetectedRecently[ent] = nil
+      self.DrG_Detected[ent] = nil
+      self.DrG_Forgotten[ent] = nil
+      self.DrG_LastTimeDetected[ent] = nil
+      self.DrG_LastKnownPosition[ent] = nil
+      self.DrG_DetectedRecently[ent] = nil
     end)
   end
   function ENT:ForgetEntity(ent)
     if self:IsOmniscient() or ent == self then return end
     if not self:HasDetected(ent) then return end
-    self._DrGBaseDetected[ent] = nil
-    self._DrGBaseForgotten[ent] = true
-    self._DrGBaseDetectedHostiles[ent] = nil
-    self._DrGBaseRelationshipCachesDetected[D_LI][ent] = nil
-    self._DrGBaseRelationshipCachesDetected[D_HT][ent] = nil
-    self._DrGBaseRelationshipCachesDetected[D_FR][ent] = nil
+    self.DrG_Detected[ent] = nil
+    self.DrG_Forgotten[ent] = true
+    self.DrG_DetectedHostiles[ent] = nil
+    self.DrG_RelationshipCachesDetected[D_LI][ent] = nil
+    self.DrG_RelationshipCachesDetected[D_HT][ent] = nil
+    self.DrG_RelationshipCachesDetected[D_FR][ent] = nil
     self:OnForget(ent)
-    self:ReactInCoroutine(self.DoOnForget, ent)
+    self:ReactInThread(self.DoForget, ent)
   end
   function ENT:ForgetAllEntities()
     if self:IsOmniscient() then return end
@@ -128,7 +128,7 @@ if SERVER then
       end)
     else
       cor = coroutine.create(function()
-        for ent in pairs(self._DrGBaseDetected) do
+        for ent in pairs(self.DrG_Detected) do
           if not IsValid(ent) then continue end
           coroutine.yield(ent)
         end
@@ -163,7 +163,7 @@ if SERVER then
   function ENT:ForgottenEntities()
     if not self:IsOmniscient() then
       local cor = coroutine.create(function()
-        for ent in pairs(self._DrGBaseForgotten) do
+        for ent in pairs(self.DrG_Forgotten) do
           if not IsValid(ent) then continue end
           coroutine.yield(ent)
         end
@@ -227,21 +227,21 @@ if SERVER then
 
   local nextbotMETA = FindMetaTable("NextBot")
 
-  ENT._DrGBaseInSight = {}
+  ENT.DrG_InSight = {}
 
   local function UsesCPPSightSystem(ent)
-    return false
+    return ent:IsPlayer() or ent:IsNextBot()
   end
 
   local old_IsAbleToSee = nextbotMETA.IsAbleToSee
   function nextbotMETA:IsAbleToSee(ent, ...)
     local res = old_IsAbleToSee(self, ent, ...)
     if self.IsDrGNextbot and not UsesCPPSightSystem(ent) then
-      if res and not self._DrGBaseInSight[ent] then
-        self._DrGBaseInSight[ent] = true
+      if res and not self.DrG_InSight[ent] then
+        self.DrG_InSight[ent] = true
         self:OnSight(ent)
-      elseif not res and self._DrGBaseInSight[ent] then
-        self._DrGBaseInSight[ent] = false
+      elseif not res and self.DrG_InSight[ent] then
+        self.DrG_InSight[ent] = false
         self:OnLostSight(ent)
       end
     end
@@ -277,8 +277,8 @@ else
     local ply = LocalPlayer()
     if spotted then
       if isfunction(self.OnSpotEntity) then
-        self._DrGBaseLastTimeSpotted = CurTime()
-        self._DrGBaseLastKnownPosition = ply:GetPos()
+        self.DrG_LastTimeSpotted = CurTime()
+        self.DrG_LastKnownPosition = ply:GetPos()
         self:OnSpotEntity(ply)
       else
         timer.Simple(engine.TickInterval(), function()
@@ -291,11 +291,11 @@ else
       end)
     else self:OnLostEntity(ply) end
   end
-  net.Receive("DrGBaseNextbotPlayerAwareness", function()
+  net.Receive("DrG/NextbotPlayerAwareness", function()
     local nextbot = net.ReadEntity()
     local awareness = net.ReadBit()
     if IsValid(nextbot) then
-      nextbot._DrGBaseLocalPlayerAwareness = awareness
+      nextbot.DrG_LocalPlayerAwareness = awareness
       CallAwarenessHooks(nextbot, awareness == 1)
     end
   end)
@@ -304,18 +304,18 @@ else
 
   function ENT:HasDetectedLocalPlayer()
     if self:IsOmniscient() then return true end
-    return self._DrGBaseLocalPlayerAwareness == 1
+    return self.DrG_LocalPlayerAwareness == 1
   end
   function ENT:HasForgottenLocalPlayer()
     if self:IsOmniscient() then return false end
-    return self._DrGBaseLocalPlayerAwareness == 0
+    return self.DrG_LocalPlayerAwareness == 0
   end
 
   function ENT:LastTimeSpotted()
-    return self._DrGBaseLastTimeSpotted or -1
+    return self.DrG_LastTimeSpotted or -1
   end
   function ENT:LastKnownPosition()
-    return self._DrGBaseLastKnownPosition
+    return self.DrG_LastKnownPosition
   end
 
 end

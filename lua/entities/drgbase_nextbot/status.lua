@@ -1,30 +1,36 @@
+-- ConVars --
+
+local RemoveRagdolls = DrGBase.ConVar("drgbase_ragdolls_remove", "-1")
+local RagdollFadeOut = DrGBase.ConVar("drgbase_ragdolls_fadeout", "3")
+local DisableRagCollisions = DrGBase.ConVar("drgbase_ragdolls_collisions_disabled", "0")
+
 -- Getters --
 
 function ENT:GetHealthRegen()
-  return self:GetNW2Float("DrGBaseHealthRegen", self.HealthRegen)
+  return self:GetNW2Float("DrG/HealthRegen", self.HealthRegen)
 end
 
 function ENT:GetGodMode()
-  return self:GetNW2Bool("DrGBaseGodMode")
+  return self:GetNW2Bool("DrG/GodMode")
 end
 
 function ENT:LastHitGroup()
-  return self:GetNW2Int("DrGBaseLastHitGroup")
+  return self:GetNW2Int("DrG/LastHitGroup", -1)
 end
 
 -- Alive? --
 
 function ENT:IsDown()
-  return self:GetNW2Bool("DrGBaseDown")
+  return self:GetNW2Bool("DrG/Down")
 end
 function ENT:IsDowned()
   return self:IsDown()
 end
 function ENT:IsDying()
-  return self:GetNW2Bool("DrGBaseDying")
+  return self:GetNW2Bool("DrG/Dying")
 end
 function ENT:IsDead()
-  return self:GetNW2Bool("DrGBaseDead") or self:IsDying()
+  return self:GetNW2Bool("DrG/Dead") or self:IsDying()
 end
 
 function ENT:IsAlive()
@@ -35,7 +41,7 @@ function ENT:Alive()
 end
 
 function ENT:GetDowned()
-  return self:GetNW2Int("DrGBaseDowned")
+  return self:GetNW2Int("DrG/Downed")
 end
 
 if SERVER then
@@ -43,7 +49,7 @@ if SERVER then
   -- Setters --
 
   function ENT:SetHealthRegen(regen)
-    self:SetNW2Float("DrGBaseHealthRegen", regen)
+    self:SetNW2Float("DrG/HealthRegen", regen)
   end
 
   function ENT:ScaleModel(mult, delta)
@@ -51,7 +57,7 @@ if SERVER then
   end
 
   function ENT:SetGodMode(god)
-    return self:SetNW2Bool("DrGBaseGodMode", tobool(god))
+    return self:SetNW2Bool("DrG/GodMode", tobool(god))
   end
   function ENT:EnableGodMode()
     self:SetGodMode(true)
@@ -75,36 +81,148 @@ if SERVER then
 
   -- Take damage hooks --
 
-  function ENT:_DrGBaseOnTraceAttack(_, _, tr)
-    self:SetNW2Int("DrGBaseLastHitGroup", tr.HitGroup)
-    self._DrGBaseHitGroupToHandle = true
+  function ENT:Kill(attacker, inflictor)
+    local dmg = DamageInfo()
+    dmg:SetAttacker(attacker or self)
+    dmg:SetInflictor(inflictor)
+    self:OnKilled(dmg)
+  end
+
+  function ENT:DrG_OnTraceAttack(_, _, tr)
+    self:SetNW2Int("DrG/LastHitGroup", tr.HitGroup)
+    self.DrG_HitGroupToHandle = true
   end
   function ENT:OnTraceAttack() end
 
-  function ENT:_DrGBaseOnInjured(dmg)
-    local hitgroup = self._DrGBaseHitGroupToHandle and self:LastHitGroup() or nil
-
+  function ENT:DrG_OnInjured(dmg)
+    if dmg:GetDamage() <= 0 or self:GetGodMode() then
+      self.DrG_HitGroupToHandle = false
+      dmg:ScaleDamage(0)
+    else
+      self:DrG_Timer(0, function() self:SetNW2Int("DrG/Health", self:Health()) end)
+      local hitgroup = self.DrG_HitGroupToHandle and self:GetNW2Int("DrG/LastHitGroup") or HITGROUP_GENERIC
+      local res = self:OnTakeDamage(dmg, hitgroup)
+      --local attacker = dmg:GetAttacker()
+      -- todo => change relationships
+      if self:IsDown() or self:IsDead() then
+        self.DrG_HitGroupToHandle = false
+        dmg:ScaleDamage(0)
+      else
+        if res == true then dmg:ScaleDamage(0) end
+        if isnumber(res) then dmg:ScaleDamage(res) end
+        if dmg:GetDamage() >= self:Health() then
+          if self:OnFatalDamage(dmg, hitgroup) then
+            self.DrG_HitGroupToHandle = false
+            self:SetNW2Bool("DrG/Down", true)
+            self:SetNW2Int("DrG/Downed", self:GetNW2Int("DrG/Downed")+1)
+            self:SetHealth(1)
+            --[[if #self.OnDownedSounds > 0 then
+              self:EmitSound(self.OnDownedSounds[math.random(#self.OnDownedSounds)])
+            end]]
+            local noTarget = self:GetNoTarget()
+            self:SetNoTarget(true)
+            local data = dmg:DrG_Get()
+            self:CallInThread(function(self)
+              self:DoDowned(dmg:DrG_Set(data), hitgroup)
+              if self:Health() <= 0 then self:SetHealth(1) end
+              self:SetNoTarget(noTarget)
+              self:SetNW2Bool("DrG/Down", false)
+            end)
+          else self:SetHealth(0) end
+          return dmg:ScaleDamage(0)
+        else
+          self.DrG_HitGroupToHandle = false
+          --[[if #self.OnDamageSounds > 0 then
+            self:EmitSlotSound("DrGBaseDamageSounds", self.DamageSoundDelay, self.OnDamageSounds[math.random(#self.OnDamageSounds)])
+          end]]
+          if isfunction(self.DoTakeDamage) then
+            local data = dmg:DrG_Get()
+            self:ReactInThread(function(self)
+              if self:IsDown() or self:IsDead() then return end
+              self:DoTakeDamage(dmg:DrG_Set(data), hitgroup)
+            end)
+          elseif isfunction(self.OnTookDamage) then -- backwards compatibility
+            local data = dmg:DrG_Get()
+            self:ReactInThread(function(self)
+              if self:IsDown() or self:IsDead() then return end
+              self:OnTookDamage(dmg:DrG_Set(data), hitgroup)
+            end)
+          elseif isfunction(self.AfterTakeDamage) then -- backwards compatibility #2
+            local data = dmg:DrG_Get()
+            local now = CurTime()
+            self:ReactInThread(function(self)
+              if self:IsDown() or self:IsDead() then return end
+              self:AfterTakeDamage(dmg:DrG_Set(data), CurTime()-now, hitgroup)
+            end)
+          end
+        end
+      end
+    end
   end
   function ENT:OnInjured() end
 
-  function ENT:_DrGBaseOnKilled(dmg)
-    local hitgroup = self._DrGBaseHitGroupToHandle and self:LastHitGroup() or nil
+  local function NextbotDeath(self, dmg)
+    if not IsValid(self) then return end
+    --[[if self:HasWeapon() and self.DropWeaponOnDeath then
+      self:DropWeapon()
+    end]]
+    if self.RagdollOnDeath then
+      local ragdoll = self:BecomeRagdoll(dmg)
+      if IsValid(ragdoll) then
+        if DisableRagCollisions:GetBool() or not GetConVar("ai_serverragdolls"):GetBool() then
+          ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+        end
+        if not self.DrG_OnRagdollRes and RemoveRagdolls:GetFloat() >= 0 then
+          ragdoll:Fire("fadeandremove", math.Clamp(RagdollFadeOut:GetFloat(), 0, math.huge), RemoveRagdolls:GetFloat())
+        end
+      end
+    else self:Remove() end
+  end
 
+  function ENT:DrG_OnKilled(dmg)
+    local hitgroup = self.DrG_HitGroupToHandle and self:GetNW2Int("DrG/LastHitGroup") or HITGROUP_GENERIC
+    self.DrG_HitGroupToHandle = false
+    if self:IsDead() then return end
+    self:SetHealth(0)
+    self:SetNW2Bool("DrG/Dying", true)
+    self:DrG_DeathNotice(dmg:GetAttacker(), dmg:GetInflictor())
+    --[[if #self.OnDeathSounds > 0 then
+      self:EmitSound(self.OnDeathSounds[math.random(#self.OnDeathSounds)])
+    end]]
+    if dmg:IsDamageType(DMG_DISSOLVE) then self:DrG_Dissolve() end
+    if isfunction(self.DoDeath) or isfunction(self.OnDeath) then -- backwards compatiblity
+      local data = dmg:DrG_Get()
+      self:CallInThread(function(self)
+        self:SetNW2Bool("DrG/Dying", false)
+        self:SetNW2Bool("DrG/Dead", true)
+        local now = CurTime()
+        local dmg = nil
+        dmg:DrG_Set(data)
+        if isfunction(self.DoDeath) then
+          dmg = self:DoDeath(dmg, hitgroup)
+        else dmg = self:OnDeath(dmg, hitgroup) end
+        if dmg == nil then
+          dmg = DamageInfo(data)
+          if CurTime() > now then
+            dmg:SetDamageForce(Vector(0, 0, 1))
+          end
+        end
+        NextbotDeath(self, dmg)
+      end)
+    else
+      self:SetNW2Bool("DrG/Dying", false)
+      self:SetNW2Bool("DrG/Dead", true)
+      NextbotDeath(self, dmg)
+    end
   end
   function ENT:OnKilled() end
 
   function ENT:OnTakeDamage() end
-
-  function ENT:DoOnTakeDamage(...) return self:OnTookDamage(...) end
-  function ENT:OnTookDamage() end
+  --function ENT:DoTakeDamage() end
 
   function ENT:OnFatalDamage() end
-
-  function ENT:DoOnDowned(...) return self:OnDowned(...) end
-  function ENT:OnDowned() end
-
-  function ENT:DoOnDeath(...) return self:OnDeath(...) end
-  function ENT:OnDeath() end
+  function ENT:DoDowned(...) if isfunction(self.OnDowned) then return self:OnDowned(...) end end -- backwards compatiblity
+  --function ENT:DoDeath() end
 
   -- Meta --
 
@@ -112,13 +230,16 @@ if SERVER then
 
   local old_SetHealth = entMETA.SetHealth
   function entMETA:SetHealth(health, ...)
-    if self.IsDrGNextbot then self:SetNW2Int("DrGBaseHealth", health) end
+    if self.IsDrGNextbot then
+      if self:IsDead() then health = 0 end
+      self:SetNW2Int("DrG/Health", health)
+    end
     return old_SetHealth(self, health, ...)
   end
 
   local old_SetMaxHealth = entMETA.SetMaxHealth
   function entMETA:SetMaxHealth(health, ...)
-    if self.IsDrGNextbot then self:SetNW2Int("DrGBaseMaxHealth", health) end
+    if self.IsDrGNextbot then self:SetNW2Int("DrG/MaxHealth", health) end
     return old_SetMaxHealth(self, health, ...)
   end
 
@@ -130,13 +251,15 @@ else
 
   local old_Health = entMETA.Health
   function entMETA:Health(...)
-    if self.IsDrGNextbot then return self:GetNW2Int("DrGBaseHealth", self.SpawnHealth)
+    if self.IsDrGNextbot then
+      return self:GetNW2Int("DrG/Health", self.SpawnHealth)
     else return old_Health(self, ...) end
   end
 
   local old_GetMaxHealth = entMETA.GetMaxHealth
   function entMETA:GetMaxHealth(...)
-    if self.IsDrGNextbot then return self:GetNW2Int("DrGBaseMaxHealth", self.SpawnHealth)
+    if self.IsDrGNextbot then
+      return self:GetNW2Int("DrG/MaxHealth", self.SpawnHealth)
     else return old_GetMaxHealth(self, ...) end
   end
 

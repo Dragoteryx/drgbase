@@ -15,6 +15,24 @@ end
 function DrGBase.ConVar(name, value, ...)
   return CreateConVar(name, value, bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, ...))
 end
+function DrGBase.ClientConVar(name, value, ...)
+  return CreateClientConVar(name, value)
+end
+
+function DrGBase.DeprecationWarning(old, new)
+  ErrorNoHalt("[DrGBase] Deprecation warning: '"..old.."' is deprecated, you should use '"..new.."' instead", "\n")
+  --DrGBase.Error("Deprecation warning: '"..old.."' is deprecated, you should use '"..new.."' instead", {chat = true})
+end
+function DrGBase.Deprecated(old, new, fn)
+  local warned = false
+  return function(self, ...)
+    if not warned and GetConVar("developer"):GetBool() then
+      DrGBase.DeprecationWarning(old, new)
+      warned = true
+    end
+    return fn(self, ...)
+  end
+end
 
 if SERVER then
 

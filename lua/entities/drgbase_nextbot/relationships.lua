@@ -1,12 +1,19 @@
+-- Convar --
+
+local TargetGrubs = DrGBase.ConVar("drgbase_target_grubs", "1")
+local TargetRepMelons = DrGBase.ConVar("drgbase_target_repmelons", "1")
+
 -- Getters --
 
 function ENT:Team()
-  return self:GetNW2Int("DrGBaseTeam", 0)
+  return self:GetNW2Int("DrG/Team", 0)
 end
 
 if SERVER then
 
   -- Internal --
+
+  local D_HS = 5
 
   local CACHED_DISPS = {
     [D_LI] = true,
@@ -143,10 +150,10 @@ if SERVER then
     ["replicator_queen"] = true,
     ["replicator_queen_hive"] = true
   }
-  local function IsTarget(ent)
+  function DrG_IsTarget(ent)
     if not IsValid(ent) then return false end
     local class = ent:GetClass()
-    if TARGET_EXCEPTIONS[class] then
+    if TARGET_EXCEPTIONS[class] ~= nil then
       local exception = TARGET_BLACKLIST[class]
       if isbool(exception) then return expection
       else return exception:GetBool() end
@@ -161,38 +168,38 @@ if SERVER then
 
   -- Setters --
 
-  ENT._DrGBaseRelationships = {}
-  ENT._DrGBaseRelationshipCaches = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
-  ENT._DrGBaseRelationshipCachesDetected = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
+  ENT.DrG_Relationships = {}
+  ENT.DrG_RelationshipCaches = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
+  ENT.DrG_RelationshipCachesDetected = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
 
   local function SetRelationship(self, ent, disp, prio)
     if not IsValid(ent) then return end
     if not IsValidDisp(disp) then return end
     if IsCachedDisp(disp) then
-      self._DrGBaseRelationshipCaches[D_LI][ent] = nil
-      self._DrGBaseRelationshipCaches[D_HT][ent] = nil
-      self._DrGBaseRelationshipCaches[D_FR][ent] = nil
-      self._DrGBaseRelationshipCaches[disp][ent] = true
-      if self._DrGBaseDetected[ent] then
-        self._DrGBaseRelationshipCachesDetected[D_LI][ent] = nil
-        self._DrGBaseRelationshipCachesDetected[D_HT][ent] = nil
-        self._DrGBaseRelationshipCachesDetected[D_FR][ent] = nil
-        self._DrGBaseRelationshipCachesDetected[disp][ent] = true
+      self.DrG_RelationshipCaches[D_LI][ent] = nil
+      self.DrG_RelationshipCaches[D_HT][ent] = nil
+      self.DrG_RelationshipCaches[D_FR][ent] = nil
+      self.DrG_RelationshipCaches[disp][ent] = true
+      if self.DrG_Detected[ent] then
+        self.DrG_RelationshipCachesDetected[D_LI][ent] = nil
+        self.DrG_RelationshipCachesDetected[D_HT][ent] = nil
+        self.DrG_RelationshipCachesDetected[D_FR][ent] = nil
+        self.DrG_RelationshipCachesDetected[disp][ent] = true
       end
       ent:CallOnRemove("DrGBaseRemoveFromDrGNextbot"..self:GetCreationID().."RelationshipCache", function()
         if not IsValid(self) then return end
-        self._DrGBaseRelationshipCaches[disp][ent] = nil
-        self._DrGBaseRelationshipCachesDetected[disp][ent] = nil
+        self.DrG_RelationshipCaches[disp][ent] = nil
+        self.DrG_RelationshipCachesDetected[disp][ent] = nil
       end)
     else
-      self._DrGBaseRelationshipCaches[D_LI][ent] = nil
-      self._DrGBaseRelationshipCaches[D_HT][ent] = nil
-      self._DrGBaseRelationshipCaches[D_FR][ent] = nil
-      self._DrGBaseRelationshipCachesDetected[D_LI][ent] = nil
-      self._DrGBaseRelationshipCachesDetected[D_HT][ent] = nil
-      self._DrGBaseRelationshipCachesDetected[D_FR][ent] = nil
+      self.DrG_RelationshipCaches[D_LI][ent] = nil
+      self.DrG_RelationshipCaches[D_HT][ent] = nil
+      self.DrG_RelationshipCaches[D_FR][ent] = nil
+      self.DrG_RelationshipCachesDetected[D_LI][ent] = nil
+      self.DrG_RelationshipCachesDetected[D_HT][ent] = nil
+      self.DrG_RelationshipCachesDetected[D_FR][ent] = nil
     end
-    self._DrGBaseRelationships[ent] = {disp = disp, prio = prio}
+    self.DrG_Relationships[ent] = {disp = disp, prio = prio}
     if self:GetEnemy() == ent and not self:IsHostile(ent) then
       self:UpdateEnemy()
     end
@@ -205,11 +212,11 @@ if SERVER then
     end]]
   end
 
-  ENT._DrGBaseDefinedRelationships = {}
+  ENT.DrG_DefinedRelationships = {}
 
   local function DefinedRelationshipTable(self, name)
-    self._DrGBaseDefinedRelationships[name] = self._DrGBaseDefinedRelationships[name] or {}
-    return self._DrGBaseDefinedRelationships[name]
+    self.DrG_DefinedRelationships[name] = self.DrG_DefinedRelationships[name] or {}
+    return self.DrG_DefinedRelationships[name]
   end
   local function GetDefinedRelationship(self, type, value)
     local rel = DefinedRelationshipTable(self, type)[value]
@@ -351,7 +358,7 @@ if SERVER then
     end
   end
 
-  ENT._DrGBaseIgnoredEntities = {}
+  ENT.DrG_IgnoredEntities = {}
 
   local NPC_STATES_IGNORED = {
     [NPC_STATE_PLAYDEAD] = true,
@@ -361,35 +368,42 @@ if SERVER then
     if ent:IsPlayer() and not ent:Alive() then return true end
     if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return true end
     if ent:IsFlagSet(FL_NOTARGET) then return true end
-    if ent.IsVJBaseSNPC and ent.VJ_NoTarget then return true end
-    if ent.CPTBase_NPC and ent.UseNotarget then return true end
+    if ent.IsVJBaseSNPC and ent.VJ_NoTarget then return true end -- why the fuck
+    if ent.CPTBase_NPC and ent.UseNotarget then return true end -- don't you use
+    if ent.IV04NextBot and ent.IsNTarget then return true end -- the built-in no target
     if ent:IsNPC() and NPC_STATES_IGNORED[ent:GetNPCState()] then return true end
     if (ent:IsPlayer() or ent:IsNPC() or ent:IsNextBot()) and ent:Health() <= 0 then return true end
     if ent.IsDrGNextbot and (ent:IsDown() or ent:IsDead()) then return true end
     if self:ShouldIgnore(ent) then return true end
-    return self._DrGBaseIgnoredEntities[ent] or false
+    return self.DrG_IgnoredEntities[ent] or false
   end
   function ENT:SetIgnored(ent, ignored)
-    self._DrGBaseIgnoredEntities[ent] = tobool(ignored)
+    self.DrG_IgnoredEntities[ent] = tobool(ignored)
+  end
+
+  function ENT:GetNoTarget()
+    return self:IsFlagSet(FL_NOTARGET)
+  end
+  function ENT:SetNoTarget(noTarget)
+    if noTarget then self:AddFlags(FL_NOTARGET)
+    else self:RemoveFlags(FL_NOTARGET) end
   end
 
   -- Factions & Teams --
 
   function ENT:SetTeam(team)
     local current = self:Team()
-    self:SetNW2Int("DrGBaseTeam", tonumber(team))
+    self:SetNW2Int("DrG/Team", tonumber(team))
     if tonumber(team) ~= current then self:UpdateRelationships() end
   end
 
-  ENT._DrGBaseFactions = {}
+  ENT.DrG_Factions = {}
 
   function ENT:JoinFaction(faction)
     if self:IsInFaction(faction) then return end
-    self._DrGBaseFactions[string.upper(faction)] = true
+    self.DrG_Factions[string.upper(faction)] = true
     self:AddFactionRelationship(faction, D_LI, 1)
-    local nextbots = DrGBase.GetNextbots()
-    for i = 1, #nextbots do
-      local nextbot = nextbots[i]
+    for nextbot in DrGBase.NextbotIterator() do
       if nextbot == self then continue end
       nextbot:UpdateRelationshipWith(self)
     end
@@ -400,12 +414,10 @@ if SERVER then
 
   function ENT:LeaveFaction(faction)
     if not self:IsInFaction(faction) then return end
-    self._DrGBaseFactions[string.upper(faction)] = nil
+    self.DrG_Factions[string.upper(faction)] = nil
     local disp, prio = self:GetFactionRelationship(faction)
     if disp == D_LI and prio == 1 then self:ResetFactionRelationship(faction) end
-    local nextbots = DrGBase.GetNextbots()
-    for i = 1, #nextbots do
-      local nextbot = nextbots[i]
+    for nextbot in DrGBase.NextbotIterator() do
       if nextbot == self then continue end
       nextbot:UpdateRelationshipWith(self)
     end
@@ -418,11 +430,11 @@ if SERVER then
   end
 
   function ENT:IsInFaction(faction)
-    return self._DrGBaseFactions[string.upper(faction)] or false
+    return self.DrG_Factions[string.upper(faction)] or false
   end
   function ENT:GetFactions()
     local factions = {}
-    for faction, joined in pairs(self._DrGBaseFactions) do
+    for faction, joined in pairs(self.DrG_Factions) do
       if not joined then return end
       table.insert(factions, faction)
     end
@@ -431,30 +443,31 @@ if SERVER then
 
   -- Update --
 
-  hook.Add("OnEntityCreated", "DrGBase_UpdateRelationshipWithNew", function(ent)
+  hook.Add("OnEntityCreated", "DrG/UpdateRelationshipWithNew", function(ent)
     timer.Simple(0, function()
       if not IsValid(ent) then return end
-      local nextbots = DrGBase.GetNextbots()
-      for i = 1, #nextbots do
-        nextbots[i]:UpdateRelationshipWith(ent)
+      for nextbot in DrGBase.NextbotIterator() do
+        nextbot:UpdateRelationshipWith(ent)
       end
     end)
   end)
 
+  function ENT:InitRelationships()
+    if self.DrG_RelationshipsReady then return end
+    self.DrG_RelationshipsReady = true
+    self:UpdateRelationships()
+  end
   function ENT:UpdateRelationships()
-    if not self._DrGBaseRelationshipSystemReady then return end
+    if not self.DrG_RelationshipsReady then return end
     local entities = ents.GetAll()
     for i = 1, #entities do
       self:UpdateRelationshipWith(entities[i])
     end
   end
   function ENT:UpdateRelationshipWith(ent)
-    if not self._DrGBaseRelationshipSystemReady then return D_ER, 1 end
+    if not self.DrG_RelationshipsReady then return D_ER, 1 end
     if not IsValid(ent) or ent == self then return D_ER, 1 end
-    local default_disp
-    if IsTarget(ent) then
-      default_disp = self:GetDefaultRelationship()
-    else default_disp = D_NU end
+    local default_disp = DrG_IsTarget(ent) and self:GetDefaultRelationship() or D_NU
     local ent_disp, ent_prio = self:GetEntityRelationship(ent)
     local class_disp, class_prio = self:GetClassRelationship(ent:GetClass())
     local model_disp, model_prio = self:GetModelRelationship(ent:GetModel())
@@ -473,8 +486,6 @@ if SERVER then
         if ent:DrG_IsInFaction(faction) then table.insert(relationships, rel) end
       elseif ent.IsDrGNextbot then
         if ent:IsInFaction(faction) then table.insert(relationships, rel) end
-      elseif ent:DrG_IsSanic() then
-        if faction == FACTION_SANIC then table.insert(relationships, rel) end
       elseif ent.IsVJBaseSNPC then
         for i = 1, #ent.VJ_NPC_Class do
           if string.upper(ent.VJ_NPC_Class[i]) == faction then
@@ -494,42 +505,41 @@ if SERVER then
   -- Getters --
 
   function ENT:GetRelationship(ent, absolute)
-    local rel = self._DrGBaseRelationships[ent]
-    if rel then
-      if not absolute and self:IsIgnored(ent) then return D_NU, rel.prio
-      else return rel.disp, rel.prio end
+    local rel = self.DrG_Relationships[ent]
+    if rel and (absolute or not self:IsIgnored(ent)) then
+      return rel.disp, rel.prio
     else return D_NU, 1 end
   end
-  function ENT:IsAlly(ent)
-    return self:GetRelationship(ent) == D_LI
+  function ENT:IsAlly(ent, absolute)
+    return self:GetRelationship(ent, absolute) == D_LI
   end
-  function ENT:IsEnemy(ent)
-    return self:GetRelationship(ent) == D_HT
+  function ENT:IsEnemy(ent, absolute)
+    return self:GetRelationship(ent, absolute) == D_HT
   end
-  function ENT:IsAfraidOf(ent)
-    return self:GetRelationship(ent) == D_FR
+  function ENT:IsAfraidOf(ent, absolute)
+    return self:GetRelationship(ent, absolute) == D_FR
   end
-  function ENT:IsHostile(ent)
-    local disp = self:GetRelationship(ent)
+  function ENT:IsHostile(ent, absolute)
+    local disp = self:GetRelationship(ent, absolute)
     return disp == D_HT or disp == D_FR
   end
-  function ENT:IsNeutral(ent)
-    return self:GetRelationship(ent) == D_NU
+  function ENT:IsNeutral(ent, absolute)
+    return self:GetRelationship(ent, absolute) == D_NU
   end
 
   -- iterators
   local function EntityIterator(self, disp, detected)
-    local cor
-    if disp == "hostile" then
-      cor = coroutine.create(function()
+    local thr
+    if disp == D_HS then
+      thr = coroutine.create(function()
         for ent in self:EnemyIterator(detected) do coroutine.yield(ent) end
         for ent in self:AfraidOfIterator(detected) do coroutine.yield(ent) end
       end)
     elseif IsCachedDisp(disp) then
       if detected then
         if not self:IsOmniscient() then
-          cor = coroutine.create(function()
-            for ent in pairs(self._DrGBaseRelationshipCachesDetected[disp]) do
+          thr = coroutine.create(function()
+            for ent in pairs(self.DrG_RelationshipCachesDetected[disp]) do
               if not IsValid(ent) then continue end
               if self:IsIgnored(ent) then continue end
               coroutine.yield(ent)
@@ -537,8 +547,8 @@ if SERVER then
           end)
         else return EntityIterator(self, disp) end
       else
-        cor = coroutine.create(function()
-          for ent in pairs(self._DrGBaseRelationshipCaches[disp]) do
+        thr = coroutine.create(function()
+          for ent in pairs(self.DrG_RelationshipCaches[disp]) do
             if not IsValid(ent) then continue end
             if isbool(detected) and self:HasDetected(ent) ~= detected then continue end
             if self:IsIgnored(ent) then continue end
@@ -547,7 +557,7 @@ if SERVER then
         end)
       end
     else
-      cor = coroutine.create(function()
+      thr = coroutine.create(function()
         local entities = ents.GetAll()
         for i = 1, #entities do
           local ent = entities[i]
@@ -559,7 +569,7 @@ if SERVER then
       end)
     end
     return function()
-      local _, res = coroutine.resume(cor)
+      local _, res = coroutine.resume(thr)
       return res
     end
   end
@@ -573,7 +583,7 @@ if SERVER then
     return EntityIterator(self, D_FR, detected)
   end
   function ENT:HostileIterator(detected)
-    return EntityIterator(self, "hostile", detected)
+    return EntityIterator(self, D_HS, detected)
   end
   function ENT:NeutralIterator(detected)
     return EntityIterator(self, D_NU, detected)
@@ -597,7 +607,7 @@ if SERVER then
     return GetEntities(self, D_FR, detected)
   end
   function ENT:GetHostiles(detected)
-    return GetEntities(self, "hostile", detected)
+    return GetEntities(self, D_HS, detected)
   end
   function ENT:GetNeutrals(detected)
     return GetEntities(self, D_NU, detected)
@@ -624,7 +634,7 @@ if SERVER then
     return GetClosestEntity(self, D_FR, detected)
   end
   function ENT:GetClosestHostile(detected)
-    return GetClosestEntity(self, "hostile", detected)
+    return GetClosestEntity(self, D_HS, detected)
   end
   function ENT:GetClosestNeutral(detected)
     return GetClosestEntity(self, D_NU, detected)
@@ -644,9 +654,9 @@ if SERVER then
     return GetNumberOfEntities(self, D_FR, detected)
   end
   function ENT:GetNumberOfHostiles(detected)
-    return GetNumberOfEntities(self, "hostile", detected)
+    return GetNumberOfEntities(self, D_HS, detected)
   end
-  function ENT:GetNumberOfNeutralsLeft(detected)
+  function ENT:GetNumberOfNeutrals(detected)
     return GetNumberOfEntities(self, D_NU, detected)
   end
 

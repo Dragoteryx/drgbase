@@ -27,6 +27,15 @@ ENT.JumpAnimation = ACT_HL2MP_JUMP_KNIFE
 ENT.WalkSpeed = -1
 ENT.RunSpeed = 300
 
+-- Climbing --
+ENT.ClimbLedges = true
+ENT.ClimbProps = true
+ENT.ClimbLedgesMaxHeight = math.huge
+ENT.ClimbLadders = true
+ENT.ClimbSpeed = 60
+ENT.ClimbUpAnimation = ACT_ZOMBIE_CLIMB_UP
+ENT.ClimbOffset = Vector(-14, 0, 0)
+
 if SERVER then
 
   sound.Add({
@@ -41,7 +50,7 @@ if SERVER then
   end
 
   function ENT:Think()
-
+    --print(self:GetEnemy())
   end
 
   function ENT:OnSight(ent)
@@ -51,8 +60,9 @@ if SERVER then
     print("lostsight", ent)
   end
 
-  function ENT:ShouldRun()
-    return true
+  function ENT:OnComputePath(area)
+    local mat = area:DrG_GetMaterialType()
+    if mat == MAT_CONCRETE then return 10000000 end
   end
 
 end

@@ -1,8 +1,24 @@
 -- Misc --
 
-DrGBase._NEXTBOTS = DrGBase._NEXTBOTS or {}
+DrG_Nextbots = DrG_Nextbots or {}
+function DrGBase.NextbotIterator()
+  local thr = coroutine.create(function()
+    for i = 1, #DrG_Nextbots do
+      local nextbot = DrG_Nextbots[i]
+      if IsValid(nextbot) then coroutine.yield(nextbot) end
+    end
+  end)
+  return function()
+    local _, nextbot = coroutine.resume(thr)
+    return nextbot
+  end
+end
 function DrGBase.GetNextbots()
-  return DrGBase._NEXTBOTS
+  local nextbots = {}
+  for nextbot in DrGBase.NextbotIterator() do
+    table.insert(nextbots, nextbot)
+  end
+  return nextbots
 end
 
 -- Registry --
@@ -52,7 +68,7 @@ function DrGBase.AddNextbot(ENT)
   local NPC = {Name = ENT.PrintName, Class = class, Category = ENT.Category}
   if ENT.Spawnable ~= false then
     list.Set("NPC", class, NPC)
-    list.Set("DrGBaseNextbots", class, NPC)
+    list.Set("DrG/Nextbots", class, NPC)
   end
 
   DrGBase.Print("Nextbot '"..class.."' loaded")
@@ -61,43 +77,23 @@ end
 
 -- Spawnmenu --
 
-hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseNextbots", function(pnlContent, tree)
-	local list = list.Get("DrGBaseNextbots")
+spawnmenu.AddContentType("drg/nextbot", function(panel, data)
+  
+end)
+
+hook.Add("DrG/PopulateSpawnmenu", "AddDrGBaseNextbots", function(panel, tree)
 	local categories = {}
-	for class, ent in pairs(list) do
-		local category = ent.Category or "Other"
-		local tab = categories[category] or {}
-		tab[class] = ent
-		categories[category] = tab
-	end
-	local nextbotsTree = tree:AddNode("Nextbots", "icon16/monkey.png")
-	for categoryName, category in SortedPairs(categories) do
-		local icon = DrGBase.GetIcon(categoryName) or "icon16/monkey.png"
-		if categoryName == "DrGBase" then icon = DrGBase.Icon end
-		local node = nextbotsTree:AddNode(categoryName, icon)
-		node.DoPopulate = function(self)
-			if self.PropPanel then return end
-			self.PropPanel = vgui.Create("ContentContainer", pnlContent)
-			self.PropPanel:SetVisible(false)
-			self.PropPanel:SetTriggerSpawnlistChange(false)
-			for class, ent in SortedPairsByMemberValue(category, "Name") do
-				spawnmenu.CreateContentIcon("npc", self.PropPanel, {
-					nicename	= ent.Name or class,
-					spawnname	= class,
-					material = "entities/"..class..".png",
-					admin	= ent.AdminOnly or false
-				})
-			end
-		end
-		node.DoClick = function(self)
-			self:DoPopulate()
-			pnlContent:SwitchPanel(self.PropPanel)
-		end
-	end
-	local firstNode = tree:Root():GetChildNode(0)
-	if IsValid(firstNode) then
-		firstNode:InternalDoClick()
-	end
+  for class, nextbot in pairs(list.Get("DrG/Nextbots")) do
+    local category = nextbot.Category or "Other"
+    categories[category] = categories[category] or {}
+    categories[category][class] = nextbot
+  end
+  local nextbots = tree:AddNode("Nextbots", "icon16/monkey.png")
+  for name, category in pairs(categories) do
+    local icon = DrGBase.GetIcon(name) or "icon16/monkey.png"
+    
+  end
+  nextbots:InternalDoClick()
 end)
 
 -- Footsteps --
