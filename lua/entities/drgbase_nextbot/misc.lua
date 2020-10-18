@@ -1,7 +1,7 @@
 -- Helpers --
 
 function ENT:IsInRange(pos, range)
-  if isentity(pos) then pos = pos:GetPos() end
+  if isentity(pos) and not IsValid(pos) then return false end
   return self:GetHullRangeSquaredTo(pos) <= range^2
 end
 function ENT:GetHullRangeTo(pos)
@@ -11,6 +11,31 @@ end
 function ENT:GetHullRangeSquaredTo(pos)
   if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
   return self:NearestPoint(pos):DistToSqr(pos)
+end
+
+-- Misc --
+
+local entMETA = FindMetaTable("Entity")
+
+local old_EyePos = entMETA.EyePos
+function entMETA:EyePos()
+  if self.IsDrGNextbot then
+    local eyepos = self:WorldSpaceCenter()
+    local eyebone = self.EyeBone
+    if isstring(eyebone) then eyebone = self:LookupBone(eyebone) end
+    if isnumber(eyebone) then eyepos = self:GetBonePosition(eyebone) end
+    return eyepos +
+      self.EyeOffset.x*self:GetForward() +
+      self.EyeOffset.y*self:GetRight() +
+      self.EyeOffset.z*self:GetUp()
+  else return old_EyePos(self) end
+end
+
+local old_EyeAngles = entMETA.EyeAngles
+function entMETA:EyeAngles()
+  if self.IsDrGNextbot then
+    return self:GetAngles() + self.EyeAngle
+  else return old_EyeAngles(self) end
 end
 
 if SERVER then
@@ -32,7 +57,7 @@ if SERVER then
   -- Helpers --
 
   function ENT:SafeSetPos(pos)
-    if self:DrG_TraceHull(nil, {
+    if self:TraceHull(nil, {
       start = pos, endpos = pos
     }).Hit then return false end
     self:SetPos(pos)
@@ -40,8 +65,6 @@ if SERVER then
   end
 
   -- Meta --
-
-  local entMETA = FindMetaTable("Entity")
 
   local old_GetVelocity = entMETA.GetVelocity
   function entMETA:GetVelocity(...)

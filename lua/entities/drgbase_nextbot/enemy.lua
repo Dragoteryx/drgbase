@@ -83,7 +83,7 @@ if SERVER then
       elseif disp == D_FR then
 
       else self:DoNoEnemy() end
-    elseif self:FollowPath(self:LastKnowPos(enemy)) == "reached" then
+    elseif self:FollowPath(self:LastKnownPosition(enemy)) == "reached" then
       self:ForgetAllEntities()
     end
   end
@@ -97,11 +97,31 @@ if SERVER then
     end
   end
 
-  function ENT:DoApproachEnemy(enemy) if isfunction(self.OnChaseEnemy) then return self:OnChaseEnemy(enemy) end end
-  function ENT:DoMoveAwayFromEnemy(enemy) if isfunction(self.OnAvoidEnemy) then return self:OnAvoidEnemy(enemy) end end
-  function ENT:DoObserveEnemy(enemy) if isfunction(self.OnIdleEnemy) then return self:OnIdleEnemy(enemy) end end
-  function ENT:DoMeleeAttack(enemy, weapon) if isfunction(self.OnMeleeAttack) then return self:OnChaseEnemy(enemy, weapon) end end
-  function ENT:DoRangeAttack(enemy, weapon) if isfunction(self.OnRangeAttack) then return self:OnChaseEnemy(enemy, weapon) end end
+  local OnChaseEnemyDeprecation = DrGBase.Deprecation("ENT:OnChaseEnemy(enemy)", "ENT:DoApproachEnemy(enemy)")
+  local OnAvoidEnemyDeprecation = DrGBase.Deprecation("ENT:OnAvoidEnemy(enemy)", "ENT:DoMoveAwayFromEnemy(enemy)")
+  local OnIdleEnemyDeprecation = DrGBase.Deprecation("ENT:OnIdleEnemy(enemy)", "ENT:DoObserveEnemy(enemy)")
+  local OnMeleeAttackDeprecation = DrGBase.Deprecation("ENT:OnMeleeAttack(enemy, weapon)", "ENT:DoMeleeAttack(enemy, weapon)")
+  local OnRangeAttackDeprecation = DrGBase.Deprecation("ENT:OnRangeAttack(enemy, weapon)", "ENT:DoRangeAttack(enemy, weapon)")
+  function ENT:DoApproachEnemy(enemy) if isfunction(self.OnChaseEnemy) then
+    OnChaseEnemyDeprecation()
+    return self:OnChaseEnemy(enemy)
+  end end
+  function ENT:DoMoveAwayFromEnemy(enemy) if isfunction(self.OnAvoidEnemy) then
+    OnAvoidEnemyDeprecation()
+    return self:OnAvoidEnemy(enemy)
+  end end
+  function ENT:DoObserveEnemy(enemy) if isfunction(self.OnIdleEnemy) then
+    OnIdleEnemyDeprecation()
+    return self:OnIdleEnemy(enemy)
+  end end
+  function ENT:DoMeleeAttack(enemy, weapon) if isfunction(self.OnMeleeAttack) then
+    OnMeleeAttackDeprecation()
+    return self:OnMeleeAttack(enemy, weapon)
+  end end
+  function ENT:DoRangeAttack(enemy, weapon) if isfunction(self.OnRangeAttack) then
+    OnRangeAttackDeprecation()
+    return self:OnRangeAttack(enemy, weapon)
+  end end
 
   -- Hooks --
 

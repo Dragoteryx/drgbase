@@ -10,14 +10,6 @@ function ENT:GetHealthRegen()
   return self:GetNW2Float("DrG/HealthRegen", self.HealthRegen)
 end
 
-function ENT:GetGodMode()
-  return self:GetNW2Bool("DrG/GodMode")
-end
-
-function ENT:LastHitGroup()
-  return self:GetNW2Int("DrG/LastHitGroup", -1)
-end
-
 -- Alive? --
 
 function ENT:IsDown()
@@ -56,14 +48,28 @@ if SERVER then
     self:SetModelScale(self:GetModelScale()*mult, delta)
   end
 
+  function ENT:HasGodMode()
+    return self:IsFlagSet(FL_GODMODE)
+  end
   function ENT:SetGodMode(god)
-    return self:SetNW2Bool("DrG/GodMode", tobool(god))
+    if tobool(god) then self:AddFlags(FL_GODMODE)
+    else self:RemoveFlags(FL_GODMODE) end
   end
   function ENT:EnableGodMode()
     self:SetGodMode(true)
   end
   function ENT:DisableGodMode()
     self:SetGodMode(false)
+  end
+
+  function ENT:LastHitGroup()
+    return this.DrG_LastHitGroup or DMG_GENERIC
+  end
+  function ENT:LastTimeHit()
+
+  end
+  function ENT:LastDamageInfo()
+
   end
 
   -- Health --
@@ -89,18 +95,21 @@ if SERVER then
   end
 
   function ENT:DrG_OnTraceAttack(_, _, tr)
-    self:SetNW2Int("DrG/LastHitGroup", tr.HitGroup)
+    self.DrG_LastHitGroup = tr.HitGroup
     self.DrG_HitGroupToHandle = true
   end
   function ENT:OnTraceAttack() end
 
+  local OnTookDamageDeprecation = DrGBase.Deprecation("ENT:OnTookDamage(dmginfo, hitgroup)", "ENT:DoTakeDamage(dmginfo, hitgroup)")
+  local AfterTakeDamageDeprecation = DrGBase.Deprecation("ENT:AfterTakeDamage(dmginfo, delay, hitgroup)", "ENT:DoTakeDamage(dmginfo, hitgroup)")
+  function ENT:OnInjured() end
   function ENT:DrG_OnInjured(dmg)
-    if dmg:GetDamage() <= 0 or self:GetGodMode() then
+    if dmg:GetDamage() <= 0 or self:HasGodMode() then
       self.DrG_HitGroupToHandle = false
       dmg:ScaleDamage(0)
     else
-      self:DrG_Timer(0, function() self:SetNW2Int("DrG/Health", self:Health()) end)
-      local hitgroup = self.DrG_HitGroupToHandle and self:GetNW2Int("DrG/LastHitGroup") or HITGROUP_GENERIC
+      self:Timer(0, function() self:SetNW2Int("DrG/Health", self:Health()) end)
+      local hitgroup = self.DrG_HitGroupToHandle and self.DrG_LastHitGroup or HITGROUP_GENERIC
       local res = self:OnTakeDamage(dmg, hitgroup)
       --local attacker = dmg:GetAttacker()
       -- todo => change relationships
@@ -142,24 +151,24 @@ if SERVER then
               self:DoTakeDamage(dmg:DrG_Set(data), hitgroup)
             end)
           elseif isfunction(self.OnTookDamage) then -- backwards compatibility
+            OnTookDamageDeprecation()
             local data = dmg:DrG_Get()
             self:ReactInThread(function(self)
               if self:IsDown() or self:IsDead() then return end
               self:OnTookDamage(dmg:DrG_Set(data), hitgroup)
             end)
           elseif isfunction(self.AfterTakeDamage) then -- backwards compatibility #2
+            AfterTakeDamageDeprecation()
             local data = dmg:DrG_Get()
-            local now = CurTime()
             self:ReactInThread(function(self)
               if self:IsDown() or self:IsDead() then return end
-              self:AfterTakeDamage(dmg:DrG_Set(data), CurTime()-now, hitgroup)
+              self:AfterTakeDamage(dmg:DrG_Set(data), 0, hitgroup)
             end)
           end
         end
       end
     end
   end
-  function ENT:OnInjured() end
 
   local function NextbotDeath(self, dmg)
     if not IsValid(self) then return end
@@ -179,8 +188,10 @@ if SERVER then
     else self:Remove() end
   end
 
+  local OnDeathDeprecation = DrGBase.Deprecation("ENT:OnDeath(dmginfo, hitgroup)", "ENT:DoDeath(dmginfo, hitgroup)")
+  function ENT:OnKilled() end
   function ENT:DrG_OnKilled(dmg)
-    local hitgroup = self.DrG_HitGroupToHandle and self:GetNW2Int("DrG/LastHitGroup") or HITGROUP_GENERIC
+    local hitgroup = self.DrG_HitGroupToHandle and self.DrG_LastHitGroup or HITGROUP_GENERIC
     self.DrG_HitGroupToHandle = false
     if self:IsDead() then return end
     self:SetHealth(0)
@@ -190,17 +201,17 @@ if SERVER then
       self:EmitSound(self.OnDeathSounds[math.random(#self.OnDeathSounds)])
     end]]
     if dmg:IsDamageType(DMG_DISSOLVE) then self:DrG_Dissolve() end
-    if isfunction(self.DoDeath) or isfunction(self.OnDeath) then -- backwards compatiblity
+    if isfunction(self.DoDeath) or isfunction(self.OnDeath) then -- backwards compatibility
       local data = dmg:DrG_Get()
       self:CallInThread(function(self)
         self:SetNW2Bool("DrG/Dying", false)
         self:SetNW2Bool("DrG/Dead", true)
         local now = CurTime()
-        local dmg = nil
         dmg:DrG_Set(data)
-        if isfunction(self.DoDeath) then
-          dmg = self:DoDeath(dmg, hitgroup)
-        else dmg = self:OnDeath(dmg, hitgroup) end
+        if isfunction(self.OnDeath) then
+          OnDeathDeprecation()
+          dmg = self:OnDeath(dmg, hitgroup)
+        else dmg = self:DoDeath(dmg, hitgroup) end
         if dmg == nil then
           dmg = DamageInfo(data)
           if CurTime() > now then
@@ -215,13 +226,19 @@ if SERVER then
       NextbotDeath(self, dmg)
     end
   end
-  function ENT:OnKilled() end
 
   function ENT:OnTakeDamage() end
   --function ENT:DoTakeDamage() end
 
   function ENT:OnFatalDamage() end
-  function ENT:DoDowned(...) if isfunction(self.OnDowned) then return self:OnDowned(...) end end -- backwards compatiblity
+
+  local OnDownedDeprecation = DrGBase.Deprecation("ENT:OnDowned(dmginfo, hitgroup)", "ENT:DoDowned(dmginfo, hitgroup)")
+  function ENT:DoDowned(...)
+    if isfunction(self.OnDowned) then -- backwards compatiblity
+      OnDownedDeprecation()
+      return self:OnDowned(...)
+    end
+  end
   --function ENT:DoDeath() end
 
   -- Meta --

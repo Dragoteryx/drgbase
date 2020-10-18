@@ -17,25 +17,25 @@ if SERVER then
 
   -- Fire --
 
+  function ENT:OnIgnite() end
   function ENT:DrG_OnIgnite(...)
     self:ReactInThread(self.DoIgnite, ...)
     self.DrG_OnFire = true
   end
-  function ENT:OnIgnite() end
 
   function ENT:OnExtinguish() end
 
   -- Touch/leave ground --
 
+  function ENT:OnLandOnGround() end
   function ENT:DrG_OnLandOnGround(...)
     self:ReactInThread(self.DoLandOnGround, ...)
     self:InvalidatePath()
   end
-  function ENT:OnLandOnGround() end
 
+  function ENT:OnLeaveGround() end
   function ENT:DrG_OnLeaveGround(...)
     self:ReactInThread(self.DoLeaveOnGround, ...)
   end
-  function ENT:OnLeaveGround() end
 
 end

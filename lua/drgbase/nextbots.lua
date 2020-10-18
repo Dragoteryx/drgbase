@@ -93,7 +93,6 @@ hook.Add("DrG/PopulateSpawnmenu", "AddDrGBaseNextbots", function(panel, tree)
     local icon = DrGBase.GetIcon(name) or "icon16/monkey.png"
     
   end
-  nextbots:InternalDoClick()
 end)
 
 -- Footsteps --

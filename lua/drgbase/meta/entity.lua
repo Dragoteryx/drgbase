@@ -169,8 +169,8 @@ if SERVER then
         if IsValid(phys) and isvector(force) and isvector(position) then
           phys:ApplyForceOffset(force, position)
         end
-        if dmg:IsDamageType(DMG_DISSOLVE) then ragdoll:DrG_Dissolve() end
-        if dmg:IsDamageType(DMG_BURN) then ragdoll:Ignite(10) end
+        if dmg:IsDamageType(DMG_DISSOLVE) then ragdoll:DrG_Dissolve()
+        elseif dmg:IsDamageType(DMG_BURN) then ragdoll:Ignite(10) end
         local attacker = dmg:GetAttacker()
         if IsValid(attacker) and attacker.IsDrGNextbot then
           attacker:DetectEntity(ragdoll)

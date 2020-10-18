@@ -236,10 +236,6 @@ if SERVER then
     undo.Finish()
   end
 
-  function plyMETA:DrG_NetCallback(name, callback, ...)
-    return net.DrG_UseCallback(name, callback, self, ...)
-  end
-
 else
 
   -- Toolgun --

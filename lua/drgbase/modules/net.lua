@@ -1,14 +1,8 @@
 -- Util --
 
-local function IsPlayer(arg)
-  if not isentity(arg) then return false end
-  if not IsValid(arg) then return false end
-  return arg:IsPlayer()
-end
-
 function net.DrG_WriteMessage(...)
   local args, n = table.DrG_Pack(...)
-  net.WriteUInt(n, 32)
+  net.WriteUInt(n, 8)
   for i = 1, n do
     net.WriteType(args[i])
   end
@@ -24,92 +18,89 @@ end
 
 -- Messages --
 
-if SERVER then
-  util.AddNetworkString("DrGBaseNetMessage")
+function net.DrG_Receive(name, fn)
+  return net.Receive(name, function(_len, ply)
+    local args, n = net.DrG_ReadMessage()
+    if SERVER then fn(ply, table.DrG_Unpack(args, n))
+    else fn(table.DrG_Unpack(args, n)) end
+  end)
 end
 
-local NET_MESSAGES = {}
-function net.DrG_Receive(name, fn)
-  if not isstring(name) then return end
-  if isfunction(fn) then NET_MESSAGES[name] = fn
-  else NET_MESSAGES[name] = nil end
+if SERVER then
+  local plyMETA = FindMetaTable("Player")
+  function plyMETA:DrG_Send(name, ...)
+    net.Start(name)
+    net.DrG_WriteMessage(...)
+    return net.Send(self)
+  end
+  function net.DrG_BroadCast(name, ...)
+    net.Start(name)
+    net.DrG_WriteMessage(...)
+    return net.Broadcast()
+  end
+else
+  function net.DrG_SendToServer(name, ...)
+    net.Start(name)
+    net.DrG_WriteMessage(...)
+    return net.SendToServer()
+  end
 end
-function net.DrG_Send(name, ...)
-  if not isstring(name) then return false end
-  net.Start("DrGBaseNetMessage")
-  net.WriteString(name)
-  net.DrG_WriteMessage(...)
-  if SERVER then net.Broadcast()
-  else net.SendToServer() end
-  return true
-end
-net.Receive("DrGBaseNetMessage", function(_, ply)
-  local name = net.ReadString()
-  if not isfunction(NET_MESSAGES[name]) then return end
-  local args, n = net.DrG_ReadMessage()
-  if SERVER then NET_MESSAGES[name](ply, table.DrG_Unpack(args, n))
-  else NET_MESSAGES[name](table.DrG_Unpack(args, n)) end
-end)
 
 -- Callbacks --
 
-local NET_REQ_ID = 0
-
-if SERVER then
-  util.AddNetworkString("DrGBaseNetCallbackReq")
-  util.AddNetworkString("DrGBaseNetCallbackRes")
-end
-
-local NET_CALLBACKS = {}
-function net.DrG_DefineCallback(name, callback)
-  if not isstring(name) then return end
-  if isfunction(callback) then
-    NET_CALLBACKS[name] = callback
-  else NET_CALLBACKS[name] = nil end
+DrG_NetCallbacks = DrG_NetCallbacks or {}
+function net.DrG_DefineCallback(name, fn)
+  DrG_NetCallbacks[name] = fn
 end
 function net.DrG_RemoveCallback(name)
-  return net.DrG_DefineCallback(name, nil)
+  DrG_NetCallbacks[name] = nil
 end
 
-local NET_REQ_WAITING = {}
-net.Receive("DrGBaseNetCallbackRes", function()
-  local id = net.ReadUInt(32)
-  if not isfunction(NET_REQ_WAITING[id]) then return end
-  local args, n = net.DrG_ReadMessage()
-  NET_REQ_WAITING[id](table.DrG_Unpack(args, n))
-  NET_REQ_WAITING[id] = nil
-end)
-function net.DrG_UseCallback(name, callback, ...)
-  if not isstring(name) then return false end
-  local args, n
-  if SERVER then
-    args, n = table.DrG_Pack(...)
-    local ply = args[1]
-    if not IsPlayer(ply) then return false end
-  end
-  local id = NET_REQ_ID
-  NET_REQ_ID = NET_REQ_ID+1
-  NET_REQ_WAITING[id] = callback
-  net.Start("DrGBaseNetCallbackReq")
-  net.WriteUInt(id, 32)
+DrG_NetCallbackID = DrG_NetCallbackID or 0
+DrG_NetCallbacksPending = DrG_NetCallbacksPending or {}
+local function UseCallback(name, fn, ...)
+  net.Start("DrG/NetCallbackReq")
+  local id = DrG_NetCallbackID
+  DrG_NetCallbackID = DrG_NetCallbackID+1
+  net.WriteInt(id, 32)
   net.WriteString(name)
-  if SERVER then
-    net.DrG_WriteMessage(table.DrG_Unpack(table.DrG_Pack(args, n, 2)))
-    net.Send(ply)
-  else
-    net.DrG_WriteMessage(...)
-    net.SendToServer()
-  end
-  return true
+  net.DrG_WriteMessage(...)
+  DrG_NetCallbacksPending[id] = fn
 end
-net.Receive("DrGBaseNetCallbackReq", function(_, ply)
-  local id = net.ReadUInt(32)
+
+net.Receive("DrG/NetCallbackReq", function(_len, ply)
+  local id = net.ReadInt(32)
   local name = net.ReadString()
-  if not isfunction(NET_CALLBACKS[name]) then return end
   local args, n = net.DrG_ReadMessage()
-  net.Start("DrGBaseNetCallbackRes")
-  net.WriteUInt(id, 32)
-  net.DrG_WriteMessage(NET_CALLBACKS[name](table.DrG_Unpack(args, n)))
+  local fn = DrG_NetCallbacks[name]
+  if not isfunction(fn) then return end
+  net.Start("DrG/NetCallbackRes")
+  net.WriteInt(id, 32)
+  net.DrG_WriteMessage(fn(table.DrG_Unpack(args, n)))
   if SERVER then net.Send(ply)
   else net.SendToServer() end
 end)
+net.Receive("DrG/NetCallbackRes", function()
+  local id = net.ReadInt(32)
+  local args, n = net.DrG_ReadMessage()
+  local fn = DrG_NetCallbacksPending[id]
+  if not isfunction(fn) then return end
+  DrG_NetCallbacksPending[id] = nil
+  fn(table.DrG_Unpack(args, n))
+end)
+
+if SERVER then
+  util.AddNetworkString("DrG/NetCallbackReq")
+  util.AddNetworkString("DrG/NetCallbackRes")
+
+  local plyMETA = FindMetaTable("Player")
+  function plyMETA:DrG_RunCallback(name, fn, ...)
+    UseCallback(name, fn, ...)
+    net.Send(self)
+  end
+else
+  function net.DrG_RunCallback(name, fn, ...)
+    UseCallback(name, fn, ...)
+    net.SendToServer()
+  end
+end

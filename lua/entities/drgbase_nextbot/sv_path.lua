@@ -3,21 +3,20 @@
 function ENT:GetPath()
   if not self.DrG_Path then
     self.DrG_Path = Path("Follow")
+    self.DrG_Path:SetGoalTolerance(20)
     self.DrG_Path:SetMinLookAheadDistance(300)
-    return self.DrG_Path
-  else return self.DrG_Path end
+  end
+  return self.DrG_Path
 end
 
 function ENT:InvalidatePath()
-  local path = self:GetPath()
-  if not IsValid(path) then return end
-  return path:Invalidate()
+  return self:GetPath():Invalidate()
 end
 
 -- Helpers --
 
-function ENT:LastComputeSuccess()
-  return self.DrG_LastComputeSuccess or false
+function ENT:LastCompute()
+  return self.DrG_LastCompute or false
 end
 
 function ENT:LastComputeTime()
@@ -88,14 +87,14 @@ end
 
 -- hooks
 
-function ENT:OnComputePath(_area, _from) return 1 end
-function ENT:OnComputePathLadderUp(_area, _from, _ladder) return 3 end
-function ENT:OnComputePathLadderDown(_area, _from, _ladder) return 3 end
-function ENT:OnComputePathLedge(_area, _from, _height) return 4 end
-function ENT:OnComputePathStep(_area, _from, _height) return 1 end
-function ENT:OnComputePathJump(_area, _from, _height) return 2 end
-function ENT:OnComputePathDrop(_area, _from, _drop) return 2 end
-function ENT:OnComputePathFlat(_area, _from) return 1 end
+function ENT:OnComputePath(_area, _from) return 0 end
+function ENT:OnComputePathLadderUp(_area, _from, _ladder) return 2 end
+function ENT:OnComputePathLadderDown(_area, _from, _ladder) return 2 end
+function ENT:OnComputePathLedge(_area, _from, _height) return 3 end
+function ENT:OnComputePathStep(_area, _from, _height) return 0 end
+function ENT:OnComputePathJump(_area, _from, _height) return 1 end
+function ENT:OnComputePathDrop(_area, _from, _drop) return 1 end
+function ENT:OnComputePathFlat(_area, _from) return 0 end
 
 -- Meta --
 
@@ -105,7 +104,7 @@ local old_Compute = pathMETA.Compute
 function pathMETA:Compute(nextbot, pos, generator, ...)
   if nextbot.IsDrGNextbot then
     if not isfunction(generator) then generator = nextbot:GetPathGenerator() end
-    nextbot.DrG_LastComputeResult = old_Compute(self, nextbot, pos, generator, ...)
-    return nextbot.DrG_LastComputeResult
+    nextbot.DrG_LastCompute = old_Compute(self, nextbot, pos, generator, ...)
+    return nextbot.DrG_LastCompute
   else return old_Compute(self, nextbot, pos, generator, ...) end
 end

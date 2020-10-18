@@ -60,13 +60,24 @@ if SERVER then
     return self:SelectWeightedSequenceSeeded(act, math.random(0, 255))
   end
 
+  local function GetSequences(self, act)
+    local sequences = {}
+    for i = 0, self:GetSequenceCount()-1 do
+      if (isnumber(act) and self:GetSequenceActivity(i) == act) or
+      (isstring(act) and self:GetSequenceActivityName(i) == act) then
+        table.insert(i)
+      end
+    end
+    return sequences
+  end
+
   local INVALID = -1
   local SEQUENCE = 0
   local ACTIVITY = 1
   local function SequenceOrActivity(anim)
     if isnumber(anim) then return ACTIVITY
     elseif isstring(anim) then
-      if string.StartWith(string.upper(anim), "ACT_") then
+      if string.StartWith(anim, "ACT_") then
         return ACTIVITY
       else return SEQUENCE end
     else return INVALID end
@@ -87,17 +98,18 @@ if SERVER then
 
   -- PSAW and friends --
 
-  function ENT:PlaySequenceAndWait(sequence, options, fn, arg, ...)
-    if istable(sequence) then return self:PlaySequenceAndWait(sequence[math.random(#sequence)], options, fn, arg, ...) end
-    if isfunction(options) then return self:PlaySequenceAndWait(sequence, 1, options, fn, arg, ...) end
-    if isnumber(options) then return self:PlaySequenceAndWait(sequence, {rate = options}, fn, arg, ...) end
-    if isbool(options) then return self:PlaySequenceAndWait(sequence, {cancellable = options}, fn, arg, ...) end
+  function ENT:PlaySequenceAndWait(sequence, options, fn, ...)
+    if istable(sequence) then return self:PlaySequenceAndWait(sequence[math.random(#sequence)], options, fn, ...) end
+    if isfunction(options) then return self:PlaySequenceAndWait(sequence, 1, options, fn, ...) end
+    if isnumber(options) then return self:PlaySequenceAndWait(sequence, {rate = options}, fn, ...) end
+    if isbool(options) then return self:PlaySequenceAndWait(sequence, {cancellable = options}, fn, ...) end
     if isstring(sequence) then sequence = self:LookupSequence(sequence) end
     if not isnumber(sequence) or sequence == -1 then return false end
     if not istable(options) then options = {} end
     if not isnumber(options.rate) then options.rate = 1 end
     if not isbool(options.cancellable) then options.cancellable = false end
     if not isbool(options.gravity) then options.gravity = true end
+    local args, n = table.DrG_Pack(...)
     ResetSequence(self, sequence)
     self:SetPlaybackRate(options.rate)
     local gravity = self:GetGravity()
@@ -117,7 +129,7 @@ if SERVER then
         self:SetGravity(gravity)
       end
       if isfunction(fn) then
-        if arg ~= nil then res = fn(self, arg, ...)
+        if n > 0 then res = fn(self, table.DrG_Unpack(args, n))
         else res = fn(self, cycle, previous) end
         if res ~= nil then break end
       end
@@ -164,18 +176,17 @@ if SERVER then
         if options.absolute then
           self:SetVelocity(Vector())
           pos = pos + vec
-          if options.collide and self:DrG_TraceHull(vec, {step = true}).Hit then
+          if options.collide and self:TraceHull(vec, {step = true}).Hit then
             return false
           else self:SetPos(pos) end
-        elseif not self:DrG_TraceHull(vec, {step = true}).Hit then
+        elseif not self:TraceHull(vec, {step = true}).Hit then
           pos = self:GetPos() + vec
           self:SetPos(pos)
         elseif options.collide then return false
         else pos = self:GetPos() end
       end
       if isfunction(fn) then
-        if n > 0 then
-          return fn(self, table.DrG_Unpack(args, n))
+        if n > 0 then return fn(self, table.DrG_Unpack(args, n))
         else return fn(self, cycle, previous) end
       end
     end)
@@ -212,6 +223,17 @@ if SERVER then
       end, ...)
     end
   end
+  function ENT:PlayActivityAndClimb(act, ...)
+    return self:PlaySequenceAndClimb(GetSequences(self, act), ...)
+  end
+  function ENT:PlayAnimationAndClimb(anim, ...)
+    local kind = SequenceOrActivity(anim)
+    if istable(anim) or kind == SEQUENCE then
+      return self:PlaySequenceAndClimb(anim, ...)
+    elseif kind == ACTIVITY then
+      return self:PlayActivityAndClimb(anim, ...)
+    else return false end
+  end
 
   -- Hooks --
 
@@ -219,34 +241,36 @@ if SERVER then
     self:BodyMoveXY()
   end
 
+  function ENT:DoAnimationChange(_old, _new) end
+
   -- Update --
 
-  function ENT:UpdateAnimation()
+  function ENT:UpdateAnimation(cancellable)
     local anim, rate = self:OnUpdateAnimation()
     local type = SequenceOrActivity(anim)
-    local validAnim = true
+    local validAnim = false
     if type == SEQUENCE then
       local current = self:GetSequence()
       local seq = self:LookupSequence(anim)
       validAnim = seq ~= -1
       if validAnim and (self:GetCycle() == 1 or seq ~= current) then
-        ResetSequence(self, seq)
+        if cancellable and seq ~= current then self:DoAnimationChange(current, seq) end
+        ResetSequence(self, seq, cancellable)
       end
     elseif type == ACTIVITY then
       local current = self:GetActivity()
+      local currentSeq = self:GetSequence()
       local seq = RandomSequence(self, anim)
       local act = self:GetSequenceActivity(seq)
       validAnim = seq ~= -1
       if validAnim and (self:GetCycle() == 1 or act ~= current) then
-        ResetSequence(self, seq)
+        if cancellable and seq ~= currentSeq then self:DoAnimationChange(currentSeq, seq) end
+        ResetSequence(self, seq, cancellable)
       end
     end
-    if validAnim and (
-      not self:IsOnGround() or
-      self:GetSequenceGroundSpeed(self:GetSequence()) == 0
-    ) then
-      self:SetPlaybackRate(rate)
-    end
+    if validAnim and isnumber(rate) and (
+      not self:IsOnGround() or self:GetSequenceGroundSpeed(self:GetSequence()) == 0
+    ) then self:SetPlaybackRate(rate) end
   end
 
   function ENT:OnUpdateAnimation()
@@ -272,10 +296,11 @@ if SERVER then
   local old_StartActivity = nextbotMETA.StartActivity
   function nextbotMETA:StartActivity(act, ...)
     if self.IsDrGNextbot then
+      if isstring(act) then act = GetActivityIDFromName(self, act) end
+      if not isnumber(act) or act == ACT_INVALID then return end
+      if act == self:GetActivity() then return end
       local seq = RandomSequence(self, act)
-      if seq == -1 then return end
-      if self:GetSequenceActivity(seq) == act then return end
-      ResetSequence(self, act)
+      if seq ~= -1 then ResetSequence(self, act) end
     else return old_StartActivity(self, act, ...) end
   end
 
@@ -298,8 +323,7 @@ if SERVER then
             forward.z = 0
             velocity.z = 0
             self:SetPoseParameter("move_yaw", math.AngleDifference(
-              velocity:Angle().y,
-              forward:Angle().y
+              velocity:Angle().y, forward:Angle().y
             ))
           end
         end

@@ -21,22 +21,22 @@ function ENT:IsMoving()
   return not self:GetVelocity():IsZero()
 end
 function ENT:IsMovingUp()
-  return math.Round(self:GetMovement().z) > 0
+  return math.Round(self:GetMovement().z, 2) > 0
 end
 function ENT:IsMovingDown()
-  return math.Round(self:GetMovement().z) < 0
+  return math.Round(self:GetMovement().z, 2) < 0
 end
 function ENT:IsMovingForward()
-  return math.Round(self:GetMovement().x) > 0
+  return math.Round(self:GetMovement().x, 2) > 0
 end
 function ENT:IsMovingBackward()
-  return math.Round(self:GetMovement().x) < 0
+  return math.Round(self:GetMovement().x, 2) < 0
 end
 function ENT:IsMovingRight()
-  return math.Round(self:GetMovement().y) > 0
+  return math.Round(self:GetMovement().y, 2) > 0
 end
 function ENT:IsMovingLeft()
-  return math.Round(self:GetMovement().y) < 0
+  return math.Round(self:GetMovement().y, 2) < 0
 end
 function ENT:IsMovingForwardLeft()
   return self:IsMovingForward() and self:IsMovingLeft()
@@ -56,7 +56,7 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:SetSpeed(speed)
-    self.loco:SetDesiredSpeed(speed)
+    self.loco:SetDesiredSpeed(speed*MultSpeed:GetFloat())
   end
 
   function ENT:IsRunning()
@@ -133,23 +133,23 @@ if SERVER then
       else pos = pos:GetPos() end
     end
     if not istable(options) then options = {} end
-    if not isnumber(options.tolerance) then options.tolerance = 20 end
     if navmesh.IsLoaded() and self:GetGroundEntity():IsWorld() then
       local path = self:GetPath()
-      path:SetGoalTolerance(options.tolerance)
+      if isnumber(options.tolerance) then path:SetGoalTolerance(options.tolerance) end
+      if isnumber(options.lookahead) then path:SetMinLookAheadDistance(options.lookahead) end
       local area = navmesh.GetNearestNavArea(pos)
       if IsValid(area) then pos = area:GetClosestPointOnArea(pos) end
-      if not IsValid(path) and self:GetRangeSquaredTo(pos) <= path:GetGoalTolerance()^2 then return "reached" end
       if ShouldCompute(self, path, pos) then path:Compute(self, pos, options.generator) end
       if not IsValid(path) then return "unreachable" end
-      local current = path:GetCurrentGoal()
+      if self:GetRangeSquaredTo(pos) <= path:GetGoalTolerance()^2 then return "reached" end
+      --local current = path:GetCurrentGoal()
       path:Update(self)
     else
 
     end
   end
 
-  function ENT:GoTo(pos, options, fn)
+  function ENT:GoTo(pos, options, fn, ...)
     if isfunction(options) then return self:GoTo(pos, nil, options) end
     if isentity(pos) then pos = pos:GetPos() end
     while true do
@@ -157,14 +157,14 @@ if SERVER then
       if res == "reached" then return true
       elseif res == "unreachable" then return false
       elseif isfunction(fn) then
-        res = fn(self, self:GetPath())
+        res = fn(self, ...)
         if res ~= nil then return res end
-        self:Yield(true)
-      else self:Yield(true) end
+      end
+      self:YieldThread(true)
     end
   end
 
-  function ENT:ChaseEntity(ent, options, fn)
+  function ENT:ChaseEntity(ent, options, fn, ...)
     if isfunction(options) then return self:ChaseEntity(ent, nil, options) end
     if not isentity(ent) then return false end
     while IsValid(ent) do
@@ -172,10 +172,10 @@ if SERVER then
       if res == "reached" then return true
       elseif res == "unreachable" then return false
       elseif isfunction(fn) then
-        res = fn(self, self:GetPath())
+        res = fn(self, ...)
         if res ~= nil then return res end
-        self:Yield(true)
-      else self:Yield(true) end
+      end
+      self:YieldThread(true)
     end
     return false
   end
@@ -194,8 +194,7 @@ if SERVER then
 
   function ENT:OnUpdateSpeed()
     if self.UseWalkframes then return -1
-    --[[if self:IsClimbing() then return self.ClimbSpeed
-    else]]
+    --[[if self:IsClimbing() then return self.ClimbSpeed]]
     elseif self:IsRunning() then return self.RunSpeed
     else return self.WalkSpeed end
   end

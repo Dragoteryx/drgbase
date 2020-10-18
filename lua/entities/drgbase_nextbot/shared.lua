@@ -103,6 +103,7 @@ DrGBase.IncludeFile("possession.lua")
 DrGBase.IncludeFile("misc.lua")
 DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("deprecated.lua")
+DrGBase.IncludeFile("drgbase/entity_helpers.lua")
 
 -- ConVars --
 local MultHealth = CreateConVar("drgbase_multiplier_health", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
@@ -161,7 +162,7 @@ function ENT:CustomInitialize() end -- backwards compatibility
 
 -- Think --
 
-function ENT:DrG_PreThink()
+function ENT:DrG_PreThink(...)
   if CLIENT then return end
   if self:IsOnGround() then self:SetAngles(Angle(0, self:GetAngles().y, 0)) end
   if self.DrG_OnFire and not self:IsOnFire() then
@@ -169,9 +170,10 @@ function ENT:DrG_PreThink()
     self:OnExtinguish()
     self:ReactInThread(self.DoExtinguish)
   end
-end
-function ENT:DrG_PostThink(...)
-  if self:IsPossessed() then self:PossessionThink(...) end
+  if self:IsPossessed() then
+    self:PossessionThink(...)
+    self:DrG_PossessedBehaviour(false)
+  end
 end
 function ENT:PossessionThink() end
 
@@ -193,14 +195,17 @@ if SERVER then
 
   coroutine.DrG_RunThread("DrG/UpdateNextbots", function()
     while true do
+      local yielded = false
       for nextbot in DrGBase.NextbotIterator() do
         if IsValid(nextbot) then
+          yielded = true
+          nextbot:UpdateAlliesSight()
           nextbot:UpdateHostilesSight()
           nextbot:UpdateEnemy()
           coroutine.yield()
         end
       end
-      coroutine.yield()
+      if not yielded then coroutine.yield() end
     end
   end)
 
@@ -245,13 +250,16 @@ if SERVER then
   end
 
   function ENT:YieldThread(cancellable)
-    --if not self.DrG_NextUpdate
-    --or CurTime() > self.DrG_NextUpdate then
-      --self.DrG_NextUpdate = CurTime() + 0.1
-      self:UpdateAnimation()
+    if cancellable then
+      local now = CurTime()
+      self:UpdateAnimation(true)
       self:UpdateSpeed()
-    --end
-    return self:YieldNoUpdate(cancellable)
+      return self:YieldNoUpdate(true) or CurTime() > now
+    else
+      self:UpdateAnimation(false)
+      self:UpdateSpeed()
+      return self:YieldNoUpdate(false)
+    end
   end
   function ENT:YieldNoUpdate(cancellable)
     if cancellable then
@@ -325,12 +333,27 @@ if SERVER then
 
 else
 
+  -- ConVars --
+
+  local DebugSight = DrGBase.ClientConVar("drgbase_debug_sight", "0")
+
+  -- Misc --
+
   function ENT:FireAnimationEvent() end
 
   -- Draw --
 
+  function ENT:DrG_PreDraw()
+    if not GetConVar("developer"):GetBool() then return end
+    local ply = LocalPlayer()
+    if DebugSight:GetBool() then
+      self:IsAbleToSee(ply, true, function(self, see) self.DrG_AbleToSeePlayer = see end)
+      local clr = self.DrG_AbleToSeePlayer and self.DrGBase.CLR_GREEN or DrGBase.CLR_RED
+      render.DrawLine(self:EyePos(), ply:WorldSpaceCenter(), clr, true)
+    end
+  end
   function ENT:DrG_PostDraw()
-    -- draw debug stuff
+    if not GetConVar("developer"):GetBool() then return end
   end
 
   function ENT:Draw()

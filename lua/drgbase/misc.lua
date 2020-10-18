@@ -19,18 +19,20 @@ function DrGBase.ClientConVar(name, value, ...)
   return CreateClientConVar(name, value)
 end
 
-function DrGBase.DeprecationWarning(old, new)
-  ErrorNoHalt("[DrGBase] Deprecation warning: '"..old.."' is deprecated, you should use '"..new.."' instead", "\n")
-  --DrGBase.Error("Deprecation warning: '"..old.."' is deprecated, you should use '"..new.."' instead", {chat = true})
-end
-function DrGBase.Deprecated(old, new, fn)
+function DrGBase.Deprecation(old, new)
   local warned = false
-  return function(self, ...)
+  return function()
     if not warned and GetConVar("developer"):GetBool() then
-      DrGBase.DeprecationWarning(old, new)
+      ErrorNoHalt("[DrGBase] Deprecation warning: '", old, "' is deprecated, you should use '", new, "' instead", "\n")
       warned = true
     end
-    return fn(self, ...)
+  end
+end
+function DrGBase.Deprecated(old, new, fn)
+  local deprecation = DrGBase.Deprecation(old, new)
+  return function(...)
+    deprecation()
+    return fn(...)
   end
 end
 

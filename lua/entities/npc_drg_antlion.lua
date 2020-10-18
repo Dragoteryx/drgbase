@@ -40,16 +40,35 @@ ENT.EyeAngle = Angle(0, 0, 0)
 if SERVER then
 
   function ENT:Initialize()
-    --
+    self.loco:SetMaxYawRate(175)
   end
 
   function ENT:Think()
+    --PrintTable(self:GetEnemies())
     --print("=========================")
     --print("desired", self:GetSpeed())
     --print("actual", self:GetVelocity():Length())
   end
 
   -- AI --
+
+  function ENT:OnDetectEntity(ent)
+    print("detect", ent)
+  end
+  function ENT:OnForgetEntity(ent)
+    print("forget", ent)
+  end
+
+  function ENT:OnEntitySight(ent)
+    print("sight", ent)
+  end
+  function ENT:OnEntitySightLost(ent)
+    print("lostsight", ent)
+  end
+
+  function ENT:ShouldRun()
+    return self:HasEnemy() and self:HasDetectedRecently(self:GetEnemy()) and not self:IsInRange(self:GetEnemy(), 250)
+  end
 
   function ENT:DoThink()
     while self:WaterLevel() >= 2 do
@@ -63,7 +82,7 @@ if SERVER then
     end
   end
 
-  function ENT:DoRangeAttack(enemy)
+  --[[function ENT:DoRangeAttack(enemy)
     if math.random(1, 500) > 1 then return end
     if self:PlaySequenceAndMove("charge_start", true) then
       self:ResetSequence("charge_run")
@@ -80,9 +99,9 @@ if SERVER then
         self:PlaySequenceAndMove("charge_end", true)
       end
     end
-  end
+  end]]
   function ENT:DoMeleeAttack()
-    local rand = math.random(1, 8)
+    local rand = math.random(1, 6)
     if rand == 7 then self:PlaySequenceAndMove("pounce", true, self.FaceEnemy)
     elseif rand == 8 then self:PlaySequenceAndMove("pounce2", true, self.FaceEnemy)
     else self:PlaySequenceAndMove("attack"..rand, true, self.FaceEnemy) end

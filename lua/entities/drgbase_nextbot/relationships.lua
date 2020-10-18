@@ -504,6 +504,11 @@ if SERVER then
 
   -- Getters --
 
+  net.DrG_DefineCallback("DrG/GetRelationship", function(self, ent, absolute)
+    if not IsValid(self) or not IsValid(ent) then return D_ER, 1 end
+    return self:GetRelationship(ent, absolute)
+  end)
+
   function ENT:GetRelationship(ent, absolute)
     local rel = self.DrG_Relationships[ent]
     if rel and (absolute or not self:IsIgnored(ent)) then
@@ -686,6 +691,43 @@ if SERVER then
     local val = tonumber(split[3])
     if val ~= val then return end
     self:AddClassRelationship(class, relationship, val)
+  end
+
+else
+
+  function ENT:GetRelationship(ent, absolute, fn)
+    if isfunction(absolute) then return self:GetRelationship(ent, true, absolute) end
+    if not isfunction(fn) then return end
+    net.DrG_RunCallback("DrG/GetRelationship", function(disp, prio)
+      if not IsValid(self) then return end
+      if IsValid(ent) then fn(self, disp, prio)
+      else fn(self, D_ER, 1) end
+    end, ent, tobool(absolute))
+  end
+  function ENT:IsAlly(ent, absolute, fn)
+    if isfunction(absolute) then return self:IsAlly(ent, true, absolute) end
+    if not isfunction(fn) then return end
+    self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_LI) end)
+  end
+  function ENT:IsEnemy(ent, absolute, fn)
+    if isfunction(absolute) then return self:IsEnemy(ent, true, absolute) end
+    if not isfunction(fn) then return end
+    self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_HT) end)
+  end
+  function ENT:IsAfraidOf(ent, absolute, fn)
+    if isfunction(absolute) then return self:IsAfraidOf(ent, true, absolute) end
+    if not isfunction(fn) then return end
+    self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_FR) end)
+  end
+  function ENT:IsHostile(ent, absolute, fn)
+    if isfunction(absolute) then return self:IsHostile(ent, true, absolute) end
+    if not isfunction(fn) then return end
+    self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_HT or disp == D_FR) end)
+  end
+  function ENT:IsNeutral(ent, absolute, fn)
+    if isfunction(absolute) then return self:IsNeutral(ent, true, absolute) end
+    if not isfunction(fn) then return end
+    self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_NU) end)
   end
 
 end

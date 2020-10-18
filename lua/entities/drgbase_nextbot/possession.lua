@@ -24,7 +24,7 @@ if SERVER then
 
   -- Internal --
 
-  function ENT:DrG_PossessedBehaviour()
+  function ENT:DrG_PossessedBehaviour(thr)
 
   end
 

@@ -5,9 +5,10 @@ hook.Add("Think", "DrGBaseRunCoroutines", function()
   for thread in pairs(DrG_Coroutines) do
     local status = coroutine.status(thread)
     if status == "suspended" then
-      coroutine.resume(thread)
+      local ok, args = coroutine.resume(thread)
+      if not ok then ErrorNoHalt("Coroutine error: ", args, "\n") end
 		elseif status == "dead" then
-      coroutine.DrG_Kill(thread)
+      coroutine.DrG_Remove(thread)
     end
   end
 end)
