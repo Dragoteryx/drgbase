@@ -15,12 +15,12 @@ function TOOL:LeftClick(tr)
 end
 function TOOL:RightClick(tr)
   if CLIENT then return true end
-  for nextbot in self:GetOwner():DrG_SelectedEntities() do
-		nextbot._DrGBaseMoverTool = true
-		nextbot:CallInCoroutine(function(nextbot, delay)
-			nextbot._DrGBaseMoverTool = false
-			nextbot:GoTo(tr.HitPos, nil, function()
-				if nextbot._DrGBaseMoverTool then return false end
+  for nb in self:GetOwner():DrG_SelectedEntities() do
+		nb._DrGBaseMoverTool = true
+		nb:CallInThread(function(nb)
+			nb._DrGBaseMoverTool = false
+			nb:GoTo(tr.HitPos, function()
+				if nb._DrGBaseMoverTool then return false end
 			end)
 		end)
   end

@@ -44,7 +44,9 @@ if SERVER then
 
   function ENT:Attack(attack, fn)
     if not istable(attack) then attack = {} end
-    if isnumber(attack.delay) or isfunction(fn) then
+    if self:GetDrGVersion() >= 2 then
+
+    elseif isnumber(attack.delay) or isfunction(fn) then
       self:Timer(isnumber(attack.delay) and attack.delay or 0, function(self)
         local hit = self:Attack(attack)
         if isfunction(fn) then fn(self, hit) end
@@ -55,6 +57,10 @@ if SERVER then
   end
 
   -- Helpers --
+
+  function ENT:IsInRangeAndSight(ent, range)
+    return self:IsInRange(ent, range) and self:IsAbleToSee(ent)
+  end
 
   function ENT:SafeSetPos(pos)
     if self:TraceHull(nil, {

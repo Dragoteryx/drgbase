@@ -1,5 +1,11 @@
 if not istable(ENT) then return end
 
+function ENT:GetDrGVersion()
+  if isnumber(self.DrG_Version) then
+    return math.max(1, self.DrG_Version)
+  else return 1 end
+end
+
 -- Print --
 
 function ENT:PrintPoseParameters()

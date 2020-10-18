@@ -1,5 +1,6 @@
 -- ConVars --
 
+local PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", "Pathfinding mode, either 'custom', 'default' or 'none'.")
 local ComputeDelay = DrGBase.ConVar("drgbase_compute_delay", "0.1")
 local AvoidObstacles = DrGBase.ConVar("drgbase_avoid_obstacles", "1")
 local MultSpeed = DrGBase.ConVar("drgbase_multiplier_speed", "1")
@@ -133,7 +134,7 @@ if SERVER then
       else pos = pos:GetPos() end
     end
     if not istable(options) then options = {} end
-    if navmesh.IsLoaded() and self:GetGroundEntity():IsWorld() then
+    if navmesh.IsLoaded() and PathfindingMode:GetString() ~= "none" and self:GetGroundEntity():IsWorld() then
       local path = self:GetPath()
       if isnumber(options.tolerance) then path:SetGoalTolerance(options.tolerance) end
       if isnumber(options.lookahead) then path:SetMinLookAheadDistance(options.lookahead) end
@@ -145,7 +146,7 @@ if SERVER then
       --local current = path:GetCurrentGoal()
       path:Update(self)
     else
-
+      self:MoveTowards(pos)
     end
   end
 

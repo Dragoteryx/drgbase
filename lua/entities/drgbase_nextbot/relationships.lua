@@ -1,7 +1,7 @@
 -- Convar --
 
-local TargetGrubs = DrGBase.ConVar("drgbase_target_grubs", "1")
-local TargetRepMelons = DrGBase.ConVar("drgbase_target_repmelons", "1")
+local TargetGrubs = DrGBase.ConVar("drgbase_ai_target_grubs", "1")
+local TargetRepMelons = DrGBase.ConVar("drgbase_ai_target_repmelons", "1")
 
 -- Getters --
 
@@ -176,6 +176,7 @@ if SERVER then
     if not IsValid(ent) then return end
     if not IsValidDisp(disp) then return end
     if IsCachedDisp(disp) then
+      self:ListenTo(ent, disp ~= D_LI)
       self.DrG_RelationshipCaches[D_LI][ent] = nil
       self.DrG_RelationshipCaches[D_HT][ent] = nil
       self.DrG_RelationshipCaches[D_FR][ent] = nil
@@ -186,12 +187,13 @@ if SERVER then
         self.DrG_RelationshipCachesDetected[D_FR][ent] = nil
         self.DrG_RelationshipCachesDetected[disp][ent] = true
       end
-      ent:CallOnRemove("DrGBaseRemoveFromDrGNextbot"..self:GetCreationID().."RelationshipCache", function()
+      ent:CallOnRemove("DrG/RemoveFromDrGNextbot"..self:GetCreationID().."RelationshipCache", function()
         if not IsValid(self) then return end
         self.DrG_RelationshipCaches[disp][ent] = nil
         self.DrG_RelationshipCachesDetected[disp][ent] = nil
       end)
     else
+      self:ListenTo(ent, false)
       self.DrG_RelationshipCaches[D_LI][ent] = nil
       self.DrG_RelationshipCaches[D_HT][ent] = nil
       self.DrG_RelationshipCaches[D_FR][ent] = nil

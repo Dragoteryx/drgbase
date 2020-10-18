@@ -82,8 +82,9 @@ if SERVER then
         if IsValid(enemy) then self:DoAttack(enemy) end
       elseif disp == D_FR then
 
-      else self:DoNoEnemy() end
-    elseif self:FollowPath(self:LastKnownPosition(enemy)) == "reached" then
+      else self:DoPassive() end
+    elseif self:DoSearchEnemy(enemy) or
+    self:FollowPath(self:LastKnownPosition(enemy)) == "reached" then
       self:ForgetAllEntities()
     end
   end
@@ -122,6 +123,8 @@ if SERVER then
     OnRangeAttackDeprecation()
     return self:OnRangeAttack(enemy, weapon)
   end end
+
+  function ENT:DoSearchEnemy(_enemy) end
 
   -- Hooks --
 

@@ -8,7 +8,7 @@ function net.DrG_WriteMessage(...)
   end
 end
 function net.DrG_ReadMessage()
-  local n = net.ReadUInt(32)
+  local n = net.ReadUInt(8)
   local args = {}
   for i = 1, n do
     args[i] = net.ReadType()

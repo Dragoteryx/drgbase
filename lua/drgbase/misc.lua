@@ -13,10 +13,13 @@ function DrGBase.IsMeleeWeapon(weapon)
 end
 
 function DrGBase.ConVar(name, value, ...)
-  return CreateConVar(name, value, bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, ...))
+  return CreateConVar(name, value, {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}, ...)
 end
 function DrGBase.ClientConVar(name, value, ...)
-  return CreateClientConVar(name, value)
+  return CreateClientConVar(name, value, true, false, ...)
+end
+function DrGBase.SharedClientConVar(name, value, ...)
+  return CreateClientConVar(name, value, true, true, ...)
 end
 
 function DrGBase.Deprecation(old, new)

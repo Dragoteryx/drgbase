@@ -113,6 +113,13 @@ if SERVER then
       self:ForgetEntity(ent)
     end
   end
+  function ENT:ForgetPlayers()
+    if self:IsOmniscient() then return end
+    local plys = player.GetAll()
+    for i = 1, #plys do
+      self:ForgetEntity(plys[i])
+    end
+  end
 
   function ENT:DetectedEntities()
     local thr
@@ -335,6 +342,24 @@ if SERVER then
     self.HearingCoefficient = coeff
   end
 
+  function ENT:ListenTo(ent, listen)
+    if not IsValid(ent) or ent == self then return end
+    ent.DrG_Listening = ent.DrG_Listening or {}
+    if isbool(listen) then
+      local rmv = "DrG/RemoveDrGNextbot"..self:GetCreationID().."FromListening"
+      if listen then
+        ent.DrG_Listening[self] = true
+        self:CallOnRemove(rmv, function(self)
+          if not IsValid(ent) then return end
+          ent.DrG_Listening[self] = nil
+        end)
+      else
+        ent.DrG_Listening[self] = nil
+        self:RemoveCallOnRemove(rmv)
+      end
+    else return ent.DrG_Listening[self] or false end
+  end
+
   -- hooks
 
   function ENT:OnEntitySound(ent)
@@ -343,11 +368,11 @@ if SERVER then
 
   hook.Add("EntityEmitSound", "DrG/SoundDetection", function(sound)
     local ent = sound.Entity
-    if not ent:IsPlayer() then return end
+    if not istable(ent.DrG_Listening) then return end
     local pos = sound.Pos or ent:GetPos()
     local distance = math.pow(sound.SoundLevel/2, 2)*sound.Volume
-    for nextbot in DrGBase.NextbotIterator() do
-      if nextbot:IsDead() then continue end
+    for nextbot in pairs(ent.DrG_Listening) do
+      if not IsValid(nextbot) or not nextbot.IsDrGNextbot then continue end
       local mult = nextbot:VisibleVec(pos) and 1 or 0.5
       if (distance*nextbot:GetHearingCoefficient()*mult)^2 >= nextbot:GetRangeSquaredTo(pos) then
         nextbot:OnEntitySound(ent, sound)

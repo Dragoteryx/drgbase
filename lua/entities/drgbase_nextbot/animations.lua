@@ -15,7 +15,7 @@ local function GetAnimInfoSequence(self, seq)
 end
 
 ENT.DrG_ActIDsFromNames = {}
-local function GetActivityIDFromName(name)
+local function GetActivityIDFromName(self, name)
   if isnumber(self.DrG_ActIDsFromNames[name]) then
     return self.DrG_ActIDsFromNames[name]
   else
@@ -56,7 +56,7 @@ end
 if SERVER then
 
   local function RandomSequence(self, act)
-    if isstring(act) then act = GetActivityIDFromName(act) end
+    if isstring(act) then act = GetActivityIDFromName(self, act) end
     return self:SelectWeightedSequenceSeeded(act, math.random(0, 255))
   end
 

@@ -22,14 +22,22 @@ if SERVER then
 
   -- Hooks --
 
-  function ENT:DoIdle(...) return self:OnIdle(...) end
-  function ENT:OnIdle() end
-
-  function ENT:DoNoEnemy()
-    if false then
+  function ENT:DoPassive()
+    if true then
       self:DoPatrol()
     else self:DoIdle() end
   end
+
+  function ENT:DoPatrol()
+    local pos = self:RandomPos(1000, 2000)
+    while not self:HasEnemy() do
+      if self:FollowPath(pos) == "reached" then break
+      else self:YieldThread(true) end
+    end
+  end
+
+  function ENT:DoIdle(...) return self:OnIdle(...) end
+  function ENT:OnIdle() end
 
   function ENT:ShouldRun()
     return self:HasEnemy() and self:HasDetectedRecently(self:GetEnemy())
@@ -40,6 +48,6 @@ if SERVER then
   function ENT:AIBehaviour()
     if self:HasEnemy() then
       self:DoHandleEnemy(self:GetEnemy())
-    else self:DoNoEnemy() end
+    else self:DoPassive() end
   end
 end

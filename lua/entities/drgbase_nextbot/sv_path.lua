@@ -103,7 +103,10 @@ local pathMETA = FindMetaTable("PathFollower")
 local old_Compute = pathMETA.Compute
 function pathMETA:Compute(nextbot, pos, generator, ...)
   if nextbot.IsDrGNextbot then
-    if not isfunction(generator) then generator = nextbot:GetPathGenerator() end
+    if not isfunction(generator) and
+    GetConVar("drgbase_pathfinding"):GetString() == "custom" then
+      generator = nextbot:GetPathGenerator()
+    end
     nextbot.DrG_LastCompute = old_Compute(self, nextbot, pos, generator, ...)
     return nextbot.DrG_LastCompute
   else return old_Compute(self, nextbot, pos, generator, ...) end

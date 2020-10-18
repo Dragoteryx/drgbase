@@ -53,10 +53,10 @@ if SERVER then
     --print(self:GetEnemy())
   end
 
-  function ENT:OnSight(ent)
+  function ENT:OnEntitySight(ent)
     print("sight", ent)
   end
-  function ENT:OnLostSight(ent)
+  function ENT:OnEntitySightLost(ent)
     print("lostsight", ent)
   end
 

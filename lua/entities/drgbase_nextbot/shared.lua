@@ -348,7 +348,7 @@ else
     local ply = LocalPlayer()
     if DebugSight:GetBool() then
       self:IsAbleToSee(ply, true, function(self, see) self.DrG_AbleToSeePlayer = see end)
-      local clr = self.DrG_AbleToSeePlayer and self.DrGBase.CLR_GREEN or DrGBase.CLR_RED
+      local clr = self.DrG_AbleToSeePlayer and DrGBase.CLR_GREEN or DrGBase.CLR_RED
       render.DrawLine(self:EyePos(), ply:WorldSpaceCenter(), clr, true)
     end
   end

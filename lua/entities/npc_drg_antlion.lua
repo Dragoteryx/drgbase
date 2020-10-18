@@ -1,5 +1,6 @@
 if not DrGBase then return end -- return if DrGBase isn't installed
 ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
+ENT.DrG_Version = 2
 
 -- Misc --
 ENT.PrintName = "Antlion"
@@ -41,6 +42,8 @@ if SERVER then
 
   function ENT:Initialize()
     self.loco:SetMaxYawRate(175)
+    --print(#DrGBase.GetNextbots())
+    self:AddEffects(EF_NOSHADOW)
   end
 
   function ENT:Think()
@@ -53,32 +56,32 @@ if SERVER then
   -- AI --
 
   function ENT:OnDetectEntity(ent)
-    print("detect", ent)
+    --print("detect", ent)
   end
   function ENT:OnForgetEntity(ent)
-    print("forget", ent)
+    --print("forget", ent)
   end
 
   function ENT:OnEntitySight(ent)
-    print("sight", ent)
+    --print("sight", ent)
   end
   function ENT:OnEntitySightLost(ent)
-    print("lostsight", ent)
+    --print("lostsight", ent)
   end
 
   function ENT:ShouldRun()
-    return self:HasEnemy() and self:HasDetectedRecently(self:GetEnemy()) and not self:IsInRange(self:GetEnemy(), 250)
+    return self:HasEnemy() and self:HasDetectedRecently(self:GetEnemy()) and not self:IsInRangeAndSight(self:GetEnemy(), 250)
   end
 
   function ENT:DoThink()
     while self:WaterLevel() >= 2 do
       self:PlaySequenceAndWait("drown", {gravity = false})
-      --[[if self:WaterLevel() >= 2 then
+      if self:WaterLevel() >= 2 then
         local dmg = DamageInfo()
         dmg:SetDamage(8)
         dmg:SetDamageType(DMG_DROWN)
         self:TakeDamageInfo(dmg)
-      end]]
+      end
     end
   end
 
@@ -110,9 +113,9 @@ if SERVER then
   -- Damage --
 
   function ENT:DoTakeDamage(dmg)
-    if dmg:IsDamageType(DMG_PHYSGUN) then
+    --[[if dmg:IsDamageType(DMG_PHYSGUN) then
       self:PlaySequenceAndWait("flip1")
-    end
+    end]]
   end
 
   -- Path --
