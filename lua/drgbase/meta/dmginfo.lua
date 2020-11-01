@@ -1,8 +1,8 @@
 local dmgMETA = FindMetaTable("CTakeDamageInfo")
 
 local old_DamageInfo = DamageInfo
-function DamageInfo(data, ...)
-  local dmg = old_DamageInfo(data, ...)
+function DamageInfo(data)
+  local dmg = old_DamageInfo()
   if istable(data) then dmg:DrG_Set(data) end
   return dmg
 end

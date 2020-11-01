@@ -1,6 +1,5 @@
 if not DrGBase then return end -- return if DrGBase isn't installed
 ENT.Base = "drgbase_nextbot" -- DO NOT TOUCH (obviously)
-ENT.DrG_Version = 2
 
 -- Misc --
 ENT.PrintName = "Antlion"
@@ -43,7 +42,6 @@ if SERVER then
   function ENT:Initialize()
     self.loco:SetMaxYawRate(175)
     --print(#DrGBase.GetNextbots())
-    self:AddEffects(EF_NOSHADOW)
   end
 
   function ENT:Think()
@@ -54,20 +52,6 @@ if SERVER then
   end
 
   -- AI --
-
-  function ENT:OnDetectEntity(ent)
-    --print("detect", ent)
-  end
-  function ENT:OnForgetEntity(ent)
-    --print("forget", ent)
-  end
-
-  function ENT:OnEntitySight(ent)
-    --print("sight", ent)
-  end
-  function ENT:OnEntitySightLost(ent)
-    --print("lostsight", ent)
-  end
 
   function ENT:ShouldRun()
     return self:HasEnemy() and self:HasDetectedRecently(self:GetEnemy()) and not self:IsInRangeAndSight(self:GetEnemy(), 250)
@@ -105,9 +89,9 @@ if SERVER then
   end]]
   function ENT:DoMeleeAttack()
     local rand = math.random(1, 6)
-    if rand == 7 then self:PlaySequenceAndMove("pounce", true, self.FaceEnemy)
-    elseif rand == 8 then self:PlaySequenceAndMove("pounce2", true, self.FaceEnemy)
-    else self:PlaySequenceAndMove("attack"..rand, true, self.FaceEnemy) end
+    if rand == 7 then self:PlaySequenceAndMove("pounce", self.FaceEnemy)
+    elseif rand == 8 then self:PlaySequenceAndMove("pounce2", self.FaceEnemy)
+    else self:PlaySequenceAndMove("attack"..rand, self.FaceEnemy) end
   end
 
   -- Damage --
@@ -121,8 +105,45 @@ if SERVER then
   -- Path --
 
   function ENT:OnComputePath(area)
-    if area:IsUnderwater() then return 100000 end
+    if area:IsUnderwater() then return -1 end
   end
+
+  -- Bugbaits --
+
+  function ENT:CustomRelationship(ent)
+    if ent:IsPlayer() or ent.IsDrGNextbot then
+      local weap = ent:GetActiveWeapon()
+      if IsValid(weap) and weap:GetClass() == "weapon_bugbait" then
+        return D_LI
+      end
+    end
+  end
+
+  hook.Add("PlayerSwitchWeapon", "DrG/PlayerSwitchWeaponBugbait", function(ply, old, new)
+    if (IsValid(old) and old:GetClass() == "weapon_bugbait") or
+    (IsValid(new) and new:GetClass() == "weapon_bugbait") then
+      timer.Simple(0, function()
+        for nb in DrGBase.NextbotIterator("npc_drg_antlion") do nb:UpdateRelationshipWith(ply) end
+      end)
+    end
+  end)
+
+  hook.Add("EntityEmitSound", "DrG/BugbaitSoundEffect", function(sound)
+    if IsValid(sound.Entity) and
+    sound.Entity:GetClass() == "npc_grenade_bugbait" and
+    sound.OriginalSoundName == "GrenadeBugBait.Splat" then
+      local bugbait = sound.Entity
+      local tr = util.DrG_TraceHull({
+        start = bugbait:GetPos(), endpos = bugbait:GetPos(),
+        mins = Vector(-10, -10, -10),
+        maxs = Vector(10, 10, 10),
+        filter = bugbait
+      })
+      if IsValid(tr.Entity) then
+        for nb in DrGBase.NextbotIterator("npc_drg_antlion") do nb:DetectEntity(tr.Entity, 30) end
+      end
+    end
+  end)
 
   -- Events --
 

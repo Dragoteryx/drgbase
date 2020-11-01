@@ -10,6 +10,7 @@ function ENT:Team()
 end
 
 if SERVER then
+  util.AddNetworkString("DrG/RelationshipChange")
 
   -- Internal --
 
@@ -145,6 +146,7 @@ if SERVER then
     ["npc_satchel"] = false,
 
     ["replicator_melon"] = TargetRepMelons,
+    ["neo_replicator_melon"] = TargetRepMelons,
     ["npc_antlion_grub"] = TargetGrubs,
     ["replicator_worker"] = true,
     ["replicator_queen"] = true,
@@ -158,7 +160,7 @@ if SERVER then
       if isbool(exception) then return expection
       else return exception:GetBool() end
     else
-      if ent.DrGBase_Target then return true end
+      if ent.DrG_Target then return true end
       if ent:IsNextBot() then return true end
       if ent:IsPlayer() then return true end
       if ent:IsNPC() then return true end
@@ -175,43 +177,44 @@ if SERVER then
   local function SetRelationship(self, ent, disp, prio)
     if not IsValid(ent) then return end
     if not IsValidDisp(disp) then return end
-    if IsCachedDisp(disp) then
-      self:ListenTo(ent, disp ~= D_LI)
-      self.DrG_RelationshipCaches[D_LI][ent] = nil
-      self.DrG_RelationshipCaches[D_HT][ent] = nil
-      self.DrG_RelationshipCaches[D_FR][ent] = nil
-      self.DrG_RelationshipCaches[disp][ent] = true
-      if self.DrG_Detected[ent] then
+    local old = self:GetRelationship(ent)
+    if old ~= disp then
+      if IsCachedDisp(disp) then
+        self:ListenTo(ent, disp ~= D_LI)
+        self.DrG_RelationshipCaches[D_LI][ent] = nil
+        self.DrG_RelationshipCaches[D_HT][ent] = nil
+        self.DrG_RelationshipCaches[D_FR][ent] = nil
+        self.DrG_RelationshipCaches[disp][ent] = true
+        if self.DrG_Detected[ent] then
+          self.DrG_RelationshipCachesDetected[D_LI][ent] = nil
+          self.DrG_RelationshipCachesDetected[D_HT][ent] = nil
+          self.DrG_RelationshipCachesDetected[D_FR][ent] = nil
+          self.DrG_RelationshipCachesDetected[disp][ent] = true
+        end
+        ent:CallOnRemove("DrG/RemoveFromDrGNextbot"..self:GetCreationID().."RelationshipCache", function()
+          if not IsValid(self) then return end
+          self.DrG_RelationshipCaches[disp][ent] = nil
+          self.DrG_RelationshipCachesDetected[disp][ent] = nil
+        end)
+      else
+        self:ListenTo(ent, false)
+        self.DrG_RelationshipCaches[D_LI][ent] = nil
+        self.DrG_RelationshipCaches[D_HT][ent] = nil
+        self.DrG_RelationshipCaches[D_FR][ent] = nil
         self.DrG_RelationshipCachesDetected[D_LI][ent] = nil
         self.DrG_RelationshipCachesDetected[D_HT][ent] = nil
         self.DrG_RelationshipCachesDetected[D_FR][ent] = nil
-        self.DrG_RelationshipCachesDetected[disp][ent] = true
       end
-      ent:CallOnRemove("DrG/RemoveFromDrGNextbot"..self:GetCreationID().."RelationshipCache", function()
-        if not IsValid(self) then return end
-        self.DrG_RelationshipCaches[disp][ent] = nil
-        self.DrG_RelationshipCachesDetected[disp][ent] = nil
-      end)
-    else
-      self:ListenTo(ent, false)
-      self.DrG_RelationshipCaches[D_LI][ent] = nil
-      self.DrG_RelationshipCaches[D_HT][ent] = nil
-      self.DrG_RelationshipCaches[D_FR][ent] = nil
-      self.DrG_RelationshipCachesDetected[D_LI][ent] = nil
-      self.DrG_RelationshipCachesDetected[D_HT][ent] = nil
-      self.DrG_RelationshipCachesDetected[D_FR][ent] = nil
     end
     self.DrG_Relationships[ent] = {disp = disp, prio = prio}
+    if old ~= disp then
+      self:OnRelationshipChange(ent, old, disp)
+      self:ReactInThread(self.DoRelationshipChange, ent, old, disp)
+      if ent:IsPlayer() then ent:DrG_Send("DrG/RelationshipChange", self, old, disp) end
+    end
     if self:GetEnemy() == ent and not self:IsHostile(ent) then
       self:UpdateEnemy()
     end
-    --[[if ent:IsPlayer() then
-      net.Start("DrGBaseNextbotPlayerRelationship")
-      net.WriteEntity(self)
-      net.WriteInt(disp, 4)
-      net.WriteInt(prio)
-      net.Send(ent)
-    end]]
   end
 
   ENT.DrG_DefinedRelationships = {}
@@ -697,37 +700,65 @@ if SERVER then
 
 else
 
+  -- Getters --
+
+  net.DrG_DelayedReceive("DrG/RelationshipChange", function(nb, old, new)
+    if not IsValid(nb) then return end
+    nb.DrG_LocalPlayerDisp = new
+    nb:OnRelationshipChange(LocalPlayer(), old, new)
+  end)
+  function ENT:GetLocalPlayerRelationship()
+    return self.DrG_LocalPlayerDisp or D_NU
+  end
+  function ENT:IsAllyLocalPlayer()
+    return self:GetLocalPlayerRelationship() == D_LI
+  end
+  function ENT:IsEnemyLocalPlayer()
+    return self:GetLocalPlayerRelationship() == D_HT
+  end
+  function ENT:IsAfraidOfLocalPlayer()
+    return self:GetLocalPlayerRelationship() == D_FR
+  end
+  function ENT:IsNeutralLocalPlayer()
+    return self:GetLocalPlayerRelationship() == D_NU
+  end
+  function ENT:IsHostileLocalPlayer()
+    return self:IsEnemyLocalPlayer() or self:IsHostileLocalPlayer()
+  end
+
+  -- Callbacks --
+
   function ENT:GetRelationship(ent, absolute, fn)
-    if isfunction(absolute) then return self:GetRelationship(ent, true, absolute) end
+    if isfunction(absolute) then return self:GetRelationship(ent, false, absolute) end
     if not isfunction(fn) then return end
     net.DrG_RunCallback("DrG/GetRelationship", function(disp, prio)
       if not IsValid(self) then return end
       if IsValid(ent) then fn(self, disp, prio)
       else fn(self, D_ER, 1) end
-    end, ent, tobool(absolute))
+    end, self, ent, tobool(absolute))
   end
   function ENT:IsAlly(ent, absolute, fn)
-    if isfunction(absolute) then return self:IsAlly(ent, true, absolute) end
+    if isfunction(absolute) then return self:IsAlly(ent, false, absolute) end
     if not isfunction(fn) then return end
     self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_LI) end)
   end
   function ENT:IsEnemy(ent, absolute, fn)
-    if isfunction(absolute) then return self:IsEnemy(ent, true, absolute) end
+    if isfunction(absolute) then return self:IsEnemy(ent, false, absolute) end
     if not isfunction(fn) then return end
     self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_HT) end)
   end
   function ENT:IsAfraidOf(ent, absolute, fn)
-    if isfunction(absolute) then return self:IsAfraidOf(ent, true, absolute) end
+    if isfunction(absolute) then return self:IsAfraidOf(ent, false, absolute) end
     if not isfunction(fn) then return end
     self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_FR) end)
   end
   function ENT:IsHostile(ent, absolute, fn)
-    if isfunction(absolute) then return self:IsHostile(ent, true, absolute) end
+    if isfunction(absolute) then return self:IsHostile(ent, false, absolute) end
     if not isfunction(fn) then return end
     self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_HT or disp == D_FR) end)
   end
   function ENT:IsNeutral(ent, absolute, fn)
-    if isfunction(absolute) then return self:IsNeutral(ent, true, absolute) end
+    if isfunction(absolute) then return self:IsNeutral(ent, false, absolute) end
     if not isfunction(fn) then return end
     self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_NU) end)
   end

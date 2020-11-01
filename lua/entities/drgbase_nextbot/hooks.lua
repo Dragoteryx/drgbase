@@ -9,12 +9,6 @@ if SERVER then
   end)
   function ENT:OnWaterLevelChanged() end
 
-  -- Use --
-
-  function ENT:DrG_Use(...)
-    self:ReactInThread(self.DoUse, ...)
-  end
-
   -- Fire --
 
   function ENT:OnIgnite() end
@@ -36,6 +30,16 @@ if SERVER then
   function ENT:OnLeaveGround() end
   function ENT:DrG_OnLeaveGround(...)
     self:ReactInThread(self.DoLeaveOnGround, ...)
+  end
+
+  -- Misc --
+
+  function ENT:Use() end
+  function ENT:DrG_Use(...)
+    self:ReactInThread(self.DoUse, ...)
+  end
+  function ENT:DrG_OnContact(...)
+    self:ReactInThread(self.DoContact, ...)
   end
 
 end

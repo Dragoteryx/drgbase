@@ -106,7 +106,7 @@ DrGBase.IncludeFile("deprecated.lua")
 DrGBase.IncludeFile("drgbase/entity_helpers.lua")
 
 -- ConVars --
-local MultHealth = CreateConVar("drgbase_multiplier_health", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local MultHealth = DrGBase.ConVar("drgbase_multiplier_health", "1")
 
 -- Initialize --
 
@@ -157,28 +157,44 @@ function ENT:DrG_PostInitialize()
   if SERVER then self:InitRelationships() end
 end
 
-function ENT:Initialize(...) return self:CustomInitialize(...) end
-function ENT:CustomInitialize() end -- backwards compatibility
+local CustomInitializeDeprecation = DrGBase.Deprecation("ENT:CustomInitialize()", "ENT:Initialize()")
+function ENT:Initialize(...)
+  if isfunction(self.CustomInitialize) then -- backwards compatibility
+    CustomInitializeDeprecation()
+    return self:CustomInitialize(...)
+  end
+end
 
 -- Think --
 
 function ENT:DrG_PreThink(...)
-  if CLIENT then return end
-  if self:IsOnGround() then self:SetAngles(Angle(0, self:GetAngles().y, 0)) end
-  if self.DrG_OnFire and not self:IsOnFire() then
-    self.DrG_OnFire = false
-    self:OnExtinguish()
-    self:ReactInThread(self.DoExtinguish)
-  end
-  if self:IsPossessed() then
-    self:PossessionThink(...)
-    self:DrG_PossessedBehaviour(false)
+  if SERVER then
+    if self:IsOnGround() then self:SetAngles(Angle(0, self:GetAngles().y, 0)) end
+    if self.DrG_OnFire and not self:IsOnFire() then
+      self.DrG_OnFire = false
+      self:OnExtinguish()
+      self:ReactInThread(self.DoExtinguish)
+    end
+    if self:IsPossessed() then
+      self:PossessionThink(...)
+      self:DrG_PBehaviour(false)
+    end
+  else
+    local ply = LocalPlayer()
+    if self:IsAbleToSeeLocalPlayer() then
+      self:OnEntitySightKept(ply)
+    else self:OnEntityNotInSight(ply) end
   end
 end
 function ENT:PossessionThink() end
 
-function ENT:Think(...) return self:CustomThink(...) end
-function ENT:CustomThink() end -- backwards compatibility
+local CustomThinkDeprecation = DrGBase.Deprecation("ENT:CustomThink()", "ENT:Think()")
+function ENT:Think(...)
+  if isfunction(self.CustomThink) then -- backwards compatibility
+    CustomThinkDeprecation()
+    return self:CustomThink(...)
+  end
+end
 
 -- OnRemove --
 
@@ -199,8 +215,7 @@ if SERVER then
       for nextbot in DrGBase.NextbotIterator() do
         if IsValid(nextbot) then
           yielded = true
-          nextbot:UpdateAlliesSight()
-          nextbot:UpdateHostilesSight()
+          nextbot:UpdateSight()
           nextbot:UpdateEnemy()
           coroutine.yield()
         end
@@ -217,7 +232,7 @@ if SERVER then
   local function Behave(self)
     while true do
       if self:IsPossessed() then
-        self:DrG_PossessedBehaviour()
+        self:DrG_PBehaviour()
       else self:AIBehaviour() end
       self:YieldThread(true)
     end
@@ -289,11 +304,12 @@ if SERVER then
     end
   end
 
-  function ENT:ReactInThread(fn, ...)
+  function ENT:ReactInThread(fn, arg1, ...)
     if not isfunction(fn) then return end
     local args, n = table.DrG_Pack(...)
     table.insert(self.DrG_ThrReacts, function(self)
-      fn(self, table.DrG_Unpack(args, n))
+      if isentity(arg1) and not IsValid(arg1) then return end
+      fn(self, arg1, table.DrG_Unpack(args, n))
     end)
   end
   function ENT:CallInThread(fn, ...)
@@ -344,11 +360,10 @@ else
   -- Draw --
 
   function ENT:DrG_PreDraw()
-    if not GetConVar("developer"):GetBool() then return end
+    if not DrGBase.DebugEnabled() then return end
     local ply = LocalPlayer()
     if DebugSight:GetBool() then
-      self:IsAbleToSee(ply, true, function(self, see) self.DrG_AbleToSeePlayer = see end)
-      local clr = self.DrG_AbleToSeePlayer and DrGBase.CLR_GREEN or DrGBase.CLR_RED
+      local clr = self:IsAbleToSeeLocalPlayer() and DrGBase.CLR_GREEN or DrGBase.CLR_RED
       render.DrawLine(self:EyePos(), ply:WorldSpaceCenter(), clr, true)
     end
   end
@@ -356,10 +371,13 @@ else
     if not GetConVar("developer"):GetBool() then return end
   end
 
-  function ENT:Draw()
+  local CustomDrawDeprecation = DrGBase.Deprecation("ENT:CustomDraw()", "ENT:Draw()")
+  function ENT:Draw(...)
     self:DrawModel()
-    self:CustomDraw()
+    if isfunction(self.CustomDraw) then -- backwards compatibility
+      CustomDrawDeprecation()
+      return self:CustomDraw(...)
+    end
   end
-  function ENT:CustomDraw() end -- backwards compatibility
 
 end

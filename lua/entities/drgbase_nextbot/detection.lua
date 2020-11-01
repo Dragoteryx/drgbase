@@ -15,7 +15,11 @@ function ENT:OnDetectEntity() end
 function ENT:OnForgetEntity() end
 
 if SERVER then
-  util.AddNetworkString("DrG/NextbotPlayerDetection")
+  util.AddNetworkString("DrG/PlayerDetect")
+  util.AddNetworkString("DrG/PlayerForget")
+  util.AddNetworkString("DrG/PlayerSight")
+  util.AddNetworkString("DrG/PlayerSightLost")
+  util.AddNetworkString("DrG/PlayerSound")
 
   -- Detection --
 
@@ -26,7 +30,7 @@ if SERVER then
   ENT.DrG_Detected = {}
   ENT.DrG_Forgotten = {}
   ENT.DrG_LastTimeDetected = {}
-  ENT.DrG_LastKnownPosition = {}
+  ENT.DrG_LastKnownPos = {}
   ENT.DrG_DetectedRecently = {}
 
   function ENT:HasDetected(ent)
@@ -52,13 +56,13 @@ if SERVER then
     if self:IsOmniscient() or ent == self then return CurTime()
     else return self.DrG_LastTimeDetected[ent] end
   end
-  function ENT:LastKnownPosition(ent)
+  function ENT:LastKnownPos(ent)
     if self:IsOmniscient() or ent == self then return ent:GetPos()
-    else return self.DrG_LastKnownPosition[ent] end
+    else return self.DrG_LastKnownPos[ent] end
   end
   function ENT:SetKnownPosition(ent, pos)
     if self:IsOmniscient() or ent == self then return end
-    self.DrG_LastKnownPosition[ent] = pos
+    self.DrG_LastKnownPos[ent] = pos
   end
   function ENT:LastDetectedEntity()
     return self.DrG_LastDetectedEntity or NULL
@@ -70,7 +74,7 @@ if SERVER then
     self.DrG_Detected[ent] = true
     self.DrG_Forgotten[ent] = nil
     self.DrG_LastTimeDetected[ent] = CurTime()
-    self.DrG_LastKnownPosition[ent] = ent:GetPos()
+    self.DrG_LastKnownPos[ent] = ent:GetPos()
     self.DrG_LastDetectedEntity = ent
     local recently = CurTime() + (isnumber(recent) and math.Clamp(recent, 0, math.huge) or 0)
     if not self.DrG_DetectedRecently[ent] or recently > self.DrG_DetectedRecently[ent] then
@@ -86,13 +90,14 @@ if SERVER then
       end
       self:OnDetectEntity(ent)
       self:ReactInThread(self.DoDetectEntity, ent)
+      if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerDetect", self) end
     end
     ent:CallOnRemove("DrG/RemoveFromDrGNextbot"..self:GetCreationID().."DetectionCache", function()
       if not IsValid(self) then return end
       self.DrG_Detected[ent] = nil
       self.DrG_Forgotten[ent] = nil
       self.DrG_LastTimeDetected[ent] = nil
-      self.DrG_LastKnownPosition[ent] = nil
+      self.DrG_LastKnownPos[ent] = nil
       self.DrG_DetectedRecently[ent] = nil
     end)
   end
@@ -106,6 +111,7 @@ if SERVER then
     self.DrG_RelationshipCachesDetected[D_FR][ent] = nil
     self:OnForgetEntity(ent)
     self:ReactInThread(self.DoForgetEntity, ent)
+    if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerForget", self) end
   end
   function ENT:ForgetAllEntities()
     if self:IsOmniscient() then return end
@@ -217,8 +223,9 @@ if SERVER then
   ENT.DrG_InSight = {}
   local OnSightDeprecation = DrGBase.Deprecation("ENT:OnSight(ent)", "ENT:OnEntitySight(ent, angle)")
   local OnLostSightDeprecation = DrGBase.Deprecation("ENT:OnLostSight(ent)", "ENT:OnEntitySightLost(ent, angle)")
-  local function UpdateSight(self, iterator)
-    for ent in iterator do
+  function ENT:UpdateSight(ent)
+    if ent then
+      if not IsValid(ent) then return end
       local res, angle = self:IsAbleToSee(ent)
       if res then
         if not self.DrG_InSight[ent] then
@@ -230,13 +237,14 @@ if SERVER then
             self:OnEntitySight(ent, angle)
             self:ReactInThread(self.DoEntitySight, ent, angle)
           end
+          if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSight", self) end
         else
           self:OnEntitySightKept(ent, angle)
           self:ReactInThread(self.DoEntitySightKept, ent, angle)
         end
       else
         if self.DrG_InSight[ent] then
-          self.DrG_InSight[ent] = false
+          self.DrG_InSight[ent] = nil
           if isfunction(self.OnLostSight) then
             OnLostSightDeprecation()
             self:OnLostSight(ent)
@@ -244,34 +252,24 @@ if SERVER then
             self:OnEntitySightLost(ent, angle)
             self:ReactInThread(self.DoEntitySightLost, ent, angle)
           end
+          if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSightLost", self) end
         else
           self:OnEntityNotInSight(ent, angle)
           self:ReactInThread(self.DoEntityNotInSight, ent, angle)
         end
       end
+    else
+      local updated = {}
+      local function LocalUpdateSight(ent)
+        if updated[ent] then return end
+        updated[ent] = true
+        self:UpdateSight(ent)
+      end
+      for ent in pairs(self.DrG_InSight) do LocalUpdateSight(ent) end
+      --for _, ply in ipairs(player.GetAll()) do LocalUpdateSight(ply) end
+      for ally in self:AllyIterator() do LocalUpdateSight(ally) end
+      for hostile in self:HostileIterator() do LocalUpdateSight(hostile) end
     end
-  end
-
-  function ENT:UpdateSight(detected)
-    self:UpdateAlliesSight(detected)
-    self:UpdateEnemiesSight(detected)
-    self:UpdateAfraidOfSight(detected)
-    self:UpdateNeutralSight(detected)
-  end
-  function ENT:UpdateAlliesSight(detected)
-    return UpdateSight(self, self:AllyIterator(detected))
-  end
-  function ENT:UpdateEnemiesSight(detected)
-    return UpdateSight(self, self:EnemyIterator(detected))
-  end
-  function ENT:UpdateAfraidOfSight(detected)
-    return UpdateSight(self, self:AfraidOfIterator(detected))
-  end
-  function ENT:UpdateHostilesSight(detected)
-    return UpdateSight(self, self:HostileIterator(detected))
-  end
-  function ENT:UpdateNeutralSight(detected)
-    return UpdateSight(self, self:NeutralIterator(detected))
   end
 
   -- meta
@@ -345,19 +343,22 @@ if SERVER then
   function ENT:ListenTo(ent, listen)
     if not IsValid(ent) or ent == self then return end
     ent.DrG_Listening = ent.DrG_Listening or {}
-    if isbool(listen) then
-      local rmv = "DrG/RemoveDrGNextbot"..self:GetCreationID().."FromListening"
-      if listen then
-        ent.DrG_Listening[self] = true
-        self:CallOnRemove(rmv, function(self)
-          if not IsValid(ent) then return end
-          ent.DrG_Listening[self] = nil
-        end)
-      else
+    local rmv = "DrG/RemoveDrGNextbot"..self:GetCreationID().."FromListening"
+    if listen then
+      ent.DrG_Listening[self] = true
+      self:CallOnRemove(rmv, function(self)
+        if not IsValid(ent) then return end
         ent.DrG_Listening[self] = nil
-        self:RemoveCallOnRemove(rmv)
-      end
-    else return ent.DrG_Listening[self] or false end
+      end)
+    else
+      ent.DrG_Listening[self] = nil
+      self:RemoveCallOnRemove(rmv)
+    end
+  end
+  function ENT:IsListeningTo(ent)
+    if not IsValid(ent) or ent == self then return false end
+    ent.DrG_Listening = ent.DrG_Listening or {}
+    return ent.DrG_Listening[self] or false
   end
 
   -- hooks
@@ -377,64 +378,76 @@ if SERVER then
       if (distance*nextbot:GetHearingCoefficient()*mult)^2 >= nextbot:GetRangeSquaredTo(pos) then
         nextbot:OnEntitySound(ent, sound)
         nextbot:ReactInThread(nextbot.DoEntitySound, ent, sound)
+        if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSound", nextbot) end
       end
     end
   end)
+
+  -- Other --
+
+  function ENT:OnContact(ent)
+    self:DetectEntity(ent)
+  end
 
 else
 
-  local function CallAwarenessHooks(self, spotted)
-    local ply = LocalPlayer()
-    if spotted then
-      if isfunction(self.OnSpotEntity) then
-        self.DrG_LastTimeDetected = CurTime()
-        self.DrG_LastKnownPosition = ply:GetPos()
-        self:OnSpotEntity(ply)
-      else
-        timer.Simple(engine.TickInterval(), function()
-          if IsValid(self) then CallAwarenessHooks(self, spotted) end
-        end)
-      end
-    elseif not isfunction(self.OnLoseEntity) then
-      timer.Simple(engine.TickInterval(), function()
-        if IsValid(self) then CallAwarenessHooks(self, spotted) end
-      end)
-    else self:OnLostEntity(ply) end
-  end
-  net.Receive("DrG/NextbotPlayerAwareness", function()
-    local nextbot = net.ReadEntity()
-    local awareness = net.ReadBit()
-    if IsValid(nextbot) then
-      nextbot.DrG_LocalPlayerAwareness = awareness
-      CallAwarenessHooks(nextbot, awareness == 1)
-    end
+ -- Net --
+
+  net.DrG_DelayedReceive("DrG/PlayerDetect", function(nb)
+    if not IsValid(nb) then return end
+    nb.DrG_LocalPlayerDetected = true
+    nb:OnDetectEntity(LocalPlayer())
   end)
+  net.DrG_DelayedReceive("DrG/PlayerForget", function(nb)
+    if not IsValid(nb) then return end
+    nb.DrG_LocalPlayerDetected = false
+    nb:OnForgetEntity(LocalPlayer())
+  end)
+  net.DrG_DelayedReceive("DrG/PlayerSight", function(nb)
+    if not IsValid(nb) then return end
+    nb.DrG_LocalPlayerInSight = true
+    nb:OnEntitySight(LocalPlayer())
+  end)
+  net.DrG_DelayedReceive("DrG/PlayerSightLost", function(nb)
+    if not IsValid(nb) then return end
+    nb.DrG_LocalPlayerInSight = false
+    nb:OnEntitySightLost(LocalPlayer())
+  end)
+  net.DrG_DelayedReceive("DrG/PlayerSound", function(nb)
+    if not IsValid(nb) then return end
+    nb:OnEntitySound(LocalPlayer())
+  end)
+
+  -- Hooks --
+
+  function ENT:OnEntitySight() end
+  function ENT:OnEntitySightLost() end
+  function ENT:OnEntitySightKept() end
+  function ENT:OnEntityNotInSight() end
+  function ENT:OnEntitySound() end
 
   -- Getters --
 
   function ENT:HasDetectedLocalPlayer()
     if self:IsOmniscient() then return true end
-    return self.DrG_LocalPlayerAwareness == 1
+    return self.DrG_LocalPlayerDetected == true
   end
   function ENT:HasForgottenLocalPlayer()
     if self:IsOmniscient() then return false end
-    return self.DrG_LocalPlayerAwareness == 0
+    return self.DrG_LocalPlayerDetected == false
   end
 
-  function ENT:LastTimeDetected()
-    return self.DrG_LastTimeDetected or -1
+  function ENT:IsAbleToSeeLocalPlayer()
+    return self.DrG_LocalPlayerInSight or false
   end
-  function ENT:LastKnownPosition()
-    return self.DrG_LastKnownPosition
-  end
-
-  -- Vision --
 
   function ENT:IsAbleToSee(ent, useFOV, fn)
     if isfunction(useFOV) then return self:IsAbleToSee(ent, true, useFOV) end
     if not isfunction(fn) then return end
-    net.DrG_RunCallback("DrG/IsAbleToSee", function(see)
-      if IsValid(self) and IsValid(ent) then fn(self, see) end
+    net.DrG_RunCallback("DrG/IsAbleToSee", function(inSight)
+      if not IsValid(self) then return end
+      if IsValid(ent) then fn(self, inSight)
+      else fn(self, false) end
     end, self, ent, tobool(useFOV))
   end
 

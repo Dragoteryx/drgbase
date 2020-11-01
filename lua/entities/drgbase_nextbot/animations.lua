@@ -241,7 +241,7 @@ if SERVER then
     self:BodyMoveXY()
   end
 
-  function ENT:DoAnimationChange(_old, _new) end
+  function ENT:DoAnimChange(_old, _new) end
 
   -- Update --
 
@@ -254,7 +254,7 @@ if SERVER then
       local seq = self:LookupSequence(anim)
       validAnim = seq ~= -1
       if validAnim and (self:GetCycle() == 1 or seq ~= current) then
-        if cancellable and seq ~= current then self:DoAnimationChange(current, seq) end
+        if cancellable and seq ~= current then self:DoAnimChange(current, seq) end
         ResetSequence(self, seq, cancellable)
       end
     elseif type == ACTIVITY then
@@ -264,7 +264,7 @@ if SERVER then
       local act = self:GetSequenceActivity(seq)
       validAnim = seq ~= -1
       if validAnim and (self:GetCycle() == 1 or act ~= current) then
-        if cancellable and seq ~= currentSeq then self:DoAnimationChange(currentSeq, seq) end
+        if cancellable and seq ~= currentSeq then self:DoAnimChange(currentSeq, seq) end
         ResetSequence(self, seq, cancellable)
       end
     end

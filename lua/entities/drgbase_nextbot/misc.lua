@@ -42,18 +42,16 @@ if SERVER then
 
   -- Attacks --
 
-  function ENT:Attack(attack, fn)
-    if not istable(attack) then attack = {} end
-    if self:GetDrGVersion() >= 2 then
-
-    elseif isnumber(attack.delay) or isfunction(fn) then
-      self:Timer(isnumber(attack.delay) and attack.delay or 0, function(self)
-        local hit = self:Attack(attack)
-        if isfunction(fn) then fn(self, hit) end
-      end)
-    else
-      -- attack code
+  function ENT:DealDamage(attack, fn)
+    local hit = {}
+    local entities = ents.GetAll()
+    for i = 1, #entities do
+      local ent = entities[i]
+      if not IsValid(ent) then continue end
+      local dmg = DamageInfo()
+      
     end
+    return hit
   end
 
   -- Helpers --

@@ -1,6 +1,6 @@
 -- ConVars --
 
-local PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", "Pathfinding mode, either 'custom', 'default' or 'none'.")
+local PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", "Pathfinding mode, either 'drgbase', 'nextbot' or 'none'.")
 local ComputeDelay = DrGBase.ConVar("drgbase_compute_delay", "0.1")
 local AvoidObstacles = DrGBase.ConVar("drgbase_avoid_obstacles", "1")
 local MultSpeed = DrGBase.ConVar("drgbase_multiplier_speed", "1")
@@ -93,7 +93,7 @@ if SERVER then
       local angle = (pos - self:GetPos()):Angle()
       if math.NormalizeAngle(math.Round(self:GetAngles().y)) == math.NormalizeAngle(math.Round(angle.y)) then return end
       self:FaceTowards(pos)
-      self:Yield(true)
+      self:YieldThread(true)
     end
   end
   function ENT:FaceEnemy()
@@ -142,16 +142,18 @@ if SERVER then
       if IsValid(area) then pos = area:GetClosestPointOnArea(pos) end
       if ShouldCompute(self, path, pos) then path:Compute(self, pos, options.generator) end
       if not IsValid(path) then return "unreachable" end
-      if self:GetRangeSquaredTo(pos) <= path:GetGoalTolerance()^2 then return "reached" end
       --local current = path:GetCurrentGoal()
       path:Update(self)
+      if not IsValid(path) then return "reached" end
     else
+      local tolerance = isnumber(options.tolerance) and options.tolerance or 20
       self:MoveTowards(pos)
+      if self:GetRangeSquaredTo(pos) <= tolerance^2 then return "reached" end
     end
   end
 
   function ENT:GoTo(pos, options, fn, ...)
-    if isfunction(options) then return self:GoTo(pos, nil, options) end
+    if isfunction(options) then return self:GoTo(pos, nil, options, ...) end
     if isentity(pos) then pos = pos:GetPos() end
     while true do
       local res = self:FollowPath(pos, options)
@@ -166,7 +168,7 @@ if SERVER then
   end
 
   function ENT:ChaseEntity(ent, options, fn, ...)
-    if isfunction(options) then return self:ChaseEntity(ent, nil, options) end
+    if isfunction(options) then return self:ChaseEntity(ent, nil, options, ...) end
     if not isentity(ent) then return false end
     while IsValid(ent) do
       local res = self:FollowPath(ent, options)

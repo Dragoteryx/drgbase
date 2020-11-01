@@ -20,6 +20,13 @@ if SERVER then
 
   -- AI --
 
+  ENT.AddPatrolPos = DrGBase.Deprecated(
+    "ENT:AddPatrolPos(pos)",
+    "ENT:RoamTo(pos)",
+    function(self, pos)
+      self:RoamTo(pos)
+    end)
+
   -- Animations --
 
   ENT.PlaySequenceAndMoveAbsolute = DrGBase.Deprecated(
@@ -118,5 +125,21 @@ if SERVER then
     end)
 
   -- Misc --
+
+  ENT.Attack = DrGBase.Deprecated(
+    "ENT:Attack(attack, fn)",
+    "ENT:?(attack, fn)",
+    function(self, attack, fn)
+      if not istable(attack) then attack = {} end
+      if isnumber(attack.delay) or isfunction(fn) then
+        self:Timer(isnumber(attack.delay) and attack.delay or 0, function(self)
+          local hit = self:Attack(attack)
+          if isfunction(fn) then fn(self, hit) end
+        end)
+      else
+        -- attack code
+        return {}
+      end
+    end)
 
 end

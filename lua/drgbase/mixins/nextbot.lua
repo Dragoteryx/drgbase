@@ -51,6 +51,14 @@ return function(ENT)
       end
     end
 
+    if isfunction(ENT.OnContact) then
+      local old_OnContact = ENT.OnContact
+      function ENT:OnContact(ent, ...)
+        self:DrG_OnContact(ent, ...)
+        return old_OnContact(self, ent, ...)
+      end
+    end
+
     -- HandleAnimEvent --
 
     if isfunction(ENT.HandleAnimEvent) then

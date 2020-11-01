@@ -25,6 +25,11 @@ function net.DrG_Receive(name, fn)
     else fn(table.DrG_Unpack(args, n)) end
   end)
 end
+function net.DrG_DelayedReceive(name, fn)
+  return net.DrG_Receive(name, function(...)
+    timer.DrG_Simple(engine.TickInterval(), fn, ...)
+  end)
+end
 
 if SERVER then
   local plyMETA = FindMetaTable("Player")

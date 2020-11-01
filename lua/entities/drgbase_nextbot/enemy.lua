@@ -5,7 +5,7 @@ end
 if SERVER then
 
   local function CompareEnemies(self, ent1, ent2)
-    local res = self:OnCompareEnemies(ent1, ent2)
+    local res = self:CompareEnemies(ent1, ent2)
     if isbool(res) then return res end
     local recently1 = self:HasDetectedRecently(ent1)
     local recently2 = self:HasDetectedRecently(ent2)
@@ -17,8 +17,8 @@ if SERVER then
           return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
         else return self:GetRangeTo(ent1)/prio1 < self:GetRangeTo(ent1)/prio2 end
       elseif prio1 == prio2 then
-        return self:GetPos():DistToSqr(self:LastKnownPosition(ent1)) < self:GetPos():DistToSqr(self:LastKnownPosition(ent2))
-      else return self:GetPos():Distance(self:LastKnownPosition(ent1))/prio1 < self:GetPos():Distance(self:LastKnownPosition(ent2))/prio2 end
+        return self:GetPos():DistToSqr(self:LastKnownPos(ent1)) < self:GetPos():DistToSqr(self:LastKnownPos(ent2))
+      else return self:GetPos():Distance(self:LastKnownPos(ent1))/prio1 < self:GetPos():Distance(self:LastKnownPos(ent2))/prio2 end
     elseif recently1 and not recently2 then return true
     else return false end
   end
@@ -83,8 +83,8 @@ if SERVER then
       elseif disp == D_FR then
 
       else self:DoPassive() end
-    elseif self:DoSearchEnemy(enemy) or
-    self:FollowPath(self:LastKnownPosition(enemy)) == "reached" then
+    elseif self:DoSearchEnemy(enemy) == false or
+    self:FollowPath(self:LastKnownPos(enemy)) == "reached" then
       self:ForgetAllEntities()
     end
   end
@@ -101,35 +101,52 @@ if SERVER then
   local OnChaseEnemyDeprecation = DrGBase.Deprecation("ENT:OnChaseEnemy(enemy)", "ENT:DoApproachEnemy(enemy)")
   local OnAvoidEnemyDeprecation = DrGBase.Deprecation("ENT:OnAvoidEnemy(enemy)", "ENT:DoMoveAwayFromEnemy(enemy)")
   local OnIdleEnemyDeprecation = DrGBase.Deprecation("ENT:OnIdleEnemy(enemy)", "ENT:DoObserveEnemy(enemy)")
+  local OnEnemyUnreachableDeprecation = DrGBase.Deprecation("ENT:OnEnemyUnreachable(enemy)", "ENT:DoEnemyUnreachable(enemy)")
   local OnMeleeAttackDeprecation = DrGBase.Deprecation("ENT:OnMeleeAttack(enemy, weapon)", "ENT:DoMeleeAttack(enemy, weapon)")
   local OnRangeAttackDeprecation = DrGBase.Deprecation("ENT:OnRangeAttack(enemy, weapon)", "ENT:DoRangeAttack(enemy, weapon)")
-  function ENT:DoApproachEnemy(enemy) if isfunction(self.OnChaseEnemy) then
-    OnChaseEnemyDeprecation()
-    return self:OnChaseEnemy(enemy)
-  end end
-  function ENT:DoMoveAwayFromEnemy(enemy) if isfunction(self.OnAvoidEnemy) then
-    OnAvoidEnemyDeprecation()
-    return self:OnAvoidEnemy(enemy)
-  end end
-  function ENT:DoObserveEnemy(enemy) if isfunction(self.OnIdleEnemy) then
-    OnIdleEnemyDeprecation()
-    return self:OnIdleEnemy(enemy)
-  end end
-  function ENT:DoMeleeAttack(enemy, weapon) if isfunction(self.OnMeleeAttack) then
-    OnMeleeAttackDeprecation()
-    return self:OnMeleeAttack(enemy, weapon)
-  end end
-  function ENT:DoRangeAttack(enemy, weapon) if isfunction(self.OnRangeAttack) then
-    OnRangeAttackDeprecation()
-    return self:OnRangeAttack(enemy, weapon)
-  end end
+  function ENT:DoApproachEnemy(enemy)
+    if isfunction(self.OnChaseEnemy) then
+      OnChaseEnemyDeprecation()
+      return self:OnChaseEnemy(enemy)
+    end
+  end
+  function ENT:DoMoveAwayFromEnemy(enemy)
+    if isfunction(self.OnAvoidEnemy) then
+      OnAvoidEnemyDeprecation()
+      return self:OnAvoidEnemy(enemy)
+    end
+  end
+  function ENT:DoObserveEnemy(enemy)
+    if isfunction(self.OnIdleEnemy) then
+      OnIdleEnemyDeprecation()
+      return self:OnIdleEnemy(enemy)
+    end
+  end
+  function ENT:DoEnemyUnreachable(enemy)
+    if isfunction(self.OnEnemyUnreachable) then
+      OnEnemyUnreachableDeprecation()
+      return self:OnEnemyUnreachable(enemy)
+    end
+  end
+  function ENT:DoMeleeAttack(enemy, weapon)
+    if isfunction(self.OnMeleeAttack) then
+      OnMeleeAttackDeprecation()
+      return self:OnMeleeAttack(enemy, weapon)
+    end
+  end
+  function ENT:DoRangeAttack(enemy, weapon)
+    if isfunction(self.OnRangeAttack) then
+      OnRangeAttackDeprecation()
+      return self:OnRangeAttack(enemy, weapon)
+    end
+  end
 
   function ENT:DoSearchEnemy(_enemy) end
 
   -- Hooks --
 
   function ENT:OnUpdateEnemy() end
-  function ENT:OnCompareEnemies() end
+  function ENT:CompareEnemies(_enemy1, _enemy2) end
 
 else
 

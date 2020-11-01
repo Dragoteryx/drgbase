@@ -11,7 +11,7 @@ function DrGBase.Print(msg, options)
       not IsValid(ply) or
       not ply:IsPlayer()
     ) then return false end
-    net.Start("DrGBaseChatPrint")
+    net.Start("DrG/ChatPrint")
     net.WriteString(msg)
     net.WriteBool(tobool(options.chat))
     net.WriteColor(options.color or DrGBase.CLR_CYAN)
@@ -31,23 +31,29 @@ function DrGBase.Print(msg, options)
     return true
   end
 end
+
 function DrGBase.Info(msg, options)
   if not istable(options) then options = {} end
   options.color = DrGBase.CLR_GREEN
   return DrGBase.Print(msg, options)
 end
+
 function DrGBase.Error(msg, options)
   if not istable(options) then options = {} end
   options.color = DrGBase.CLR_RED
   return DrGBase.Print(msg, options)
 end
-if CLIENT then
-  net.Receive("DrGBaseChatPrint", function()
+
+if SERVER then
+  util.AddNetworkString("DrG/ChatPrint")
+else
+  net.Receive("DrG/ChatPrint", function()
     DrGBase.Print(net.ReadString(), {
-      chat = net.ReadBool(), color = net.ReadColor()
+      chat = net.ReadBool(),
+      color = net.ReadColor()
     })
   end)
-else util.AddNetworkString("DrGBaseChatPrint") end
+end
 
 -- Manage files --
 

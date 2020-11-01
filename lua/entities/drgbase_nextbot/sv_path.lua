@@ -1,3 +1,7 @@
+-- ConVars --
+
+local PathfindingMode = GetConVar("drgbase_pathfinding")
+
 -- Path --
 
 function ENT:GetPath()
@@ -15,8 +19,8 @@ end
 
 -- Helpers --
 
-function ENT:LastCompute()
-  return self.DrG_LastCompute or false
+function ENT:LastComputeResult()
+  return self.DrG_LastComputeResult or false
 end
 
 function ENT:LastComputeTime()
@@ -45,18 +49,18 @@ function ENT:PathGenerator(area, from, ladder, _elevator, length)
       if not self.ClimbLaddersUp then return -1 end
       if height < self.ClimbLaddersUpMinHeight then return -1 end
       if height > self.ClimbLaddersUpMaxHeight then return -1 end
-      local res = self:OnComputePathLadderUp(area, from, ladder) or 1
+      local res = self:OnComputePathLadderUp(area, from, ladder) or 0
       if res >= 0 then cost = cost + dist*res else return -1 end
     elseif height < self.loco:GetStepHeight() then
-      local res = self:OnComputePathStep(area, from, height) or 1
+      local res = self:OnComputePathStep(area, from, height) or 0
       if res >= 0 then cost = cost + dist*res else return -1 end
     elseif ENABLE_JUMPING and height < self.loco:GetJumpHeight() then
-      local res = self:OnComputePathJump(area, from, height) or 1
+      local res = self:OnComputePathJump(area, from, height) or 0
       if res >= 0 then cost = cost + dist*res else return -1 end
     elseif self.ClimbLedges then
       if height < self.ClimbLedgesMinHeight then return -1 end
       if height > self.ClimbLedgesMaxHeight then return -1 end
-      local res = self:OnComputePathLedge(area, from, height) or 1
+      local res = self:OnComputePathLedge(area, from, height) or 0
       if res >= 0 then cost = cost + dist*res else return -1 end
     else return -1 end
   elseif height < 0 then
@@ -65,17 +69,17 @@ function ENT:PathGenerator(area, from, ladder, _elevator, length)
       if not self.ClimbLaddersDown then return -1 end
       if drop < self.ClimbLaddersDownMinHeight then return -1 end
       if drop > self.ClimbLaddersDownMaxHeight then return -1 end
-      local res = self:OnComputePathLadderDown(area, from, ladder) or 1
+      local res = self:OnComputePathLadderDown(area, from, ladder) or 0
       if res >= 0 then cost = cost + dist*res else return -1 end
     elseif drop < self.loco:GetDeathDropHeight() then
-      local res = self:OnComputePathDrop(area, from, drop) or 1
+      local res = self:OnComputePathDrop(area, from, drop) or 0
       if res >= 0 then cost = cost + dist*res else return -1 end
     else return -1 end
   else
-    local res = self:OnComputePathFlat(area, from) or 1
+    local res = self:OnComputePathFlat(area, from) or 0
     if res >= 0 then cost = cost + dist*res else return -1 end
   end
-  local res = self:OnComputePath(area, from) or 1
+  local res = self:OnComputePath(area, from) or 0
   if res >= 0 then return cost + dist*res else return -1 end
 end
 
@@ -103,11 +107,14 @@ local pathMETA = FindMetaTable("PathFollower")
 local old_Compute = pathMETA.Compute
 function pathMETA:Compute(nextbot, pos, generator, ...)
   if nextbot.IsDrGNextbot then
-    if not isfunction(generator) and
-    GetConVar("drgbase_pathfinding"):GetString() == "custom" then
-      generator = nextbot:GetPathGenerator()
+    local pathfinding = PathfindingMode:GetString()
+    if pathfinding == "drgbase" then
+      if not isfunction(generator) then generator = nextbot:GetPathGenerator() end
+    elseif pathfinding ~= "nextbot" then
+      nextbot.DrG_LastComputeResult = false
+      return false
     end
-    nextbot.DrG_LastCompute = old_Compute(self, nextbot, pos, generator, ...)
-    return nextbot.DrG_LastCompute
+    nextbot.DrG_LastComputeResult = old_Compute(self, nextbot, pos, generator, ...)
+    return nextbot.DrG_LastComputeResult
   else return old_Compute(self, nextbot, pos, generator, ...) end
 end

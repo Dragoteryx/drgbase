@@ -1,11 +1,14 @@
 -- Misc --
 
 DrG_Nextbots = DrG_Nextbots or {}
-function DrGBase.NextbotIterator()
+function DrGBase.NextbotIterator(class)
   local thr = coroutine.create(function()
     for i = 1, #DrG_Nextbots do
-      local nextbot = DrG_Nextbots[i]
-      if IsValid(nextbot) then coroutine.yield(nextbot) end
+      local nb = DrG_Nextbots[i]
+      if IsValid(nb) and (
+        not isstring(class) or
+        class == nb:GetClass()
+      ) then coroutine.yield(nb) end
     end
   end)
   return function()
@@ -13,9 +16,9 @@ function DrGBase.NextbotIterator()
     return nextbot
   end
 end
-function DrGBase.GetNextbots()
+function DrGBase.GetNextbots(class)
   local nextbots = {}
-  for nextbot in DrGBase.NextbotIterator() do
+  for nextbot in DrGBase.NextbotIterator(class) do
     table.insert(nextbots, nextbot)
   end
   return nextbots
@@ -77,23 +80,27 @@ end
 
 -- Spawnmenu --
 
-spawnmenu.AddContentType("drg/nextbot", function(panel, data)
-  
-end)
+if CLIENT then
 
-hook.Add("DrG/PopulateSpawnmenu", "AddDrGBaseNextbots", function(panel, tree)
-	local categories = {}
-  for class, nextbot in pairs(list.Get("DrG/Nextbots")) do
-    local category = nextbot.Category or "Other"
-    categories[category] = categories[category] or {}
-    categories[category][class] = nextbot
-  end
-  local nextbots = tree:AddNode("Nextbots", "icon16/monkey.png")
-  for name, category in pairs(categories) do
-    local icon = DrGBase.GetIcon(name) or "icon16/monkey.png"
-    
-  end
-end)
+  spawnmenu.AddContentType("drg/nextbot", function(panel, data)
+
+  end)
+
+  hook.Add("DrG/PopulateSpawnmenu", "AddDrGBaseNextbots", function(panel, tree)
+    local categories = {}
+    for class, nextbot in pairs(list.Get("DrG/Nextbots")) do
+      local category = nextbot.Category or "Other"
+      categories[category] = categories[category] or {}
+      categories[category][class] = nextbot
+    end
+    local nextbots = tree:AddNode("Nextbots", "icon16/monkey.png")
+    for name, category in pairs(categories) do
+      local icon = DrGBase.GetIcon(name) or "icon16/monkey.png"
+
+    end
+  end)
+
+end
 
 -- Footsteps --
 

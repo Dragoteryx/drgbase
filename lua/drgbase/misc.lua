@@ -1,3 +1,20 @@
+-- ConVars --
+
+function DrGBase.ConVar(name, value, ...)
+  return CreateConVar(name, value, {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}, ...)
+end
+function DrGBase.ClientConVar(name, value, ...)
+  return CreateClientConVar(name, value, true, false, ...)
+end
+function DrGBase.SharedClientConVar(name, value, ...)
+  return CreateClientConVar(name, value, true, true, ...)
+end
+
+local EnableDebug = DrGBase.ConVar("drgbase_debug", "0")
+function DrGBase.DebugEnabled()
+  return EnableDebug:GetBool()
+end
+
 -- Misc --
 
 local RANGE_MELEE = {
@@ -10,16 +27,6 @@ function DrGBase.IsMeleeWeapon(weapon)
   local holdType = weapon:GetHoldType()
   if RANGE_MELEE[holdType] or RANGE_MELEE[weapon.HoldType] then return true end
   return weapon.DrGBase_Melee or string.find(holdType, "melee") ~= nil
-end
-
-function DrGBase.ConVar(name, value, ...)
-  return CreateConVar(name, value, {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}, ...)
-end
-function DrGBase.ClientConVar(name, value, ...)
-  return CreateClientConVar(name, value, true, false, ...)
-end
-function DrGBase.SharedClientConVar(name, value, ...)
-  return CreateClientConVar(name, value, true, true, ...)
 end
 
 function DrGBase.Deprecation(old, new)

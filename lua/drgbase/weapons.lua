@@ -49,7 +49,7 @@ properties.Add("drgbasegiveweapons", {
 		local ent = net.ReadEntity()
     if not IsValid(ent) then return end
     local wep = ply:GetActiveWeapon()
-    ent:SetActiveWeapon(ent:GiveWeapon(wep:GetClass()))    
+    ent:SetActiveWeapon(ent:GiveWeapon(wep:GetClass()))
 	end
 })
 
