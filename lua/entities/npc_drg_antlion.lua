@@ -41,7 +41,7 @@ if SERVER then
 
   function ENT:Initialize()
     self.loco:SetMaxYawRate(175)
-    --print(#DrGBase.GetNextbots())
+    print(#DrGBase.GetNextbots())
   end
 
   function ENT:Think()
@@ -67,6 +67,10 @@ if SERVER then
         self:TakeDamageInfo(dmg)
       end
     end
+  end
+
+  function ENT:CustomSightTest(ent, sight)
+    print(sight)
   end
 
   --[[function ENT:DoRangeAttack(enemy)

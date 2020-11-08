@@ -48,6 +48,8 @@ ENT.EyeOffset = Vector(0, 0, 0)
 ENT.EyeAngle = Angle(0, 0, 0)
 ENT.SightFOV = 150
 ENT.SightRange = 15000
+ENT.MinLuminosity = 0.2
+ENT.MaxLuminosity = 1
 ENT.HearingCoefficient = 1
 
 -- Movements --
@@ -100,10 +102,10 @@ DrGBase.IncludeFile("weapons.lua")
 DrGBase.IncludeFile("possession.lua")
 
 -- Misc --
+DrGBase.IncludeFile("drgbase/entity_helpers.lua")
 DrGBase.IncludeFile("misc.lua")
 DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("deprecated.lua")
-DrGBase.IncludeFile("drgbase/entity_helpers.lua")
 
 -- ConVars --
 local MultHealth = DrGBase.ConVar("drgbase_multiplier_health", "1")
@@ -181,7 +183,7 @@ function ENT:DrG_PreThink(...)
     end
   else
     local ply = LocalPlayer()
-    if self:IsAbleToSeeLocalPlayer() then
+    if self:IsAbleToSee(LocalPlayer()) then
       self:OnEntitySightKept(ply)
     else self:OnEntityNotInSight(ply) end
   end
@@ -195,14 +197,14 @@ function ENT:Think(...)
     return self:CustomThink(...)
   end
 end
-
+ 
 -- OnRemove --
 
+function ENT:OnRemove() end
 function ENT:DrG_OnRemove()
   if SERVER and self:IsPossessed() then self:StopPossession() end
   table.RemoveByValue(DrG_Nextbots, self)
 end
-function ENT:OnRemove() end
 
 if SERVER then
   AddCSLuaFile()
@@ -329,11 +331,6 @@ if SERVER then
     end)
   end
 
-  -- imo CallInCoroutineOverride is an ugly name, but there you go Roach
-  function ENT:CallInCoroutineOverride(fn, ...)
-    return self:OverrideThread(fn, ...)
-  end
-
   -- SLVBase compatibility --
   if file.Exists("autorun/slvbase", "LUA") then
     function ENT:PercentageFrozen() return 0 end
@@ -363,7 +360,7 @@ else
     if not DrGBase.DebugEnabled() then return end
     local ply = LocalPlayer()
     if DebugSight:GetBool() then
-      local clr = self:IsAbleToSeeLocalPlayer() and DrGBase.CLR_GREEN or DrGBase.CLR_RED
+      local clr = self:IsAbleToSee(LocalPlayer()) and DrGBase.CLR_GREEN or DrGBase.CLR_RED
       render.DrawLine(self:EyePos(), ply:WorldSpaceCenter(), clr, true)
     end
   end

@@ -1,6 +1,9 @@
--- ConVars --
+-- ConVars --rest
 
-local PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", "Pathfinding mode, either 'drgbase', 'nextbot' or 'none'.")
+local PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", "Pathfinding mode:\n"..
+  "    'custom' => DrGBase custom pathfinding, allows climbing at the cost of performance\n"..
+  "    'default' => default Garry's Mod nextbot pathfinding, more efficient than custom but dumber\n"..
+  "    'none' => disable pathfinding entirely, best performance at the cost of having nextbots running into every wall")
 local ComputeDelay = DrGBase.ConVar("drgbase_compute_delay", "0.1")
 local AvoidObstacles = DrGBase.ConVar("drgbase_avoid_obstacles", "1")
 local MultSpeed = DrGBase.ConVar("drgbase_multiplier_speed", "1")
@@ -134,7 +137,7 @@ if SERVER then
       else pos = pos:GetPos() end
     end
     if not istable(options) then options = {} end
-    if navmesh.IsLoaded() and PathfindingMode:GetString() ~= "none" and self:GetGroundEntity():IsWorld() then
+    if navmesh.IsLoaded() and PathfindingMode:GetString() ~= "none" and IsValid(self:CurrentNavArea()) then
       local path = self:GetPath()
       if isnumber(options.tolerance) then path:SetGoalTolerance(options.tolerance) end
       if isnumber(options.lookahead) then path:SetMinLookAheadDistance(options.lookahead) end

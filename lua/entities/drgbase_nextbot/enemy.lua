@@ -63,29 +63,29 @@ if SERVER then
     self:UpdateEnemy()
   end
 
+  function ENT:HasRecentEnemy()
+    return self:HasEnemy() and self:HasDetectedRecently(self:GetEnemy())
+  end
+
   -- Thread --
 
   function ENT:DoHandleEnemy(enemy)
-    if self:HasDetectedRecently(enemy) then
-      local visible = self:Visible(enemy)
-      local disp = self:GetRelationship(enemy)
-      if disp == D_HT then
-        if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
-          if self:DoApproachEnemy(enemy) ~= true and self:FollowPath(enemy) == "unreachable" then
-            self:DoEnemyUnreachable(enemy)
-          end
-        elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible then
-          if self:DoMoveAwayFromEnemy(enemy) ~= true then
-            self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
-          end
-        elseif self:DoObserveEnemy(enemy) ~= true then self:FaceTowards(enemy) end
-        if IsValid(enemy) then self:DoAttack(enemy) end
-      elseif disp == D_FR then
+    if not self:HasDetectedRecently(enemy) then
+      local res = self:DoSearchEnemy(enemy)
+      if res == false then self:DoEnemyNotFound(enemy) end
+      if res ~= true then return end
+    end
+    local visible = self:Visible(enemy)
+    local disp = self:GetRelationship(enemy)
+    if disp == D_HT then
+      if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
+        if self:DoApproachEnemy(enemy) == false then self:DoEnemyUnreachable(enemy) end
+      elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible then
+        self:DoMoveAwayFromEnemy(enemy)
+      else self:DoObserveEnemy(enemy) end
+      if IsValid(enemy) then self:DoAttack(enemy) end
+    elseif disp == D_FR then
 
-      else self:DoPassive() end
-    elseif self:DoSearchEnemy(enemy) == false or
-    self:FollowPath(self:LastKnownPos(enemy)) == "reached" then
-      self:ForgetAllEntities()
     end
   end
   function ENT:DoAttack(enemy)
@@ -108,19 +108,22 @@ if SERVER then
     if isfunction(self.OnChaseEnemy) then
       OnChaseEnemyDeprecation()
       return self:OnChaseEnemy(enemy)
+    else
+      local res = self:FollowPath(enemy)
+      if res == "unreachable" then return false end
     end
   end
   function ENT:DoMoveAwayFromEnemy(enemy)
     if isfunction(self.OnAvoidEnemy) then
       OnAvoidEnemyDeprecation()
       return self:OnAvoidEnemy(enemy)
-    end
+    else self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos())) end
   end
   function ENT:DoObserveEnemy(enemy)
     if isfunction(self.OnIdleEnemy) then
       OnIdleEnemyDeprecation()
       return self:OnIdleEnemy(enemy)
-    end
+    else self:FaceTowards(enemy) end
   end
   function ENT:DoEnemyUnreachable(enemy)
     if isfunction(self.OnEnemyUnreachable) then
@@ -141,7 +144,14 @@ if SERVER then
     end
   end
 
-  function ENT:DoSearchEnemy(_enemy) end
+  function ENT:DoSearchEnemy(enemy)
+    if self:FollowPath(self:LastKnownPos(enemy)) == "reached" then
+      return false
+    end
+  end
+  function ENT:DoEnemyNotFound(_enemy)
+    self:ForgetHostiles()
+  end
 
   -- Hooks --
 

@@ -17,6 +17,28 @@ function ENT:InvalidatePath()
   return self:GetPath():Invalidate()
 end
 
+-- Nav areas --
+
+function ENT:CurrentNavArea()
+  if not navmesh.IsLoaded() then return nil end
+  if not self:GetGroundEntity():IsWorld() then return nil end
+  if not IsValid(self.DrG_CurrentNavArea) then self.DrG_CurrentNavArea = navmesh.GetNearestNavArea(self:GetPos(), 10) end
+  if IsValid(self.DrG_CurrentNavArea) and self.DrG_CurrentNavArea:IsOverlapping(self:GetPos(), 10) then
+    return self.DrG_CurrentNavArea
+  else return nil end
+end
+function ENT:PreviousNavArea()
+  if not IsValid(self:CurrentNavArea()) then
+    return self.DrG_CurrentNavArea or nil
+  else return self.DrG_PreviousNavArea or nil end
+end
+
+function ENT:OnNavAreaChanged() end
+function ENT:DrG_OnNavAreaChanged(old, new)
+  self.DrG_PreviousNavArea = old
+  self.DrG_CurrentNavArea = new
+end
+
 -- Helpers --
 
 function ENT:LastComputeResult()
@@ -108,9 +130,9 @@ local old_Compute = pathMETA.Compute
 function pathMETA:Compute(nextbot, pos, generator, ...)
   if nextbot.IsDrGNextbot then
     local pathfinding = PathfindingMode:GetString()
-    if pathfinding == "drgbase" then
+    if pathfinding == "custom" then
       if not isfunction(generator) then generator = nextbot:GetPathGenerator() end
-    elseif pathfinding ~= "nextbot" then
+    elseif pathfinding ~= "default" then
       nextbot.DrG_LastComputeResult = false
       return false
     end

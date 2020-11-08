@@ -54,17 +54,19 @@ if SERVER then
     return hit
   end
 
-  -- Helpers --
+  -- Misc --
 
-  function ENT:IsInRangeAndSight(ent, range)
-    return self:IsInRange(ent, range) and self:IsAbleToSee(ent)
+  function ENT:IsInRangeAndSight(ent, range, useFOV)
+    return self:IsInRange(ent, range) and self:IsAbleToSee(ent, useFOV)
   end
 
-  function ENT:SafeSetPos(pos)
-    if self:TraceHull(nil, {
-      start = pos, endpos = pos
-    }).Hit then return false end
-    self:SetPos(pos)
+  function ENT:Idle(duration)
+    local delay = CurTime() + duration
+    while CurTime() < delay do
+      if self:HasEnemy() then return false end
+      if self:IsPossessed() then return false end
+      if self:YieldThread(true) then return false end
+    end
     return true
   end
 

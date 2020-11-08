@@ -1,6 +1,7 @@
 -- ConVars --
 
 local AllOmniscient = DrGBase.ConVar("drgbase_ai_omniscient", "0")
+local EnableSight = DrGBase.ConVar("drgbase_ai_sight", "1")
 local EnableHearing = DrGBase.ConVar("drgbase_ai_hearing", "1")
 
 -- Detection --
@@ -126,6 +127,45 @@ if SERVER then
       self:ForgetEntity(plys[i])
     end
   end
+  function ENT:ForgetAllies()
+    if self:IsOmniscient() then return end
+    for ally in self:AllyIterator() do
+      self:ForgetEntity(ally)
+    end
+  end
+  function ENT:ForgetEnemies()
+    if self:IsOmniscient() then return end
+    for enemy in self:EnemyIterator() do
+      self:ForgetEntity(enemy)
+    end
+  end
+  function ENT:ForgetAfraidOf()
+    if self:IsOmniscient() then return end
+    for afraidOf in self:AfraidOfIterator() do
+      self:ForgetEntity(afraidOf)
+    end
+  end
+  function ENT:ForgetHostiles()
+    if self:IsOmniscient() then return end
+    for hostile in self:HostileIterator() do
+      self:ForgetEntity(hostile)
+    end
+  end
+  function ENT:ForgetNeutrals()
+    if self:IsOmniscient() then return end
+    local entities = ents.GetAll()
+    for i = 1, #entities do
+      local ent = entities[i]
+      if IsValid(ent) and self:IsNeutral(ent) then
+        self:ForgetEntity(ent)
+      end
+    end
+  end
+  function ENT:ForgetEnemy()
+    if self:IsOmniscient() then return end
+    if not self:HasEnemy() then return end
+    self:ForgetEntity(self:GetEnemy())
+  end
 
   function ENT:DetectedEntities()
     local thr
@@ -209,13 +249,53 @@ if SERVER then
 
   -- Vision --
 
-  net.DrG_DefineCallback("DrG/IsAbleToSee", function(self, ent, useFOV)
-    if not IsValid(self) or not IsValid(ent) then return false end
-    return self:IsAbleToSee(ent, useFOV)
-  end)
-
   function ENT:IsBlind()
     return GetConVar("nb_blind"):GetBool() or self:GetFOV() <= 0 or self:GetMaxVisionRange() <= 0
+  end
+
+  -- sight info
+
+  local SightInfo = DrGBase.Class()
+
+  function SightInfo:__new(nextbot, entity, flags)
+    function self:GetNextbot()
+      return nextbot
+    end
+    function self:GetEntity()
+      return entity
+    end
+    function self:GetFlags()
+      return flags
+    end
+  end
+
+  function SightInfo.__index:IsFlagSet(flag)
+    return bit.band(self:GetFlags(), flag) ~= 0
+  end
+  function SightInfo.__index:IsAbleToSee()
+    return self:GetFlags() == SIGHT_TEST_PASSED_ALL
+  end
+  function SightInfo.__index:IsLineOfSightClear()
+    return self:IsFlagSet(SIGHT_TEST_LOS)
+  end
+  function SightInfo.__index:IsCloseEnough()
+    return self:IsFlagSet(SIGHT_TEST_RANGE)
+  end
+  function SightInfo.__index:IsInViewCone()
+    return self:IsFlagSet(SIGHT_TEST_ANGLE)
+  end
+  function SightInfo.__index:IsLuminosityOk()
+    return self:IsFlagSet(SIGHT_TEST_LUMINOSITY)
+  end
+
+  function SightInfo:__tostring()
+    return "Nextbot = " .. tostring(self:GetNextbot()) .. "\n" ..
+      "Entity = " .. tostring(self:GetEntity()) .. "\n" ..
+      "AbleToSee = " .. tostring(self:IsAbleToSee()) .. "\n" ..
+      "| LineOfSightClear = " .. tostring(self:IsLineOfSightClear()) .. "\n" ..
+      "| CloseEnough = " .. tostring(self:IsCloseEnough()) .. "\n" ..
+      "| InViewCone = " .. tostring(self:IsInViewCone()) .. "\n" ..
+      "| LuminosityOk = " .. tostring(self:IsLuminosityOk())
   end
 
   -- update
@@ -266,10 +346,33 @@ if SERVER then
         self:UpdateSight(ent)
       end
       for ent in pairs(self.DrG_InSight) do LocalUpdateSight(ent) end
-      --for _, ply in ipairs(player.GetAll()) do LocalUpdateSight(ply) end
+      for _, ply in ipairs(player.GetAll()) do LocalUpdateSight(ply) end
       for ally in self:AllyIterator() do LocalUpdateSight(ally) end
       for hostile in self:HostileIterator() do LocalUpdateSight(hostile) end
     end
+  end
+
+  function ENT:GetMinLuminosity()
+    return math.Clamp(self.MinLuminosity, 0, 1)
+  end
+  function ENT:SetMinLuminosity(luminosity)
+    self.MinLuminosity = tonumber(luminosity)
+  end
+
+  function ENT:GetMaxLuminosity()
+    return math.Clamp(self.MaxLuminosity, 0, 1)
+  end
+  function ENT:SetMaxLuminosity(luminosity)
+    self.MaxLuminosity = tonumber(luminosity)
+  end
+
+  function ENT:EntitySightAngle(ent)
+    local eyepos = self:EyePos()
+    local eyeangles = self:EyeAngles()
+    return eyepos:DrG_Degrees(
+      eyepos + eyeangles:Forward(),
+      ent:WorldSpaceCenter()
+    )
   end
 
   -- meta
@@ -279,19 +382,34 @@ if SERVER then
   local old_IsAbleToSee = nextbotMETA.IsAbleToSee
   function nextbotMETA:IsAbleToSee(ent, useFOV, ...)
     if self.IsDrGNextbot then
+      if not EnableSight:GetBool() then return false end
       if not IsValid(ent) then return false end
       if ent == self then return true end
-      if self:GetRangeSquaredTo(ent) <= self:GetMaxVisionRange()^2 then
-        local res = self:Visible(ent)
-        local angle = -1
-        if res and useFOV ~= false then
-          local eyepos = self:EyePos()
-          local eyeangles = self:EyeAngles()
-          angle = (eyepos + eyeangles:Forward()):DrG_Degrees(ent:WorldSpaceCenter(), eyepos)
-          if angle > self:GetFOV()/2 then res = false end
+      local flags = SIGHT_TEST_PASSED_ALL
+      if not self:Visible(ent) then
+        flags = flags - SIGHT_TEST_LOS
+      end
+      if self:EyePos():DistToSqr(ent:WorldSpaceCenter()) > self:GetMaxVisionRange()^2 then
+        flags = flags - SIGHT_TEST_RANGE
+      end
+      local fov = self:GetFOV()
+      if useFOV ~= false and fov < 360 then
+        local angle = self:EntitySightAngle(ent)
+        if angle > fov/2 then
+          flags = flags - SIGHT_TEST_ANGLE
         end
-        return res, angle
-      else return false, -1 end
+      end
+      if ent:IsPlayer() then
+        local luminosity = ent:FlashlightIsOn() and 1 or ent:DrG_Luminosity()
+        if luminosity < self:GetMinLuminosity() or luminosity > self:GetMaxLuminosity() then
+          flags = flags - SIGHT_TEST_LUMINOSITY
+        end
+      end
+      if isfunction(self.CustomSightTest) then
+        local res = self:CustomSightTest(ent, SightInfo(self, ent, flags))
+        if isbool(res) then return res end
+      end
+      return flags == SIGHT_TEST_PASSED_ALL
     else return old_IsAbleToSee(self, ent, useFOV, ...) end
   end
 
@@ -304,7 +422,7 @@ if SERVER then
   local old_SetFOV = nextbotMETA.SetFOV
   function nextbotMETA:SetFOV(fov, ...)
     if self.IsDrGNextbot then
-      self.SightFOV = fov
+      self.SightFOV = tonumber(fov)
     else return old_SetFOV(self, fov, ...) end
   end
 
@@ -317,7 +435,7 @@ if SERVER then
   local old_SetMaxVisionRange = nextbotMETA.SetMaxVisionRange
   function nextbotMETA:SetMaxVisionRange(range, ...)
     if self.IsDrGNextbot then
-      self.SightRange = range
+      self.SightRange = tonumber(range)
     else return old_SetMaxVisionRange(self, range, ...) end
   end
 
@@ -363,19 +481,24 @@ if SERVER then
 
   -- hooks
 
-  function ENT:OnEntitySound(ent)
-    self:DetectEntity(ent)
+  local OnSoundDeprecation = DrGBase.Deprecation("ENT:OnSound(entity, sound)", "ENT:OnEntitySound(ent, sound)")
+  function ENT:OnEntitySound(ent, sound)
+    if isfunction(self.OnSound) then
+      OnSoundDeprecation()
+      self:OnSound(ent, sound)
+    else self:DetectEntity(ent) end
   end
 
   hook.Add("EntityEmitSound", "DrG/SoundDetection", function(sound)
+    if not EnableHearing:GetBool() then return end
     local ent = sound.Entity
     if not istable(ent.DrG_Listening) then return end
     local pos = sound.Pos or ent:GetPos()
-    local distance = math.pow(sound.SoundLevel/2, 2)*sound.Volume
+    local radius = math.pow(sound.SoundLevel/2, 2)*sound.Volume
     for nextbot in pairs(ent.DrG_Listening) do
       if not IsValid(nextbot) or not nextbot.IsDrGNextbot then continue end
       local mult = nextbot:VisibleVec(pos) and 1 or 0.5
-      if (distance*nextbot:GetHearingCoefficient()*mult)^2 >= nextbot:GetRangeSquaredTo(pos) then
+      if (radius*nextbot:GetHearingCoefficient()*mult)^2 >= nextbot:GetRangeSquaredTo(pos) then
         nextbot:OnEntitySound(ent, sound)
         nextbot:ReactInThread(nextbot.DoEntitySound, ent, sound)
         if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSound", nextbot) end
@@ -428,27 +551,20 @@ else
 
   -- Getters --
 
-  function ENT:HasDetectedLocalPlayer()
+  function ENT:HasDetected(ent)
     if self:IsOmniscient() then return true end
+    if ent ~= LocalPlayer() then return false end
     return self.DrG_LocalPlayerDetected == true
   end
-  function ENT:HasForgottenLocalPlayer()
+  function ENT:HasForgotten(ent)
     if self:IsOmniscient() then return false end
+    if ent ~= LocalPlayer() then return false end
     return self.DrG_LocalPlayerDetected == false
   end
 
-  function ENT:IsAbleToSeeLocalPlayer()
+  function ENT:IsAbleToSee(ent)
+    if ent ~= LocalPlayer() then return false end
     return self.DrG_LocalPlayerInSight or false
-  end
-
-  function ENT:IsAbleToSee(ent, useFOV, fn)
-    if isfunction(useFOV) then return self:IsAbleToSee(ent, true, useFOV) end
-    if not isfunction(fn) then return end
-    net.DrG_RunCallback("DrG/IsAbleToSee", function(inSight)
-      if not IsValid(self) then return end
-      if IsValid(ent) then fn(self, inSight)
-      else fn(self, false) end
-    end, self, ent, tobool(useFOV))
   end
 
 end

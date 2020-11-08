@@ -509,11 +509,6 @@ if SERVER then
 
   -- Getters --
 
-  net.DrG_DefineCallback("DrG/GetRelationship", function(self, ent, absolute)
-    if not IsValid(self) or not IsValid(ent) then return D_ER, 1 end
-    return self:GetRelationship(ent, absolute)
-  end)
-
   function ENT:GetRelationship(ent, absolute)
     local rel = self.DrG_Relationships[ent]
     if rel and (absolute or not self:IsIgnored(ent)) then
@@ -700,6 +695,10 @@ if SERVER then
 
 else
 
+  -- Hooks --
+
+  function ENT:OnRelationshipChange(_old, _new) end
+
   -- Getters --
 
   net.DrG_DelayedReceive("DrG/RelationshipChange", function(nb, old, new)
@@ -707,60 +706,24 @@ else
     nb.DrG_LocalPlayerDisp = new
     nb:OnRelationshipChange(LocalPlayer(), old, new)
   end)
-  function ENT:GetLocalPlayerRelationship()
-    return self.DrG_LocalPlayerDisp or D_NU
+  function ENT:GetRelationship(ent)
+    if ent ~= LocalPlayer() then return D_ER, 1 end
+    return self.DrG_LocalPlayerDisp or D_NU, 1
   end
-  function ENT:IsAllyLocalPlayer()
-    return self:GetLocalPlayerRelationship() == D_LI
+  function ENT:IsAlly(ent)
+    return self:GetRelationship(ent) == D_LI
   end
-  function ENT:IsEnemyLocalPlayer()
-    return self:GetLocalPlayerRelationship() == D_HT
+  function ENT:IsEnemy(ent)
+    return self:GetRelationship(ent) == D_HT
   end
-  function ENT:IsAfraidOfLocalPlayer()
-    return self:GetLocalPlayerRelationship() == D_FR
+  function ENT:IsAfraidOf(ent)
+    return self:GetRelationship(ent) == D_FR
   end
-  function ENT:IsNeutralLocalPlayer()
-    return self:GetLocalPlayerRelationship() == D_NU
+  function ENT:IsNeutral(ent)
+    return self:GetRelationship(ent) == D_NU
   end
-  function ENT:IsHostileLocalPlayer()
-    return self:IsEnemyLocalPlayer() or self:IsHostileLocalPlayer()
-  end
-
-  -- Callbacks --
-
-  function ENT:GetRelationship(ent, absolute, fn)
-    if isfunction(absolute) then return self:GetRelationship(ent, false, absolute) end
-    if not isfunction(fn) then return end
-    net.DrG_RunCallback("DrG/GetRelationship", function(disp, prio)
-      if not IsValid(self) then return end
-      if IsValid(ent) then fn(self, disp, prio)
-      else fn(self, D_ER, 1) end
-    end, self, ent, tobool(absolute))
-  end
-  function ENT:IsAlly(ent, absolute, fn)
-    if isfunction(absolute) then return self:IsAlly(ent, false, absolute) end
-    if not isfunction(fn) then return end
-    self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_LI) end)
-  end
-  function ENT:IsEnemy(ent, absolute, fn)
-    if isfunction(absolute) then return self:IsEnemy(ent, false, absolute) end
-    if not isfunction(fn) then return end
-    self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_HT) end)
-  end
-  function ENT:IsAfraidOf(ent, absolute, fn)
-    if isfunction(absolute) then return self:IsAfraidOf(ent, false, absolute) end
-    if not isfunction(fn) then return end
-    self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_FR) end)
-  end
-  function ENT:IsHostile(ent, absolute, fn)
-    if isfunction(absolute) then return self:IsHostile(ent, false, absolute) end
-    if not isfunction(fn) then return end
-    self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_HT or disp == D_FR) end)
-  end
-  function ENT:IsNeutral(ent, absolute, fn)
-    if isfunction(absolute) then return self:IsNeutral(ent, false, absolute) end
-    if not isfunction(fn) then return end
-    self:GetRelationship(ent, absolute, function(self, disp) fn(self, disp == D_NU) end)
+  function ENT:IsHostile(ent)
+    return self:IsEnemy(ent) or self:IsHostile(ent)
   end
 
 end

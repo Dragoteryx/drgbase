@@ -18,66 +18,73 @@ end
 
 -- Traces --
 
-function entMETA:DrG_TraceLine(vec, data)
-  if not isvector(vec) then vec = Vector(0, 0, 0) end
-  local trdata = {}
-  data = data or {}
-  local center = self:OBBCenter()
-  trdata.start = data.start or self:GetPos() + center
-  trdata.endpos = data.endpos or trdata.start + vec
-  trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
-  if self.IsDrGNextbot then
-    if SERVER then trdata.mask = data.mask or self:GetSolidMask() end
-    trdata.filter = data.filter or {self, self:GetWeapon(), self:GetPossessor()}
-  else trdata.filter = data.filter or self end
-  return util.DrG_TraceLine(trdata)
+function entMETA:DrG_TraceLine(data, arg2)
+  if isvector(data) then
+    if not istable(arg2) then arg = {} end
+    arg2.direction = data
+    return self:DrG_TraceLine(arg2)
+  else
+    if not istable(data) then data = {} end
+    if not isvector(data.start) then data.start = self:OBBCenter() end
+    if not isvector(data.endpos) and isvector(data.direction) then data.endpos = data.start + data.direction end
+    data.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
+    if self.IsDrGNextbot then
+      if SERVER then data.mask = data.mask or self:GetSolidMask() end
+      data.filter = data.filter or {self, self:GetWeapon(), self:GetPossessor()}
+    else data.filter = data.filter or self end
+    return util.DrG_TraceLine(data)
+  end
 end
-function entMETA:DrG_TraceHull(vec, data)
-  if not isvector(vec) then vec = Vector(0, 0, 0) end
-  local bound1, bound2 = self:GetCollisionBounds()
-  if bound1.z < bound2.z then
-    local temp = bound1
-    bound1 = bound2
-    bound2 = temp
+function entMETA:DrG_TraceHull(data, arg2)
+  if isvector(data) then
+    if not istable(arg2) then arg = {} end
+    arg2.direction = data
+    return self:DrG_TraceHull(arg2)
+  else
+    if not istable(data) then data = {} end
+    if not isvector(data.start) then data.start = self:OBBCenter() end
+    if not isvector(data.endpos) and isvector(data.direction) then data.endpos = data.start + data.direction end
+    data.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
+    if self.IsDrGNextbot then
+      if SERVER then data.mask = data.mask or self:GetSolidMask() end
+      data.filter = data.filter or {self, self:GetWeapon(), self:GetPossessor()}
+    else data.filter = data.filter or self end
+    local bound1, bound2 = self:GetCollisionBounds()
+    if bound1.z < bound2.z then
+      local temp = bound1
+      bound1 = bound2
+      bound2 = temp
+    end
+    if self:IsNextBot() and data.step then
+      bound2.z = self.loco:GetStepHeight()
+    end
+    data.maxs = data.maxs or bound1
+    data.mins = data.mins or bound2
+    return util.DrG_TraceHull(data)
   end
-  local trdata = {}
-  data = data or {}
-  if self.IsDrGNextbot and data.step then
-    bound2.z = self.loco:GetStepHeight()
-  end
-  trdata.start = data.start or self:GetPos()
-  trdata.endpos = data.endpos or trdata.start + vec
-  trdata.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
-  if self.IsDrGNextbot then
-    if SERVER then trdata.mask = data.mask or self:GetSolidMask() end
-    trdata.filter = data.filter or {self, self:GetWeapon(), self:GetPossessor()}
-  else trdata.filter = data.filter or self end
-  trdata.maxs = data.maxs or bound1
-  trdata.mins = data.mins or bound2
-  return util.DrG_TraceHull(trdata)
 end
 function entMETA:DrG_TraceLineRadial(distance, precision, data)
   local traces = {}
-  for i = 1, precision do
+  --[[for i = 1, precision do
     local normal = self:GetForward()*distance
     normal:Rotate(Angle(0, i*(360/precision), 0))
-    table.insert(traces, self:TraceLine(normal, data))
+    table.insert(traces, self:DrG_TraceLine(normal, data))
   end
   table.sort(traces, function(tr1, tr2)
     return self:GetRangeSquaredTo(tr1.HitPos) < self:GetRangeSquaredTo(tr2.HitPos)
-  end)
+  end)]]
   return traces
 end
 function entMETA:DrG_TraceHullRadial(distance, precision, data)
   local traces = {}
-  for i = 1, precision do
+  --[[for i = 1, precision do
     local normal = self:GetForward()*distance
     normal:Rotate(Angle(0, i*(360/precision), 0))
-    table.insert(traces, self:TraceHull(normal, data))
+    table.insert(traces, self:DrG_TraceHull(normal, data))
   end
   table.sort(traces, function(tr1, tr2)
     return self:GetRangeSquaredTo(tr1.HitPos) < self:GetRangeSquaredTo(tr2.HitPos)
-  end)
+  end)]]
   return traces
 end
 
@@ -100,6 +107,7 @@ if SERVER then
   -- Misc --
 
   function entMETA:DrG_RandomPos(min, max)
+    if not isnumber(min) then min = 1500 end
     if isnumber(max) then
       local dir = Vector(math.random(-100, 100), math.random(-100, 100), 0)
       dir = dir:GetNormalized()*math.random(min, max)
@@ -116,11 +124,12 @@ if SERVER then
         end
       end
       if util.IsInWorld(pos) then
-        return self:DrG_TraceHull(Vector(0, 0, -999999), {
-          collisiongroup = COLLISION_GROUP_WORLD, start = pos
+        return self:DrG_TraceHull({
+          start = pos, endpos = pos + Vector(0, 0, -10000),
+          collisiongroup = COLLISION_GROUP_WORLD
         }).HitPos
       else return self:DrG_RandomPos(min, max) end
-    else return self:DrG_RandomPos(0, min) end
+    else return self:DrG_RandomPos(min, min) end
   end
 
   function entMETA:DrG_Dissolve(type)
@@ -231,6 +240,14 @@ if SERVER then
         return self:DrG_ThrowAt(self:GetPos()+owner:GetForward()*speed, options)
       else return self:DrG_ThrowAt(self:GetPos()+self:GetForward()*speed, options) end
     else return dir, info end
+  end
+
+  function entMETA:DrG_SafeSetPos(pos)
+    if self:DrG_TraceHull({
+      start = pos, endpos = pos
+    }).Hit then return false end
+    self:SetPos(pos)
+    return true
   end
 
   -- Effects --

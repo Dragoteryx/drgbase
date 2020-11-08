@@ -1,4 +1,4 @@
-function DrGBase.CreateClass(superclass)
+function DrGBase.Class(superclass)
   local class = {}
   if istable(superclass) then
     class.__index = setmetatable({}, superclass)

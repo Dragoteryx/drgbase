@@ -28,39 +28,73 @@ if SERVER then
     else self:DoPassive() end
   end
 
+  local OnIdleDeprecation = DrGBase.Deprecation("ENT:OnIdle()", "ENT:DoPassive()")
   function ENT:DoPassive()
-    if #self.DrG_RoamTo > 0 and EnableRoam:GetBool() then
-      local pos = self.DrG_RoamTo[1]
-      local res = self:DoRoam(pos)
-      if isbool(res) then
-        if res then self:DoRoamReached(pos)
-        else self:DoRoamUnreachable(pos) end
-        table.remove(self.DrG_RoamTo, 1)
-      end
-    else self:DoIdle() end
+    if isfunction(self.OnIdle) then
+      OnIdleDeprecation()
+      self:OnIdle()
+    else self:RoamAtRandom() end
   end
 
-  local OnPatrolDeprecation = DrGBase.Deprecation("ENT:OnPatrol()", "ENT:DoRoam()")
+  -- roam
+
+  function ENT:RoamTo(...)
+    local args, n = table.DrG_Pack(...)
+    if n == 0 then return false end
+    for i = 1, n do
+      local pos = args[i]
+      local res
+      while true do
+        if not EnableRoam:GetBool() then return false end
+        if self:HasEnemy() then return false end
+        if self:IsPossessed() then return false end
+        local now = CurTime()
+        res = self:DoRoam(pos)
+        if isbool(res) then break
+        elseif CurTime() == now then
+          self:YieldThread(true)
+        end
+      end
+      if res then self:DoRoamReached(pos)
+      else self:DoRoamUnreachable(pos) end
+    end
+    return true
+  end
+  function ENT:RoamAtRandom(min, max)
+    if not EnableRoam:GetBool() then return false end
+    if not isnumber(min) then min = 1500 max = nil end
+    return self:RoamTo(self:RandomPos(min, max))
+  end
+
+  local OnPatrollingDeprecation = DrGBase.Deprecation("ENT:OnPatrolling()", "ENT:DoRoam()")
   function ENT:DoRoam(pos)
-    if isfunction(self.OnPatrol) then -- backwards compatibility
-      OnPatrolDeprecation()
-      return self:OnPatrol(pos)
+    if isfunction(self.OnPatrolling) then -- backwards compatibility
+      OnPatrollingDeprecation()
+      return self:OnPatrolling(pos)
     else
-      return self:GoTo(pos, function(self)
-        if self:HasEnemy() then return "enemy" end
-        if self:IsPossessed() then return "possessed" end
-      end)
+      local res = self:FollowPath(pos)
+      if res == "reached" then return true
+      elseif res == "unreachable" then return false end
     end
   end
 
-  ENT.DrG_RoamTo = {}
-  function ENT:RoamTo(pos)
-    table.insert(self.DrG_RoamTo, pos)
+  local OnReachedPatrolDeprecation = DrGBase.Deprecation("ENT:OnReachedPatrol(pos)", "ENT:DoRoamReached(pos)")
+  function ENT:DoRoamReached(pos)
+    if isfunction(self.OnReachedPatrol) then
+      OnReachedPatrolDeprecation()
+      self:OnReachedPatrol(pos)
+    else self:Idle(3, 7) end
   end
-  function ENT:RoamAtRandom(min, max)
-    if not EnableRoam:GetBool() then return end
-    self:RoamTo(self:RandomPos(min, max))
+
+  local OnPatrolUnreachableDeprecation = DrGBase.Deprecation("ENT:OnPatrolUnreachable(pos)", "ENT:DoRoamUnreachable(pos)")
+  function ENT:DoRoamUnreachable(pos)
+    if isfunction(self.OnPatrolUnreachable) then
+      OnPatrolUnreachableDeprecation()
+      self:OnPatrolUnreachable(pos)
+    else self:Idle(3, 7) end
   end
+
+  -- misc
 
   local OnIdleDeprecation = DrGBase.Deprecation("ENT:OnIdle()", "ENT:DoIdle()")
   function ENT:DoIdle(...)
@@ -71,7 +105,7 @@ if SERVER then
   end
 
   function ENT:ShouldRun()
-    return self:HasEnemy() and self:HasDetectedRecently(self:GetEnemy())
+    return self:HasRecentEnemy()
   end
 
 end

@@ -1,11 +1,5 @@
 if not istable(ENT) then return end
 
-function ENT:GetDrGVersion()
-  if isnumber(self.DrG_Version) then
-    return math.max(1, self.DrG_Version)
-  else return 1 end
-end
-
 -- Print --
 
 function ENT:PrintPoseParameters()
@@ -53,23 +47,23 @@ end
 
 -- Traces --
 
-function ENT:TraceLine(vec, data)
-  return self:DrG_TraceLine(vec, data)
+function ENT:TraceLine(...)
+  return self:DrG_TraceLine(...)
 end
-function ENT:TraceHull(vec, data)
-  return self:DrG_TraceHull(vec, data)
+function ENT:TraceHull(...)
+  return self:DrG_TraceHull(...)
 end
-function ENT:TraceLineRadial(distance, precision, data)
-  return self:DrG_TraceLineRadial(distance, precision, data)
+function ENT:TraceLineRadial(...)
+  return self:DrG_TraceLineRadial(...)
 end
-function ENT:TraceHullRadial(distance, precision, data)
-  return self:DrG_TraceHullRadial(distance, precision, data)
+function ENT:TraceHullRadial(...)
+  return self:DrG_TraceHullRadial(...)
 end
 
 -- Misc --
 
-function ENT:ScreenShake(amplitude, frequency, duration, radius)
-  return util.ScreenShake(self:GetPos(), amplitude, frequency, duration, radius)
+function ENT:ScreenShake(...)
+  return util.ScreenShake(self:GetPos(), ...)
 end
 
 function ENT:GetCooldown(name)
@@ -133,6 +127,10 @@ if SERVER then
       else ent:SetVelocity(ent:GetVelocity()+vec) end
       return vec
     end
+  end
+
+  function ENT:SafeSetPos(pos)
+    return self:DrG_SafeSetPos(pos)
   end
 
   -- Effects --

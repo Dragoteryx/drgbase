@@ -160,6 +160,25 @@ if SERVER then
     end
 	end)
 
+  -- Luminosity --
+
+  coroutine.DrG_RunThread("DrG/PlayerLuminosity", function()
+    while true do
+      local players = player.GetHumans()
+      for i = 1, #players do
+        local ply = players[i]
+        ply:DrG_RunCallback("DrG/PlayerLuminosity", function(luminosity)
+          if IsValid(ply) then ply.DrG_LuminosityValue = luminosity end
+        end)
+      end
+      coroutine.wait(0.5)
+    end
+  end)
+
+  function plyMETA:DrG_Luminosity()
+    return self.DrG_LuminosityValue or 1
+  end
+
   -- Factions --
 
   local function InitFactions(ply)
@@ -206,14 +225,6 @@ if SERVER then
 
   -- Misc --
 
-  util.AddNetworkString("DrGBasePlayerLuminosity")
-  net.Receive("DrGBasePlayerLuminosity", function(len, ply)
-    ply._DrGBaseLuminosity = net.ReadFloat()
-  end)
-  function plyMETA:DrG_Luminosity()
-    return self._DrGBaseLuminosity or 1
-  end
-
   function plyMETA:DrG_Immobilize()
     local chair = ents.Create("prop_vehicle_prisoner_pod")
     if not chair then return end
@@ -257,20 +268,17 @@ else
     end
   end)
 
-  -- Misc --
+  -- Luminosity --
 
-  local LAST_LUX_UPDATE = 0
-  hook.Add("Think", "DrGBasePlayerLuminosity", function()
-    --print(LocalPlayer():DrG_Luminosity())
-    if CurTime() <= LAST_LUX_UPDATE + 0.1 then return end
-    LAST_LUX_UPDATE = CurTime()
-    net.Start("DrGBasePlayerLuminosity")
-    net.WriteFloat(LocalPlayer():DrG_Luminosity())
-    net.SendToServer()
+  net.DrG_DefineCallback("DrG/PlayerLuminosity", function()
+    return LocalPlayer():DrG_Luminosity()
   end)
+
   function plyMETA:DrG_Luminosity()
-    local ply = LocalPlayer()
-    return math.min(render.GetLightColor(ply:EyePos()):Length()*(1/0.7), 1)
+    if self ~= LocalPlayer() then return -1 end
+    local light = render.GetLightColor(self:EyePos())
+    local length = math.Round(light:Length(), 2)
+    return math.Clamp(math.sqrt(math.log(length)+5)/2, 0, 1)
   end
 
 end

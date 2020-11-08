@@ -59,6 +59,14 @@ return function(ENT)
       end
     end
 
+    if isfunction(ENT.OnNavAreaChanged) then
+      local old_OnNavAreaChanged = ENT.OnNavAreaChanged
+      function ENT:OnNavAreaChanged(old, new, ...)
+        self:DrG_OnNavAreaChanged(old, new, ...)
+        return old_OnNavAreaChanged(self, old, new, ...)
+      end
+    end
+
     -- HandleAnimEvent --
 
     if isfunction(ENT.HandleAnimEvent) then

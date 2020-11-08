@@ -162,12 +162,8 @@ function vecMETA:DrG_Dir(pos)
   return self:DrG_Direction(pos)
 end
 
-function vecMETA:DrG_Degrees(vec2, origin)
-  local vec1 = self
-  origin = origin or Vector(0, 0, 0)
-  vec1 = vec1 - origin
-  vec2 = vec2 - origin
-  return math.deg(math.acos(math.Round(vec1:GetNormalized():Dot(vec2:GetNormalized()), 2)))
+function vecMETA:DrG_Degrees(vec1, vec2)
+  return math.deg(math.acos(math.Round((vec1-self):GetNormalized():Dot((vec2-self):GetNormalized()), 2)))
 end
 
 function vecMETA:DrG_Round(round)
