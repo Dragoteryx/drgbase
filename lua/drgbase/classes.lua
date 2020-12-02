@@ -69,6 +69,10 @@ function DrGBase.CreateClass(superclass)
       IsInstance(meta.__index)
   end
 
+  function class.IsExtension(other)
+    return class.IsInstance(other.prototype)
+  end
+
   return class
 end
 
@@ -98,8 +102,7 @@ function DrGBase.FlagsHelper(length)
   end
 
   function class.prototype:equals(other)
-    return GetClass(self).IsInstance(other) and
-      self:GetFlags() == other:GetFlags()
+    return self:GetFlags() == other:GetFlags()
   end
   function class.prototype:unm()
     return GetClass(self)(ALL - self:GetFlags())
