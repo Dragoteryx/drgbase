@@ -41,22 +41,15 @@ if SERVER then
 
   function ENT:Initialize()
     self.loco:SetMaxYawRate(175)
-    print(#DrGBase.GetNextbots())
-  end
-
-  function ENT:Think()
-    --PrintTable(self:GetEnemies())
-    --print("=========================")
-    --print("desired", self:GetSpeed())
-    --print("actual", self:GetVelocity():Length())
   end
 
   -- AI --
 
   function ENT:ShouldRun()
-    return self:HasEnemy() and self:HasDetectedRecently(self:GetEnemy()) and not self:IsInRangeAndSight(self:GetEnemy(), 250)
+    return self:HasRecentEnemy() and not self:IsInRangeAndSight(self:GetEnemy(), 250)
   end
 
+  local DMGS = {}
   function ENT:DoThink()
     while self:WaterLevel() >= 2 do
       self:PlaySequenceAndWait("drown", {gravity = false})
@@ -64,13 +57,10 @@ if SERVER then
         local dmg = DamageInfo()
         dmg:SetDamage(8)
         dmg:SetDamageType(DMG_DROWN)
+        dmg:AddDrGFlags("TEST", math.random(8))
         self:TakeDamageInfo(dmg)
       end
     end
-  end
-
-  function ENT:CustomSightTest(ent, sight)
-    print(sight)
   end
 
   --[[function ENT:DoRangeAttack(enemy)
@@ -99,7 +89,7 @@ if SERVER then
   end
 
   -- Damage --
-
+  function ENT:OnTakeDamage(dmg) end
   function ENT:DoTakeDamage(dmg)
     --[[if dmg:IsDamageType(DMG_PHYSGUN) then
       self:PlaySequenceAndWait("flip1")

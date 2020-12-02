@@ -11,7 +11,7 @@ local MultSpeed = DrGBase.ConVar("drgbase_multiplier_speed", "1")
 -- Getters --
 
 function ENT:GetSpeed()
-  return self:GetNW2Float("DrG/Speed", 300)
+  return self:GetNW2Float("DrG/Speed", 300)/MultSpeed:GetFloat()
 end
 
 function ENT:GetMovement(ignoreZ)
@@ -57,6 +57,26 @@ end
 
 if SERVER then
 
+  local function CalcRadius(self)
+    local mins = self:GetCollisionBounds()
+    local distance = math.sqrt((math.abs(mins.x)^2)*2)/2
+    return distance
+  end
+
+  local function CollisionHulls(self, distance)
+    if not isnumber(distance) then distance = 1 end
+    local radius = CalcRadius(self)+1*distance
+    local mins, maxs = self:GetCollisionBounds()
+    mins.x = mins.x/2
+    mins.y = mins.y/2
+    maxs.x = maxs.x/2
+    maxs.y = maxs.y/2
+    return self:TraceHull(Vector(1, -1):GetNormalized()*radius, {step = true, mins = mins, maxs = maxs}),
+      self:TraceHull(Vector(1, 1):GetNormalized()*radius, {step = true, mins = mins, maxs = maxs}),
+      self:TraceHull(Vector(-1, -1):GetNormalized()*radius, {step = true, mins = mins, maxs = maxs}),
+      self:TraceHull(Vector(-1, 1):GetNormalized()*radius, {step = true, mins = mins, maxs = maxs})
+  end
+
   -- Getters/setters --
 
   function ENT:SetSpeed(speed)
@@ -69,6 +89,9 @@ if SERVER then
         return self:GetPossessor():KeyDown(IN_SPEED)
       else return self:ShouldRun() end
     else return false end
+  end
+  function ENT:IsWalking()
+    return self:IsMoving() and not self:IsRunning()
   end
 
   -- Movements --
@@ -117,6 +140,19 @@ if SERVER then
     else self:MoveTowards(away) end
   end
 
+  function ENT:MoveForward()
+    self:Approach(self:GetPos() + self:GetForward())
+  end
+  function ENT:MoveBackward()
+    self:Approach(self:GetPos() - self:GetForward())
+  end
+  function ENT:MoveRight()
+    self:Approach(self:GetPos() + self:GetRight())
+  end
+  function ENT:MoveLeft()
+    self:Approach(self:GetPos() - self:GetRight())
+  end
+
   -- FollowPath & friends --
 
   local function ShouldCompute(self, path, pos)
@@ -146,10 +182,34 @@ if SERVER then
       if ShouldCompute(self, path, pos) then path:Compute(self, pos, options.generator) end
       if not IsValid(path) then return "unreachable" end
       --local current = path:GetCurrentGoal()
+      if not self.DrG_UnstuckDelay or self.DrG_UnstuckDelay < CurTime() then
+        self.DrG_UnstuckDelay = CurTime() + 0.25
+        local nw, ne, sw, se = CollisionHulls(self)
+        if nw.Hit or ne.Hit or sw.Hit or se.Hit then
+          if self:Unstuck() then self.loco:ClearStuck()
+          else return "stuck" end
+        end
+      end
+      if self.loco:IsStuck() then
+        self:HandleStuck()
+        return "stuck"
+      end
       path:Update(self)
       if not IsValid(path) then return "reached" end
     else
       local tolerance = isnumber(options.tolerance) and options.tolerance or 20
+      if not self.DrG_UnstuckDelay or self.DrG_UnstuckDelay < CurTime() then
+        self.DrG_UnstuckDelay = CurTime() + 0.25
+        local nw, ne, sw, se = CollisionHulls(self)
+        if nw.Hit or ne.Hit or sw.Hit or se.Hit then
+          if self:Unstuck() then self.loco:ClearStuck()
+          else return "stuck" end
+        end
+      end
+      if self.loco:IsStuck() then
+        self:HandleStuck()
+        return "stuck"
+      end
       self:MoveTowards(pos)
       if self:GetRangeSquaredTo(pos) <= tolerance^2 then return "reached" end
     end
@@ -184,6 +244,43 @@ if SERVER then
       self:YieldThread(true)
     end
     return false
+  end
+
+  local NORTH = Vector(999999999, 0)
+  local SOUTH = -NORTH
+  local EAST = Vector(0, 999999999)
+  local WEST = -EAST
+  function ENT:Unstuck()
+    while true do
+      local nw, ne, sw, se = CollisionHulls(self, 5)
+      local hit = 0
+      if nw.Hit then hit = hit+1 end
+      if ne.Hit then hit = hit+1 end
+      if sw.Hit then hit = hit+1 end
+      if se.Hit then hit = hit+1 end
+      if hit == 3 then
+        if sw.Hit and nw.Hit and ne.Hit then self:Approach(SOUTH + EAST)
+        elseif nw.Hit and ne.Hit and se.Hit then self:Approach(SOUTH + WEST)
+        elseif se.Hit and sw.Hit and nw.Hit then self:Approach(NORTH + EAST)
+        elseif ne.Hit and se.Hit and sw.Hit then self:Approach(NORTH + WEST) end
+      elseif hit == 2 then
+        if nw.Hit and ne.Hit then self:Approach(SOUTH)
+        elseif sw.Hit and se.Hit then self:Approach(NORTH)
+        elseif nw.Hit and sw.Hit then self:Approach(EAST)
+        elseif ne.Hit and se.Hit then self:Approach(WEST)
+        else return false end
+      elseif hit == 1 then
+        if nw.Hit then self:Approach(SOUTH + EAST)
+        elseif ne.Hit then self:Approach(SOUTH + WEST)
+        elseif sw.Hit then self:Approach(NORTH + EAST)
+        elseif se.Hit then self:Approach(NORTH + WEST) end
+      else return hit == 0 end
+      self:YieldThread(true)
+    end
+  end
+
+  function ENT:HandleStuck()
+    self.loco:ClearStuck()
   end
 
   -- Climbing --

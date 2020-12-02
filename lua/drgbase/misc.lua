@@ -12,7 +12,7 @@ end
 
 local EnableDebug = DrGBase.ConVar("drgbase_debug", "0")
 function DrGBase.DebugEnabled()
-  return EnableDebug:GetBool()
+  return GetConVar("developer"):GetBool() and EnableDebug:GetBool()
 end
 
 -- Misc --

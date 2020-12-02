@@ -39,6 +39,7 @@ if SERVER then
   -- roam
 
   function ENT:RoamTo(...)
+    if not EnableRoam:GetBool() then return false end
     local args, n = table.DrG_Pack(...)
     if n == 0 then return false end
     for i = 1, n do
@@ -96,16 +97,12 @@ if SERVER then
 
   -- misc
 
-  local OnIdleDeprecation = DrGBase.Deprecation("ENT:OnIdle()", "ENT:DoIdle()")
-  function ENT:DoIdle(...)
-    if isfunction(self.OnIdle) then -- backwards compatibility
-      OnIdleDeprecation()
-      self:OnIdle(...)
-    else self:RoamAtRandom(1500) end
-  end
-
   function ENT:ShouldRun()
     return self:HasRecentEnemy()
+  end
+
+  function ENT:ShouldDropWeapon()
+    return self.DropWeaponOnDeath
   end
 
 end

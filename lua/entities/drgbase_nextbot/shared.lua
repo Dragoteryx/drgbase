@@ -197,7 +197,7 @@ function ENT:Think(...)
     return self:CustomThink(...)
   end
 end
- 
+
 -- OnRemove --
 
 function ENT:OnRemove() end
@@ -258,7 +258,14 @@ if SERVER then
       local ok, args = coroutine.resume(self.BehaveThread)
       if not ok then
         ErrorNoHalt(self, " Error: ", args, "\n")
-        if self:OnError(args) then self:BehaveRestart() end
+        if self:OnError(args) then
+          if isfunction(self.DoError) then
+            self.BehaveThread = coroutine.create(function()
+              self:DoError(args)
+              Behave(self)
+            end)
+          else self:BehaveRestart() end
+        end
       end
     else self.BehaveThread = nil end
   end
@@ -342,17 +349,11 @@ if SERVER then
   function ENT:DoSpawn(...) return self:OnSpawn(...) end
   function ENT:OnSpawn() end
 
-  function ENT:HandleAnimEvent() end
-
 else
 
   -- ConVars --
 
   local DebugSight = DrGBase.ClientConVar("drgbase_debug_sight", "0")
-
-  -- Misc --
-
-  function ENT:FireAnimationEvent() end
 
   -- Draw --
 
@@ -365,7 +366,7 @@ else
     end
   end
   function ENT:DrG_PostDraw()
-    if not GetConVar("developer"):GetBool() then return end
+    if not DrGBase.DebugEnabled() then return end
   end
 
   local CustomDrawDeprecation = DrGBase.Deprecation("ENT:CustomDraw()", "ENT:Draw()")

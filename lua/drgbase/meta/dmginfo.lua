@@ -1,11 +1,33 @@
 local dmgMETA = FindMetaTable("CTakeDamageInfo")
 
-local old_DamageInfo = DamageInfo
-function DamageInfo(data)
-  local dmg = old_DamageInfo()
-  if istable(data) then dmg:DrG_Set(data) end
-  return dmg
+-- flags
+
+local DmgFlags = DrGBase.FlagsHelper(32)
+
+local FLAGS = {}
+local function GetFlags(name)
+  FLAGS[name] = FLAGS[name] or DmgFlags()
+  return FLAGS[name]
 end
+
+function dmgMETA:DrG_GetFlags(name, flags)
+  return GetFlags(name):GetFlags(flags)
+end
+function dmgMETA:DrG_AddFlags(name, flags)
+  return GetFlags(name):AddFlags(flags)
+end
+function dmgMETA:DrG_RemoveFlags(name, flags)
+  return GetFlags(name):RemoveFlags(flags)
+end
+function dmgMETA:DrG_IsFlagSet(name, flags)
+  return GetFlags(name):IsFlagSet(flags)
+end
+
+hook.Add("PostEntityTakeDamage", "DrG/ResetDamageFlags", function()
+  FLAGS = {}
+end)
+
+-- misc
 
 function dmgMETA:DrG_Get()
   local data = {}
@@ -21,6 +43,10 @@ function dmgMETA:DrG_Get()
   data.inflictor = self:GetInflictor()
   data.maxDamage = self:GetMaxDamage()
   data.reportedPosition = self:GetReportedPosition()
+  data.drg_flags = {}
+  for name, flags in pairs(FLAGS) do
+    data.drg_flags[name] = flags:GetFlags()
+  end
   return data
 end
 
@@ -41,5 +67,18 @@ function dmgMETA:DrG_Set(data)
   end
   self:SetMaxDamage(data.maxDamage)
   self:SetReportedPosition(data.reportedPosition)
+  for name, flags in data.drg_flags do
+    self:AddDrGFlags(name, flags)
+  end
   return self
+end
+
+-- function stuff
+
+local old_DamageInfo = DamageInfo
+function DamageInfo(data)
+  FLAGS = {}
+  local dmg = old_DamageInfo()
+  if istable(data) then dmg:DrG_Set(data) end
+  return dmg
 end

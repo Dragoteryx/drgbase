@@ -1,7 +1,5 @@
 return function(ENT)
 
-  -- Initialize --
-
   if isfunction(ENT.Initialize) then
     local old_Initialize = ENT.Initialize
     function ENT:Initialize(...)
@@ -11,8 +9,6 @@ return function(ENT)
       return res
     end
   end
-
-  -- Think --
 
   if isfunction(ENT.Think) then
     local old_Think = ENT.Think
@@ -32,17 +28,14 @@ return function(ENT)
     end
   end
 
-  -- OnRemove --
-
   if isfunction(ENT.OnRemove) then
     local old_OnRemove = ENT.OnRemove
     function ENT:OnRemove(...)
+      local res = old_OnRemove(self, ...)
       if self.DrG_OnRemove then self:DrG_OnRemove(...) end
-      return old_OnRemove(self, ...)
+      return res
     end
   end
-
-  -- Draw --
 
   if CLIENT and isfunction(ENT.Draw) then
     local old_Draw = ENT.Draw

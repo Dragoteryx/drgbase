@@ -144,7 +144,7 @@ if SERVER then
 
   ENT.Wait = DrGBase.Deprecated(
     "ENT:Wait(duration)",
-    "ENT:Idle(duration, cancellable)",
+    "ENT:Idle(duration)",
     function(self, duration)
       return self:Idle(duration)
     end)

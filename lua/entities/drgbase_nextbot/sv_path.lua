@@ -130,10 +130,10 @@ local old_Compute = pathMETA.Compute
 function pathMETA:Compute(nextbot, pos, generator, ...)
   if nextbot.IsDrGNextbot then
     local pathfinding = PathfindingMode:GetString()
-    if pathfinding == "custom" then
-      if not isfunction(generator) then generator = nextbot:GetPathGenerator() end
+    if pathfinding == "custom" then generator = nextbot:GetPathGenerator()
     elseif pathfinding ~= "default" then
       nextbot.DrG_LastComputeResult = false
+      self:Invalidate()
       return false
     end
     nextbot.DrG_LastComputeResult = old_Compute(self, nextbot, pos, generator, ...)

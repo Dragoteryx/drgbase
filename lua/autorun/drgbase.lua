@@ -110,8 +110,8 @@ end
 
 -- Autorun --
 
-DrGBase.IncludeFolder("drgbase")
 DrGBase.IncludeFolder("drgbase/modules")
+DrGBase.IncludeFolder("drgbase")
 DrGBase.IncludeFolder("drgbase/meta")
 DrGBase.IncludeFolder("drgbase/autorun")
 DrGBase.IncludeFolder("drgbase/autorun/server")

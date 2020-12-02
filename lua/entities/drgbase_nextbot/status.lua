@@ -102,69 +102,69 @@ if SERVER then
 
   local OnTookDamageDeprecation = DrGBase.Deprecation("ENT:OnTookDamage(dmginfo, hitgroup)", "ENT:DoTakeDamage(dmginfo, hitgroup)")
   local AfterTakeDamageDeprecation = DrGBase.Deprecation("ENT:AfterTakeDamage(dmginfo, delay, hitgroup)", "ENT:DoTakeDamage(dmginfo, hitgroup)")
+  local OnDownedDeprecation = DrGBase.Deprecation("ENT:OnDowned(dmginfo, hitgroup)", "ENT:DoDowned(dmginfo, hitgroup)")
   function ENT:OnInjured() end
   function ENT:DrG_OnInjured(dmg)
-    if dmg:GetDamage() <= 0 or self:HasGodMode() then
+    if self:HasGodMode() then dmg:ScaleDamage(0) end
+    self:Timer(0, function() self:SetNW2Int("DrG/Health", self:Health()) end)
+    local hitgroup = self.DrG_HitGroupToHandle and self.DrG_LastHitGroup or HITGROUP_GENERIC
+    local res = self:OnTakeDamage(dmg, hitgroup)
+    --local attacker = dmg:GetAttacker()
+    -- todo => change relationships
+    if self:IsDown() or self:IsDead() then
       self.DrG_HitGroupToHandle = false
       dmg:ScaleDamage(0)
     else
-      self:Timer(0, function() self:SetNW2Int("DrG/Health", self:Health()) end)
-      local hitgroup = self.DrG_HitGroupToHandle and self.DrG_LastHitGroup or HITGROUP_GENERIC
-      local res = self:OnTakeDamage(dmg, hitgroup)
-      --local attacker = dmg:GetAttacker()
-      -- todo => change relationships
-      if self:IsDown() or self:IsDead() then
-        self.DrG_HitGroupToHandle = false
-        dmg:ScaleDamage(0)
-      else
-        if res == true then dmg:ScaleDamage(0) end
-        if isnumber(res) then dmg:ScaleDamage(res) end
-        if dmg:GetDamage() >= self:Health() then
-          if self:OnFatalDamage(dmg, hitgroup) then
-            self.DrG_HitGroupToHandle = false
-            self:SetNW2Bool("DrG/Down", true)
-            self:SetNW2Int("DrG/Downed", self:GetNW2Int("DrG/Downed")+1)
-            self:SetHealth(1)
-            --[[if #self.OnDownedSounds > 0 then
-              self:EmitSound(self.OnDownedSounds[math.random(#self.OnDownedSounds)])
-            end]]
-            local noTarget = self:GetNoTarget()
-            self:SetNoTarget(true)
-            local data = dmg:DrG_Get()
-            self:CallInThread(function(self)
-              self:DoDowned(dmg:DrG_Set(data), hitgroup)
-              if self:Health() <= 0 then self:SetHealth(1) end
-              self:SetNoTarget(noTarget)
-              self:SetNW2Bool("DrG/Down", false)
-            end)
-          else self:SetHealth(0) end
-          return dmg:ScaleDamage(0)
-        else
+      if res == true then dmg:ScaleDamage(0) end
+      if isnumber(res) then dmg:ScaleDamage(res) end
+      if dmg:GetDamage() >= self:Health() then
+        if self:OnFatalDamage(dmg, hitgroup) then
           self.DrG_HitGroupToHandle = false
-          --[[if #self.OnDamageSounds > 0 then
-            self:EmitSlotSound("DrGBaseDamageSounds", self.DamageSoundDelay, self.OnDamageSounds[math.random(#self.OnDamageSounds)])
+          self:SetNW2Bool("DrG/Down", true)
+          self:SetNW2Int("DrG/Downed", self:GetNW2Int("DrG/Downed")+1)
+          self:SetHealth(1)
+          --[[if #self.OnDownedSounds > 0 then
+            self:EmitSound(self.OnDownedSounds[math.random(#self.OnDownedSounds)])
           end]]
-          if isfunction(self.DoTakeDamage) then
-            local data = dmg:DrG_Get()
-            self:ReactInThread(function(self)
-              if self:IsDown() or self:IsDead() then return end
-              self:DoTakeDamage(dmg:DrG_Set(data), hitgroup)
-            end)
-          elseif isfunction(self.OnTookDamage) then -- backwards compatibility
-            OnTookDamageDeprecation()
-            local data = dmg:DrG_Get()
-            self:ReactInThread(function(self)
-              if self:IsDown() or self:IsDead() then return end
-              self:OnTookDamage(dmg:DrG_Set(data), hitgroup)
-            end)
-          elseif isfunction(self.AfterTakeDamage) then -- backwards compatibility #2
-            AfterTakeDamageDeprecation()
-            local data = dmg:DrG_Get()
-            self:ReactInThread(function(self)
-              if self:IsDown() or self:IsDead() then return end
-              self:AfterTakeDamage(dmg:DrG_Set(data), 0, hitgroup)
-            end)
-          end
+          local noTarget = self:GetNoTarget()
+          self:SetNoTarget(true)
+          local data = dmg:DrG_Get()
+          self:CallInThread(function(self)
+            if isfunction(self.OnDowned) then
+              OnDownedDeprecation()
+              self:OnDowned(dmg:DrG_Set(data), hitgroup)
+            else self:DoDowned(dmg:DrG_Set(data), hitgroup) end
+            if self:Health() <= 0 then self:SetHealth(1) end
+            self:SetNoTarget(noTarget)
+            self:SetNW2Bool("DrG/Down", false)
+          end)
+        else self:SetHealth(0) end
+        return dmg:ScaleDamage(0)
+      else
+        self.DrG_HitGroupToHandle = false
+        --[[if #self.OnDamageSounds > 0 then
+          self:EmitSlotSound("DrGBaseDamageSounds", self.DamageSoundDelay, self.OnDamageSounds[math.random(#self.OnDamageSounds)])
+        end]]
+        if isfunction(self.AfterTakeDamage) then -- backwards compatibility #2
+          AfterTakeDamageDeprecation()
+          local data = dmg:DrG_Get()
+          self:ReactInThread(function(self)
+            if self:IsDown() or self:IsDead() then return end
+            self:AfterTakeDamage(dmg:DrG_Set(data), 0, hitgroup)
+          end)
+        elseif isfunction(self.OnTookDamage) then -- backwards compatibility
+          OnTookDamageDeprecation()
+          local data = dmg:DrG_Get()
+          self:ReactInThread(function(self)
+            if self:IsDown() or self:IsDead() then return end
+            self:OnTookDamage(dmg:DrG_Set(data), hitgroup)
+          end)
+        elseif isfunction(self.DoTakeDamage) then
+          local data = dmg:DrG_Get()
+          self:ReactInThread(function(self)
+            if self:IsDown() or self:IsDead() then return end
+            self:DoTakeDamage(dmg:DrG_Set(data), hitgroup)
+          end)
         end
       end
     end
@@ -172,9 +172,7 @@ if SERVER then
 
   local function NextbotDeath(self, dmg)
     if not IsValid(self) then return end
-    --[[if self:HasWeapon() and self.DropWeaponOnDeath then
-      self:DropWeapon()
-    end]]
+    if self:HasWeapon() and self:ShouldDropWeapon() then self:DropWeapon() end
     if self.RagdollOnDeath then
       local ragdoll = self:BecomeRagdoll(dmg)
       if IsValid(ragdoll) then
@@ -228,18 +226,8 @@ if SERVER then
   end
 
   function ENT:OnTakeDamage() end
-  --function ENT:DoTakeDamage() end
-
   function ENT:OnFatalDamage() end
-
-  local OnDownedDeprecation = DrGBase.Deprecation("ENT:OnDowned(dmginfo, hitgroup)", "ENT:DoDowned(dmginfo, hitgroup)")
-  function ENT:DoDowned(...)
-    if isfunction(self.OnDowned) then -- backwards compatiblity
-      OnDownedDeprecation()
-      return self:OnDowned(...)
-    end
-  end
-  --function ENT:DoDeath() end
+  function ENT:DoDowned() end
 
   -- Meta --
 

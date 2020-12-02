@@ -25,13 +25,15 @@ function entMETA:DrG_TraceLine(data, arg2)
     return self:DrG_TraceLine(arg2)
   else
     if not istable(data) then data = {} end
-    if not isvector(data.start) then data.start = self:OBBCenter() end
+    if not isvector(data.start) then data.start = self:GetPos() end
     if not isvector(data.endpos) and isvector(data.direction) then data.endpos = data.start + data.direction end
     data.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
-    if self.IsDrGNextbot then
-      if SERVER then data.mask = data.mask or self:GetSolidMask() end
-      data.filter = data.filter or {self, self:GetWeapon(), self:GetPossessor()}
-    else data.filter = data.filter or self end
+    if not data.mask and SERVER and self:IsNextBot() then data.mask = self:GetSolidMask() end
+    if not data.filter then
+      if self.IsDrGNextbot then
+        data.filter = {self, self:GetWeapon(), self:GetPossessor()}
+      else data.filter = self end
+    end
     return util.DrG_TraceLine(data)
   end
 end
@@ -42,24 +44,21 @@ function entMETA:DrG_TraceHull(data, arg2)
     return self:DrG_TraceHull(arg2)
   else
     if not istable(data) then data = {} end
-    if not isvector(data.start) then data.start = self:OBBCenter() end
+    if not isvector(data.start) then data.start = self:GetPos() end
     if not isvector(data.endpos) and isvector(data.direction) then data.endpos = data.start + data.direction end
     data.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
-    if self.IsDrGNextbot then
-      if SERVER then data.mask = data.mask or self:GetSolidMask() end
-      data.filter = data.filter or {self, self:GetWeapon(), self:GetPossessor()}
-    else data.filter = data.filter or self end
-    local bound1, bound2 = self:GetCollisionBounds()
-    if bound1.z < bound2.z then
-      local temp = bound1
-      bound1 = bound2
-      bound2 = temp
+    if not data.mask and SERVER and self:IsNextBot() then data.mask = self:GetSolidMask() end
+    if not data.filter then
+      if self.IsDrGNextbot then
+        data.filter = {self, self:GetWeapon(), self:GetPossessor()}
+      else data.filter = self end
     end
+    local mins, maxs = self:GetCollisionBounds()
+    data.maxs = data.maxs or maxs
+    data.mins = data.mins or mins
     if self:IsNextBot() and data.step then
-      bound2.z = self.loco:GetStepHeight()
+      data.mins.z = self.loco:GetStepHeight()
     end
-    data.maxs = data.maxs or bound1
-    data.mins = data.mins or bound2
     return util.DrG_TraceHull(data)
   end
 end
@@ -109,8 +108,8 @@ if SERVER then
   function entMETA:DrG_RandomPos(min, max)
     if not isnumber(min) then min = 1500 end
     if isnumber(max) then
-      local dir = Vector(math.random(-100, 100), math.random(-100, 100), 0)
-      dir = dir:GetNormalized()*math.random(min, max)
+      local dir = Vector(math.random(min, max), 0, 0)
+      dir:Rotate(Angle(0, math.random(0, 359), 0))
       local pos = self:GetPos()+dir
       if navmesh.IsLoaded() then
         local area = navmesh.GetNearestNavArea(pos)
@@ -125,7 +124,7 @@ if SERVER then
       end
       if util.IsInWorld(pos) then
         return self:DrG_TraceHull({
-          start = pos, endpos = pos + Vector(0, 0, -10000),
+          start = pos, direction = Vector(0, 0, -10000),
           collisiongroup = COLLISION_GROUP_WORLD
         }).HitPos
       else return self:DrG_RandomPos(min, max) end

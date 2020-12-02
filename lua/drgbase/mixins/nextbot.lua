@@ -72,9 +72,10 @@ return function(ENT)
     if isfunction(ENT.HandleAnimEvent) then
       local old_HandleAnimEvent = ENT.HandleAnimEvent
       function ENT:HandleAnimEvent(event, time, cycle, type, options)
-        self:OnAnimEvent(options, event, self:GetPos(), self:GetAngles(), time)
+        local res = self:OnAnimEvent(options, event, self:GetPos(), self:GetAngles(), time)
         self:ReactInThread(self.DoAnimEvent, options, event, self:GetPos(), self:GetAngles(), time)
-        return old_HandleAnimEvent(self, event, time, cycle, type, options)
+        local res2 = old_HandleAnimEvent(self, event, time, cycle, type, options)
+        if res == true or res2 == true then return true end
       end
     end
 
@@ -85,8 +86,9 @@ return function(ENT)
     if isfunction(ENT.FireAnimationEvent) then
       local old_FireAnimationEvent = ENT.FireAnimationEvent
       function ENT:FireAnimationEvent(pos, angle, event, name)
-        if self.OnAnimEvent then self:OnAnimEvent(name, event, pos, angle, CurTime()) end
-        return old_FireAnimationEvent(self, pos, angle, event, name)
+        local res = self:OnAnimEvent(name, event, pos, angle, CurTime())
+        local res2 = old_FireAnimationEvent(self, pos, angle, event, name)
+        if res == true or res2 == true then return true end
       end
     end
 

@@ -67,8 +67,8 @@ function ENT:ScreenShake(...)
 end
 
 function ENT:GetCooldown(name)
-  local delay = self:GetNW2Float("DrG/Cooldowns/"..tostring(name), false)
-  if delay ~= false then return math.Clamp(delay - CurTime(), 0, math.huge)
+  local delay = self:GetNW2Float("DrG/Cooldowns/"..name, false)
+  if delay ~= false then return math.max(0, delay - CurTime())
   else return 0 end
 end
 
@@ -91,7 +91,14 @@ if SERVER then
   end
 
   function ENT:SetCooldown(name, delay)
-    self:SetNW2Float("DrG/Cooldowns/"..tostring(name), CurTime() + delay)
+    self:SetNW2Float("DrG/Cooldowns/"..name, CurTime() + delay)
+  end
+
+  function ENT:Cooldown(name, delay)
+    if self:GetCooldown(name) == 0 then
+      self:SetCooldown(name, delay)
+      return true
+    else return false end
   end
 
   function ENT:PushEntity(ent, force)

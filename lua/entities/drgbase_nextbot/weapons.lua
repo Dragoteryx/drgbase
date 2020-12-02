@@ -7,6 +7,10 @@ function ENT:GetActiveWeapon()
   return self:GetWeapon()
 end
 
+function ENT:HasWeapon()
+  return IsValid(self:GetWeapon())
+end
+
 if SERVER then
 
 

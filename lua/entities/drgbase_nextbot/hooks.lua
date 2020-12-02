@@ -42,4 +42,10 @@ if SERVER then
     self:ReactInThread(self.DoContact, ...)
   end
 
+  function ENT:HandleAnimEvent() end
+
+else
+
+  function ENT:FireAnimationEvent() end
+
 end

@@ -174,7 +174,7 @@ if SERVER then
         local entities = ents.GetAll()
         for i = 1, #entities do
           local ent = entities[i]
-          if not IsValid(ent) then continue end
+          if not IsValid(ent) or ent == self then continue end
           coroutine.yield(ent)
         end
       end)
@@ -249,109 +249,6 @@ if SERVER then
 
   -- Vision --
 
-  function ENT:IsBlind()
-    return GetConVar("nb_blind"):GetBool() or self:GetFOV() <= 0 or self:GetMaxVisionRange() <= 0
-  end
-
-  -- sight info
-
-  local SightInfo = DrGBase.Class()
-
-  function SightInfo:__new(nextbot, entity, flags)
-    function self:GetNextbot()
-      return nextbot
-    end
-    function self:GetEntity()
-      return entity
-    end
-    function self:GetFlags()
-      return flags
-    end
-  end
-
-  function SightInfo.__index:IsFlagSet(flag)
-    return bit.band(self:GetFlags(), flag) ~= 0
-  end
-  function SightInfo.__index:IsAbleToSee()
-    return self:GetFlags() == SIGHT_TEST_PASSED_ALL
-  end
-  function SightInfo.__index:IsLineOfSightClear()
-    return self:IsFlagSet(SIGHT_TEST_LOS)
-  end
-  function SightInfo.__index:IsCloseEnough()
-    return self:IsFlagSet(SIGHT_TEST_RANGE)
-  end
-  function SightInfo.__index:IsInViewCone()
-    return self:IsFlagSet(SIGHT_TEST_ANGLE)
-  end
-  function SightInfo.__index:IsLuminosityOk()
-    return self:IsFlagSet(SIGHT_TEST_LUMINOSITY)
-  end
-
-  function SightInfo:__tostring()
-    return "Nextbot = " .. tostring(self:GetNextbot()) .. "\n" ..
-      "Entity = " .. tostring(self:GetEntity()) .. "\n" ..
-      "AbleToSee = " .. tostring(self:IsAbleToSee()) .. "\n" ..
-      "| LineOfSightClear = " .. tostring(self:IsLineOfSightClear()) .. "\n" ..
-      "| CloseEnough = " .. tostring(self:IsCloseEnough()) .. "\n" ..
-      "| InViewCone = " .. tostring(self:IsInViewCone()) .. "\n" ..
-      "| LuminosityOk = " .. tostring(self:IsLuminosityOk())
-  end
-
-  -- update
-
-  ENT.DrG_InSight = {}
-  local OnSightDeprecation = DrGBase.Deprecation("ENT:OnSight(ent)", "ENT:OnEntitySight(ent, angle)")
-  local OnLostSightDeprecation = DrGBase.Deprecation("ENT:OnLostSight(ent)", "ENT:OnEntitySightLost(ent, angle)")
-  function ENT:UpdateSight(ent)
-    if ent then
-      if not IsValid(ent) then return end
-      local res, angle = self:IsAbleToSee(ent)
-      if res then
-        if not self.DrG_InSight[ent] then
-          self.DrG_InSight[ent] = true
-          if isfunction(self.OnSight) then
-            OnSightDeprecation()
-            self:OnSight(ent)
-          else
-            self:OnEntitySight(ent, angle)
-            self:ReactInThread(self.DoEntitySight, ent, angle)
-          end
-          if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSight", self) end
-        else
-          self:OnEntitySightKept(ent, angle)
-          self:ReactInThread(self.DoEntitySightKept, ent, angle)
-        end
-      else
-        if self.DrG_InSight[ent] then
-          self.DrG_InSight[ent] = nil
-          if isfunction(self.OnLostSight) then
-            OnLostSightDeprecation()
-            self:OnLostSight(ent)
-          else
-            self:OnEntitySightLost(ent, angle)
-            self:ReactInThread(self.DoEntitySightLost, ent, angle)
-          end
-          if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSightLost", self) end
-        else
-          self:OnEntityNotInSight(ent, angle)
-          self:ReactInThread(self.DoEntityNotInSight, ent, angle)
-        end
-      end
-    else
-      local updated = {}
-      local function LocalUpdateSight(ent)
-        if updated[ent] then return end
-        updated[ent] = true
-        self:UpdateSight(ent)
-      end
-      for ent in pairs(self.DrG_InSight) do LocalUpdateSight(ent) end
-      for _, ply in ipairs(player.GetAll()) do LocalUpdateSight(ply) end
-      for ally in self:AllyIterator() do LocalUpdateSight(ally) end
-      for hostile in self:HostileIterator() do LocalUpdateSight(hostile) end
-    end
-  end
-
   function ENT:GetMinLuminosity()
     return math.Clamp(self.MinLuminosity, 0, 1)
   end
@@ -375,41 +272,75 @@ if SERVER then
     )
   end
 
+  -- sight info
+
+  local SightInfo = DrGBase.FlagsHelper(4)
+
+  function SightInfo.prototype:IsAbleToSee()
+    return self:GetFlags() == SIGHT_TEST_PASSED_ALL
+  end
+  function SightInfo.prototype:IsLineOfSightClear()
+    return self:IsFlagSet(SIGHT_TEST_LOS)
+  end
+  function SightInfo.prototype:IsCloseEnough()
+    return self:IsFlagSet(SIGHT_TEST_RANGE)
+  end
+  function SightInfo.prototype:IsInViewCone()
+    return self:IsFlagSet(SIGHT_TEST_ANGLE)
+  end
+  function SightInfo.prototype:IsLuminosityOk()
+    return self:IsFlagSet(SIGHT_TEST_LUMINOSITY)
+  end
+
+  function SightInfo.prototype:tostring()
+    return "AbleToSee = " .. tostring(self:IsAbleToSee()) .. "\n" ..
+      "| LineOfSightClear = " .. tostring(self:IsLineOfSightClear()) .. "\n" ..
+      "| CloseEnough = " .. tostring(self:IsCloseEnough()) .. "\n" ..
+      "| InViewCone = " .. tostring(self:IsInViewCone()) .. "\n" ..
+      "| LuminosityOk = " .. tostring(self:IsLuminosityOk())
+  end
+
   -- meta
 
   local nextbotMETA = FindMetaTable("NextBot")
 
+  local function FOVTest(self, ent)
+    return self:Visible(ent)
+  end
+  local function RangeTest(self, ent)
+    return self:EyePos():DistToSqr(ent:WorldSpaceCenter()) <= self:GetMaxVisionRange()^2
+  end
+  local function AngleTest(self, ent)
+    return self:EntitySightAngle(ent) <= self:GetFOV()/2
+  end
+  local function LuminosityTest(self, ent)
+    if not ent:IsPlayer() then return true end
+    local luminosity = ent:FlashlightIsOn() and 1 or ent:DrG_Luminosity()
+    return luminosity >= self:GetMinLuminosity() and luminosity <= self:GetMaxLuminosity()
+  end
+
   local old_IsAbleToSee = nextbotMETA.IsAbleToSee
   function nextbotMETA:IsAbleToSee(ent, useFOV, ...)
     if self.IsDrGNextbot then
-      if not EnableSight:GetBool() then return false end
       if not IsValid(ent) then return false end
       if ent == self then return true end
-      local flags = SIGHT_TEST_PASSED_ALL
-      if not self:Visible(ent) then
-        flags = flags - SIGHT_TEST_LOS
-      end
-      if self:EyePos():DistToSqr(ent:WorldSpaceCenter()) > self:GetMaxVisionRange()^2 then
-        flags = flags - SIGHT_TEST_RANGE
-      end
-      local fov = self:GetFOV()
-      if useFOV ~= false and fov < 360 then
-        local angle = self:EntitySightAngle(ent)
-        if angle > fov/2 then
-          flags = flags - SIGHT_TEST_ANGLE
-        end
-      end
-      if ent:IsPlayer() then
-        local luminosity = ent:FlashlightIsOn() and 1 or ent:DrG_Luminosity()
-        if luminosity < self:GetMinLuminosity() or luminosity > self:GetMaxLuminosity() then
-          flags = flags - SIGHT_TEST_LUMINOSITY
-        end
-      end
+      if not EnableSight:GetBool() then return false end
+      if GetConVar("nb_blind"):GetBool() then return false end
       if isfunction(self.CustomSightTest) then
-        local res = self:CustomSightTest(ent, SightInfo(self, ent, flags))
-        if isbool(res) then return res end
+        local flags = SIGHT_TEST_PASSED_ALL
+        if not FOVTest(self, ent) then flags = flags - SIGHT_TEST_LOS end
+        if not RangeTest(self, ent) then flags = flags - SIGHT_TEST_RANGE end
+        if useFOV ~= false and not AngleTest(self, ent) then flags = flags - SIGHT_TEST_ANGLE end
+        if not LuminosityTest(self, ent) then flags = flags - SIGHT_TEST_LUMINOSITY end
+        local res = self:CustomSightTest(ent, SightInfo(flags))
+        if not isbool(res) then return flags == SIGHT_TEST_PASSED_ALL
+        else return res end
+      else
+        return LuminosityTest(self, ent) and
+        RangeTest(self, ent) and
+        (useFOV == false or AngleTest(self, ent)) and
+        FOVTest(self, ent)
       end
-      return flags == SIGHT_TEST_PASSED_ALL
     else return old_IsAbleToSee(self, ent, useFOV, ...) end
   end
 
@@ -439,29 +370,80 @@ if SERVER then
     else return old_SetMaxVisionRange(self, range, ...) end
   end
 
+  -- update
+
+  ENT.DrG_InSight = {}
+  local OnSightDeprecation = DrGBase.Deprecation("ENT:OnSight(ent)", "ENT:OnEntitySight(ent, angle)")
+  local OnLostSightDeprecation = DrGBase.Deprecation("ENT:OnLostSight(ent)", "ENT:OnEntitySightLost(ent, angle)")
+  function ENT:UpdateSight(ent)
+    if ent then
+      if not IsValid(ent) then return end
+      local res = self:IsAbleToSee(ent)
+      if res then
+        if not self.DrG_InSight[ent] then
+          self.DrG_InSight[ent] = true
+          if isfunction(self.OnSight) then
+            OnSightDeprecation()
+            self:OnSight(ent)
+          else
+            self:OnEntitySight(ent)
+            self:ReactInThread(self.DoEntitySight, ent)
+          end
+          if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSight", self) end
+        else
+          self:OnEntitySightKept(ent, angle)
+          self:ReactInThread(self.DoEntitySightKept, ent)
+        end
+      else
+        if self.DrG_InSight[ent] then
+          self.DrG_InSight[ent] = nil
+          if isfunction(self.OnLostSight) then
+            OnLostSightDeprecation()
+            self:OnLostSight(ent)
+          else
+            self:OnEntitySightLost(ent)
+            self:ReactInThread(self.DoEntitySightLost, ent)
+          end
+          if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSightLost", self) end
+        else
+          self:OnEntityNotInSight(ent)
+          self:ReactInThread(self.DoEntityNotInSight, ent)
+        end
+      end
+    else
+      local updated = {}
+      local function LocalUpdateSight(ent)
+        if updated[ent] then return end
+        updated[ent] = true
+        self:UpdateSight(ent)
+      end
+      for ent in pairs(self.DrG_InSight) do LocalUpdateSight(ent) end
+      for _, ply in ipairs(player.GetAll()) do LocalUpdateSight(ply) end
+      for ally in self:AllyIterator() do LocalUpdateSight(ally) end
+      for hostile in self:HostileIterator() do LocalUpdateSight(hostile) end
+    end
+  end
+
   -- hooks
 
-  function ENT:OnEntitySight(_ent, _angle) end
-  function ENT:OnEntitySightLost(_ent, _angle) end
-  function ENT:OnEntitySightKept(ent, _angle) self:DetectEntity(ent, 30) end
-  function ENT:OnEntityNotInSight(_ent, _angle) end
+  function ENT:OnEntitySight(_ent) end
+  function ENT:OnEntitySightLost(_ent) end
+  function ENT:OnEntitySightKept(ent) self:DetectEntity(ent, 10) end
+  function ENT:OnEntityNotInSight(_ent) end
 
   -- Sounds --
 
-  function ENT:IsDeaf()
-    return not EnableHearing:GetBool() or self:GetHearingCoefficient() == 0
-  end
   function ENT:GetHearingCoefficient()
-    return math.Clamp(self.HearingCoefficient, 0, math.huge)
+    return math.max(0, self.HearingCoefficient)
   end
   function ENT:SetHearingCoefficient(coeff)
-    self.HearingCoefficient = coeff
+    self.HearingCoefficient = tonumber(coeff)
   end
 
   function ENT:ListenTo(ent, listen)
     if not IsValid(ent) or ent == self then return end
     ent.DrG_Listening = ent.DrG_Listening or {}
-    local rmv = "DrG/RemoveDrGNextbot"..self:GetCreationID().."FromListening"
+    local rmv = "DrG/Remove"..self:GetCreationID().."FromListening"
     if listen then
       ent.DrG_Listening[self] = true
       self:CallOnRemove(rmv, function(self)
@@ -497,6 +479,7 @@ if SERVER then
     local radius = math.pow(sound.SoundLevel/2, 2)*sound.Volume
     for nextbot in pairs(ent.DrG_Listening) do
       if not IsValid(nextbot) or not nextbot.IsDrGNextbot then continue end
+      if nextbot:GetHearingCoefficient() == 0 then continue end
       local mult = nextbot:VisibleVec(pos) and 1 or 0.5
       if (radius*nextbot:GetHearingCoefficient()*mult)^2 >= nextbot:GetRangeSquaredTo(pos) then
         nextbot:OnEntitySound(ent, sound)
@@ -563,6 +546,7 @@ else
   end
 
   function ENT:IsAbleToSee(ent)
+    if ent == self then return true end
     if ent ~= LocalPlayer() then return false end
     return self.DrG_LocalPlayerInSight or false
   end
