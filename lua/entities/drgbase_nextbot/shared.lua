@@ -136,7 +136,6 @@ DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("misc.lua")
 
 -- Convars --
-local NextbotTickrate = CreateConVar("drgbase_nextbot_tickrate", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local MultHealth = CreateConVar("drgbase_multiplier_health", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local EnablePatrol = CreateConVar("drgbase_ai_patrol", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
@@ -303,13 +302,6 @@ function ENT:Think()
       local delay = self:PossessionThink(possessor) or 0
       self._DrGBasePossessionThinkDelay = CurTime() + delay
     end
-  end
-  -- custom tickrate
-  if CLIENT then return end
-  local tickrate = NextbotTickrate:GetFloat()
-  if tickrate > 0 then
-    self:NextThink(CurTime() + 1/tickrate)
-    return true
   end
 end
 function ENT:_BaseThink() end
