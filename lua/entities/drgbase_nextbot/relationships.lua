@@ -1,6 +1,6 @@
 -- Convar --
 
-local TargetGrubs = DrGBase.ConVar("drgbase_ai_target_grubs", "1")
+local TargetInsects = DrGBase.ConVar("drgbase_ai_target_insects", "0")
 local TargetRepMelons = DrGBase.ConVar("drgbase_ai_target_repmelons", "1")
 
 -- Getters --
@@ -147,7 +147,8 @@ if SERVER then
 
     ["replicator_melon"] = TargetRepMelons,
     ["neo_replicator_melon"] = TargetRepMelons,
-    ["npc_antlion_grub"] = TargetGrubs,
+    ["npc_antlion_grub"] = TargetInsects,
+    ["monster_cockroach"] = TargetInsects,
     ["replicator_worker"] = true,
     ["replicator_queen"] = true,
     ["replicator_queen_hive"] = true
