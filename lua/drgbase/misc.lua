@@ -38,14 +38,15 @@ if SERVER then
     ["npc_bullseye"] = true,
     ["npc_grenade_frag"] = true,
     ["npc_tripmine"] = true,
-    ["npc_satchel"] = true
+    ["npc_satchel"] = true,
+    ["npc_antlion_grub"] = true,
+    ["monster_cockroach"] = true
   }
   local TARGET_WHITELIST = {
     ["replicator_melon"] = true,
     ["replicator_worker"] = true,
     ["replicator_queen"] = true,
-    ["replicator_queen_hive"] = true,
-    ["npc_antlion_grub"] = true
+    ["replicator_queen_hive"] = true
   }
   function DrGBase.IsTarget(ent)
     if not IsValid(ent) then return false end
