@@ -482,7 +482,7 @@ if SERVER then
         Sound = "Weapon_Shotgun.Double", Empty = "Weapon_Shotgun.Empty",
         Delay = 1.25, Cost = 2
       }, anim)
-    elseif wep:IsScripted() and not self:IsWeaponSecondaryEmpty() then
+    elseif weapon:IsScripted() and not self:IsWeaponSecondaryEmpty() then
       if CurTime() < weapon:GetNextSecondaryFire() then return false end
       if isstring(anim) then self:AddGestureSequence(anim)
       elseif isnumber(anim) then self:AddGesture(anim) end

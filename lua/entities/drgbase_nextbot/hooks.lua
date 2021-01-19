@@ -3,6 +3,7 @@
 
 local MultDamagePlayer = CreateConVar("drgbase_multiplier_damage_players", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 local MultDamageNPC = CreateConVar("drgbase_multiplier_damage_npc", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local RemoveDead = CreateConVar("drgbase_remove_dead", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 -- Functions --
 
@@ -140,6 +141,9 @@ if SERVER then
       self.BehaveThread = coroutine.create(function()
         self:SetNW2Bool("DrGBaseDying", false)
         self:SetNW2Bool("DrGBaseDead", true)
+        if RemoveDead:GetBool() and GetConVar("drgbase_remove_ragdolls"):GetFloat() >= 0 then
+          self:Timer(GetConVar("drgbase_remove_ragdolls"):GetFloat(), self.Remove)
+        end
         local now = CurTime()
         dmg = self:OnDeath(util.DrG_LoadDmg(data), hitgroup)
         if dmg == nil then

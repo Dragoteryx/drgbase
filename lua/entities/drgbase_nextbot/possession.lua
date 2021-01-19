@@ -198,17 +198,20 @@ function ENT:_HandlePossession(cor)
     end
     if possessor:DrG_ButtonDown(possessor:GetInfoNum("drgbase_possession_climb", KEY_C)) then
       if self.ClimbLadders and navmesh.IsLoaded() then
-        local ladders = navmesh.GetNearestNavArea(self:GetPos()):GetLadders()
-        for i, ladder in ipairs(ladders) do
-          if self.ClimbLadderUp then
-            if self:GetHullRangeSquaredTo(ladder:GetBottom()) < self.LaddersUpDistance^2 then
-              self:ClimbLadderUp(ladder)
-              return
-            end
-          elseif self.ClimbLaddersDown then
-            if self:GetHullRangeSquaredTo(ladder:GetTop()) < self.LaddersDownDistance^2 then
-              self:ClimbLadderDown(ladder)
-              return
+        local area = navmesh.GetNearestNavArea(self:GetPos())
+        if IsValid(area) then
+          local ladders = area:GetLadders()
+          for i, ladder in ipairs(ladders) do
+            if self.ClimbLadderUp then
+              if self:GetHullRangeSquaredTo(ladder:GetBottom()) < self.LaddersUpDistance^2 then
+                self:ClimbLadderUp(ladder)
+                return
+              end
+            elseif self.ClimbLaddersDown then
+              if self:GetHullRangeSquaredTo(ladder:GetTop()) < self.LaddersDownDistance^2 then
+                self:ClimbLadderDown(ladder)
+                return
+              end
             end
           end
         end

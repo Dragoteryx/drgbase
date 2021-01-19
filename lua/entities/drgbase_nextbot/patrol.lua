@@ -21,7 +21,7 @@ if SERVER then
   function Patrol:New(type)
     local patrol = {}
     patrol._type = type
-    patrol.time = CurTime()
+    patrol._time = CurTime()
     setmetatable(patrol, self)
     return patrol
   end

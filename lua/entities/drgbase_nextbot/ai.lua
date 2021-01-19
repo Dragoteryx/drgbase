@@ -53,7 +53,7 @@ function ENT:_InitAI()
     self._DrGBaseAfraidOfDamageTolerance = {}
     self._DrGBaseNeutralDamageTolerance = {}
   end
-  self:SetNW2VarProxy("DrGBaseEnemy", function(self, name, old, new)
+  self:SetNW2VarProxy("DrGBaseEnemy", function(self, _, old, new)
     if not self._DrGBaseHadEnemy and IsValid(new) then
       self._DrGBaseHadEnemy = true
       self:OnNewEnemy(new)
@@ -178,8 +178,8 @@ if SERVER then
 
   -- Handlers --
 
-  cvars.AddChangeCallback("ai_disabled", function(name, old, new)
-    for i, nextbot in ipairs(DrGBase.GetNextbots()) do
+  cvars.AddChangeCallback("ai_disabled", function(_, _, new)
+    for _, nextbot in ipairs(DrGBase.GetNextbots()) do
       if not tobool(new) then nextbot:UpdateAI() end
     end
   end, "DrGBaseDisableAIUpdateBT")

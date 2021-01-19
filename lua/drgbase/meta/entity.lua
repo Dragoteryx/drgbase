@@ -141,12 +141,18 @@ if SERVER then
       local pos = self:GetPos()+dir
       if navmesh.IsLoaded() then
         local area = navmesh.GetNearestNavArea(pos)
-        return self:DrG_TraceHull(nil, {
-          start = area:GetCenter(),
-          endpos = area:GetClosestPointOnArea(pos),
-          collisiongroup = COLLISION_GROUP_WORLD,
-          step = true
-        }).HitPos
+        if IsValid(area) then
+          return self:DrG_TraceHull(nil, {
+            start = area:GetCenter(),
+            endpos = area:GetClosestPointOnArea(pos),
+            collisiongroup = COLLISION_GROUP_WORLD,
+            step = true
+          }).HitPos
+        elseif util.IsInWorld(pos) then
+          return self:DrG_TraceHull(Vector(0, 0, -999999), {
+            collisiongroup = COLLISION_GROUP_WORLD, start = pos
+          }).HitPos
+        else return self:DrG_RandomPos(0, min) end
       elseif util.IsInWorld(pos) then
         return self:DrG_TraceHull(Vector(0, 0, -999999), {
           collisiongroup = COLLISION_GROUP_WORLD, start = pos

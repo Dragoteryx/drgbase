@@ -9,6 +9,7 @@ local PossessTargetAll = CreateConVar("drgbase_possession_targetall", "1", {FCVA
 -- Getters/setters --
 
 function ENT:IsInRange(pos, range)
+  if isentity(pos) and not IsValid(pos) then return false end
   return self:GetHullRangeSquaredTo(pos) <= (range*self:GetScale())^2
 end
 function ENT:GetHullRangeTo(pos)
