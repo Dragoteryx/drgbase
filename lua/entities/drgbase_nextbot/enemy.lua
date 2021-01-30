@@ -67,7 +67,7 @@ if SERVER then
     return self:HasEnemy() and self:HasDetectedRecently(self:GetEnemy())
   end
 
-  -- Thread --
+  -- Coroutine --
 
   function ENT:DoHandleEnemy(enemy)
     if not self:HasDetectedRecently(enemy) then

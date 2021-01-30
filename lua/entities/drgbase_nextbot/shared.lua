@@ -175,7 +175,7 @@ function ENT:DrG_PreThink(...)
     if self.DrG_OnFire and not self:IsOnFire() then
       self.DrG_OnFire = false
       self:OnExtinguish()
-      self:ReactInThread(self.DoExtinguish)
+      self:ReactInCoroutine(self.DoExtinguish)
     end
     if self:IsPossessed() then
       self:PossessionThink(...)
@@ -236,7 +236,7 @@ if SERVER then
       if self:IsPossessed() then
         self:DrG_PBehaviour()
       else self:AIBehaviour() end
-      self:YieldThread(true)
+      self:YieldCoroutine(true)
     end
   end
 
@@ -273,7 +273,7 @@ if SERVER then
     return self.RestartOnError
   end
 
-  function ENT:YieldThread(cancellable)
+  function ENT:YieldCoroutine(cancellable)
     if cancellable then
       local now = CurTime()
       self:UpdateAnimation(true)
@@ -313,7 +313,7 @@ if SERVER then
     end
   end
 
-  function ENT:ReactInThread(fn, arg1, ...)
+  function ENT:ReactInCoroutine(fn, arg1, ...)
     if not isfunction(fn) then return end
     local args, n = table.DrG_Pack(...)
     table.insert(self.DrG_ThrReacts, function(self)
@@ -321,14 +321,14 @@ if SERVER then
       fn(self, arg1, table.DrG_Unpack(args, n))
     end)
   end
-  function ENT:CallInThread(fn, ...)
+  function ENT:CallInCoroutine(fn, ...)
     if not isfunction(fn) then return end
     local args, n = table.DrG_Pack(...)
     table.insert(self.DrG_ThrCalls, function(self)
       fn(self, table.DrG_Unpack(args, n))
     end)
   end
-  function ENT:OverrideThread(fn, ...)
+  function ENT:OverrideCoroutine(fn, ...)
     if not isfunction(fn) then return end
     local args, n = table.DrG_Pack(...)
     local old_BehaveThread = self.BehaveThread

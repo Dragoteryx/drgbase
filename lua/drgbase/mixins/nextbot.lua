@@ -73,7 +73,7 @@ return function(ENT)
       local old_HandleAnimEvent = ENT.HandleAnimEvent
       function ENT:HandleAnimEvent(event, time, cycle, type, options)
         local res = self:OnAnimEvent(options, event, self:GetPos(), self:GetAngles(), time)
-        self:ReactInThread(self.DoAnimEvent, options, event, self:GetPos(), self:GetAngles(), time)
+        self:ReactInCoroutine(self.DoAnimEvent, options, event, self:GetPos(), self:GetAngles(), time)
         local res2 = old_HandleAnimEvent(self, event, time, cycle, type, options)
         if res == true or res2 == true then return true end
       end

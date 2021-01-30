@@ -119,7 +119,7 @@ if SERVER then
       local angle = (pos - self:GetPos()):Angle()
       if math.NormalizeAngle(math.Round(self:GetAngles().y)) == math.NormalizeAngle(math.Round(angle.y)) then return end
       self:FaceTowards(pos)
-      self:YieldThread(true)
+      self:YieldCoroutine(true)
     end
   end
   function ENT:FaceEnemy()
@@ -226,7 +226,7 @@ if SERVER then
         res = fn(self, ...)
         if res ~= nil then return res end
       end
-      self:YieldThread(true)
+      self:YieldCoroutine(true)
     end
   end
 
@@ -241,7 +241,7 @@ if SERVER then
         res = fn(self, ...)
         if res ~= nil then return res end
       end
-      self:YieldThread(true)
+      self:YieldCoroutine(true)
     end
     return false
   end
@@ -275,7 +275,7 @@ if SERVER then
         elseif sw.Hit then self:Approach(NORTH + EAST)
         elseif se.Hit then self:Approach(NORTH + WEST) end
       else return hit == 0 end
-      self:YieldThread(true)
+      self:YieldCoroutine(true)
     end
   end
 

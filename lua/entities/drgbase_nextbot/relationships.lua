@@ -210,7 +210,7 @@ if SERVER then
     self.DrG_Relationships[ent] = {disp = disp, prio = prio}
     if old ~= disp then
       self:OnRelationshipChange(ent, old, disp)
-      self:ReactInThread(self.DoRelationshipChange, ent, old, disp)
+      self:ReactInCoroutine(self.DoRelationshipChange, ent, old, disp)
       if ent:IsPlayer() then ent:DrG_Send("DrG/RelationshipChange", self, old, disp) end
     end
     if self:GetEnemy() == ent and not self:IsHostile(ent) then

@@ -90,7 +90,7 @@ if SERVER then
         self.DrG_RelationshipCachesDetected[disp][ent] = true
       end
       self:OnDetectEntity(ent)
-      self:ReactInThread(self.DoDetectEntity, ent)
+      self:ReactInCoroutine(self.DoDetectEntity, ent)
       if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerDetect", self) end
     end
     ent:CallOnRemove("DrG/RemoveFromDrGNextbot"..self:GetCreationID().."DetectionCache", function()
@@ -111,7 +111,7 @@ if SERVER then
     self.DrG_RelationshipCachesDetected[D_HT][ent] = nil
     self.DrG_RelationshipCachesDetected[D_FR][ent] = nil
     self:OnForgetEntity(ent)
-    self:ReactInThread(self.DoForgetEntity, ent)
+    self:ReactInCoroutine(self.DoForgetEntity, ent)
     if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerForget", self) end
   end
   function ENT:ForgetAllEntities()
@@ -387,12 +387,12 @@ if SERVER then
             self:OnSight(ent)
           else
             self:OnEntitySight(ent)
-            self:ReactInThread(self.DoEntitySight, ent)
+            self:ReactInCoroutine(self.DoEntitySight, ent)
           end
           if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSight", self) end
         else
           self:OnEntitySightKept(ent, angle)
-          self:ReactInThread(self.DoEntitySightKept, ent)
+          self:ReactInCoroutine(self.DoEntitySightKept, ent)
         end
       else
         if self.DrG_InSight[ent] then
@@ -402,12 +402,12 @@ if SERVER then
             self:OnLostSight(ent)
           else
             self:OnEntitySightLost(ent)
-            self:ReactInThread(self.DoEntitySightLost, ent)
+            self:ReactInCoroutine(self.DoEntitySightLost, ent)
           end
           if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSightLost", self) end
         else
           self:OnEntityNotInSight(ent)
-          self:ReactInThread(self.DoEntityNotInSight, ent)
+          self:ReactInCoroutine(self.DoEntityNotInSight, ent)
         end
       end
     else
@@ -483,7 +483,7 @@ if SERVER then
       local mult = nextbot:VisibleVec(pos) and 1 or 0.5
       if (radius*nextbot:GetHearingCoefficient()*mult)^2 >= nextbot:GetRangeSquaredTo(pos) then
         nextbot:OnEntitySound(ent, sound)
-        nextbot:ReactInThread(nextbot.DoEntitySound, ent, sound)
+        nextbot:ReactInCoroutine(nextbot.DoEntitySound, ent, sound)
         if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSound", nextbot) end
       end
     end

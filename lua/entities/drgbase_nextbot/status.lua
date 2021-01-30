@@ -94,11 +94,11 @@ if SERVER then
     self:OnKilled(dmg)
   end
 
+  function ENT:OnTraceAttack() end
   function ENT:DrG_OnTraceAttack(_, _, tr)
     self.DrG_LastHitGroup = tr.HitGroup
     self.DrG_HitGroupToHandle = true
   end
-  function ENT:OnTraceAttack() end
 
   local OnTookDamageDeprecation = DrGBase.Deprecation("ENT:OnTookDamage(dmginfo, hitgroup)", "ENT:DoTakeDamage(dmginfo, hitgroup)")
   local AfterTakeDamageDeprecation = DrGBase.Deprecation("ENT:AfterTakeDamage(dmginfo, delay, hitgroup)", "ENT:DoTakeDamage(dmginfo, hitgroup)")
@@ -129,7 +129,7 @@ if SERVER then
           local noTarget = self:GetNoTarget()
           self:SetNoTarget(true)
           local data = dmg:DrG_Get()
-          self:CallInThread(function(self)
+          self:CallInCoroutine(function(self)
             if isfunction(self.OnDowned) then
               OnDownedDeprecation()
               self:OnDowned(dmg:DrG_Set(data), hitgroup)
@@ -148,20 +148,20 @@ if SERVER then
         if isfunction(self.AfterTakeDamage) then -- backwards compatibility #2
           AfterTakeDamageDeprecation()
           local data = dmg:DrG_Get()
-          self:ReactInThread(function(self)
+          self:ReactInCoroutine(function(self)
             if self:IsDown() or self:IsDead() then return end
             self:AfterTakeDamage(dmg:DrG_Set(data), 0, hitgroup)
           end)
         elseif isfunction(self.OnTookDamage) then -- backwards compatibility
           OnTookDamageDeprecation()
           local data = dmg:DrG_Get()
-          self:ReactInThread(function(self)
+          self:ReactInCoroutine(function(self)
             if self:IsDown() or self:IsDead() then return end
             self:OnTookDamage(dmg:DrG_Set(data), hitgroup)
           end)
         elseif isfunction(self.DoTakeDamage) then
           local data = dmg:DrG_Get()
-          self:ReactInThread(function(self)
+          self:ReactInCoroutine(function(self)
             if self:IsDown() or self:IsDead() then return end
             self:DoTakeDamage(dmg:DrG_Set(data), hitgroup)
           end)
@@ -201,7 +201,7 @@ if SERVER then
     if dmg:IsDamageType(DMG_DISSOLVE) then self:DrG_Dissolve() end
     if isfunction(self.DoDeath) or isfunction(self.OnDeath) then -- backwards compatibility
       local data = dmg:DrG_Get()
-      self:CallInThread(function(self)
+      self:CallInCoroutine(function(self)
         self:SetNW2Bool("DrG/Dying", false)
         self:SetNW2Bool("DrG/Dead", true)
         local now = CurTime()

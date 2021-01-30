@@ -9,15 +9,6 @@ ENT.HadEnemy = DrGBase.Deprecated(
 
 if SERVER then
 
-  -- Coroutine --
-
-  ENT.YieldCoroutine = DrGBase.Deprecated(
-    "ENT:YieldCoroutine(cancellable)",
-    "ENT:YieldThread(cancellable)",
-    function(self, cancellable)
-      return self:YieldThread(cancellable)
-    end)
-
   -- AI --
 
   ENT.AddPatrolPos = DrGBase.Deprecated(

@@ -41,6 +41,7 @@ if SERVER then
 
   function ENT:Initialize()
     self.loco:SetMaxYawRate(175)
+    print(#DrGBase.GetNextbots())
   end
 
   -- AI --
@@ -49,7 +50,6 @@ if SERVER then
     return self:HasRecentEnemy() and not self:IsInRangeAndSight(self:GetEnemy(), 250)
   end
 
-  local DMGS = {}
   function ENT:DoThink()
     while self:WaterLevel() >= 2 do
       self:PlaySequenceAndWait("drown", {gravity = false})
@@ -57,7 +57,6 @@ if SERVER then
         local dmg = DamageInfo()
         dmg:SetDamage(8)
         dmg:SetDamageType(DMG_DROWN)
-        dmg:AddDrGFlags("TEST", math.random(8))
         self:TakeDamageInfo(dmg)
       end
     end

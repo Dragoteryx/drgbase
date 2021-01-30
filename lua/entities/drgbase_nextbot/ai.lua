@@ -53,7 +53,7 @@ if SERVER then
         res = self:DoRoam(pos)
         if isbool(res) then break
         elseif CurTime() == now then
-          self:YieldThread(true)
+          self:YieldCoroutine(true)
         end
       end
       if res then self:DoRoamReached(pos)

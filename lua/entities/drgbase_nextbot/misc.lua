@@ -65,7 +65,7 @@ if SERVER then
     while CurTime() < delay do
       if self:HasEnemy() then return false end
       if self:IsPossessed() then return false end
-      if self:YieldThread(true) then return false end
+      if self:YieldCoroutine(true) then return false end
     end
     return true
   end
