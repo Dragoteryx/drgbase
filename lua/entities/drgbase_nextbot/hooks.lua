@@ -43,9 +43,11 @@ if SERVER then
   end
 
   function ENT:HandleAnimEvent() end
+  function ENT:OnAnimEvent() end
 
 else
 
   function ENT:FireAnimationEvent() end
+  function ENT:OnAnimEvent() end
 
 end

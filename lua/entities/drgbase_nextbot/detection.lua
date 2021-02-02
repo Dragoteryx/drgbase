@@ -376,51 +376,38 @@ if SERVER then
   local OnSightDeprecation = DrGBase.Deprecation("ENT:OnSight(ent)", "ENT:OnEntitySight(ent, angle)")
   local OnLostSightDeprecation = DrGBase.Deprecation("ENT:OnLostSight(ent)", "ENT:OnEntitySightLost(ent, angle)")
   function ENT:UpdateSight(ent)
-    if ent then
-      if not IsValid(ent) then return end
-      local res = self:IsAbleToSee(ent)
-      if res then
-        if not self.DrG_InSight[ent] then
-          self.DrG_InSight[ent] = true
-          if isfunction(self.OnSight) then
-            OnSightDeprecation()
-            self:OnSight(ent)
-          else
-            self:OnEntitySight(ent)
-            self:ReactInCoroutine(self.DoEntitySight, ent)
-          end
-          if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSight", self) end
+    if not IsValid(ent) then return end
+    local res = self:IsAbleToSee(ent)
+    if res then
+      if not self.DrG_InSight[ent] then
+        self.DrG_InSight[ent] = true
+        if isfunction(self.OnSight) then
+          OnSightDeprecation()
+          self:OnSight(ent)
         else
-          self:OnEntitySightKept(ent, angle)
-          self:ReactInCoroutine(self.DoEntitySightKept, ent)
+          self:OnEntitySight(ent)
+          self:ReactInCoroutine(self.DoEntitySight, ent)
         end
+        if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSight", self) end
       else
-        if self.DrG_InSight[ent] then
-          self.DrG_InSight[ent] = nil
-          if isfunction(self.OnLostSight) then
-            OnLostSightDeprecation()
-            self:OnLostSight(ent)
-          else
-            self:OnEntitySightLost(ent)
-            self:ReactInCoroutine(self.DoEntitySightLost, ent)
-          end
-          if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSightLost", self) end
-        else
-          self:OnEntityNotInSight(ent)
-          self:ReactInCoroutine(self.DoEntityNotInSight, ent)
-        end
+        self:OnEntitySightKept(ent, angle)
+        self:ReactInCoroutine(self.DoEntitySightKept, ent)
       end
     else
-      local updated = {}
-      local function LocalUpdateSight(ent)
-        if updated[ent] then return end
-        updated[ent] = true
-        self:UpdateSight(ent)
+      if self.DrG_InSight[ent] then
+        self.DrG_InSight[ent] = nil
+        if isfunction(self.OnLostSight) then
+          OnLostSightDeprecation()
+          self:OnLostSight(ent)
+        else
+          self:OnEntitySightLost(ent)
+          self:ReactInCoroutine(self.DoEntitySightLost, ent)
+        end
+        if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSightLost", self) end
+      else
+        self:OnEntityNotInSight(ent)
+        self:ReactInCoroutine(self.DoEntityNotInSight, ent)
       end
-      for ent in pairs(self.DrG_InSight) do LocalUpdateSight(ent) end
-      for _, ply in ipairs(player.GetAll()) do LocalUpdateSight(ply) end
-      for ally in self:AllyIterator() do LocalUpdateSight(ally) end
-      for hostile in self:HostileIterator() do LocalUpdateSight(hostile) end
     end
   end
 

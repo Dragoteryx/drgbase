@@ -217,7 +217,16 @@ if SERVER then
       for nextbot in DrGBase.NextbotIterator() do
         if IsValid(nextbot) then
           yielded = true
-          nextbot:UpdateSight()
+          local updated = {}
+          local function LocalUpdateSight(ent)
+            if updated[ent] then return end
+            updated[ent] = true
+            nextbot:UpdateSight(ent)
+          end
+          for ent in pairs(nextbot.DrG_InSight) do LocalUpdateSight(ent) end
+          for _, ply in ipairs(player.GetAll()) do LocalUpdateSight(ply) end
+          --for ally in nextbot:AllyIterator() do LocalUpdateSight(ally) end
+          for hostile in nextbot:HostileIterator() do LocalUpdateSight(hostile) end
           nextbot:UpdateEnemy()
           coroutine.yield()
         end

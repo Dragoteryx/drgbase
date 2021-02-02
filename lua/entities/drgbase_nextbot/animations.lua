@@ -35,7 +35,8 @@ function ENT:IsAttack(sequence)
   if isstring(sequence) then sequence = self:LookupSequence(sequence) end
   if not isnumber(sequence) or sequence == -1 then return false end
   return string.find(string.lower(self:GetSequenceName(sequence)), "attack") or
-  string.find(self:GetSequenceActivityName(sequence), "ATTACK")
+  string.find(self:GetSequenceActivityName(sequence), "ATTACK") or
+  self:GetNW2Bool("DrG/IsAttack/"..sequence) or false
 end
 
 -- Anim events --
@@ -94,6 +95,12 @@ if SERVER then
 
   function ENT:IsAttacking()
     return self:IsAttack(self:GetSequence())
+  end
+
+  function ENT:SetAttack(sequence, attack)
+    if isstring(sequence) then sequence = self:LookupSequence(sequence) end
+    if not isnumber(sequence) or sequence == -1 then return end
+    self:SetNW2Bool("DrG/IsAttack/"..sequence, attack)
   end
 
   -- PSAW and friends --
