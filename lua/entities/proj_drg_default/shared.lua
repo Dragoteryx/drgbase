@@ -176,6 +176,7 @@ if SERVER then
     dmg:SetDamage(value)
     dmg:SetDamageForce(self:GetVelocity())
     dmg:SetDamageType(type or DMG_DIRECT)
+    dmg:SetDamagePosition(self:GetPos())
     if IsValid(self:GetOwner()) then
       dmg:SetAttacker(self:GetOwner())
     else dmg:SetAttacker(self) end
