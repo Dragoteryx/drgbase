@@ -211,7 +211,15 @@ if SERVER then
     if old ~= disp then
       self:OnRelationshipChange(ent, old, disp)
       self:ReactInCoroutine(self.DoRelationshipChange, ent, old, disp)
-      if ent:IsPlayer() then ent:DrG_Send("DrG/RelationshipChange", self, old, disp) end
+      if ent:IsPlayer() then ent:DrG_Send("DrG/RelationshipChange", self, old, disp)
+      elseif ent:IsNPC() then
+        if self:IsAlly(ent) then ent:DrG_SetRelationship(self, D_LI)
+        elseif self:IsAfraidOf(ent) then ent:DrG_SetRelationship(self, D_HT)
+        elseif self:IsHostile(ent) then
+          if self:IsFrightening() then ent:DrG_SetRelationship(self, D_FR)
+          else ent:DrG_SetRelationship(self, D_HT) end
+        end
+      end
     end
     if self:GetEnemy() == ent and not self:IsHostile(ent) then
       self:UpdateEnemy()

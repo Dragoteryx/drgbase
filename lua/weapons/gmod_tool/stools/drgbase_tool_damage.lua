@@ -8,7 +8,7 @@ TOOL.ClientConVar = {
 TOOL.BuildCPanel = function(panel)
 	GetConVar("drgbase_tool_damage_type"):SetInt(DMG_GENERIC)
 	panel:Help("#tool.drgbase_tool_damage.desc")
-	panel:NumSlider("Damage", "drgbase_tool_damage_value", 0, 10000)
+	panel:NumSlider("Damage", "drgbase_tool_damage_value", 0, 500, 0)
 	local dlist = DrGBase.DListView({"Type", "Enabled"})
 	dlist:AddLine("Crush", "False", DMG_CRUSH)
 	dlist:AddLine("Slash", "False", DMG_SLASH)

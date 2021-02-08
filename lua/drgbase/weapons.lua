@@ -30,7 +30,7 @@ end)
 
 local PlayersCanGiveWeapons = CreateConVar("drgbase_give_weapons", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
-properties.Add("drgbasegiveweapons", {
+properties.Add("drg/giveweapon", {
 	MenuLabel = "Give Current Weapon",
 	Order = 1001,
 	MenuIcon = "icon16/gun.png",
@@ -53,7 +53,7 @@ properties.Add("drgbasegiveweapons", {
 	end
 })
 
-properties.Add("drgbasestripweapons", {
+properties.Add("drg/stripweapon", {
 	MenuLabel = "Strip Weapon",
 	Order = 1002,
 	MenuIcon = "icon16/gun.png",

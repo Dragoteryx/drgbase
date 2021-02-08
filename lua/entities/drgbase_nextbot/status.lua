@@ -87,6 +87,43 @@ if SERVER then
 
   -- Take damage hooks --
 
+  local function SaveDmg(dmg)
+    local data = {}
+    data.ammoType = dmg:GetAmmoType()
+    data.attacker = dmg:GetAttacker()
+    data.baseDamage = dmg:GetBaseDamage()
+    data.damage = dmg:GetDamage()
+    data.damageBonus = dmg:GetDamageBonus()
+    data.damageCustom = dmg:GetDamageCustom()
+    data.damageForce = dmg:GetDamageForce()
+    data.damagePosition = dmg:GetDamagePosition()
+    data.damageType = dmg:GetDamageType()
+    data.inflictor = dmg:GetInflictor()
+    data.maxDamage = dmg:GetMaxDamage()
+    data.reportedPosition = dmg:GetReportedPosition()
+    return data
+  end
+
+  local function LoadDmg(data)
+    local dmg = DamageInfo()
+    dmg:SetAmmoType(data.ammoType)
+    if IsValid(data.attacker) then
+      dmg:SetAttacker(data.attacker)
+    end
+    dmg:SetDamage(data.damage)
+    dmg:SetDamageBonus(data.damageBonus)
+    dmg:SetDamageCustom(data.damageCustom)
+    dmg:SetDamageForce(data.damageForce)
+    dmg:SetDamagePosition(data.damagePosition)
+    dmg:SetDamageType(data.damageType)
+    if IsValid(data.inflictor) then
+      dmg:SetInflictor(data.inflictor)
+    end
+    dmg:SetMaxDamage(data.maxDamage)
+    dmg:SetReportedPosition(data.reportedPosition)
+    return dmg
+  end
+
   function ENT:Kill(attacker, inflictor)
     local dmg = DamageInfo()
     dmg:SetAttacker(attacker or self)
@@ -128,12 +165,12 @@ if SERVER then
           end]]
           local noTarget = self:GetNoTarget()
           self:SetNoTarget(true)
-          local data = dmg:DrG_Get()
+          local data = SaveDmg(dmg)
           self:CallInCoroutine(function(self)
             if isfunction(self.OnDowned) then
               OnDownedDeprecation()
-              self:OnDowned(dmg:DrG_Set(data), hitgroup)
-            else self:DoDowned(dmg:DrG_Set(data), hitgroup) end
+              self:OnDowned(LoadDmg(data), hitgroup)
+            else self:DoDowned(LoadDmg(data), hitgroup) end
             if self:Health() <= 0 then self:SetHealth(1) end
             self:SetNoTarget(noTarget)
             self:SetNW2Bool("DrG/Down", false)
@@ -147,23 +184,23 @@ if SERVER then
         end]]
         if isfunction(self.AfterTakeDamage) then -- backwards compatibility #2
           AfterTakeDamageDeprecation()
-          local data = dmg:DrG_Get()
+          local data = SaveDmg(dmg)
           self:ReactInCoroutine(function(self)
             if self:IsDown() or self:IsDead() then return end
-            self:AfterTakeDamage(dmg:DrG_Set(data), 0, hitgroup)
+            self:AfterTakeDamage(LoadDmg(data), 0, hitgroup)
           end)
         elseif isfunction(self.OnTookDamage) then -- backwards compatibility
           OnTookDamageDeprecation()
-          local data = dmg:DrG_Get()
+          local data = SaveDmg(dmg)
           self:ReactInCoroutine(function(self)
             if self:IsDown() or self:IsDead() then return end
-            self:OnTookDamage(dmg:DrG_Set(data), hitgroup)
+            self:OnTookDamage(LoadDmg(data), hitgroup)
           end)
         elseif isfunction(self.DoTakeDamage) then
-          local data = dmg:DrG_Get()
+          local data = SaveDmg(dmg)
           self:ReactInCoroutine(function(self)
             if self:IsDown() or self:IsDead() then return end
-            self:DoTakeDamage(dmg:DrG_Set(data), hitgroup)
+            self:DoTakeDamage(LoadDmg(data), hitgroup)
           end)
         end
       end
@@ -200,18 +237,18 @@ if SERVER then
     end]]
     if dmg:IsDamageType(DMG_DISSOLVE) then self:DrG_Dissolve() end
     if isfunction(self.DoDeath) or isfunction(self.OnDeath) then -- backwards compatibility
-      local data = dmg:DrG_Get()
+      local data = SaveDmg(dmg)
       self:CallInCoroutine(function(self)
         self:SetNW2Bool("DrG/Dying", false)
         self:SetNW2Bool("DrG/Dead", true)
         local now = CurTime()
-        dmg:DrG_Set(data)
+        dmg = LoadDmg(data)
         if isfunction(self.OnDeath) then
           OnDeathDeprecation()
           dmg = self:OnDeath(dmg, hitgroup)
         else dmg = self:DoDeath(dmg, hitgroup) end
         if dmg == nil then
-          dmg = DamageInfo(data)
+          dmg = LoadDmg(data)
           if CurTime() > now then
             dmg:SetDamageForce(Vector(0, 0, 1))
           end

@@ -1,4 +1,4 @@
--- Helpers --
+-- Util --
 
 function ENT:IsInRange(pos, range)
   if isentity(pos) and not IsValid(pos) then return false end
@@ -14,6 +14,16 @@ function ENT:GetHullRangeSquaredTo(pos)
 end
 
 -- Misc --
+
+function ENT:Height()
+  local bound1, bound2 = self:GetCollisionBounds()
+  return math.abs(bound1.z - bound2.z)
+end
+function ENT:Length()
+  local bound1, bound2 = self:GetCollisionBounds()
+  bound1.z, bound2.z = 0, 0
+  return bound1:Distance(bound2)
+end
 
 local entMETA = FindMetaTable("Entity")
 
@@ -36,6 +46,42 @@ function entMETA:EyeAngles()
   if self.IsDrGNextbot then
     return self:GetAngles() + self.EyeAngle
   else return old_EyeAngles(self) end
+end
+
+-- Footsteps --
+
+local DEFAULT_FOOTSTEPS = {
+  [MAT_ANTLION] = {"DrGBase.AntlionFootstep"},
+  [MAT_BLOODYFLESH] = {"DrGBase.BloodyFleshFootstep"},
+  [MAT_CONCRETE] = {"DrGBase.ConcreteFootstep"},
+  [MAT_DIRT] = {"DrGBase.DirtFootstep"},
+  [MAT_EGGSHELL] = {"DrGBase.EggShellFootstep"},
+  [MAT_FLESH] = {"DrGBase.FleshFootstep"},
+  [MAT_GRATE] = {"DrGBase.GrateFootstep"},
+  [MAT_ALIENFLESH] = {"DrGBase.AlienFleshFootstep"},
+  [MAT_SNOW] = {"DrGBase.SnowFootstep"},
+  [MAT_PLASTIC] = {"DrGBase.PlasticFootstep"},
+  [MAT_METAL] = {"DrGBase.MetalFootstep"},
+  [MAT_SAND] = {"DrGBase.SandFootstep"},
+  [MAT_FOLIAGE] = {"DrGBase.FoliageFootstep"},
+  [MAT_COMPUTER] = {"DrGBase.ComputerFootstep"},
+  [MAT_SLOSH] = {"DrGBase.SloshFootstep"},
+  [MAT_TILE] = {"DrGBase.TileFootstep"},
+  [MAT_GRASS] = {"DrGBase.GrassFootstep"},
+  [MAT_VENT] = {"DrGBase.VentFootstep"},
+  [MAT_WOOD] = {"DrGBase.WoodFootstep"},
+  [MAT_DEFAULT] = {"DrGBase.DefaultFootstep"},
+  [MAT_GLASS] = {"DrGBase.GlassFootstep"},
+  [MAT_WARPSHIELD] = {"DrGBase.WarpShieldFootstep"}
+}
+
+function ENT:EmitFootstep(soundLevel, pitchPercent, volume, channel, soundFlags, dsp)
+  if not self:OnGround() then return end
+  local tr = self:TraceLine({start = self:GetPos()+Vector(0, 0, 10), direction = -self:GetUp()*self:Height()/2})
+  local sounds = self.Footsteps[tr.MatType] or DEFAULT_FOOTSTEPS[tr.MatType]
+  if not istable(sounds) then sounds = self.Footsteps[MAT_DEFAULT] or DEFAULT_FOOTSTEPS[MAT_DEFAULT] end
+  if not istable(sounds) or #sounds == 0 then return end
+  self:EmitSound(sounds[math.random(#sounds)], soundLevel, pitchPercent, volume, channel or CHAN_BODY, soundFlags, dsp)
 end
 
 if SERVER then
@@ -70,6 +116,21 @@ if SERVER then
     return true
   end
 
+  function ENT:DirectPoseParametersAt(pos, pitch, yaw, center)
+    if not isstring(yaw) then
+      return self:DirectPoseParametersAt(pos, pitch.."_pitch", pitch.."_yaw", yaw)
+    elseif isentity(pos) then pos = pos:WorldSpaceCenter() end
+    if isvector(pos) then
+      center = center or self:WorldSpaceCenter()
+      local angle = (pos - center):Angle()
+      self:SetPoseParameter(pitch, math.AngleDifference(angle.p, self:GetAngles().p))
+      self:SetPoseParameter(yaw, math.AngleDifference(angle.y, self:GetAngles().y))
+    else
+      self:SetPoseParameter(pitch, 0)
+      self:SetPoseParameter(yaw, 0)
+    end
+  end
+
   -- Meta --
 
   local old_GetVelocity = entMETA.GetVelocity
@@ -98,6 +159,18 @@ if SERVER then
     if self.IsDrGNextbot then
       return self.loco:SetGravity(gravity)
     else return old_SetGravity(self, gravity, ...) end
+  end
+
+  local old_SetPos = entMETA.SetPos
+  function entMETA:SetPos(pos, ...)
+    if self.IsDrGNextbot and
+    not game.SinglePlayer() and
+    IsValid(self:GetPhysicsObject())then
+      self:PhysicsDestroy()
+      local res = old_SetPos(self, pos, ...)
+      self:PhysicsInitShadow()
+      return res
+    else return old_SetPos(self, pos, ...) end
   end
 
   local nextbotMETA = FindMetaTable("NextBot")

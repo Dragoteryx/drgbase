@@ -95,11 +95,18 @@ ENT.IdleAnimRate = 1
 ENT.JumpAnimation = ACT_JUMP
 ENT.JumpAnimRate = 1
 
+-- Sounds --
+ENT.Footsteps = {}
+
 -- Weapons --
 DrGBase.IncludeFile("weapons.lua")
 
 -- Possession --
 DrGBase.IncludeFile("possession.lua")
+ENT.PossessionEnabled = false
+ENT.PossessionPrompt = true
+ENT.PossessionMove = POSSESSION_MOVE_1DIR
+--ENT.PossessionViews = {{auto = true}}
 
 -- Misc --
 DrGBase.IncludeFile("drgbase/entity_helpers.lua")
@@ -151,7 +158,40 @@ function ENT:DrG_PreInitialize()
     self:JoinFactions(self.Factions)
     self.VJ_AddEntityToSNPCAttackList = true
     self.vFireIsCharacter = true
+    -- parallel coroutines
+    local function UpdateEntity(ent, yield)
+      self:UpdateSight(ent)
+      yield()
+    end
+    self:ParallelCoroutine(function(self, yield)
+      while true do
+        for ally in self:AllyIterator() do UpdateEntity(ally, yield) end
+        yield()
+      end
+    end)
+    self:ParallelCoroutine(function(self, yield)
+      while true do
+        for hostile in self:HostileIterator() do
+          UpdateEntity(hostile, yield)
+        end
+        self:UpdateEnemy()
+        yield()
+      end
+    end)
+    self:ParallelCoroutine(function(_self, yield)
+      while true do
+        for _, ply in ipairs(player.GetAll()) do UpdateEntity(ply, yield) end
+        yield()
+      end
+    end)
+    self:ParallelCoroutine(function(self, yield)
+      while true do
+        for ent in pairs(self.DrG_InSight) do UpdateEntity(ent, yield) end
+        yield()
+      end
+    end)
   else self:SetIK(true) end
+  self:PhysicsInitShadow()
   self:AddFlags(FL_OBJECT + FL_NPC)
   table.insert(DrG_Nextbots, self)
 end
@@ -170,6 +210,27 @@ end
 -- Think --
 
 function ENT:DrG_PreThink(...)
+  -- anim events
+  local seq = self:GetSequence()
+  local curCycle = self:GetCycle()
+  if seq ~= self.DrG_PrevSeq then
+    self.DrG_PrevSeq = seq
+    self.DrG_LastCycle = 0
+    curCycle = 0
+  end
+  local events = self.DrG_AnimEvents[seq]
+  if events then for cycle, eventList in pairs(events) do
+    if (curCycle > cycle and self.DrG_LastCycle <= cycle) or
+    (curCycle < self.DrG_LastCycle and curCycle >= cycle) or
+    (curCycle < self.DrG_LastCycle and self.DrG_LastCycle <= cycle) then
+      for _, event in ipairs(eventList) do
+        self:OnAnimEvent(event, -1, self:GetPos(), self:GetAngles())
+        if SERVER then self:ReactInCoroutine(self.DoAnimEvent, event, -1, self:GetPos(), self:GetAngles()) end
+      end
+    end
+  end end
+  self.DrG_LastCycle = curCycle
+  -- misc
   if SERVER then
     if self:IsOnGround() then self:SetAngles(Angle(0, self:GetAngles().y, 0)) end
     if self.DrG_OnFire and not self:IsOnFire() then
@@ -177,15 +238,16 @@ function ENT:DrG_PreThink(...)
       self:OnExtinguish()
       self:ReactInCoroutine(self.DoExtinguish)
     end
-    if self:IsPossessed() then
-      self:PossessionThink(...)
-      self:DrG_PBehaviour(false)
-    end
   else
     local ply = LocalPlayer()
-    if self:IsAbleToSee(LocalPlayer()) then
+    if self:IsAbleToSee(ply) then
       self:OnEntitySightKept(ply)
     else self:OnEntityNotInSight(ply) end
+  end
+  -- possession
+  if self:IsPossessed() then
+    self:PossessionThink(...)
+    self:PossessionBehaviour()
   end
 end
 function ENT:PossessionThink() end
@@ -209,32 +271,6 @@ end
 if SERVER then
   AddCSLuaFile()
 
-  -- Update behaviours --
-
-  coroutine.DrG_RunThread("DrG/UpdateNextbots", function()
-    while true do
-      local yielded = false
-      for nextbot in DrGBase.NextbotIterator() do
-        if IsValid(nextbot) then
-          yielded = true
-          local updated = {}
-          local function LocalUpdateSight(ent)
-            if updated[ent] then return end
-            updated[ent] = true
-            nextbot:UpdateSight(ent)
-          end
-          for ent in pairs(nextbot.DrG_InSight) do LocalUpdateSight(ent) end
-          for _, ply in ipairs(player.GetAll()) do LocalUpdateSight(ply) end
-          --for ally in nextbot:AllyIterator() do LocalUpdateSight(ally) end
-          for hostile in nextbot:HostileIterator() do LocalUpdateSight(hostile) end
-          nextbot:UpdateEnemy()
-          coroutine.yield()
-        end
-      end
-      if not yielded then coroutine.yield() end
-    end
-  end)
-
   -- Coroutine --
 
   ENT.DrG_ThrReacts = {}
@@ -243,7 +279,7 @@ if SERVER then
   local function Behave(self)
     while true do
       if self:IsPossessed() then
-        self:DrG_PBehaviour()
+        self:PossessionBehaviour()
       else self:AIBehaviour() end
       self:YieldCoroutine(true)
     end
@@ -262,25 +298,41 @@ if SERVER then
   end
 
   function ENT:BehaveUpdate()
-    if not self.BehaveThread then return end
-    if coroutine.status(self.BehaveThread) ~= "dead" then
-      local ok, args = coroutine.resume(self.BehaveThread)
-      if not ok then
-        ErrorNoHalt(self, " Error: ", args, "\n")
-        if self:OnError(args) then
-          if isfunction(self.DoError) then
-            self.BehaveThread = coroutine.create(function()
-              self:DoError(args)
-              Behave(self)
-            end)
-          else self:BehaveRestart() end
+    if self.BehaveThread then
+      if coroutine.status(self.BehaveThread) ~= "dead" then
+        local ok, args = coroutine.resume(self.BehaveThread)
+        if not ok then
+          ErrorNoHalt(self, " Error: ", args, "\n")
+          if self:OnError(args) then
+            if isfunction(self.DoError) then
+              self.BehaveThread = coroutine.create(function()
+                self:DoError(args)
+                Behave(self)
+              end)
+            else self:BehaveRestart() end
+          end
         end
+      else self.BehaveThread = nil end
+    end
+    local dead = {}
+    for thr, done in pairs(self.DrG_ThrParallel) do
+      local ok, args = coroutine.resume(thr)
+      if coroutine.status(thr) == "dead" then
+        dead[thr] = true
+        if not ok then
+          ErrorNoHalt(self, " Parallel Error: ", args, "\n")
+          self:OnParallelError(args)
+        else done(self, args) end
       end
-    else self.BehaveThread = nil end
+    end
+    for thr in pairs(dead) do
+      self.DrG_ThrParallel[thr] = nil
+    end
   end
   function ENT:OnError()
     return self.RestartOnError
   end
+  function ENT:OnParallelError() end
 
   function ENT:YieldCoroutine(cancellable)
     if cancellable then
@@ -303,6 +355,7 @@ if SERVER then
           table.remove(self.DrG_ThrCalls, 1)(self)
         end
         self:DoThink()
+        if self:IsPossessed() then self:DoPossessionThink() end
         if CurTime() > innerNow then self.DrG_ThrReacts = {} end
         while #self.DrG_ThrReacts > 0 do
           local reactNow = CurTime()
@@ -324,27 +377,45 @@ if SERVER then
 
   function ENT:ReactInCoroutine(fn, arg1, ...)
     if not isfunction(fn) then return end
-    local args, n = table.DrG_Pack(...)
-    table.insert(self.DrG_ThrReacts, function(self)
-      if isentity(arg1) and not IsValid(arg1) then return end
-      fn(self, arg1, table.DrG_Unpack(args, n))
-    end)
+    if not self:InCoroutine() then
+      local args, n = table.DrG_Pack(...)
+      table.insert(self.DrG_ThrReacts, function(self)
+        if isentity(arg1) and not IsValid(arg1) then return end
+        fn(self, arg1, table.DrG_Unpack(args, n))
+      end)
+    else fn(self, arg1, ...) end
   end
   function ENT:CallInCoroutine(fn, ...)
     if not isfunction(fn) then return end
-    local args, n = table.DrG_Pack(...)
-    table.insert(self.DrG_ThrCalls, function(self)
-      fn(self, table.DrG_Unpack(args, n))
-    end)
+    if not self:InCoroutine() then
+      local args, n = table.DrG_Pack(...)
+      table.insert(self.DrG_ThrCalls, function(self)
+        fn(self, table.DrG_Unpack(args, n))
+      end)
+    else fn(self, ...) end
   end
   function ENT:OverrideCoroutine(fn, ...)
     if not isfunction(fn) then return end
-    local args, n = table.DrG_Pack(...)
-    local old_BehaveThread = self.BehaveThread
-    self.BehaveThread = coroutine.create(function()
-      fn(self, table.DrG_Unpack(args, n))
-      self.BehaveThread = old_BehaveThread
-    end)
+    if not self:InCoroutine() then
+      local args, n = table.DrG_Pack(...)
+      local old_BehaveThread = self.BehaveThread
+      self.BehaveThread = coroutine.create(function()
+        fn(self, table.DrG_Unpack(args, n))
+        self.BehaveThread = old_BehaveThread
+      end)
+    else fn(self, ...) end
+  end
+
+  ENT.DrG_ThrParallel = {}
+  function ENT:ParallelCoroutine(fn, done)
+    if not isfunction(fn) then return end
+    self.DrG_ThrParallel[coroutine.create(function()
+      fn(self, function() coroutine.yield() end)
+    end)] = done or function() end
+  end
+
+  function ENT:InCoroutine()
+    return self.BehaveThread ~= nil and coroutine.status(self.BehaveThread) == "running"
   end
 
   -- SLVBase compatibility --
@@ -355,8 +426,15 @@ if SERVER then
   -- Hooks --
 
   function ENT:DoThink() end
+  function ENT:DoPossessionThink() end
   function ENT:DoSpawn(...) return self:OnSpawn(...) end
   function ENT:OnSpawn() end
+
+  local count = 0
+  for _, ent in ipairs(ents.GetAll()) do
+    if ent:IsNextbot() then count  = count+1 end
+  end
+  print(count)
 
 else
 
@@ -369,7 +447,7 @@ else
   function ENT:DrG_PreDraw()
     if not DrGBase.DebugEnabled() then return end
     local ply = LocalPlayer()
-    if DebugSight:GetBool() then
+    if not self:IsPossessedByLocalPlayer() and DebugSight:GetBool() then
       local clr = self:IsAbleToSee(LocalPlayer()) and DrGBase.CLR_GREEN or DrGBase.CLR_RED
       render.DrawLine(self:EyePos(), ply:WorldSpaceCenter(), clr, true)
     end

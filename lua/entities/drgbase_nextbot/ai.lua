@@ -5,7 +5,7 @@ local EnableRoam = DrGBase.ConVar("drgbase_ai_roam", "1")
 -- Getters --
 
 function ENT:IsAIDisabled()
-  return GetConVar("ai_disabled"):GetBool() or self:GetNW2Bool("DrG/AIDisabled") or (SERVER and not self:IsInWorld())
+  return GetConVar("ai_disabled"):GetBool() or self:GetNW2Bool("DrG/AIDisabled") or (SERVER and not self:IsInWorld()) or self:IsDormant()
 end
 
 if SERVER then

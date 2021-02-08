@@ -1,6 +1,6 @@
 -- Helpers --
 
-local function GetAnimInfoSequence(self, seq)
+local function GetNumFrames(self, seq)
   if isstring(sequence) then sequence = self:LookupSequence(sequence) end
   if not isnumber(sequence) or sequence == -1 then return {} end
   local seqName = self:GetSequenceName(seq)
@@ -9,7 +9,7 @@ local function GetAnimInfoSequence(self, seq)
     local anim = seqInfo.anims[i]
     local info = self:GetAnimInfo(anim)
     if info.label == "@"..seqName or info.label == "a_"..seqName then
-      return info
+      return info.numframes
     end
   end
 end
@@ -31,27 +31,49 @@ local function GetActivityIDFromName(self, name)
   end
 end
 
-function ENT:IsAttack(sequence)
-  if isstring(sequence) then sequence = self:LookupSequence(sequence) end
-  if not isnumber(sequence) or sequence == -1 then return false end
-  return string.find(string.lower(self:GetSequenceName(sequence)), "attack") or
-  string.find(self:GetSequenceActivityName(sequence), "ATTACK") or
-  self:GetNW2Bool("DrG/IsAttack/"..sequence) or false
+function ENT:IsAttack(seq)
+  if isstring(seq) then seq = self:LookupSequence(seq) end
+  if not isnumber(seq) or seq == -1 then return false end
+  local res = self:GetNW2Bool("DrG/IsAttack/"..seq, 0)
+  if isbool(res) then return res end
+  return string.find(string.lower(self:GetSequenceName(seq)), "attack") or
+  string.find(self:GetSequenceActivityName(seq), "ATTACK")
+end
+
+function ENT:IsAttacking()
+  return self:IsAttack(self:GetSequence())
 end
 
 -- Anim events --
 
 ENT.DrG_AnimEvents = {}
-function ENT:AddAnimEvent(sequence, frames, event)
-  if isstring(sequence) then sequence = self:LookupSequence(sequence) end
-  if not isnumber(sequence) or sequence == -1 then return false end
-  if not istable(frames) then frames = {frames} end
-
+function ENT:AddAnimEventCycle(seq, cycles, event)
+  if isstring(seq) then seq = self:LookupSequence(seq) end
+  if not isnumber(seq) or seq == -1 then return false end
+  if not istable(cycles) then cycles = {cycles} end
+  self.DrG_AnimEvents[seq] = self.DrG_AnimEvents[seq] or {}
+  local events = self.DrG_AnimEvents[seq]
+  for _, cycle in ipairs(cycles) do
+    events[cycle] = events[cycle] or {}
+    table.insert(events[cycle], event)
+  end
 end
-function ENT:RemoveAnimEvents(sequence)
-  if isstring(sequence) then sequence = self:LookupSequence(sequence) end
-  if not isnumber(sequence) or sequence == -1 then return false end
-
+function ENT:AddAnimEvent(seq, frames, event)
+  if isstring(seq) then seq = self:LookupSequence(seq) end
+  if not isnumber(seq) or seq == -1 then return false end
+  if not istable(frames) then frames = {frames} end
+  local numframes = GetNumFrames(self, seq)
+  if not numframes then return end
+  local cycles = {}
+  for _, frame in ipairs(frames) do
+    table.insert(cycles, frame/(numframes-1))
+  end
+  self:AddAnimEventCycle(seq, cycles, event)
+end
+function ENT:RemoveAnimEvents(seq)
+  if isstring(seq) then seq = self:LookupSequence(seq) end
+  if not isnumber(seq) or seq == -1 then return false end
+  self.DrG_AnimEvents[seq] = nil
 end
 
 if SERVER then
@@ -62,14 +84,14 @@ if SERVER then
   end
 
   local function GetSequences(self, act)
-    local sequences = {}
+    local seqs = {}
     for i = 0, self:GetSequenceCount()-1 do
       if (isnumber(act) and self:GetSequenceActivity(i) == act) or
       (isstring(act) and self:GetSequenceActivityName(i) == act) then
         table.insert(i)
       end
     end
-    return sequences
+    return seqs
   end
 
   local INVALID = -1
@@ -93,31 +115,27 @@ if SERVER then
 
   -- Helpers --
 
-  function ENT:IsAttacking()
-    return self:IsAttack(self:GetSequence())
-  end
-
-  function ENT:SetAttack(sequence, attack)
-    if isstring(sequence) then sequence = self:LookupSequence(sequence) end
-    if not isnumber(sequence) or sequence == -1 then return end
-    self:SetNW2Bool("DrG/IsAttack/"..sequence, attack)
+  function ENT:SetAttack(seq, attack)
+    if isstring(seq) then seq = self:LookupSequence(seq) end
+    if not isnumber(seq) or seq == -1 then return end
+    self:SetNW2Bool("DrG/IsAttack/"..seq, attack)
   end
 
   -- PSAW and friends --
 
-  function ENT:PlaySequenceAndWait(sequence, options, fn, ...)
-    if istable(sequence) then return self:PlaySequenceAndWait(sequence[math.random(#sequence)], options, fn, ...) end
-    if isfunction(options) then return self:PlaySequenceAndWait(sequence, 1, options, fn, ...) end
-    if isnumber(options) then return self:PlaySequenceAndWait(sequence, {rate = options}, fn, ...) end
-    if isbool(options) then return self:PlaySequenceAndWait(sequence, {cancellable = options}, fn, ...) end
-    if isstring(sequence) then sequence = self:LookupSequence(sequence) end
-    if not isnumber(sequence) or sequence == -1 then return false end
+  function ENT:PlaySequenceAndWait(seq, options, fn, ...)
+    if istable(seq) then return self:PlaySequenceAndWait(seq[math.random(#seq)], options, fn, ...) end
+    if isfunction(options) then return self:PlaySequenceAndWait(seq, 1, options, fn, ...) end
+    if isnumber(options) then return self:PlaySequenceAndWait(seq, {rate = options}, fn, ...) end
+    if isbool(options) then return self:PlaySequenceAndWait(seq, {cancellable = options}, fn, ...) end
+    if isstring(seq) then seq = self:LookupSequence(seq) end
+    if not isnumber(seq) or seq == -1 then return false end
     if not istable(options) then options = {} end
     if not isnumber(options.rate) then options.rate = 1 end
     if not isbool(options.cancellable) then options.cancellable = false end
     if not isbool(options.gravity) then options.gravity = true end
     local args, n = table.DrG_Pack(...)
-    ResetSequence(self, sequence)
+    ResetSequence(self, seq)
     self:SetPlaybackRate(options.rate)
     local gravity = self:GetGravity()
     local previous = -1
@@ -127,6 +145,10 @@ if SERVER then
       if previous >= cycle then
         res = true
         break
+      end
+      if options.forward then
+        if self:IsPossessed() then self:PossessionFaceForward()
+        elseif self:HasEnemy() then self:FaceTowards(self:GetEnemy()) end
       end
       if not options.gravity then
         self:SetVelocity(Vector())
@@ -162,20 +184,20 @@ if SERVER then
     else return false end
   end
 
-  function ENT:PlaySequenceAndMove(sequence, options, fn, ...)
-    if istable(sequence) then return self:PlaySequenceAndMove(sequence[math.random(#sequence)], options, fn, ...) end
-    if isfunction(options) then return self:PlaySequenceAndMove(sequence, 1, options, fn, ...) end
-    if isnumber(options) then return self:PlaySequenceAndMove(sequence, {rate = options}, fn, ...) end
-    if isbool(options) then return self:PlaySequenceAndMove(sequence, {cancellable = options}, fn, ...) end
-    if isstring(sequence) then sequence = self:LookupSequence(sequence) end
-    if not isnumber(sequence) or sequence == -1 then return false end
+  function ENT:PlaySequenceAndMove(seq, options, fn, ...)
+    if istable(seq) then return self:PlaySequenceAndMove(seq[math.random(#seq)], options, fn, ...) end
+    if isfunction(options) then return self:PlaySequenceAndMove(seq, 1, options, fn, ...) end
+    if isnumber(options) then return self:PlaySequenceAndMove(seq, {rate = options}, fn, ...) end
+    if isbool(options) then return self:PlaySequenceAndMove(seq, {cancellable = options}, fn, ...) end
+    if isstring(seq) then seq = self:LookupSequence(seq) end
+    if not isnumber(seq) or seq == -1 then return false end
     if not istable(options) then options = {} end
     if not isbool(options.absolute) then options.absolute = false end
     if not isbool(options.collide) then options.collide = false end
     local args, n = table.DrG_Pack(...)
     local pos = self:GetPos()
-    local res = self:PlaySequenceAndWait(sequence, options, function(self, cycle, previous)
-      local ok, vec, angles = self:GetSequenceMovement(sequence, previous == -1 and 0 or previous, cycle)
+    local res = self:PlaySequenceAndWait(seq, options, function(self, cycle, previous)
+      local ok, vec, angles = self:GetSequenceMovement(seq, previous == -1 and 0 or previous, cycle)
       if ok then
         if isnumber(options.multiply) or isvector(options.multiply) then vec = vec*options.multiply end
         self:SetAngles(self:LocalToWorldAngles(angles))
@@ -212,19 +234,19 @@ if SERVER then
     else return false end
   end
 
-  function ENT:PlaySequenceAndClimb(sequence, options, fn, ...)
-    if isnumber(options) then return self:PlaySequenceAndClimb(sequence, {height = options}, fn, ...) end
+  function ENT:PlaySequenceAndClimb(seq, options, fn, ...)
+    if isnumber(options) then return self:PlaySequenceAndClimb(seq, {height = options}, fn, ...) end
     if not istable(options) or not isnumber(options.height) then return false end
-    if istable(sequence) then
+    if istable(seq) then
 
     else
-      if isstring(sequence) then sequence = self:LookupSequence(sequence) end
-      if not isnumber(sequence) or sequence == -1 then return false end
-      local ok, vec = self:GetSequenceMovement(sequence, 0, 1)
+      if isstring(seq) then seq = self:LookupSequence(seq) end
+      if not isnumber(seq) or seq == -1 then return false end
+      local ok, vec = self:GetSequenceMovement(seq, 0, 1)
       if not ok then return false end
       options.absolute = true
       options.multiply = Vector(1, 1, options.height/vec.z/self:GetModelScale())
-      return self:PlaySequenceAndMove(sequence, options, function(self, ...)
+      return self:PlaySequenceAndMove(seq, options, function(self, ...)
         if not self:TraceHull(self:GetForward()*self.LedgeDetectionDistance*2).Hit then return false end
         if isfunction(fn) then return fn(self, ...) end
       end, ...)
@@ -245,7 +267,7 @@ if SERVER then
   -- Hooks --
 
   function ENT:BodyUpdate()
-    self:BodyMoveXY()
+    self:BodyMoveXY({rate = false})
   end
 
   function ENT:DoAnimChange(_old, _new) end
@@ -275,9 +297,8 @@ if SERVER then
         ResetSequence(self, seq, cancellable)
       end
     end
-    if validAnim and isnumber(rate) and (
-      not self:IsOnGround() or self:GetSequenceGroundSpeed(self:GetSequence()) == 0
-    ) then self:SetPlaybackRate(rate) end
+    if validAnim and isnumber(rate) then self:SetPlaybackRate(rate) end
+    self:BodyMoveXY({frame = false, direction = false})
   end
 
   function ENT:OnUpdateAnimation()
@@ -335,7 +356,20 @@ if SERVER then
           end
         end
         if options.rate ~= false then
-          -- todo
+          local velocity = self:GetVelocity()
+          if self:IsOnGround() then
+            velocity.z = 0
+            if velocity:IsZero() then return end
+            local speed = velocity:Length()
+            local seqspeed = self:GetSequenceGroundSpeed(self:GetSequence())
+            if seqspeed ~= 0 then self:SetPlaybackRate(speed/seqspeed) end
+          elseif not velocity:IsZero() then
+            local speed = velocity:Length()
+            local ok, vec = self:GetSequenceMovement(self:GetSequence(), 0, 1)
+            if not ok then return end
+            local seqspeed = vec:Length()/self:SequenceDuration()
+            if seqspeed ~= 0 then self:SetPlaybackRate(speed/seqspeed) end
+          end
         end
       end
     else return old_BodyMoveXY(self, options, ...) end

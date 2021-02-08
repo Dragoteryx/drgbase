@@ -59,8 +59,7 @@ if SERVER then
 
   local function CalcRadius(self)
     local mins = self:GetCollisionBounds()
-    local distance = math.sqrt((math.abs(mins.x)^2)*2)/2
-    return distance
+    return math.sqrt((math.abs(mins.x)^2)*2)/2
   end
 
   local function CollisionHulls(self, distance)
@@ -185,6 +184,16 @@ if SERVER then
       if not self.DrG_UnstuckDelay or self.DrG_UnstuckDelay < CurTime() then
         self.DrG_UnstuckDelay = CurTime() + 0.25
         local nw, ne, sw, se = CollisionHulls(self)
+        if nw.Hit and ne.Hit then
+          local tr = self:TraceLine({
+            start = self:WorldSpaceCenter(),
+            direction = self:GetForward()*50
+          })
+          if IsValid(tr.Entity) then
+            print(tr.Entity:GetClass())
+            tr.Entity:Use(self)
+          end
+        end
         if nw.Hit or ne.Hit or sw.Hit or se.Hit then
           if self:Unstuck() then self.loco:ClearStuck()
           else return "stuck" end
@@ -307,7 +316,7 @@ if SERVER then
     if not isnumber(speed) or speed < 0 then
       if not self:IsOnGround() then
         local ok, vec = self:GetSequenceMovement(self:GetSequence(), 0, 1)
-        if ok then speed = vec:Length()/self:SequenceDuration(seq) end
+        if ok then speed = vec:Length()/self:SequenceDuration() end
       else speed = self:GetSequenceGroundSpeed(self:GetSequence()) end
       if not isnumber(speed) or speed <= 0 then speed = 1 end
     end

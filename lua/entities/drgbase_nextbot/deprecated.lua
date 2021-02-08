@@ -7,6 +7,38 @@ ENT.HadEnemy = DrGBase.Deprecated(
     return self:HasEnemy()
   end)
 
+-- Possession --
+
+ENT.PossessorView = DrGBase.Deprecated(
+  "ENT:PossessorView()",
+  "ENT:PossessorEyePos() & ENT:PossessorEyeAngles()",
+  function(self)
+    return self:PossessorEyePos(), self:PossessorEyeAngles()
+  end)
+
+ENT.PossessorNormal = DrGBase.Deprecated(
+  "ENT:PossessorNormal()",
+  "ENT:PossessorEyeNormal()",
+  function(self)
+    return self:PossessorEyeNormal()
+  end)
+
+ENT.PossessorTrace = DrGBase.Deprecated(
+  "ENT:PossessorTrace()",
+  "ENT:PossessorEyeTrace()",
+  function(self)
+    return self:PossessorEyeTrace()
+  end)
+
+-- Misc --
+
+ENT.EmitStep = DrGBase.Deprecated(
+  "ENT:EmitStep(soundLevel, pitchPercent, volume, channel, soundFlags, dsp)",
+  "ENT:EmitFootstep(soundLevel, pitchPercent, volume, channel, soundFlags, dsp)",
+  function(self, ...)
+    return self:EmitFootstep(...)
+  end)
+
 if SERVER then
 
   -- AI --
@@ -71,7 +103,7 @@ if SERVER then
 
   ENT.IsInSight = DrGBase.Deprecated(
     "ENT:IsInSight(entity)",
-    "ENT:IsAbleToSee(entity, useFOV = true)",
+    "ENT:IsAbleToSee(entity, useFOV)",
     function(self, ent)
       return self:IsAbleToSee(ent)
     end)
@@ -104,7 +136,7 @@ if SERVER then
 
   ENT.Possess = DrGBase.Deprecated(
     "ENT:Possess(player)",
-    "ENT:SetPossessor(player | NULL)",
+    "ENT:SetPossessor(player)",
     function(self, ply)
       return self:SetPossessor(ply)
     end)

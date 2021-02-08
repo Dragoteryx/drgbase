@@ -26,7 +26,6 @@ function entMETA:DrG_TraceLine(data, arg2)
   else
     if not istable(data) then data = {} end
     if not isvector(data.start) then data.start = self:GetPos() end
-    if not isvector(data.endpos) and isvector(data.direction) then data.endpos = data.start + data.direction end
     data.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
     if not data.mask and SERVER and self:IsNextBot() then data.mask = self:GetSolidMask() end
     if not data.filter then
@@ -45,7 +44,6 @@ function entMETA:DrG_TraceHull(data, arg2)
   else
     if not istable(data) then data = {} end
     if not isvector(data.start) then data.start = self:GetPos() end
-    if not isvector(data.endpos) and isvector(data.direction) then data.endpos = data.start + data.direction end
     data.collisiongroup = data.collisiongroup or self:GetCollisionGroup()
     if not data.mask and SERVER and self:IsNextBot() then data.mask = self:GetSolidMask() end
     if not data.filter then

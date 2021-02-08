@@ -304,7 +304,7 @@ if SERVER then
 
   local nextbotMETA = FindMetaTable("NextBot")
 
-  local function FOVTest(self, ent)
+  local function LOSTest(self, ent)
     return self:Visible(ent)
   end
   local function RangeTest(self, ent)
@@ -328,7 +328,7 @@ if SERVER then
       if GetConVar("nb_blind"):GetBool() then return false end
       if isfunction(self.CustomSightTest) then
         local flags = SIGHT_TEST_PASSED_ALL
-        if not FOVTest(self, ent) then flags = flags - SIGHT_TEST_LOS end
+        if not LOSTest(self, ent) then flags = flags - SIGHT_TEST_LOS end
         if not RangeTest(self, ent) then flags = flags - SIGHT_TEST_RANGE end
         if useFOV ~= false and not AngleTest(self, ent) then flags = flags - SIGHT_TEST_ANGLE end
         if not LuminosityTest(self, ent) then flags = flags - SIGHT_TEST_LUMINOSITY end
@@ -339,7 +339,7 @@ if SERVER then
         return LuminosityTest(self, ent) and
         RangeTest(self, ent) and
         (useFOV == false or AngleTest(self, ent)) and
-        FOVTest(self, ent)
+        LOSTest(self, ent)
       end
     else return old_IsAbleToSee(self, ent, useFOV, ...) end
   end
@@ -373,6 +373,7 @@ if SERVER then
   -- update
 
   ENT.DrG_InSight = {}
+
   local OnSightDeprecation = DrGBase.Deprecation("ENT:OnSight(ent)", "ENT:OnEntitySight(ent, angle)")
   local OnLostSightDeprecation = DrGBase.Deprecation("ENT:OnLostSight(ent)", "ENT:OnEntitySightLost(ent, angle)")
   function ENT:UpdateSight(ent)

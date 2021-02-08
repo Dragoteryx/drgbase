@@ -2,8 +2,14 @@
 
 local DebugTraces = CreateConVar("drgbase_debug_traces", "0")
 function util.DrG_TraceLine(data)
+  if not istable(data) then data = {} end
+  if isvector(data.start) and
+  not isvector(data.endpos) and
+  isvector(data.direction) then
+    data.endpos = data.start + data.direction
+  end
   local tr = util.TraceLine(data)
-  if DebugTraces:GetFloat() > 0 then
+  if data.debug ~= false and DebugTraces:GetFloat() > 0 then
     local clr = tr.Hit and DrGBase.CLR_RED or DrGBase.CLR_GREEN
     debugoverlay.Line(data.start, tr.HitPos, DebugTraces:GetFloat(), clr, false)
     debugoverlay.Line(tr.HitPos, data.endpos, DebugTraces:GetFloat(), DrGBase.CLR_WHITE, false)
@@ -11,8 +17,14 @@ function util.DrG_TraceLine(data)
   return tr
 end
 function util.DrG_TraceHull(data)
+  if not istable(data) then data = {} end
+  if isvector(data.start) and
+  not isvector(data.endpos) and
+  isvector(data.direction) then
+    data.endpos = data.start + data.direction
+  end
   local tr = util.TraceHull(data)
-  if DebugTraces:GetFloat() > 0 then
+  if data.debug ~= false and DebugTraces:GetFloat() > 0 then
     local clr = tr.Hit and DrGBase.CLR_RED or DrGBase.CLR_GREEN
     clr = clr:ToVector():ToColor() clr.a = 0
     debugoverlay.Line(data.start, tr.HitPos, DebugTraces:GetFloat(), DrGBase.CLR_WHITE, false)

@@ -6,7 +6,7 @@ ENT.PrintName = "Antlion"
 ENT.Category = "DrGBase"
 ENT.Models = {"models/Antlion.mdl"}
 ENT.Skins = {0, 1, 2, 3}
-ENT.CollisionBounds = Vector(30, 30, 60)
+ENT.CollisionBounds = Vector(20, 20, 60)
 ENT.BloodColor = BLOOD_COLOR_YELLOW
 ENT.RagdollOnDeath = true
 
@@ -37,6 +37,11 @@ ENT.EyeBone = "Antlion.Head_Bone"
 ENT.EyeOffset = Vector(7.5, 0, 5)
 ENT.EyeAngle = Angle(0, 0, 0)
 
+-- Possession --
+ENT.PossessionEnabled = true
+ENT.PossessionMove = POSSESSION_MOVE_8DIR
+ENT.PossessionViews = {{auto = true}}
+
 if SERVER then
 
   function ENT:Initialize()
@@ -45,10 +50,6 @@ if SERVER then
   end
 
   -- AI --
-
-  function ENT:ShouldRun()
-    return self:HasRecentEnemy() and not self:IsInRangeAndSight(self:GetEnemy(), 250)
-  end
 
   function ENT:DoThink()
     while self:WaterLevel() >= 2 do
@@ -62,7 +63,7 @@ if SERVER then
     end
   end
 
-  --[[function ENT:DoRangeAttack(enemy)
+  function ENT:DoRangeAttack(enemy)
     if math.random(1, 500) > 1 then return end
     if self:PlaySequenceAndMove("charge_start", true) then
       self:ResetSequence("charge_run")
@@ -79,20 +80,41 @@ if SERVER then
         self:PlaySequenceAndMove("charge_end", true)
       end
     end
-  end]]
+  end
+
   function ENT:DoMeleeAttack()
     local rand = math.random(1, 6)
-    if rand == 7 then self:PlaySequenceAndMove("pounce", self.FaceEnemy)
-    elseif rand == 8 then self:PlaySequenceAndMove("pounce2", self.FaceEnemy)
-    else self:PlaySequenceAndMove("attack"..rand, self.FaceEnemy) end
+    if rand == 7 then self:PlaySequenceAndMove("pounce", true)
+    elseif rand == 8 then self:PlaySequenceAndMove("pounce2", true)
+    else self:PlaySequenceAndMove("attack"..rand, true) end
+  end
+
+  -- Possession --
+
+  function ENT:DoPossessionBinds(binds)
+    if binds:IsDown("IN_ATTACK") then self:DoMeleeAttack() end
+    if binds:IsDown("IN_ATTACK2") then
+      self:EmitSound("")
+      if self:PlaySequenceAndMove("charge_start", true) then
+        self:ResetSequence("charge_run")
+        self:UpdateSpeed()
+        while binds:IsDown("IN_ATTACK2") do
+          self:PossessionFaceForward()
+          self:PossessionMoveForward()
+          if self:YieldNoUpdate(true) then return end
+        end
+        self:EmitSound("NPC_Antlion.MeleeAttackSingle")
+        self:PlaySequenceAndMove("charge_end", true)
+      end
+    end
   end
 
   -- Damage --
   function ENT:OnTakeDamage(dmg) end
   function ENT:DoTakeDamage(dmg)
-    --[[if dmg:IsDamageType(DMG_PHYSGUN) then
+    if dmg:IsDamageType(DMG_PHYSGUN) then
       self:PlaySequenceAndWait("flip1")
-    end]]
+    end
   end
 
   -- Path --
@@ -140,8 +162,12 @@ if SERVER then
 
   -- Events --
 
-  function ENT:OnAnimEvent()
-    if self:IsAttacking() then
+  function ENT:OnAnimEvent(event)
+    if event == "Test" then
+      print("=====================")
+    elseif event == "Test2" then
+      print(self:GetCycle())
+    elseif self:IsAttacking() then
       if self:GetCycle() > 0.3 then
         local hit = self:Attack({
           damage = 5, range = 50, type = DMG_SLASH,

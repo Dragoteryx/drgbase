@@ -4,13 +4,11 @@ if SERVER then
 
   function npcMETA:DrG_SetRelationship(ent, disp)
     if not IsValid(ent) then return end
-    if self.CPTBase_NPC then
-      self:AddEntityRelationship(ent, disp, 99)
-    else
-      self._DrGBaseRelPrios = self._DrGBaseRelPrios or {}
-      if not self._DrGBaseRelPrios[ent] then self._DrGBaseRelPrios[ent] = 0 end
-      self._DrGBaseRelPrios[ent] = self._DrGBaseRelPrios[ent]+1
-      self:AddEntityRelationship(ent, disp, self._DrGBaseRelPrios[ent])
+    if not self.CPTBase_NPC then
+      self.DrG_RelPrios = self.DrG_RelPrios or {}
+      if not self.DrG_RelPrios[ent] then self.DrG_RelPrios[ent] = 0 end
+      self.DrG_RelPrios[ent] = self.DrG_RelPrios[ent]+1
+      self:AddEntityRelationship(ent, disp, self.DrG_RelPrios[ent])
       if not self.IsVJBaseSNPC or not ent.IsDrGNextbot then return end
       if istable(self.CurrentPossibleEnemies) and
       not table.HasValue(self.CurrentPossibleEnemies, ent) then
@@ -30,7 +28,7 @@ if SERVER then
           end
         else table.RemoveByValue(self.VJ_AddCertainEntityAsFriendly, ent) end
       end
-    end
+    else self:AddEntityRelationship(ent, disp, 99) end
   end
 
 end

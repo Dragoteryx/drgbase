@@ -5,53 +5,53 @@ function plyMETA:DrG_IsPossessing()
   return IsValid(self:DrG_Possessing())
 end
 function plyMETA:DrG_Possessing()
-  return self:GetNW2Entity("DrGBasePossessing")
+  return self:GetNW2Entity("DrG/Possessing")
 end
 function plyMETA:DrG_GetPossessing()
   return self:DrG_Possessing()
 end
 
 hook.Add("PlayerButtonDown", "DrGBasePlayerButtonDown", function(ply, button)
-  ply._DrGBaseButtonsDown = ply._DrGBaseButtonsDown or {}
-  ply._DrGBaseButtonsDown[button] = {
+  ply.DrG_ButtonsDown = ply.DrG_ButtonsDown or {}
+  ply.DrG_ButtonsDown[button] = {
     down = true, recent = true
   }
   timer.Simple(0, function()
     if not IsValid(ply) then return end
-    ply._DrGBaseButtonsDown[button].recent = false
+    ply.DrG_ButtonsDown[button].recent = false
   end)
 end)
 hook.Add("PlayerButtonUp", "DrGBasePlayerButtonUp", function(ply, button)
-  ply._DrGBaseButtonsDown = ply._DrGBaseButtonsDown or {}
-  ply._DrGBaseButtonsDown[button] = {
+  ply.DrG_ButtonsDown = ply.DrG_ButtonsDown or {}
+  ply.DrG_ButtonsDown[button] = {
     down = false, recent = true
   }
   timer.Simple(0, function()
     if not IsValid(ply) then return end
-    ply._DrGBaseButtonsDown[button].recent = false
+    ply.DrG_ButtonsDown[button].recent = false
   end)
 end)
 function plyMETA:DrG_ButtonUp(button)
-  self._DrGBaseButtonsDown = self._DrGBaseButtonsDown or {}
-  local data = self._DrGBaseButtonsDown[button]
+  self.DrG_ButtonsDown = self.DrG_ButtonsDown or {}
+  local data = self.DrG_ButtonsDown[button]
   if data == nil then return true end
   return not data.down
 end
 function plyMETA:DrG_ButtonPressed(button)
-  self._DrGBaseButtonsDown = self._DrGBaseButtonsDown or {}
-  local data = self._DrGBaseButtonsDown[button]
+  self.DrG_ButtonsDown = self.DrG_ButtonsDown or {}
+  local data = self.DrG_ButtonsDown[button]
   if data == nil then return false end
   return tobool(data.down and data.recent)
 end
 function plyMETA:DrG_ButtonDown(button)
-  self._DrGBaseButtonsDown = self._DrGBaseButtonsDown or {}
-  local data = self._DrGBaseButtonsDown[button]
+  self.DrG_ButtonsDown = self.DrG_ButtonsDown or {}
+  local data = self.DrG_ButtonsDown[button]
   if data == nil then return false end
   return data.down or false
 end
 function plyMETA:DrG_ButtonReleased(button)
-  self._DrGBaseButtonsDown = self._DrGBaseButtonsDown or {}
-  local data = self._DrGBaseButtonsDown[button]
+  self.DrG_ButtonsDown = self.DrG_ButtonsDown or {}
+  local data = self.DrG_ButtonsDown[button]
   if data == nil then return false end
   return tobool(not data.down and data.recent)
 end
@@ -59,10 +59,10 @@ end
 -- Toolgun --
 
 function plyMETA:DrG_GetSelectionTable(mode)
-  self._DrGBaseSelectionTables = self._DrGBaseSelectionTables or {}
+  self.DrG_SelectionTables = self.DrG_SelectionTables or {}
   if isstring(mode) then
-    self._DrGBaseSelectionTables[mode] = self._DrGBaseSelectionTables[mode] or {}
-    return self._DrGBaseSelectionTables[mode]
+    self.DrG_SelectionTables[mode] = self.DrG_SelectionTables[mode] or {}
+    return self.DrG_SelectionTables[mode]
   else
     local tool = self:GetTool()
     if tool == nil then return {}
@@ -93,7 +93,150 @@ function plyMETA:DrG_IsEntitySelected(ent, mode)
   return self:DrG_GetSelectionTable(mode)[ent] or false
 end
 
+-- Move --
+
+local PlayerMove = DrGBase.CreateClass()
+
+function PlayerMove:new(ply)
+  self.Player = ply
+end
+
+function PlayerMove.prototype:IsMoving()
+  return self:IsMovingForward() or
+    self:IsMovingBackward() or
+    self:IsMovingLeft() or
+    self:IsMovingRight()
+end
+function PlayerMove.prototype:IsMovingForward()
+  return self.Player:KeyDown(IN_FORWARD) and
+    not self.Player:KeyDown(IN_BACK)
+end
+function PlayerMove.prototype:IsMovingBackward()
+  return self.Player:KeyDown(IN_BACK) and
+    not self.Player:KeyDown(IN_FORWARD)
+end
+function PlayerMove.prototype:IsMovingLeft()
+  return self.Player:KeyDown(IN_MOVELEFT) and
+    not self.Player:KeyDown(IN_MOVERIGHT)
+end
+function PlayerMove.prototype:IsMovingRight()
+  return self.Player:KeyDown(IN_MOVERIGHT) and
+    not self.Player:KeyDown(IN_MOVELEFT)
+end
+
+function PlayerMove.prototype:tostring()
+  return "IsMoving = " .. tostring(self:IsMoving()) .. "\n" ..
+    "| Forward = " .. tostring(self:IsMovingForward()) .. "\n" ..
+    "| Backward = " .. tostring(self:IsMovingBackward()) .. "\n" ..
+    "| Left = " .. tostring(self:IsMovingLeft()) .. "\n" ..
+    "| Right = " .. tostring(self:IsMovingRight())
+end
+
+local MOVE = {}
+function plyMETA:DrG_Move()
+  if not MOVE[self] then MOVE[self] = PlayerMove(self) end
+  return MOVE[self]
+end
+
+-- Binds --
+
+local PlayerBinds = DrGBase.CreateClass()
+
+function PlayerBinds:new(ply)
+  self.Player = ply
+end
+
+function PlayerBinds.prototype:IsUp(key)
+  if string.StartWith(key, "IN_") then
+    return not self.Player:KeyDown(_G[key])
+  elseif string.StartWith(key, "KEY_") then
+    return self.Player:DrG_ButtonUp(_G[key])
+  else
+    local key
+    if CLIENT then
+      local convar = GetConVar(key)
+      if not convar then return false
+      else key = convar:GetInt() end
+    else
+      key = self.Player:GetInfoNum(key, BUTTON_CODE_INVALID)
+      if key == BUTTON_CODE_INVALID then return false end
+    end
+    return self.Player:DrG_ButtonUp(key)
+  end
+end
+function PlayerBinds.prototype:IsDown(key)
+  if string.StartWith(key, "IN_") then
+    return self.Player:KeyDown(_G[key])
+  elseif string.StartWith(key, "KEY_") then
+    return self.Player:DrG_ButtonDown(_G[key])
+  else
+    local key
+    if CLIENT then
+      local convar = GetConVar(key)
+      if not convar then return false
+      else key = convar:GetInt() end
+    else
+      key = self.Player:GetInfoNum(key, BUTTON_CODE_INVALID)
+      if key == BUTTON_CODE_INVALID then return false end
+    end
+    return self.Player:DrG_ButtonDown(key)
+  end
+end
+function PlayerBinds.prototype:WasPressed(key)
+  if string.StartWith(key, "IN_") then
+    return self.Player:KeyPressed(_G[key])
+  elseif string.StartWith(key, "KEY_") then
+    return self.Player:DrG_ButtonPresed(_G[key])
+  else
+    local key
+    if CLIENT then
+      local convar = GetConVar(key)
+      if not convar then return false
+      else key = convar:GetInt() end
+    else
+      key = self.Player:GetInfoNum(key, BUTTON_CODE_INVALID)
+      if key == BUTTON_CODE_INVALID then return false end
+    end
+    return self.Player:DrG_ButtonPressed(key)
+  end
+end
+function PlayerBinds.prototype:WasReleased(key)
+  if string.StartWith(key, "IN_") then
+    return self.Player:KeyReleased(_G[key])
+  elseif string.StartWith(key, "KEY_") then
+    return self.Player:DrG_ButtonReleased(_G[key])
+  else
+    local key
+    if CLIENT then
+      local convar = GetConVar(key)
+      if not convar then return false
+      else key = convar:GetInt() end
+    else
+      key = self.Player:GetInfoNum(key, BUTTON_CODE_INVALID)
+      if key == BUTTON_CODE_INVALID then return false end
+    end
+    return self.Player:DrG_ButtonReleased(key)
+  end
+end
+
+function PlayerBinds.prototype:tostring()
+  return ""
+end
+
+local BINDS = {}
+function plyMETA:DrG_Binds()
+  if not BINDS[self] then BINDS[self] = PlayerBinds(self) end
+  return BINDS[self]
+end
+
 if SERVER then
+
+  -- Possession --
+
+  function plyMETA:DrG_StopPossession()
+    if not self:DrG_IsPossessing() then return end
+    self:DrG_Possessing():StopPossession()
+  end
 
   -- Toolgun --
 
@@ -182,13 +325,13 @@ if SERVER then
   -- Factions --
 
   local function InitFactions(ply)
-    ply._DrGBaseFactions =ply._DrGBaseFactions or {}
+    ply.DrG_Factions =ply.DrG_Factions or {}
   end
 
   function plyMETA:DrG_JoinFaction(faction)
     InitFactions(self)
     if self:DrG_IsInFaction(faction) then return end
-    self._DrGBaseFactions[string.upper(faction)] = true
+    self.DrG_Factions[string.upper(faction)] = true
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
       nextbot:UpdateRelationshipWith(self)
     end
@@ -196,19 +339,19 @@ if SERVER then
   function plyMETA:DrG_LeaveFaction(faction)
     InitFactions(self)
     if not self:DrG_IsInFaction(faction) then return end
-    self._DrGBaseFactions[string.upper(faction)] = false
+    self.DrG_Factions[string.upper(faction)] = false
     for i, nextbot in ipairs(DrGBase.GetNextbots()) do
       nextbot:UpdateRelationshipWith(self)
     end
   end
   function plyMETA:DrG_IsInFaction(faction)
     InitFactions(self)
-    return self._DrGBaseFactions[string.upper(faction)] or false
+    return self.DrG_Factions[string.upper(faction)] or false
   end
   function plyMETA:DrG_GetFactions()
     InitFactions(self)
     local factions = {}
-    for faction, joined in pairs(self._DrGBaseFactions) do
+    for faction, joined in pairs(self.DrG_Factions) do
       if joined then table.insert(factions, faction) end
     end
     return factions
@@ -270,15 +413,17 @@ else
 
   -- Luminosity --
 
-  net.DrG_DefineCallback("DrG/PlayerLuminosity", function()
-    return LocalPlayer():DrG_Luminosity()
-  end)
-
   function plyMETA:DrG_Luminosity()
     if self ~= LocalPlayer() then return -1 end
     local light = render.GetLightColor(self:EyePos())
     local length = math.Round(light:Length(), 2)
     return math.Clamp(math.sqrt(math.log(length)+5)/2, 0, 1)
   end
+
+  net.DrG_DefineCallback("DrG/PlayerLuminosity", function()
+    local ply = LocalPlayer()
+    if not isfunction(ply.DrG_Luminosity) then return 1
+    else return ply:DrG_Luminosity() end
+  end)
 
 end
