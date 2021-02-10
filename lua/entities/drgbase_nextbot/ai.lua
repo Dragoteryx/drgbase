@@ -1,7 +1,3 @@
--- ConVars --
-
-local EnableRoam = DrGBase.ConVar("drgbase_ai_roam", "1")
-
 -- Getters --
 
 function ENT:IsAIDisabled()
@@ -24,7 +20,8 @@ if SERVER then
 
   function ENT:AIBehaviour()
     if self:HasEnemy() then
-      self:DoHandleEnemy(self:GetEnemy())
+      local enemy = self:GetEnemy()
+      self:DoHandleEnemy(enemy, self:GetDetectState(enemy))
     else self:DoPassive() end
   end
 
@@ -39,14 +36,14 @@ if SERVER then
   -- roam
 
   function ENT:RoamTo(...)
-    if not EnableRoam:GetBool() then return false end
+    if not DrGBase.EnableRoam:GetBool() then return false end
     local args, n = table.DrG_Pack(...)
     if n == 0 then return false end
     for i = 1, n do
       local pos = args[i]
       local res
       while true do
-        if not EnableRoam:GetBool() then return false end
+        if not DrGBase.EnableRoam:GetBool() then return false end
         if self:HasEnemy() then return false end
         if self:IsPossessed() then return false end
         local now = CurTime()
@@ -62,7 +59,7 @@ if SERVER then
     return true
   end
   function ENT:RoamAtRandom(min, max)
-    if not EnableRoam:GetBool() then return false end
+    if not DrGBase.EnableRoam:GetBool() then return false end
     if not isnumber(min) then min = 1500 max = nil end
     return self:RoamTo(self:RandomPos(min, max))
   end
@@ -98,7 +95,7 @@ if SERVER then
   -- misc
 
   function ENT:ShouldRun()
-    return self:HasRecentEnemy()
+    return self:HasDetectedEnemy()
   end
 
   function ENT:ShouldDropWeapon()

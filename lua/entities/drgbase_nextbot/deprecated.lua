@@ -90,9 +90,9 @@ if SERVER then
 
   ENT.SpotEntity = DrGBase.Deprecated(
     "ENT:SpotEntity(entity)",
-    "ENT:DetectEntity(entity, duration)",
+    "ENT:DetectEntity(entity)",
     function(self, ent)
-      return self:DetectEntity(ent, self.SpotDuration or 30)
+      return self:DetectEntity(ent)
     end)
   ENT.LoseEntity = DrGBase.Deprecated(
     "ENT:LoseEntity(entity)",

@@ -1,7 +1,3 @@
--- ConVars --
-
-local PathfindingMode = GetConVar("drgbase_pathfinding")
-
 -- Path --
 
 function ENT:GetPath()
@@ -126,17 +122,17 @@ function ENT:OnComputePathFlat(_area, _from) return 0 end
 
 local pathMETA = FindMetaTable("PathFollower")
 
-local old_Compute = pathMETA.Compute
+local Compute = pathMETA.Compute
 function pathMETA:Compute(nextbot, pos, generator, ...)
   if nextbot.IsDrGNextbot then
-    local pathfinding = PathfindingMode:GetString()
+    local pathfinding = DrGBase.PathfindingMode:GetString()
     if pathfinding == "custom" then generator = nextbot:GetPathGenerator()
     elseif pathfinding ~= "default" then
       nextbot.DrG_LastComputeResult = false
       self:Invalidate()
       return false
     end
-    nextbot.DrG_LastComputeResult = old_Compute(self, nextbot, pos, generator, ...)
+    nextbot.DrG_LastComputeResult = Compute(self, nextbot, pos, generator, ...)
     return nextbot.DrG_LastComputeResult
-  else return old_Compute(self, nextbot, pos, generator, ...) end
+  else return Compute(self, nextbot, pos, generator, ...) end
 end

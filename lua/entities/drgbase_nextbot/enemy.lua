@@ -1,3 +1,5 @@
+-- Getters --
+
 function ENT:HasEnemy()
   return IsValid(self:GetEnemy())
 end
@@ -7,26 +9,24 @@ if SERVER then
   local function CompareEnemies(self, ent1, ent2)
     local res = self:CompareEnemies(ent1, ent2)
     if isbool(res) then return res end
-    local recently1 = self:HasDetectedRecently(ent1)
-    local recently2 = self:HasDetectedRecently(ent2)
-    if recently1 == recently2 then
-      local _, prio1 = self:GetRelationship(ent1)
-      local _, prio2 = self:GetRelationship(ent2)
-      if recently1 then
-        if prio1 == prio2 then
-          return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
-        else return self:GetRangeTo(ent1)/prio1 < self:GetRangeTo(ent1)/prio2 end
-      elseif prio1 == prio2 then
-        return self:GetPos():DistToSqr(self:LastKnownPos(ent1)) < self:GetPos():DistToSqr(self:LastKnownPos(ent2))
-      else return self:GetPos():Distance(self:LastKnownPos(ent1))/prio1 < self:GetPos():Distance(self:LastKnownPos(ent2))/prio2 end
-    elseif recently1 and not recently2 then return true
-    else return false end
+    local state1 = self:GetDetectState(ent1)
+    local state2 = self:GetDetectState(ent2)
+    if state1 > state2 then return true end
+    if state1 < state2 then return false end
+    local _, prio1 = self:GetRelationship(ent1)
+    local _, prio2 = self:GetRelationship(ent2)
+    if state1 == DETECT_STATE_DETECTED then
+      if prio1 == prio2 then
+        return self:GetRangeSquaredTo(ent1) < self:GetRangeSquaredTo(ent2)
+      else return self:GetRangeTo(ent1)/prio1 < self:GetRangeTo(ent1)/prio2 end
+    elseif prio1 == prio2 then
+      return self:GetPos():DistToSqr(self:LastKnownPos(ent1)) < self:GetPos():DistToSqr(self:LastKnownPos(ent2))
+    else return self:GetPos():Distance(self:LastKnownPos(ent1))/prio1 < self:GetPos():Distance(self:LastKnownPos(ent2))/prio2 end
   end
 
   local function FetchEnemy(self)
     local enemy
     for hostile in self:HostileIterator(true) do
-      if not IsValid(hostile) then continue end
       if not enemy or CompareEnemies(self, hostile, enemy) then
         enemy = hostile
       end
@@ -40,7 +40,7 @@ if SERVER then
     if not self:IsPossessed() then
       local enemy = self.DrG_SetEnemy
       if not IsValid(enemy) then enemy = self:OnUpdateEnemy() end
-      if not IsValid(enemy) then enemy = FetchEnemy(self) end
+      if not enemy then enemy = FetchEnemy(self) end
       if IsValid(enemy) then
         self:SetNW2Entity("DrG/Enemy", enemy)
         self.DrG_HadEnemy = true
@@ -63,28 +63,35 @@ if SERVER then
     self:UpdateEnemy()
   end
 
-  function ENT:HasRecentEnemy()
-    return self:HasEnemy() and self:HasDetectedRecently(self:GetEnemy())
+  function ENT:GetEnemyDetectState()
+    return self:GetDetectState(self:GetEnemy())
+  end
+  function ENT:SetEnemyDetectState(state)
+    return self:SetDetectState(self:GetEnemy(), state)
+  end
+
+  function ENT:HasDetectedEnemy()
+    return self:GetEnemyDetectState() == DETECT_STATE_DETECTED
   end
 
   -- Coroutine --
 
-  function ENT:DoHandleEnemy(enemy)
-    if not self:HasDetectedRecently(enemy) then
-      local res = self:DoSearchEnemy(enemy)
-      if res == false then self:DoEnemyNotFound(enemy) end
-      if res ~= true then return end
-    end
-    local visible = self:Visible(enemy)
-    local disp = self:GetRelationship(enemy)
-    if disp == D_HT then
-      if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
-        if self:DoApproachEnemy(enemy) == false then self:DoEnemyUnreachable(enemy) end
-      elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible then
-        self:DoMoveAwayFromEnemy(enemy)
-      else self:DoObserveEnemy(enemy) end
-      if IsValid(enemy) then self:DoAttack(enemy) end
-    elseif disp == D_FR then
+  function ENT:DoHandleEnemy(enemy, state)
+    if self:IsEnemy(enemy) then
+      if state == DETECT_STATE_DETECTED then
+        local visible = self:Visible(enemy)
+        if not self:IsInRange(enemy, self.ReachEnemyRange) or not visible then
+          if self:DoApproachEnemy(enemy) == false then self:DoEnemyUnreachable(enemy) end
+        elseif self:IsInRange(enemy, self.AvoidEnemyRange) and visible then
+          self:DoMoveAwayFromEnemy(enemy)
+        else self:DoObserveEnemy(enemy) end
+        if IsValid(enemy) then self:DoAttack(enemy) end
+      elseif state == DETECT_STATE_SEARCHING then
+        local res = self:DoSearchEnemy(enemy)
+        if res == false then self:DoEnemyNotFound(enemy) end
+        if res == true then self:DetectEntity(enemy) end
+      end
+    elseif self:IsAfraidOf(enemy) then
 
     end
   end

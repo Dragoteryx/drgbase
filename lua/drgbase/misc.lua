@@ -10,9 +10,9 @@ function DrGBase.SharedClientConVar(name, value, ...)
   return CreateClientConVar(name, value, true, true, ...)
 end
 
-local EnableDebug = DrGBase.ConVar("drgbase_debug", "0")
+DrGBase.EnableDebug = DrGBase.ConVar("drgbase_debug", "0")
 function DrGBase.DebugEnabled()
-  return GetConVar("developer"):GetBool() and EnableDebug:GetBool()
+  return GetConVar("developer"):GetBool() and DrGBase.EnableDebug:GetBool()
 end
 
 -- Misc --

@@ -5,76 +5,82 @@ return function(ENT)
     -- Damage hooks --
 
     if isfunction(ENT.OnTraceAttack) then
-      local old_OnTraceAttack = ENT.OnTraceAttack
+      local OnTraceAttack = ENT.OnTraceAttack
       function ENT:OnTraceAttack(...)
-        local res = old_OnTraceAttack(self, ...)
+        local res = OnTraceAttack(self, ...)
         self:DrG_OnTraceAttack(...)
         return res
       end
     end
 
     if isfunction(ENT.OnInjured) then
+      local OnInjured = ENT.OnInjured
       function ENT:OnInjured(...)
+        local res = OnInjured(self, ...)
         self:DrG_OnInjured(...)
+        return res
       end
     end
 
     if isfunction(ENT.OnKilled) then
+      local OnKilled = ENT.OnKilled
       function ENT:OnKilled(...)
+        local res = OnKilled(self, ...)
         self:DrG_OnKilled(...)
+        return res
       end
     end
 
     -- Misc hooks --
 
     if isfunction(ENT.OnLandOnGround) then
-      local old_OnLandOnGround = ENT.OnLandOnGround
+      local OnLandOnGround = ENT.OnLandOnGround
       function ENT:OnLandOnGround(...)
         self:DrG_OnLandOnGround(...)
-        return old_OnLandOnGround(self, ...)
+        return OnLandOnGround(self, ...)
       end
     end
 
     if isfunction(ENT.OnLeaveGround) then
-      local old_OnLeaveGround = ENT.OnLeaveGround
+      local OnLeaveGround = ENT.OnLeaveGround
       function ENT:OnLeaveGround(...)
         self:DrG_OnLeaveGround(...)
-        return old_OnLeaveGround(self, ...)
+        return OnLeaveGround(self, ...)
       end
     end
 
     if isfunction(ENT.OnIgnite) then
-      local old_OnIgnite = ENT.OnIgnite
+      local OnIgnite = ENT.OnIgnite
       function ENT:OnIgnite(...)
         self:DrG_OnIgnite(...)
-        return old_OnIgnite(self, ...)
+        return OnIgnite(self, ...)
       end
     end
 
     if isfunction(ENT.OnContact) then
-      local old_OnContact = ENT.OnContact
+      local OnContact = ENT.OnContact
       function ENT:OnContact(ent, ...)
         self:DrG_OnContact(ent, ...)
-        return old_OnContact(self, ent, ...)
+        return OnContact(self, ent, ...)
       end
     end
 
     if isfunction(ENT.OnNavAreaChanged) then
-      local old_OnNavAreaChanged = ENT.OnNavAreaChanged
+      local OnNavAreaChanged = ENT.OnNavAreaChanged
       function ENT:OnNavAreaChanged(old, new, ...)
         self:DrG_OnNavAreaChanged(old, new, ...)
-        return old_OnNavAreaChanged(self, old, new, ...)
+        return OnNavAreaChanged(self, old, new, ...)
       end
     end
 
     -- HandleAnimEvent --
 
     if isfunction(ENT.HandleAnimEvent) then
-      local old_HandleAnimEvent = ENT.HandleAnimEvent
+      local HandleAnimEvent = ENT.HandleAnimEvent
       function ENT:HandleAnimEvent(event, time, cycle, type, options)
         local res = self:OnAnimEvent(options, event, self:GetPos(), self:GetAngles(), time)
         self:ReactInCoroutine(self.DoAnimEvent, options, event, self:GetPos(), self:GetAngles(), time)
-        local res2 = old_HandleAnimEvent(self, event, time, cycle, type, options)
+        local res2 = HandleAnimEvent(self, event, time, cycle, type, options)
         if res == true or res2 == true then return true end
       end
     end
@@ -84,10 +90,10 @@ return function(ENT)
     -- FireAnimationEvent --
 
     if isfunction(ENT.FireAnimationEvent) then
-      local old_FireAnimationEvent = ENT.FireAnimationEvent
+      local FireAnimationEvent = ENT.FireAnimationEvent
       function ENT:FireAnimationEvent(pos, angle, event, name)
         local res = self:OnAnimEvent(name, event, pos, angle, CurTime())
-        local res2 = old_FireAnimationEvent(self, pos, angle, event, name)
+        local res2 = FireAnimationEvent(self, pos, angle, event, name)
         if res == true or res2 == true then return true end
       end
     end

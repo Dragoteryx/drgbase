@@ -23,7 +23,7 @@ ENT.ReachEnemyRange = 125
 ENT.AvoidEnemyRange = 100
 
 -- Relationships --
-ENT.Factions = {FACTION_ZOMBIES}
+ENT.Factions = {"FACTION_ZOMBIES"}
 
 -- Animations --
 ENT.WalkAnimation = ACT_RUN
@@ -42,10 +42,7 @@ ENT.EyeOffset = Vector(4, 0, 0)
 ENT.PossessionEnabled = true
 ENT.PossessionCrosshair = true
 ENT.PossessionViews = {
-  {
-    offset = Vector(0, 10, 10),
-    distance = 50
-  },
+  {auto = true},
   {
     offset = Vector(7.5, 0, 0),
     distance = 0,

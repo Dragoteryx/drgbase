@@ -21,7 +21,7 @@ ENT.ReachEnemyRange = 30
 ENT.AvoidEnemyRange = 0
 
 -- Relationships --
-ENT.Factions = {FACTION_ZOMBIES}
+ENT.Factions = {"FACTION_ZOMBIES"}
 
 -- Movements/animations --
 ENT.UseWalkframes = true

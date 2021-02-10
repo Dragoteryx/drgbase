@@ -107,9 +107,11 @@ if SERVER then
   end
 
   local function ResetSequence(self, seq)
+    local old = self:GetSequence()
     local len = self:SetSequence(seq)
     self:ResetSequenceInfo()
     self:SetCycle(0)
+    if old ~= seq then self:OnAnimChange(old, seq) end
     return len
   end
 
@@ -270,6 +272,7 @@ if SERVER then
     self:BodyMoveXY({rate = false})
   end
 
+  function ENT:OnAnimChange(_old, _new) end
   function ENT:DoAnimChange(_old, _new) end
 
   -- Update --
@@ -314,14 +317,14 @@ if SERVER then
 
   local nextbotMETA = FindMetaTable("NextBot")
 
-  local old_GetActivity = nextbotMETA.GetActivity
+  local GetActivity = nextbotMETA.GetActivity
   function nextbotMETA:GetActivity(...)
     if self.IsDrGNextbot then
       return self:GetSequenceActivity(self:GetSequence())
-    else return old_GetActivity(self, ...) end
+    else return GetActivity(self, ...) end
   end
 
-  local old_StartActivity = nextbotMETA.StartActivity
+  local StartActivity = nextbotMETA.StartActivity
   function nextbotMETA:StartActivity(act, ...)
     if self.IsDrGNextbot then
       if isstring(act) then act = GetActivityIDFromName(self, act) end
@@ -329,10 +332,10 @@ if SERVER then
       if act == self:GetActivity() then return end
       local seq = RandomSequence(self, act)
       if seq ~= -1 then ResetSequence(self, act) end
-    else return old_StartActivity(self, act, ...) end
+    else return StartActivity(self, act, ...) end
   end
 
-  local old_BodyMoveXY = nextbotMETA.BodyMoveXY
+  local BodyMoveXY = nextbotMETA.BodyMoveXY
   function nextbotMETA:BodyMoveXY(options, ...)
     if self.IsDrGNextbot then
       if self.IsDrGNextbotSprite then return end
@@ -372,7 +375,7 @@ if SERVER then
           end
         end
       end
-    else return old_BodyMoveXY(self, options, ...) end
+    else return BodyMoveXY(self, options, ...) end
   end
 
 end

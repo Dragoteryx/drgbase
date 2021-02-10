@@ -70,3 +70,14 @@ function util.DrG_MergeColors(ratio, max, low)
     max.a*ratio + low.a*(1-ratio)
   )
 end
+
+function util.DrG_MergeIterators(iterators)
+  local iterator = table.remove(iterators, 1)
+  return function(inv, res)
+    res = iterator(inv, res)
+    if res == nil then
+      iterator = table.remove(iterators, 1)
+      if iterator then return iterator(inv) end
+    else return res end
+  end
+end

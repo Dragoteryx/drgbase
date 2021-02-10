@@ -82,7 +82,12 @@ ENT.ClimbAnimRate = 1
 ENT.ClimbOffset = Vector(0, 0, 0)
 
 -- Locomotion --
-
+ENT.Acceleration = 400
+ENT.Deceleration = 400
+ENT.MaxYawRate = 250
+ENT.JumpHeight = 58
+ENT.StepHeight = 20
+ENT.DeathDropHeight = 200
 
 -- Animations --
 DrGBase.IncludeFile("animations.lua")
@@ -115,7 +120,30 @@ DrGBase.IncludeFile("hooks.lua")
 DrGBase.IncludeFile("deprecated.lua")
 
 -- ConVars --
-local MultHealth = DrGBase.ConVar("drgbase_multiplier_health", "1")
+
+DrGBase.MultHealth = DrGBase.ConVar("drgbase_multiplier_health", "1")
+DrGBase.MultSpeed = DrGBase.ConVar("drgbase_multiplier_speed", "1")
+
+DrGBase.AllOmniscient = DrGBase.ConVar("drgbase_ai_omniscient", "0")
+DrGBase.AIBlind = DrGBase.ConVar("drgbase_ai_blind", "0")
+DrGBase.AIDeaf = DrGBase.ConVar("drgbase_ai_deaf", "0")
+DrGBase.EnableRoam = DrGBase.ConVar("drgbase_ai_roam", "1")
+DrGBase.TargetInsects = DrGBase.ConVar("drgbase_ai_target_insects", "0")
+DrGBase.TargetRepMelons = DrGBase.ConVar("drgbase_ai_target_repmelons", "1")
+
+DrGBase.PossessionEnabled = DrGBase.ConVar("drgbase_possession_enabled", "1")
+DrGBase.LockOnEnabled = DrGBase.ConVar("drgbase_possession_lockon", "1")
+
+DrGBase.PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", "Pathfinding mode:\n"..
+  "    'custom' => DrGBase custom pathfinding, allows climbing at the cost of performance\n"..
+  "    'default' => default Garry's Mod nextbot pathfinding, more efficient than custom but dumber\n"..
+  "    'none' => disable pathfinding entirely, best performance at the cost of having nextbots running into every wall")
+DrGBase.ComputeDelay = DrGBase.ConVar("drgbase_compute_delay", "0.1")
+DrGBase.AvoidObstacles = DrGBase.ConVar("drgbase_avoid_obstacles", "1")
+
+DrGBase.RemoveRagdolls = DrGBase.ConVar("drgbase_ragdolls_remove", "-1")
+DrGBase.RagdollFadeOut = DrGBase.ConVar("drgbase_ragdolls_fadeout", "3")
+DrGBase.DisableRagCollisions = DrGBase.ConVar("drgbase_ragdolls_collisions_disabled", "0")
 
 -- Initialize --
 
@@ -140,7 +168,7 @@ function ENT:DrG_PreInitialize()
     -- status
     self:SetMaxHealth(self.SpawnHealth)
     self:SetHealth(self.SpawnHealth)
-    self:ScaleHealth(MultHealth:GetFloat())
+    self:ScaleHealth(DrGBase.MultHealth:GetFloat())
     -- vision
     self:SetMaxVisionRange(self.SightRange)
     self:SetFOV(self.SightFOV)
@@ -152,46 +180,75 @@ function ENT:DrG_PreInitialize()
         Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0)
       )
     else self:SetCollisionBounds(self:GetModelBounds()) end
+    -- physics
+    self:PhysicsInitShadow()
+    self:AddCallback("PhysicsCollide", function(self, data)
+      local ent = data.HitEntity
+      if not IsValid(ent) then return end
+      if ent:GetClass() == "prop_combine_ball" then
+        ent:EmitSound("NPC_CombineBall.Impact")
+      end
+    end)
+    -- locomotion --
+    self:SetAcceleration(self.Acceleration)
+    self:SetDeceleration(self.Deceleration)
+    self:SetMaxYawRate(self.MaxYawRate)
+    self:SetJumpHeight(self.JumpHeight)
+    self:SetStepHeight(self.StepHeight)
+    self:SetDeathDropHeight(self.DeathDropHeight)
     -- misc
     self:SetBloodColor(self.BloodColor)
     self:SetUseType(SIMPLE_USE)
+    self:AddCallback("OnAngleChange", function(self, ang)
+      if true then self:SetAngles(Angle(0, ang.y, 0)) end
+    end)
     self:JoinFactions(self.Factions)
     self.VJ_AddEntityToSNPCAttackList = true
     self.vFireIsCharacter = true
     -- parallel coroutines
-    local function UpdateEntity(ent, yield)
+    local function UpdateEntity(ent)
       self:UpdateSight(ent)
-      yield()
+      coroutine.yield()
     end
-    self:ParallelCoroutine(function(self, yield)
-      while true do
-        for ally in self:AllyIterator() do UpdateEntity(ally, yield) end
-        yield()
-      end
-    end)
-    self:ParallelCoroutine(function(self, yield)
+    self:ParallelCoroutine(function(self)
       while true do
         for hostile in self:HostileIterator() do
-          UpdateEntity(hostile, yield)
+          UpdateEntity(hostile)
         end
         self:UpdateEnemy()
-        yield()
+        coroutine.yield()
       end
     end)
-    self:ParallelCoroutine(function(_self, yield)
+    --[[self:ParallelCoroutine(function(self)
       while true do
-        for _, ply in ipairs(player.GetAll()) do UpdateEntity(ply, yield) end
-        yield()
+        for ally in self:AllyIterator() do UpdateEntity(ally) end
+        coroutine.yield()
       end
     end)
-    self:ParallelCoroutine(function(self, yield)
+    self:ParallelCoroutine(function()
       while true do
-        for ent in pairs(self.DrG_InSight) do UpdateEntity(ent, yield) end
-        yield()
+        for _, ply in ipairs(player.GetAll()) do UpdateEntity(ply) end
+        coroutine.yield()
       end
     end)
+    self:ParallelCoroutine(function(self)
+      while true do
+        for ent in pairs(self.DrG_InSight) do UpdateEntity(ent) end
+        coroutine.yield()
+      end
+    end)
+    self:ParallelCoroutine(function(self)
+      while true do
+        for ent, state in self:DetectedEntities() do
+          if self:IsOmniscient() then break end
+          local newState = self:OnUpdateDetectState(ent, state, CurTime() - self:GetDetectStateLastUpdate(ent))
+          if newState then self:SetDetectState(ent, newState) end
+          coroutine.yield()
+        end
+        coroutine.yield()
+      end
+    end)]]
   else self:SetIK(true) end
-  self:PhysicsInitShadow()
   self:AddFlags(FL_OBJECT + FL_NPC)
   table.insert(DrG_Nextbots, self)
 end
@@ -232,7 +289,6 @@ function ENT:DrG_PreThink(...)
   self.DrG_LastCycle = curCycle
   -- misc
   if SERVER then
-    if self:IsOnGround() then self:SetAngles(Angle(0, self:GetAngles().y, 0)) end
     if self.DrG_OnFire and not self:IsOnFire() then
       self.DrG_OnFire = false
       self:OnExtinguish()
@@ -271,12 +327,34 @@ end
 if SERVER then
   AddCSLuaFile()
 
+  -- Misc --
+
+  hook.Add("EntityRemoved", "DrG/EntityRemovalCleanup", function(ent)
+    for nb in DrGBase.NextbotIterator() do
+      if ent == nb then continue end
+      -- detection
+      nb.DrG_DetectState[ent] = nil
+      nb.DrG_DetectStateLastUpdate[ent] = nil
+      nb.DrG_InSight[ent] = nil
+      -- relationships
+      nb.DrG_Relationships[ent] = nil
+      nb.DrG_RelationshipCache[D_LI][ent] = nil
+      nb.DrG_RelationshipCache[D_HT][ent] = nil
+      nb.DrG_RelationshipCache[D_FR][ent] = nil
+      nb.DrG_RelationshipCacheDetected[D_LI][ent] = nil
+      nb.DrG_RelationshipCacheDetected[D_HT][ent] = nil
+      nb.DrG_RelationshipCacheDetected[D_FR][ent] = nil
+      nb.DrG_DefinedRelationships["Entity"][ent] = nil
+      nb.DrG_IgnoredEntities[ent] = nil
+    end
+  end)
+
   -- Coroutine --
 
   ENT.DrG_ThrReacts = {}
   ENT.DrG_ThrCalls = {}
 
-  local function Behave(self)
+  local function RunBehaviour(self)
     while true do
       if self:IsPossessed() then
         self:PossessionBehaviour()
@@ -288,12 +366,12 @@ if SERVER then
   function ENT:BehaveStart()
     self.BehaveThread = coroutine.create(function()
       self:DoSpawn()
-      Behave(self)
+      RunBehaviour(self)
     end)
   end
   function ENT:BehaveRestart()
     self.BehaveThread = coroutine.create(function()
-      Behave(self)
+      RunBehaviour(self)
     end)
   end
 
@@ -307,7 +385,7 @@ if SERVER then
             if isfunction(self.DoError) then
               self.BehaveThread = coroutine.create(function()
                 self:DoError(args)
-                Behave(self)
+                RunBehaviour(self)
               end)
             else self:BehaveRestart() end
           end
@@ -398,10 +476,10 @@ if SERVER then
     if not isfunction(fn) then return end
     if not self:InCoroutine() then
       local args, n = table.DrG_Pack(...)
-      local old_BehaveThread = self.BehaveThread
+      local BehaveThread = self.BehaveThread
       self.BehaveThread = coroutine.create(function()
         fn(self, table.DrG_Unpack(args, n))
-        self.BehaveThread = old_BehaveThread
+        self.BehaveThread = BehaveThread
       end)
     else fn(self, ...) end
   end
@@ -410,7 +488,7 @@ if SERVER then
   function ENT:ParallelCoroutine(fn, done)
     if not isfunction(fn) then return end
     self.DrG_ThrParallel[coroutine.create(function()
-      fn(self, function() coroutine.yield() end)
+      fn(self)
     end)] = done or function() end
   end
 
@@ -430,24 +508,18 @@ if SERVER then
   function ENT:DoSpawn(...) return self:OnSpawn(...) end
   function ENT:OnSpawn() end
 
-  local count = 0
-  for _, ent in ipairs(ents.GetAll()) do
-    if ent:IsNextbot() then count  = count+1 end
-  end
-  print(count)
-
 else
 
   -- ConVars --
 
-  local DebugSight = DrGBase.ClientConVar("drgbase_debug_sight", "0")
+  DrGBase.DebugSight = DrGBase.ClientConVar("drgbase_debug_sight", "0")
 
   -- Draw --
 
   function ENT:DrG_PreDraw()
     if not DrGBase.DebugEnabled() then return end
     local ply = LocalPlayer()
-    if not self:IsPossessedByLocalPlayer() and DebugSight:GetBool() then
+    if not self:IsPossessedByLocalPlayer() and DrGBase.DebugSight:GetBool() then
       local clr = self:IsAbleToSee(LocalPlayer()) and DrGBase.CLR_GREEN or DrGBase.CLR_RED
       render.DrawLine(self:EyePos(), ply:WorldSpaceCenter(), clr, true)
     end

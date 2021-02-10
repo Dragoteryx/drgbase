@@ -1,9 +1,3 @@
--- ConVars --
-
-local RemoveRagdolls = DrGBase.ConVar("drgbase_ragdolls_remove", "-1")
-local RagdollFadeOut = DrGBase.ConVar("drgbase_ragdolls_fadeout", "3")
-local DisableRagCollisions = DrGBase.ConVar("drgbase_ragdolls_collisions_disabled", "0")
-
 -- Getters --
 
 function ENT:GetHealthRegen()
@@ -213,11 +207,11 @@ if SERVER then
     if self.RagdollOnDeath then
       local ragdoll = self:BecomeRagdoll(dmg)
       if IsValid(ragdoll) then
-        if DisableRagCollisions:GetBool() or not GetConVar("ai_serverragdolls"):GetBool() then
+        if DrGBase.DisableRagCollisions:GetBool() or not GetConVar("ai_serverragdolls"):GetBool() then
           ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
         end
-        if not self.DrG_OnRagdollRes and RemoveRagdolls:GetFloat() >= 0 then
-          ragdoll:Fire("fadeandremove", math.Clamp(RagdollFadeOut:GetFloat(), 0, math.huge), RemoveRagdolls:GetFloat())
+        if not self.DrG_OnRagdollRes and DrGBase.RemoveRagdolls:GetFloat() >= 0 then
+          ragdoll:Fire("fadeandremove", math.Clamp(DrGBase.RagdollFadeOut:GetFloat(), 0, math.huge), DrGBase.RemoveRagdolls:GetFloat())
         end
       end
     else self:Remove() end
@@ -270,19 +264,19 @@ if SERVER then
 
   local entMETA = FindMetaTable("Entity")
 
-  local old_SetHealth = entMETA.SetHealth
+  local SetHealth = entMETA.SetHealth
   function entMETA:SetHealth(health, ...)
     if self.IsDrGNextbot then
       if self:IsDead() then health = 0 end
       self:SetNW2Int("DrG/Health", health)
     end
-    return old_SetHealth(self, health, ...)
+    return SetHealth(self, health, ...)
   end
 
-  local old_SetMaxHealth = entMETA.SetMaxHealth
+  local SetMaxHealth = entMETA.SetMaxHealth
   function entMETA:SetMaxHealth(health, ...)
     if self.IsDrGNextbot then self:SetNW2Int("DrG/MaxHealth", health) end
-    return old_SetMaxHealth(self, health, ...)
+    return SetMaxHealth(self, health, ...)
   end
 
 else
@@ -291,18 +285,18 @@ else
 
   local entMETA = FindMetaTable("Entity")
 
-  local old_Health = entMETA.Health
+  local Health = entMETA.Health
   function entMETA:Health(...)
     if self.IsDrGNextbot then
       return self:GetNW2Int("DrG/Health", self.SpawnHealth)
-    else return old_Health(self, ...) end
+    else return Health(self, ...) end
   end
 
-  local old_GetMaxHealth = entMETA.GetMaxHealth
+  local GetMaxHealth = entMETA.GetMaxHealth
   function entMETA:GetMaxHealth(...)
     if self.IsDrGNextbot then
       return self:GetNW2Int("DrG/MaxHealth", self.SpawnHealth)
-    else return old_GetMaxHealth(self, ...) end
+    else return GetMaxHealth(self, ...) end
   end
 
 end

@@ -44,8 +44,8 @@ function areaMETA:DrG_GetMaterialType()
   return MAT_TYPES[id]
 end
 
-local old_Remove = areaMETA.Remove
+local Remove = areaMETA.Remove
 function areaMETA:Remove(...)
   MAT_TYPES[self:GetID()] = nil
-  return old_Remove(self, ...)
+  return Remove(self, ...)
 end

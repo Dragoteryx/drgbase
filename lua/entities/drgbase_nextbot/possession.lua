@@ -1,12 +1,7 @@
--- ConVars --
-
-local PossessionEnabled = DrGBase.ConVar("drgbase_possession_enabled", "1")
-local LockOnEnabled = DrGBase.ConVar("drgbase_possession_lockon", "1")
-
 -- Getters --
 
 function ENT:IsPossessionEnabled()
-  return self:GetNW2Bool("DrG/PossessionEnabled", self.PossessionEnabled)
+  return self:GetNW2Bool("DrG/DrGBase.PossessionEnabled", self.PossessionEnabled)
 end
 
 function ENT:GetPossessor()
@@ -16,14 +11,18 @@ function ENT:IsPossessed()
   return IsValid(self:GetPossessor())
 end
 
-function ENT:PossessionGetZoom()
+function ENT:GetPossessionZoom()
   return self:GetNW2Float("DrG/PossessionZoom", 1)
+end
+
+function ENT:GetPossessionView()
+  return self:GetNW2Int("DrG/PossessionView")
 end
 
 -- View --
 
 function ENT:PossessorEyePos()
-  local view = self:OnPossessionCalcView(0)
+  local view = self:OnPossessionCalcView(self:GetPossessionView())
   if isvector(view) then return view end
   local origin
   local distance
@@ -34,7 +33,9 @@ function ENT:PossessorEyePos()
   else
     local pos = self:GetPos()
     local offset = view.offset or Vector(0, 0, 0)
-    if view.eyepos then
+    if view.origin then
+      origin = view.origin
+    elseif view.eyepos then
       origin = self:EyePos()
     else origin = self:WorldSpaceCenter() end
     origin = origin +
@@ -50,7 +51,7 @@ function ENT:PossessorEyePos()
   local tr = self:TraceLine({
     start = origin,
     direction = -self:PossessorEyeNormal()*
-      (1/self:PossessionGetZoom())*
+      (1/self:GetPossessionZoom())*
       (distance+10)
   })
   return tr.HitPos +
@@ -98,7 +99,7 @@ properties.Add("drg/possess", {
 	Filter = function(_self, ent, _ply)
     if not IsValid(ent) then return end
 		if not ent.IsDrGNextbot then return false end
-		if not PossessionEnabled:GetBool() then return false end
+		if not DrGBase.PossessionEnabled:GetBool() then return false end
 		if not ent.PossessionPrompt then return false end
 		if not ent:IsPossessionEnabled() then return false end
 		return true
@@ -198,7 +199,7 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:SetPossessionEnabled(bool)
-    self:SetNW2Bool("DrG/PossessionEnabled", bool)
+    self:SetNW2Bool("DrG/DrGBase.PossessionEnabled", bool)
     if not bool then self:StopPossession() end
   end
 
@@ -224,6 +225,7 @@ if SERVER then
     if IsValid(ply) and ply:IsPlayer() then
       if not self:CanPossess(ply) then return end
       ply:DrG_StopPossession()
+      self:StopPossession()
       self:SetNW2Float("DrG/PossessionZoom", 1)
       self:SetNW2Entity("DrG/Possessor", ply)
       ply:SetNW2Entity("DrG/Possessing", self)
@@ -266,14 +268,19 @@ if SERVER then
     return true
   end
 
-  function ENT:PossessionSetZoom(zoom)
+  function ENT:SetPossessionZoom(zoom)
     self:SetNW2Float("DrG/PossessionZoom", zoom)
   end
   function ENT:PossessionZoomIn(mult)
-    self:PossessionSetZoom(self:PossessionGetZoom()*1.05*(mult or 1))
+    self:SetPossessionZoom(self:GetPossessionZoom()*1.05*(mult or 1))
   end
   function ENT:PossessionZoomOut(mult)
-    self:PossessionSetZoom(self:PossessionGetZoom()*0.95*(mult or 1))
+    self:SetPossessionZoom(self:GetPossessionZoom()*0.95*(mult or 1))
+  end
+
+
+  function ENT:SetPossessionView(view)
+    self:SetNW2Int("DrG/PossessionView", view)
   end
 
   -- Movements --
@@ -286,27 +293,19 @@ if SERVER then
   end
 
   function ENT:PossessionMoveForward()
-    if not self:IsOnGround() then
-      self:SetVelocity(self:GetVelocity() + self:PossessorForward()*10)
-    else self:Approach(self:GetPos() + self:PossessorForward()) end
+    self:Approach(self:GetPos() + self:PossessorForward())
   end
   function ENT:PossessionMoveBackward()
-    if not self:IsOnGround() then
-      self:SetVelocity(self:GetVelocity() - self:PossessorForward()*10)
-    else self:Approach(self:GetPos() - self:PossessorForward()) end
+    self:Approach(self:GetPos() - self:PossessorForward())
   end
   function ENT:PossessionMoveLeft()
-    if not self:IsOnGround() then
-      self:SetVelocity(self:GetVelocity() - self:PossessorRight()*10)
-    else self:Approach(self:GetPos() - self:PossessorRight()) end
+    self:Approach(self:GetPos() - self:PossessorRight())
   end
   function ENT:PossessionMoveRight()
-    if not self:IsOnGround() then
-      self:SetVelocity(self:GetVelocity() + self:PossessorRight()*10)
-    else self:Approach(self:GetPos() + self:PossessorRight()) end
+    self:Approach(self:GetPos() + self:PossessorRight())
   end
 
-  -- Controls --
+  -- Hooks --
 
   local PossessionMovementDeprecation = DrGBase.Deprecation("ENT:PossessionMovement(forward, backward, right, left)", "ENT:DoPossessionMoveCustom(move)")
   function ENT:DoPossessionMove(move)
@@ -364,9 +363,12 @@ if SERVER then
   function ENT:DoPossessionBinds()
     PossessionBindsTable(self, true)
   end
-
   function ENT:OnPossessionBinds()
     PossessionBindsTable(self, false)
+  end
+
+  function ENT:OnPossessionNextView(view)
+    if istable(self.PossessionViews) then return (view+1)%#self.PossessionViews end
   end
 
   -- Internal --
@@ -376,10 +378,7 @@ if SERVER then
     if self:InCoroutine() then
       if ply:KeyDown(IN_USE) then
         local tr = self:PossessorEyeTrace()
-        if IsValid(tr.Entity) then
-          print(tr.Entity:GetClass())
-          tr.Entity:Use(self)
-        end
+        if IsValid(tr.Entity) then tr.Entity:Use(self)end
       end
       self:DoPossessionMove(ply:DrG_Move())
       self:DoPossessionBinds(ply:DrG_Binds())
@@ -415,7 +414,24 @@ if SERVER then
     if ply:DrG_IsPossessing() and enabled then return false end
   end)
 
+  hook.Add("PlayerButtonDown", "DrG/PossessionPlayerButtonDown", function(ply, button)
+    if not ply:DrG_IsPossessing() then return end
+    local possessing = ply:DrG_Possessing()
+    if button == KEY_V then
+      local view = possessing:OnPossessionNextView(possessing:GetPossessionView())
+      if isnumber(view) then possessing:SetPossessionView(view) end
+    end
+  end)
+
 else
+
+  -- Getters --
+
+  function ENT:IsPossessedByLocalPlayer()
+    return self:GetPossessor() == LocalPlayer()
+  end
+
+  -- Hooks --
 
   function ENT:PossessionBehaviour()
     self:OnPossessionBinds(LocalPlayer():DrG_Binds())
@@ -425,9 +441,7 @@ else
     PossessionBindsTable(self, false)
   end
 
-  function ENT:IsPossessedByLocalPlayer()
-    return self:GetPossessor() == LocalPlayer()
-  end
+  -- Internal --
 
   hook.Add("CalcView", "DrG/PossessionCalcView", function(ply, _origin, angles, fov, znear, zfar)
     if not isfunction(ply.DrG_IsPossessing) or not ply:DrG_IsPossessing() then return end

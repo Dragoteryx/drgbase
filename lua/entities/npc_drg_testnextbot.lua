@@ -51,12 +51,15 @@ if SERVER then
 
   function ENT:Initialize()
     self.loco:SetDesiredSpeed(300)
-    self:AddAnimEventCycle("walk_all", {0.28, 0.78}, "Step")
-    self:AddAnimEventCycle("run_all_02", {0.28, 0.78}, "Step")
+    self:AddAnimEventCycle("walk_all", 0.28, "StepLeft")
+    self:AddAnimEventCycle("run_all_02", 0.28, "StepLeft")
+    self:AddAnimEventCycle("walk_all", 0.78, "StepRight")
+    self:AddAnimEventCycle("run_all_02", 0.78, "StepRight")
   end
 
   function ENT:OnAnimEvent(event)
-    if event == "Step" then self:EmitFootstep() end
+    print(event)
+    if event == "StepLeft" or event == "StepRight" then self:EmitFootstep() end
   end
 
 end

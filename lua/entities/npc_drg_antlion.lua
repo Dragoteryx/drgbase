@@ -24,7 +24,7 @@ ENT.AvoidEnemyRange = 0
 ENT.FollowPlayers = true
 
 -- Relationships --
-ENT.Factions = {FACTION_ANTLIONS}
+ENT.Factions = {"FACTION_ANTLIONS"}
 ENT.DefaultRelationship = D_HT
 
 -- Movements/animations --
@@ -40,7 +40,13 @@ ENT.EyeAngle = Angle(0, 0, 0)
 -- Possession --
 ENT.PossessionEnabled = true
 ENT.PossessionMove = POSSESSION_MOVE_8DIR
-ENT.PossessionViews = {{auto = true}}
+ENT.PossessionViews = {
+  {auto = true},
+  {
+    offset = Vector(7.5, 0, 10),
+    eyepos = true
+  }
+}
 
 if SERVER then
 
@@ -107,17 +113,33 @@ if SERVER then
         self:PlaySequenceAndMove("charge_end", true)
       end
     end
-  end
-
-  -- Damage --
-  function ENT:OnTakeDamage(dmg) end
-  function ENT:DoTakeDamage(dmg)
-    if dmg:IsDamageType(DMG_PHYSGUN) then
-      self:PlaySequenceAndWait("flip1")
+    if binds:IsDown("IN_JUMP") then
+      local pos = self:PossessorEyeTrace().HitPos
+      self:Jump(pos, function(self)
+        self:FaceTowards(pos)
+      end)
     end
   end
 
-  -- Path --
+  -- Misc --
+
+  function ENT:OnAnimChange(old, new)
+    local flip = self:LookupSequence("jump_glide")
+    if flip == new then
+      self:SetBodygroup(1, 1)
+    elseif flip == old then
+      self:SetBodygroup(1, 0)
+    end
+  end
+
+  function ENT:DoTakeDamage(dmg)
+    if dmg:IsDamageType(DMG_PHYSGUN) then
+      self:SetVelocity(dmg:GetAttacker():GetForward()*500 + Vector(0, 0, 300))
+      self:PlaySequenceAndWait("flip1", function(self)
+        if self:WaterLevel() >= 2 then return true end
+      end)
+    end
+  end
 
   function ENT:OnComputePath(area)
     if area:IsUnderwater() then return -1 end
@@ -162,12 +184,8 @@ if SERVER then
 
   -- Events --
 
-  function ENT:OnAnimEvent(event)
-    if event == "Test" then
-      print("=====================")
-    elseif event == "Test2" then
-      print(self:GetCycle())
-    elseif self:IsAttacking() then
+  function ENT:OnAnimEvent()
+    if self:IsAttacking() then
       if self:GetCycle() > 0.3 then
         local hit = self:Attack({
           damage = 5, range = 50, type = DMG_SLASH,

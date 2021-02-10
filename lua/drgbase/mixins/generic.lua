@@ -1,47 +1,47 @@
 return function(ENT)
 
   if isfunction(ENT.Initialize) then
-    local old_Initialize = ENT.Initialize
+    local Initialize = ENT.Initialize
     function ENT:Initialize(...)
       if self.DrG_PreInitialize then self:DrG_PreInitialize(...) end
-      local res = old_Initialize(self, ...)
+      local res = Initialize(self, ...)
       if self.DrG_PostInitialize then self:DrG_PostInitialize(...) end
       return res
     end
   end
 
   if isfunction(ENT.Think) then
-    local old_Think = ENT.Think
+    local Think = ENT.Think
     function ENT:Think(...)
       if self.DrG_PreThink then self:DrG_PreThink(...) end
-      local res = old_Think(self, ...)
+      local res = Think(self, ...)
       if self.DrG_PostThink then self:DrG_PostThink(...) end
       return res
     end
   end
 
   if isfunction(ENT.Use) then
-    local old_Use = ENT.Use
+    local Use = ENT.Use
     function ENT:Use(...)
       if self.DrG_Use then self:DrG_Use(...) end
-      return old_Use(self, ...)
+      return Use(self, ...)
     end
   end
 
   if isfunction(ENT.OnRemove) then
-    local old_OnRemove = ENT.OnRemove
+    local OnRemove = ENT.OnRemove
     function ENT:OnRemove(...)
-      local res = old_OnRemove(self, ...)
+      local res = OnRemove(self, ...)
       if self.DrG_OnRemove then self:DrG_OnRemove(...) end
       return res
     end
   end
 
   if CLIENT and isfunction(ENT.Draw) then
-    local old_Draw = ENT.Draw
+    local Draw = ENT.Draw
     function ENT:Draw(...)
       if self.DrG_PreDraw then self:DrG_PreDraw(...) end
-      local res = old_Draw(self, ...)
+      local res = Draw(self, ...)
       if self.DrG_PostDraw then self:DrG_PostDraw(...) end
       return res
     end

@@ -2,18 +2,15 @@
 
 DrG_Nextbots = DrG_Nextbots or {}
 function DrGBase.NextbotIterator(class)
-  local thr = coroutine.create(function()
-    for i = 1, #DrG_Nextbots do
-      local nb = DrG_Nextbots[i]
-      if IsValid(nb) and (
-        not isstring(class) or
-        class == nb:GetClass()
-      ) then coroutine.yield(nb) end
-    end
-  end)
+  local i = 1
   return function()
-    local _, nextbot = coroutine.resume(thr)
-    return nextbot
+    for j = i, #DrG_Nextbots do
+      local ent = DrG_Nextbots[j]
+      if not IsValid(ent) then continue end
+      if class and class ~= ent:GetClass() then continue end
+      i = j+1
+      return ent
+    end
   end
 end
 function DrGBase.GetNextbots(class)

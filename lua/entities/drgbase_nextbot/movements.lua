@@ -1,17 +1,7 @@
--- ConVars --rest
-
-local PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", "Pathfinding mode:\n"..
-  "    'custom' => DrGBase custom pathfinding, allows climbing at the cost of performance\n"..
-  "    'default' => default Garry's Mod nextbot pathfinding, more efficient than custom but dumber\n"..
-  "    'none' => disable pathfinding entirely, best performance at the cost of having nextbots running into every wall")
-local ComputeDelay = DrGBase.ConVar("drgbase_compute_delay", "0.1")
-local AvoidObstacles = DrGBase.ConVar("drgbase_avoid_obstacles", "1")
-local MultSpeed = DrGBase.ConVar("drgbase_multiplier_speed", "1")
-
 -- Getters --
 
 function ENT:GetSpeed()
-  return self:GetNW2Float("DrG/Speed", 300)/MultSpeed:GetFloat()
+  return self:GetNW2Float("DrG/Speed", 300)/DrGBase.MultSpeed:GetFloat()
 end
 
 function ENT:GetMovement(ignoreZ)
@@ -79,7 +69,7 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:SetSpeed(speed)
-    self.loco:SetDesiredSpeed(speed*MultSpeed:GetFloat())
+    self.loco:SetDesiredSpeed(speed*DrGBase.MultSpeed:GetFloat())
   end
 
   function ENT:IsRunning()
@@ -157,7 +147,7 @@ if SERVER then
   local function ShouldCompute(self, path, pos)
     if not IsValid(path) then return true end
     local segments = #path:GetAllSegments()
-    if path:GetAge() >= ComputeDelay:GetFloat()*segments then
+    if path:GetAge() >= DrGBase.ComputeDelay:GetFloat()*segments then
       return path:GetEnd():DistToSqr(pos) > path:GetGoalTolerance()^2
     else return false end
   end
@@ -172,7 +162,7 @@ if SERVER then
       else pos = pos:GetPos() end
     end
     if not istable(options) then options = {} end
-    if navmesh.IsLoaded() and PathfindingMode:GetString() ~= "none" and IsValid(self:CurrentNavArea()) then
+    if navmesh.IsLoaded() and DrGBase.PathfindingMode:GetString() ~= "none" and IsValid(self:CurrentNavArea()) then
       local path = self:GetPath()
       if isnumber(options.tolerance) then path:SetGoalTolerance(options.tolerance) end
       if isnumber(options.lookahead) then path:SetMinLookAheadDistance(options.lookahead) end
@@ -184,16 +174,6 @@ if SERVER then
       if not self.DrG_UnstuckDelay or self.DrG_UnstuckDelay < CurTime() then
         self.DrG_UnstuckDelay = CurTime() + 0.25
         local nw, ne, sw, se = CollisionHulls(self)
-        if nw.Hit and ne.Hit then
-          local tr = self:TraceLine({
-            start = self:WorldSpaceCenter(),
-            direction = self:GetForward()*50
-          })
-          if IsValid(tr.Entity) then
-            print(tr.Entity:GetClass())
-            tr.Entity:Use(self)
-          end
-        end
         if nw.Hit or ne.Hit or sw.Hit or se.Hit then
           if self:Unstuck() then self.loco:ClearStuck()
           else return "stuck" end

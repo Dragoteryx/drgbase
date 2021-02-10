@@ -27,7 +27,7 @@ end
 
 local entMETA = FindMetaTable("Entity")
 
-local old_EyePos = entMETA.EyePos
+local EyePos = entMETA.EyePos
 function entMETA:EyePos()
   if self.IsDrGNextbot then
     local eyepos = self:WorldSpaceCenter()
@@ -38,14 +38,14 @@ function entMETA:EyePos()
       self.EyeOffset.x*self:GetForward() +
       self.EyeOffset.y*self:GetRight() +
       self.EyeOffset.z*self:GetUp()
-  else return old_EyePos(self) end
+  else return EyePos(self) end
 end
 
-local old_EyeAngles = entMETA.EyeAngles
+local EyeAngles = entMETA.EyeAngles
 function entMETA:EyeAngles()
   if self.IsDrGNextbot then
     return self:GetAngles() + self.EyeAngle
-  else return old_EyeAngles(self) end
+  else return EyeAngles(self) end
 end
 
 -- Footsteps --
@@ -131,55 +131,75 @@ if SERVER then
     end
   end
 
+  -- Jump --
+
+  local function LocoJump(self)
+    local seq = self:GetSequence()
+    local cycle = self:GetCycle()
+    self.loco:Jump()
+    self:ResetSequence(seq)
+    self:SetCycle(cycle)
+  end
+  local function LocoJumpGap(self, pos)
+    local seq = self:GetSequence()
+    local cycle = self:GetCycle()
+    self.loco:JumpAcrossGap(pos, self:GetForward())
+    self:ResetSequence(seq)
+    self:SetCycle(cycle)
+  end
+
+  function ENT:LeaveGround()
+    if not self:IsOnGround() then return end
+    local height = self.loco:GetJumpHeight()
+    self.loco:SetJumpHeight(1)
+    LocoJump(self)
+    self.loco:SetJumpHeight(height)
+  end
+
+  function ENT:Jump(height, fn, ...)
+    if not self:IsOnGround() then return end
+    if isnumber(height) then
+      local oldHeight = self.loco:GetJumpHeight()
+      self.loco:SetJumpHeight(height)
+      LocoJump(self)
+      self.loco:SetJumpHeight(oldHeight)
+    elseif isvector(height) then
+      LocoJumpGap(self, height)
+    else LocoJump(self) end
+    local args, n = table.DrG_Pack(...)
+    local function Jumping(self)
+      while not self:IsOnGround() do
+        if isfunction(fn) and fn(self, table.DrG_Unpack(args, n)) then break end
+        if self:InCoroutine() and self:YieldCoroutine(true) then break
+        else coroutine.yield() end
+      end
+    end
+    if not self:InCoroutine() then
+      self:ParallelCoroutine(Jumping)
+    else Jumping(self) end
+  end
+
   -- Meta --
 
-  local old_GetVelocity = entMETA.GetVelocity
-  function entMETA:GetVelocity(...)
-    if self.IsDrGNextbot then
-      return self.loco:GetVelocity()
-    else return old_GetVelocity(self, ...) end
-  end
-
-  local old_SetVelocity = entMETA.SetVelocity
-  function entMETA:SetVelocity(velocity, ...)
-    if self.IsDrGNextbot then
-      return self.loco:SetVelocity(velocity)
-    else return old_SetVelocity(self, velocity, ...) end
-  end
-
-  local old_GetGravity = entMETA.GetGravity
-  function entMETA:GetGravity(...)
-    if self.IsDrGNextbot then
-      return self.loco:GetGravity()
-    else return old_GetGravity(self, ...) end
-  end
-
-  local old_SetGravity = entMETA.SetGravity
-  function entMETA:SetGravity(gravity, ...)
-    if self.IsDrGNextbot then
-      return self.loco:SetGravity(gravity)
-    else return old_SetGravity(self, gravity, ...) end
-  end
-
-  local old_SetPos = entMETA.SetPos
+  local SetPos = entMETA.SetPos
   function entMETA:SetPos(pos, ...)
     if self.IsDrGNextbot and
     not game.SinglePlayer() and
     IsValid(self:GetPhysicsObject())then
       self:PhysicsDestroy()
-      local res = old_SetPos(self, pos, ...)
+      local res = SetPos(self, pos, ...)
       self:PhysicsInitShadow()
       return res
-    else return old_SetPos(self, pos, ...) end
+    else return SetPos(self, pos, ...) end
   end
 
   local nextbotMETA = FindMetaTable("NextBot")
 
-  local old_BecomeRagdoll = nextbotMETA.BecomeRagdoll
+  local BecomeRagdoll = nextbotMETA.BecomeRagdoll
   function nextbotMETA:BecomeRagdoll(...)
     if self.IsDrGNextbot then
       return self:DrG_BecomeRagdoll(...) -- calls self:OnRagdoll
-    else return old_BecomeRagdoll(self, ...) end
+    else return BecomeRagdoll(self, ...) end
   end
 
   -- Hooks --

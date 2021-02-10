@@ -1,8 +1,3 @@
--- Convar --
-
-local TargetInsects = DrGBase.ConVar("drgbase_ai_target_insects", "0")
-local TargetRepMelons = DrGBase.ConVar("drgbase_ai_target_repmelons", "1")
-
 -- Getters --
 
 function ENT:Team()
@@ -60,81 +55,81 @@ if SERVER then
   end
 
   local DEFAULT_FACTIONS = {
-    ["npc_crow"] = FACTION_ANIMALS,
-    ["npc_monk"] = FACTION_REBELS,
-    ["npc_pigeon"] = FACTION_ANIMALS,
-    ["npc_seagull"] = FACTION_ANIMALS,
-    ["npc_combine_camera"] = FACTION_COMBINE,
-    ["npc_turret_ceiling"] = FACTION_COMBINE,
-    ["npc_cscanner"] = FACTION_COMBINE,
-    ["npc_combinedropship"] = FACTION_COMBINE,
-    ["npc_combinegunship"] = FACTION_COMBINE,
-    ["npc_combine_s"] = FACTION_COMBINE,
-    ["npc_hunter"] = FACTION_COMBINE,
-    ["npc_helicopter"] = FACTION_COMBINE,
-    ["npc_manhack"] = FACTION_COMBINE,
-    ["npc_metropolice"] = FACTION_COMBINE,
-    ["npc_rollermine"] = FACTION_COMBINE,
-    ["npc_clawscanner"] = FACTION_COMBINE,
-    ["npc_stalker"] = FACTION_COMBINE,
-    ["npc_strider"] = FACTION_COMBINE,
-    ["npc_turret_floor"] = FACTION_COMBINE,
-    ["npc_alyx"] = FACTION_REBELS,
-    ["npc_barney"] = FACTION_REBELS,
-    ["npc_citizen"] = FACTION_REBELS,
-    ["npc_dog"] = FACTION_REBELS,
-    ["npc_magnusson"] = FACTION_REBELS,
-    ["npc_kleiner"] = FACTION_REBELS,
-    ["npc_mossman"] = FACTION_REBELS,
-    ["npc_eli"] = FACTION_REBELS,
-    ["npc_fisherman"] = FACTION_REBELS,
-    ["npc_gman"] = FACTION_GMAN,
-    ["npc_odessa"] = FACTION_REBELS,
-    ["npc_vortigaunt"] = FACTION_REBELS,
-    ["npc_breen"] = FACTION_COMBINE,
-    ["npc_antlion"] = FACTION_ANTLIONS,
-    ["npc_antlion_grub"] = FACTION_ANTLIONS,
-    ["npc_antlionguard"] = FACTION_ANTLIONS,
-    ["npc_antlionguardian"] = FACTION_ANTLIONS,
-    ["npc_antlion_worker"] = FACTION_ANTLIONS,
-    ["npc_barnacle"] = FACTION_BARNACLES,
-    ["npc_headcrab_fast"] = FACTION_ZOMBIES,
-    ["npc_fastzombie"] = FACTION_ZOMBIES,
-    ["npc_fastzombie_torso"] = FACTION_ZOMBIES,
-    ["npc_headcrab"] = FACTION_ZOMBIES,
-    ["npc_headcrab_black"] = FACTION_ZOMBIES,
-    ["npc_poisonzombie"] = FACTION_ZOMBIES,
-    ["npc_zombie"] = FACTION_ZOMBIES,
-    ["npc_zombie_torso"] = FACTION_ZOMBIES,
-    ["npc_zombine"] = FACTION_ZOMBIES,
-    ["monster_alien_grunt"] = FACTION_XEN_ARMY,
-    ["monster_alien_slave"] = FACTION_XEN_ARMY,
-    ["monster_human_assassin"] = FACTION_HECU,
-    ["monster_babycrab"] = FACTION_ZOMBIES,
-    ["monster_bullchicken"] = FACTION_XEN_WILDLIFE,
-    ["monster_cockroach"] = FACTION_ANIMALS,
-    ["monster_alien_controller"] = FACTION_XEN_ARMY,
-    ["monster_gargantua"] = FACTION_XEN_ARMY,
-    ["monster_bigmomma"] = FACTION_ZOMBIES,
-    ["monster_human_grunt"] = FACTION_HECU,
-    ["monster_headcrab"] = FACTION_ZOMBIES,
-    ["monster_houndeye"] = FACTION_XEN_WILDLIFE,
-    ["monster_nihilanth"] = FACTION_XEN_ARMY,
-    ["monster_scientist"] = FACTION_REBELS,
-    ["monster_barney"] = FACTION_REBELS,
-    ["monster_snark"] = FACTION_XEN_WILDLIFE,
-    ["monster_tentacle"] = FACTION_XEN_WILDLIFE,
-    ["monster_zombie"] = FACTION_ZOMBIES,
-    ["npc_apc_dropship"] = FACTION_COMBINE,
-    ["npc_elite_overwatch_dropship"] = FACTION_COMBINE,
-    ["npc_civil_protection_tier1_dropship"] = FACTION_COMBINE,
-    ["npc_civil_protection_tier2_dropship"] = FACTION_COMBINE,
-    ["npc_shotgunner_dropship"] = FACTION_COMBINE,
-    ["npc_overwatch_squad_tier1_dropship"] = FACTION_COMBINE,
-    ["npc_overwatch_squad_tier2_dropship"] = FACTION_COMBINE,
-    ["npc_overwatch_squad_tier3_dropship"] = FACTION_COMBINE,
-    ["npc_random_combine_dropship"] = FACTION_COMBINE,
-    ["npc_strider_dropship"] = FACTION_COMBINE
+    ["npc_crow"] = "FACTION_ANIMALS",
+    ["npc_monk"] = "FACTION_REBELS",
+    ["npc_pigeon"] = "FACTION_ANIMALS",
+    ["npc_seagull"] = "FACTION_ANIMALS",
+    ["npc_combine_camera"] = "FACTION_COMBINE",
+    ["npc_turret_ceiling"] = "FACTION_COMBINE",
+    ["npc_cscanner"] = "FACTION_COMBINE",
+    ["npc_combinedropship"] = "FACTION_COMBINE",
+    ["npc_combinegunship"] = "FACTION_COMBINE",
+    ["npc_combine_s"] = "FACTION_COMBINE",
+    ["npc_hunter"] = "FACTION_COMBINE",
+    ["npc_helicopter"] = "FACTION_COMBINE",
+    ["npc_manhack"] = "FACTION_COMBINE",
+    ["npc_metropolice"] = "FACTION_COMBINE",
+    ["npc_rollermine"] = "FACTION_COMBINE",
+    ["npc_clawscanner"] = "FACTION_COMBINE",
+    ["npc_stalker"] = "FACTION_COMBINE",
+    ["npc_strider"] = "FACTION_COMBINE",
+    ["npc_turret_floor"] = "FACTION_COMBINE",
+    ["npc_alyx"] = "FACTION_REBELS",
+    ["npc_barney"] = "FACTION_REBELS",
+    ["npc_citizen"] = "FACTION_REBELS",
+    ["npc_dog"] = "FACTION_REBELS",
+    ["npc_magnusson"] = "FACTION_REBELS",
+    ["npc_kleiner"] = "FACTION_REBELS",
+    ["npc_mossman"] = "FACTION_REBELS",
+    ["npc_eli"] = "FACTION_REBELS",
+    ["npc_fisherman"] = "FACTION_REBELS",
+    ["npc_gman"] = "FACTION_GMAN",
+    ["npc_odessa"] = "FACTION_REBELS",
+    ["npc_vortigaunt"] = "FACTION_REBELS",
+    ["npc_breen"] = "FACTION_COMBINE",
+    ["npc_antlion"] = "FACTION_ANTLIONS",
+    ["npc_antlion_grub"] = "FACTION_ANTLIONS",
+    ["npc_antlionguard"] = "FACTION_ANTLIONS",
+    ["npc_antlionguardian"] = "FACTION_ANTLIONS",
+    ["npc_antlion_worker"] = "FACTION_ANTLIONS",
+    ["npc_barnacle"] = "FACTION_BARNACLES",
+    ["npc_headcrab_fast"] = "FACTION_ZOMBIES",
+    ["npc_fastzombie"] = "FACTION_ZOMBIES",
+    ["npc_fastzombie_torso"] = "FACTION_ZOMBIES",
+    ["npc_headcrab"] = "FACTION_ZOMBIES",
+    ["npc_headcrab_black"] = "FACTION_ZOMBIES",
+    ["npc_poisonzombie"] = "FACTION_ZOMBIES",
+    ["npc_zombie"] = "FACTION_ZOMBIES",
+    ["npc_zombie_torso"] = "FACTION_ZOMBIES",
+    ["npc_zombine"] = "FACTION_ZOMBIES",
+    ["monster_alien_grunt"] = "FACTION_XEN_ARMY",
+    ["monster_alien_slave"] = "FACTION_XEN_ARMY",
+    ["monster_human_assassin"] = "FACTION_HECU",
+    ["monster_babycrab"] = "FACTION_ZOMBIES",
+    ["monster_bullchicken"] = "FACTION_XEN_WILDLIFE",
+    ["monster_cockroach"] = "FACTION_ANIMALS",
+    ["monster_alien_controller"] = "FACTION_XEN_ARMY",
+    ["monster_gargantua"] = "FACTION_XEN_ARMY",
+    ["monster_bigmomma"] = "FACTION_ZOMBIES",
+    ["monster_human_grunt"] = "FACTION_HECU",
+    ["monster_headcrab"] = "FACTION_ZOMBIES",
+    ["monster_houndeye"] = "FACTION_XEN_WILDLIFE",
+    ["monster_nihilanth"] = "FACTION_XEN_ARMY",
+    ["monster_scientist"] = "FACTION_REBELS",
+    ["monster_barney"] = "FACTION_REBELS",
+    ["monster_snark"] = "FACTION_XEN_WILDLIFE",
+    ["monster_tentacle"] = "FACTION_XEN_WILDLIFE",
+    ["monster_zombie"] = "FACTION_ZOMBIES",
+    ["npc_apc_dropship"] = "FACTION_COMBINE",
+    ["npc_elite_overwatch_dropship"] = "FACTION_COMBINE",
+    ["npc_civil_protection_tier1_dropship"] = "FACTION_COMBINE",
+    ["npc_civil_protection_tier2_dropship"] = "FACTION_COMBINE",
+    ["npc_shotgunner_dropship"] = "FACTION_COMBINE",
+    ["npc_overwatch_squad_tier1_dropship"] = "FACTION_COMBINE",
+    ["npc_overwatch_squad_tier2_dropship"] = "FACTION_COMBINE",
+    ["npc_overwatch_squad_tier3_dropship"] = "FACTION_COMBINE",
+    ["npc_random_combine_dropship"] = "FACTION_COMBINE",
+    ["npc_strider_dropship"] = "FACTION_COMBINE"
   }
 
   -- Targetting --
@@ -145,10 +140,10 @@ if SERVER then
     ["npc_tripmine"] = false,
     ["npc_satchel"] = false,
 
-    ["replicator_melon"] = TargetRepMelons,
-    ["neo_replicator_melon"] = TargetRepMelons,
-    ["npc_antlion_grub"] = TargetInsects,
-    ["monster_cockroach"] = TargetInsects,
+    ["replicator_melon"] = DrGBase.TargetRepMelons,
+    ["neo_replicator_melon"] = DrGBase.TargetRepMelons,
+    ["npc_antlion_grub"] = DrGBase.TargetInsects,
+    ["monster_cockroach"] = DrGBase.TargetInsects,
     ["replicator_worker"] = true,
     ["replicator_queen"] = true,
     ["replicator_queen_hive"] = true
@@ -157,7 +152,7 @@ if SERVER then
     if not IsValid(ent) then return false end
     local class = ent:GetClass()
     if TARGET_EXCEPTIONS[class] ~= nil then
-      local exception = TARGET_BLACKLIST[class]
+      local exception = TARGET_EXCEPTIONS[class]
       if isbool(exception) then return expection
       else return exception:GetBool() end
     else
@@ -172,8 +167,10 @@ if SERVER then
   -- Setters --
 
   ENT.DrG_Relationships = {}
-  ENT.DrG_RelationshipCaches = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
-  ENT.DrG_RelationshipCachesDetected = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
+  ENT.DrG_RelationshipCache = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
+  ENT.DrG_RelationshipCacheDetected = {[D_LI] = {}, [D_HT] = {}, [D_FR] = {}}
+  ENT.DrG_DefinedRelationships = {}
+  ENT.DrG_IgnoredEntities = {}
 
   local function SetRelationship(self, ent, disp, prio)
     if not IsValid(ent) then return end
@@ -182,29 +179,24 @@ if SERVER then
     if old ~= disp then
       if IsCachedDisp(disp) then
         self:ListenTo(ent, disp ~= D_LI)
-        self.DrG_RelationshipCaches[D_LI][ent] = nil
-        self.DrG_RelationshipCaches[D_HT][ent] = nil
-        self.DrG_RelationshipCaches[D_FR][ent] = nil
-        self.DrG_RelationshipCaches[disp][ent] = true
-        if self.DrG_Detected[ent] then
-          self.DrG_RelationshipCachesDetected[D_LI][ent] = nil
-          self.DrG_RelationshipCachesDetected[D_HT][ent] = nil
-          self.DrG_RelationshipCachesDetected[D_FR][ent] = nil
-          self.DrG_RelationshipCachesDetected[disp][ent] = true
+        self.DrG_RelationshipCache[D_LI][ent] = nil
+        self.DrG_RelationshipCache[D_HT][ent] = nil
+        self.DrG_RelationshipCache[D_FR][ent] = nil
+        self.DrG_RelationshipCache[disp][ent] = true
+        if self.DrG_DetectState[ent] then
+          self.DrG_RelationshipCacheDetected[D_LI][ent] = nil
+          self.DrG_RelationshipCacheDetected[D_HT][ent] = nil
+          self.DrG_RelationshipCacheDetected[D_FR][ent] = nil
+          self.DrG_RelationshipCacheDetected[disp][ent] = true
         end
-        ent:CallOnRemove("DrG/RemoveFromDrGNextbot"..self:GetCreationID().."RelationshipCache", function()
-          if not IsValid(self) then return end
-          self.DrG_RelationshipCaches[disp][ent] = nil
-          self.DrG_RelationshipCachesDetected[disp][ent] = nil
-        end)
       else
         self:ListenTo(ent, false)
-        self.DrG_RelationshipCaches[D_LI][ent] = nil
-        self.DrG_RelationshipCaches[D_HT][ent] = nil
-        self.DrG_RelationshipCaches[D_FR][ent] = nil
-        self.DrG_RelationshipCachesDetected[D_LI][ent] = nil
-        self.DrG_RelationshipCachesDetected[D_HT][ent] = nil
-        self.DrG_RelationshipCachesDetected[D_FR][ent] = nil
+        self.DrG_RelationshipCache[D_LI][ent] = nil
+        self.DrG_RelationshipCache[D_HT][ent] = nil
+        self.DrG_RelationshipCache[D_FR][ent] = nil
+        self.DrG_RelationshipCacheDetected[D_LI][ent] = nil
+        self.DrG_RelationshipCacheDetected[D_HT][ent] = nil
+        self.DrG_RelationshipCacheDetected[D_FR][ent] = nil
       end
     end
     self.DrG_Relationships[ent] = {disp = disp, prio = prio}
@@ -225,8 +217,6 @@ if SERVER then
       self:UpdateEnemy()
     end
   end
-
-  ENT.DrG_DefinedRelationships = {}
 
   local function DefinedRelationshipTable(self, name)
     self.DrG_DefinedRelationships[name] = self.DrG_DefinedRelationships[name] or {}
@@ -346,15 +336,19 @@ if SERVER then
   end
 
   function ENT:GetFactionRelationship(faction)
+    if not isstring(faction) then return D_ER, 1 end
     return GetDefinedRelationship(self, "Faction", string.upper(faction))
   end
   function ENT:SetFactionRelationship(faction, disp, prio)
+    if not isstring(faction) then return end
     return SetDefinedRelationship(self, "Faction", string.upper(faction), disp, prio)
   end
   function ENT:AddFactionRelationship(faction, disp, prio)
+    if not isstring(faction) then return end
     return AddDefinedRelationship(self, "Faction", string.upper(faction), disp, prio)
   end
   function ENT:ResetFactionRelationship(faction)
+    if not isstring(faction) then return end
     return ResetDefinedRelationship(self, "Faction", string.upper(faction))
   end
 
@@ -372,8 +366,6 @@ if SERVER then
     end
   end
 
-  ENT.DrG_IgnoredEntities = {}
-
   local NPC_STATES_IGNORED = {
     [NPC_STATE_PLAYDEAD] = true,
     [NPC_STATE_DEAD] = true
@@ -381,6 +373,7 @@ if SERVER then
   function ENT:IsIgnored(ent)
     if ent:IsPlayer() and not ent:Alive() then return true end
     if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return true end
+    if ent:IsPlayer() and self:GetPossessor() == ent then return true end
     if ent:IsFlagSet(FL_NOTARGET) then return true end
     if ent.IsVJBaseSNPC and ent.VJ_NoTarget then return true end -- why the fuck
     if ent.CPTBase_NPC and ent.UseNotarget then return true end -- don't you use
@@ -519,6 +512,7 @@ if SERVER then
   -- Getters --
 
   function ENT:GetRelationship(ent, absolute)
+    if ent == self then return D_ER, 1 end
     local rel = self.DrG_Relationships[ent]
     if rel and (absolute or not self:IsIgnored(ent)) then
       return rel.disp, rel.prio
@@ -543,48 +537,50 @@ if SERVER then
 
   -- iterators
   local function EntityIterator(self, disp, detected)
-    local thr
     if disp == D_HS then
-      thr = coroutine.create(function()
-        for ent in self:EnemyIterator(detected) do coroutine.yield(ent) end
-        for ent in self:AfraidOfIterator(detected) do coroutine.yield(ent) end
-      end)
+      return util.DrG_MergeIterators({
+        self:EnemyIterator(detected),
+        self:AfraidOfIterator(detected)
+      })
     elseif IsCachedDisp(disp) then
       if detected then
-        if not self:IsOmniscient() then
-          thr = coroutine.create(function()
-            for ent in pairs(self.DrG_RelationshipCachesDetected[disp]) do
-              if not IsValid(ent) then continue end
-              if self:IsIgnored(ent) then continue end
-              coroutine.yield(ent)
-            end
-          end)
-        else return EntityIterator(self, disp) end
+        local cache = self:IsOmniscient() and
+          self.DrG_RelationshipCache[disp] or
+          self.DrG_RelationshipCacheDetected[disp]
+        return function(_, ent)
+          while true do
+            ent = next(cache, ent)
+            if not ent then return end
+            if not IsValid(ent) then continue end
+            if self:IsIgnored(ent) then continue end
+            return ent
+          end
+        end
       else
-        thr = coroutine.create(function()
-          for ent in pairs(self.DrG_RelationshipCaches[disp]) do
+        return function(_, ent)
+          while true do
+            ent = next(self.DrG_RelationshipCache[disp], ent)
+            if not ent then return end
             if not IsValid(ent) then continue end
             if isbool(detected) and self:HasDetected(ent) ~= detected then continue end
             if self:IsIgnored(ent) then continue end
-            coroutine.yield(ent)
+            return ent
           end
-        end)
+        end
       end
     else
-      thr = coroutine.create(function()
-        local entities = ents.GetAll()
-        for i = 1, #entities do
-          local ent = entities[i]
+      local i = 1
+      local entities = ents.GetAll()
+      return function()
+        for j = i, #entities do
+          local ent = entities[j]
           if not IsValid(ent) then continue end
           if isbool(detected) and self:HasDetected(ent) ~= detected then continue end
           if self:GetRelationship(ent) ~= disp then continue end
-          coroutine.yield(ent)
+          i = j+1
+          return ent
         end
-      end)
-    end
-    return function()
-      local _, res = coroutine.resume(thr)
-      return res
+      end
     end
   end
   function ENT:AllyIterator(detected)
@@ -652,26 +648,6 @@ if SERVER then
   end
   function ENT:GetClosestNeutral(detected)
     return GetClosestEntity(self, D_NU, detected)
-  end
-
-  -- number of entities left
-  local function GetNumberOfEntities(self, disp, detected)
-    return #GetEntities(self, disp, detected)
-  end
-  function ENT:GetNumberOfAllies(detected)
-    return GetNumberOfEntities(self, D_LI, detected)
-  end
-  function ENT:GetNumberOfEnemies(detected)
-    return GetNumberOfEntities(self, D_HT, detected)
-  end
-  function ENT:GetNumberOfAfraidOf(detected)
-    return GetNumberOfEntities(self, D_FR, detected)
-  end
-  function ENT:GetNumberOfHostiles(detected)
-    return GetNumberOfEntities(self, D_HS, detected)
-  end
-  function ENT:GetNumberOfNeutrals(detected)
-    return GetNumberOfEntities(self, D_NU, detected)
   end
 
   -- Hooks --
