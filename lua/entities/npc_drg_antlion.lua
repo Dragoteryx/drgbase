@@ -32,10 +32,12 @@ ENT.UseWalkframes = true
 ENT.IdleAnimation = "distractidle2"
 ENT.JumpAnimation = ACT_GLIDE
 
+-- Locomotion --
+ENT.MaxYawRate = 175
+
 -- Detection --
 ENT.EyeBone = "Antlion.Head_Bone"
 ENT.EyeOffset = Vector(7.5, 0, 5)
-ENT.EyeAngle = Angle(0, 0, 0)
 
 -- Possession --
 ENT.PossessionEnabled = true
@@ -51,7 +53,6 @@ ENT.PossessionViews = {
 if SERVER then
 
   function ENT:Initialize()
-    self.loco:SetMaxYawRate(175)
     print(#DrGBase.GetNextbots())
   end
 
@@ -124,12 +125,16 @@ if SERVER then
   -- Misc --
 
   function ENT:OnAnimChange(old, new)
-    local flip = self:LookupSequence("jump_glide")
-    if flip == new then
+    local glide = self:LookupSequence("jump_glide")
+    if glide == new then
       self:SetBodygroup(1, 1)
-    elseif flip == old then
+    elseif glide == old then
       self:SetBodygroup(1, 0)
     end
+  end
+
+  function ENT:OnLeaveGround()
+    self:PlaySequence("jump_start")
   end
 
   function ENT:DoTakeDamage(dmg)

@@ -219,7 +219,7 @@ function ENT:DrG_PreInitialize()
         coroutine.yield()
       end
     end)
-    --[[self:ParallelCoroutine(function(self)
+    self:ParallelCoroutine(function(self)
       while true do
         for ally in self:AllyIterator() do UpdateEntity(ally) end
         coroutine.yield()
@@ -247,7 +247,7 @@ function ENT:DrG_PreInitialize()
         end
         coroutine.yield()
       end
-    end)]]
+    end)
   else self:SetIK(true) end
   self:AddFlags(FL_OBJECT + FL_NPC)
   table.insert(DrG_Nextbots, self)
@@ -275,17 +275,7 @@ function ENT:DrG_PreThink(...)
     self.DrG_LastCycle = 0
     curCycle = 0
   end
-  local events = self.DrG_AnimEvents[seq]
-  if events then for cycle, eventList in pairs(events) do
-    if (curCycle > cycle and self.DrG_LastCycle <= cycle) or
-    (curCycle < self.DrG_LastCycle and curCycle >= cycle) or
-    (curCycle < self.DrG_LastCycle and self.DrG_LastCycle <= cycle) then
-      for _, event in ipairs(eventList) do
-        self:OnAnimEvent(event, -1, self:GetPos(), self:GetAngles())
-        if SERVER then self:ReactInCoroutine(self.DoAnimEvent, event, -1, self:GetPos(), self:GetAngles()) end
-      end
-    end
-  end end
+  self:DrG_PlayAnimEvents(seq, curCycle, self.DrG_LastCycle)
   self.DrG_LastCycle = curCycle
   -- misc
   if SERVER then

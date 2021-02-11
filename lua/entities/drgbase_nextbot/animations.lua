@@ -76,6 +76,20 @@ function ENT:RemoveAnimEvents(seq)
   self.DrG_AnimEvents[seq] = nil
 end
 
+function ENT:DrG_PlayAnimEvents(seq, curCycle, lastCycle)
+  local events = self.DrG_AnimEvents[seq]
+  if events then for cycle, eventList in pairs(events) do
+    if (curCycle > cycle and lastCycle <= cycle) or
+    (curCycle < lastCycle and curCycle >= cycle) or
+    (curCycle < lastCycle and lastCycle <= cycle) then
+      for _, event in ipairs(eventList) do
+        self:OnAnimEvent(event, -1, self:GetPos(), self:GetAngles())
+        if SERVER then self:ReactInCoroutine(self.DoAnimEvent, event, -1, self:GetPos(), self:GetAngles()) end
+      end
+    end
+  end end
+end
+
 if SERVER then
 
   local function RandomSequence(self, act)
@@ -140,11 +154,11 @@ if SERVER then
     ResetSequence(self, seq)
     self:SetPlaybackRate(options.rate)
     local gravity = self:GetGravity()
-    local previous = -1
+    local lastCycle = -1
     local res = nil
     while true do
       local cycle = self:GetCycle()
-      if previous >= cycle then
+      if lastCycle >= cycle then
         res = true
         break
       end
@@ -161,10 +175,10 @@ if SERVER then
       end
       if isfunction(fn) then
         if n > 0 then res = fn(self, table.DrG_Unpack(args, n))
-        else res = fn(self, cycle, previous) end
+        else res = fn(self, cycle, lastCycle) end
         if res ~= nil then break end
       end
-      previous = cycle
+      lastCycle = cycle
       if self:YieldNoUpdate(options.cancellable) then
         res = false
         break
@@ -263,6 +277,48 @@ if SERVER then
       return self:PlaySequenceAndClimb(anim, ...)
     elseif kind == ACTIVITY then
       return self:PlayActivityAndClimb(anim, ...)
+    else return false end
+  end
+
+  function ENT:PlaySequence(seq, options, fn, ...)
+    if istable(seq) then return self:PlaySequence(seq[math.random(#seq)], options, fn, ...) end
+    if isfunction(options) then return self:PlaySequence(seq, 1, options, fn, ...) end
+    if isnumber(options) then return self:PlaySequence(seq, {rate = options}, fn, ...) end
+    if isstring(seq) then seq = self:LookupSequence(seq) end
+    if not isnumber(seq) or seq == -1 then return false end
+    if not istable(options) then options = {} end
+    if not isnumber(options.rate) then options.rate = 1 end
+    local args, n = table.DrG_Pack(...)
+    local layer = self:AddGestureSequence(seq, true)
+    if layer == -1 then return false end
+    self:SetLayerPlaybackRate(layer, self:IsPossessed() and
+      options.rate/2 or
+      options.rate)
+    self:SetLayerWeight(layer, 1)
+    self:ParallelCoroutine(function(self)
+      local lastCycle = -1
+      while self:GetLayerSequence(layer) == seq do
+        local cycle = self:GetLayerCycle(layer)
+        self:DrG_PlayAnimEvents(seq, cycle, math.max(lastCycle, 0))
+        lastCycle = cycle
+        if isfunction(fn) then
+          if n > 0 then fn(self, table.DrG_Unpack(args, n))
+          else fn(self, cycle, lastCyle) end
+        end
+        coroutine.yield()
+      end
+    end)
+    return true, layer
+  end
+  function ENT:PlayActivity(act, ...)
+    return self:PlaySequence(RandomSequence(self, act), ...)
+  end
+  function ENT:PlayAnimations(anim, ...)
+    local kind = SequenceOrActivity(anim)
+    if istable(anim) or kind == SEQUENCE then
+      return self:PlaySequence(anim, ...)
+    elseif kind == ACTIVITY then
+      return self:PlayActivity(anim, ...)
     else return false end
   end
 

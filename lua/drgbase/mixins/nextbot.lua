@@ -1,103 +1,75 @@
-return function(ENT)
+local MIXIN = {}
 
-  if SERVER then
+if SERVER then
 
-    -- Damage hooks --
+  -- Damage hooks --
 
-    if isfunction(ENT.OnTraceAttack) then
-      local OnTraceAttack = ENT.OnTraceAttack
-      function ENT:OnTraceAttack(...)
-        local res = OnTraceAttack(self, ...)
-        self:DrG_OnTraceAttack(...)
-        return res
-      end
-    end
+  function MIXIN:OnTraceAttack(...)
+    local res = self.DrG_Mixin.OnTraceAttack(self, ...)
+    self:DrG_OnTraceAttack(...)
+    return res
+  end
 
-    if isfunction(ENT.OnInjured) then
-      local OnInjured = ENT.OnInjured
-      function ENT:OnInjured(...)
-        local res = OnInjured(self, ...)
-        self:DrG_OnInjured(...)
-        return res
-      end
-    end
 
-    if isfunction(ENT.OnKilled) then
-      local OnKilled = ENT.OnKilled
-      function ENT:OnKilled(...)
-        local res = OnKilled(self, ...)
-        self:DrG_OnKilled(...)
-        return res
-      end
-    end
+  function MIXIN:OnInjured(...)
+    local res = self.DrG_Mixin.OnInjured(self, ...)
+    self:DrG_OnInjured(...)
+    return res
+  end
 
-    -- Misc hooks --
 
-    if isfunction(ENT.OnLandOnGround) then
-      local OnLandOnGround = ENT.OnLandOnGround
-      function ENT:OnLandOnGround(...)
-        self:DrG_OnLandOnGround(...)
-        return OnLandOnGround(self, ...)
-      end
-    end
+  function MIXIN:OnKilled(...)
+    local res = self.DrG_Mixin.OnKilled(self, ...)
+    self:DrG_OnKilled(...)
+    return res
+  end
 
-    if isfunction(ENT.OnLeaveGround) then
-      local OnLeaveGround = ENT.OnLeaveGround
-      function ENT:OnLeaveGround(...)
-        self:DrG_OnLeaveGround(...)
-        return OnLeaveGround(self, ...)
-      end
-    end
+  -- Misc hooks --
 
-    if isfunction(ENT.OnIgnite) then
-      local OnIgnite = ENT.OnIgnite
-      function ENT:OnIgnite(...)
-        self:DrG_OnIgnite(...)
-        return OnIgnite(self, ...)
-      end
-    end
+  function MIXIN:OnLandOnGround(...)
+    self:DrG_OnLandOnGround(...)
+    return self.DrG_Mixin.OnLandOnGround(self, ...)
+  end
 
-    if isfunction(ENT.OnContact) then
-      local OnContact = ENT.OnContact
-      function ENT:OnContact(ent, ...)
-        self:DrG_OnContact(ent, ...)
-        return OnContact(self, ent, ...)
-      end
-    end
+  function MIXIN:OnLeaveGround(...)
+    self:DrG_OnLeaveGround(...)
+    return self.DrG_Mixin.OnLeaveGround(self, ...)
+  end
 
-    if isfunction(ENT.OnNavAreaChanged) then
-      local OnNavAreaChanged = ENT.OnNavAreaChanged
-      function ENT:OnNavAreaChanged(old, new, ...)
-        self:DrG_OnNavAreaChanged(old, new, ...)
-        return OnNavAreaChanged(self, old, new, ...)
-      end
-    end
+  function MIXIN:OnIgnite(...)
+    self:DrG_OnIgnite(...)
+    return self.DrG_Mixin.OnIgnite(self, ...)
+  end
 
-    -- HandleAnimEvent --
+  function MIXIN:OnContact(ent, ...)
+    self:DrG_OnContact(ent, ...)
+    return self.DrG_Mixin.OnContact(self, ent, ...)
+  end
 
-    if isfunction(ENT.HandleAnimEvent) then
-      local HandleAnimEvent = ENT.HandleAnimEvent
-      function ENT:HandleAnimEvent(event, time, cycle, type, options)
-        local res = self:OnAnimEvent(options, event, self:GetPos(), self:GetAngles(), time)
-        self:ReactInCoroutine(self.DoAnimEvent, options, event, self:GetPos(), self:GetAngles(), time)
-        local res2 = HandleAnimEvent(self, event, time, cycle, type, options)
-        if res == true or res2 == true then return true end
-      end
-    end
+  function MIXIN:OnNavAreaChanged(old, new, ...)
+    self:DrG_OnNavAreaChanged(old, new, ...)
+    return self.DrG_Mixin.OnNavAreaChanged(self, old, new, ...)
+  end
 
-  else
+  -- HandleAnimEvent --
 
-    -- FireAnimationEvent --
+  function MIXIN:HandleAnimEvent(event, time, cycle, type, options)
+    local res = self:OnAnimEvent(options, event, self:GetPos(), self:GetAngles(), time)
+    self:ReactInCoroutine(self.DoAnimEvent, options, event, self:GetPos(), self:GetAngles(), time)
+    local res2 = self.DrG_Mixin.HandleAnimEvent(self, event, time, cycle, type, options)
+    if res == true or res2 == true then return true end
+  end
 
-    if isfunction(ENT.FireAnimationEvent) then
-      local FireAnimationEvent = ENT.FireAnimationEvent
-      function ENT:FireAnimationEvent(pos, angle, event, name)
-        local res = self:OnAnimEvent(name, event, pos, angle, CurTime())
-        local res2 = FireAnimationEvent(self, pos, angle, event, name)
-        if res == true or res2 == true then return true end
-      end
-    end
+else
 
+  -- FireAnimationEvent --
+
+  function MIXIN:FireAnimationEvent(pos, angle, event, name)
+    local res = self:OnAnimEvent(name, event, pos, angle, CurTime())
+    local res2 = self.DrG_Mixin.FireAnimationEvent(self, pos, angle, event, name)
+    if res == true or res2 == true then return true end
   end
 
 end
+
+return MIXIN
