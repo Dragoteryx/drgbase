@@ -322,50 +322,6 @@ if SERVER then
     return self.DrG_LuminosityValue or 1
   end
 
-  -- Factions --
-
-  local function InitFactions(ply)
-    ply.DrG_Factions =ply.DrG_Factions or {}
-  end
-
-  function plyMETA:DrG_JoinFaction(faction)
-    InitFactions(self)
-    if self:DrG_IsInFaction(faction) then return end
-    self.DrG_Factions[string.upper(faction)] = true
-    for i, nextbot in ipairs(DrGBase.GetNextbots()) do
-      nextbot:UpdateRelationshipWith(self)
-    end
-  end
-  function plyMETA:DrG_LeaveFaction(faction)
-    InitFactions(self)
-    if not self:DrG_IsInFaction(faction) then return end
-    self.DrG_Factions[string.upper(faction)] = false
-    for i, nextbot in ipairs(DrGBase.GetNextbots()) do
-      nextbot:UpdateRelationshipWith(self)
-    end
-  end
-  function plyMETA:DrG_IsInFaction(faction)
-    InitFactions(self)
-    return self.DrG_Factions[string.upper(faction)] or false
-  end
-  function plyMETA:DrG_GetFactions()
-    InitFactions(self)
-    local factions = {}
-    for faction, joined in pairs(self.DrG_Factions) do
-      if joined then table.insert(factions, faction) end
-    end
-    return factions
-  end
-  function plyMETA:DrG_JoinFactions(factions)
-    for _, faction in ipairs(factions) do self:DrG_JoinFaction(faction) end
-  end
-  function plyMETA:DrG_LeaveFactions(factions)
-    for _, faction in ipairs(factions) do self:DrG_LeaveFaction(faction) end
-  end
-  function plyMETA:DrG_LeaveAllFactions()
-    self:DrG_LeaveFactions(self:DrG_GetFactions())
-  end
-
   -- Misc --
 
   function plyMETA:DrG_Immobilize()

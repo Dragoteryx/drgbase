@@ -99,6 +99,6 @@ local locoMETA = FindMetaTable("CLuaLocomotion")
 local SetDesiredSpeed = locoMETA.SetDesiredSpeed
 function locoMETA:SetDesiredSpeed(speed, ...)
   local nextbot = self:GetNextBot()
-  if nextbot.IsDrGNextbot then nextbot:SetNW2Float("DrG/Speed", speed) end
+  if nextbot.IsDrGNextbot then nextbot:SetNW2Float("DrG/Speed", speed/DrGBase.MultSpeed:GetFloat()/nextbot:GetModelScale()) end
   return SetDesiredSpeed(self, speed, ...)
 end

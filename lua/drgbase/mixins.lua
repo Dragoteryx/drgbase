@@ -22,11 +22,17 @@ end)
 
 -- Built-in --
 
-local GenericMixin = DrGBase.IncludeFile("drgbase/mixins/generic.lua")
-local NextbotMixin = DrGBase.IncludeFile("drgbase/mixins/nextbot.lua")
-local ProjectileMixin = DrGBase.IncludeFile("drgbase/mixins/projectile.lua")
-local SpawnerMixin = DrGBase.IncludeFile("drgbase/mixins/spawner.lua")
-local WeaponMixin = DrGBase.IncludeFile("drgbase/mixins/weapon.lua")
+local GenericMixin = DrGBase.IncludeFile("mixins/generic.lua")
+local NextbotMixin = DrGBase.IncludeFile("mixins/nextbot.lua")
+local ProjectileMixin = DrGBase.IncludeFile("mixins/projectile.lua")
+local SpawnerMixin = DrGBase.IncludeFile("mixins/spawner.lua")
+local WeaponMixin = DrGBase.IncludeFile("mixins/weapon.lua")
 
 DrGBase.ApplyMixin("drgbase_nextbot", GenericMixin)
 DrGBase.ApplyMixin("drgbase_nextbot", NextbotMixin)
+
+DrGBase.ApplyMixin("drgbase_projectile", GenericMixin)
+DrGBase.ApplyMixin("drgbase_projectile", ProjectileMixin)
+
+DrGBase.ApplyMixin("drgbase_spawner", GenericMixin)
+DrGBase.ApplyMixin("drgbase_spawner", SpawnerMixin)

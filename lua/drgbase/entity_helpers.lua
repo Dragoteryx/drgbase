@@ -72,16 +72,6 @@ function ENT:GetCooldown(name)
   else return 0 end
 end
 
---[[function ENT:GetScale()
-  return self:GetModelScale()
-end
-function ENT:SetScale(scale)
-  return self:SetModelScale(scale)
-end
-function ENT:Scale(scale)
-  return self:SetModelScale(self:GetModelScale()*scale)
-end]]
-
 if SERVER then
 
   -- Misc --

@@ -76,19 +76,18 @@ if SERVER then
       return function()
         for j = i, #entities do
           if not IsValid(ent) then continue end
-          i = j
+          i = j+1
           return ent, DETECT_STATE_DETECTED
         end
       end
     else
       return function(_, ent)
         while true do
-          local state
-          ent, state = next(self.DrG_DetectState, ent)
+          ent, entState = next(self.DrG_DetectState, ent)
           if not ent then return end
           if not IsValid(ent) then continue end
           if state and entState ~= state then continue end
-          return ent, state
+          return ent, entState
         end
       end
     end
@@ -103,7 +102,7 @@ if SERVER then
 
   -- hooks
 
-  function ENT:OnUpdateDetectState(ent, state, lastUpdate)
+  function ENT:OnUpdateDetectState(_ent, state, lastUpdate)
     if state == DETECT_STATE_DETECTED and lastUpdate > 10 then
       return DETECT_STATE_SEARCHING
     end

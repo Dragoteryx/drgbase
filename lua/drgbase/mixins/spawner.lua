@@ -1,3 +1,3 @@
-return function(ENT)
+local MIXIN = {}
 
-end
+return MIXIN

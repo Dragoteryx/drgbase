@@ -25,6 +25,10 @@ function ENT:Length()
   return bound1:Distance(bound2)
 end
 
+function ENT:ScaleModel(mult, delta)
+  self:SetModelScale(self:GetModelScale()*mult, delta)
+end
+
 local entMETA = FindMetaTable("Entity")
 
 local EyePos = entMETA.EyePos
@@ -111,6 +115,7 @@ if SERVER then
     while CurTime() < delay do
       if self:HasEnemy() then return false end
       if self:IsPossessed() then return false end
+      if self:IsAIDisabled() then return false end
       if self:YieldCoroutine(true) then return false end
     end
     return true

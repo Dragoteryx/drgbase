@@ -1,20 +1,3 @@
--- ConVars --
-
-function DrGBase.ConVar(name, value, ...)
-  return CreateConVar(name, value, {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}, ...)
-end
-function DrGBase.ClientConVar(name, value, ...)
-  return CreateClientConVar(name, value, true, false, ...)
-end
-function DrGBase.SharedClientConVar(name, value, ...)
-  return CreateClientConVar(name, value, true, true, ...)
-end
-
-DrGBase.EnableDebug = DrGBase.ConVar("drgbase_debug", "0")
-function DrGBase.DebugEnabled()
-  return GetConVar("developer"):GetBool() and DrGBase.EnableDebug:GetBool()
-end
-
 -- Misc --
 
 local RANGE_MELEE = {

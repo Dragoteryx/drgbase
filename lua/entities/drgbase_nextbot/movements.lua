@@ -1,7 +1,7 @@
 -- Getters --
 
 function ENT:GetSpeed()
-  return self:GetNW2Float("DrG/Speed", 300)/DrGBase.MultSpeed:GetFloat()
+  return self:GetNW2Float("DrG/Speed", 300)
 end
 
 function ENT:GetMovement(ignoreZ)
@@ -69,7 +69,7 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:SetSpeed(speed)
-    self.loco:SetDesiredSpeed(speed*DrGBase.MultSpeed:GetFloat())
+    self.loco:SetDesiredSpeed(speed*DrGBase.MultSpeed:GetFloat()*self:GetModelScale())
   end
 
   function ENT:IsRunning()
@@ -297,7 +297,7 @@ if SERVER then
       if not self:IsOnGround() then
         local ok, vec = self:GetSequenceMovement(self:GetSequence(), 0, 1)
         if ok then speed = vec:Length()/self:SequenceDuration() end
-      else speed = self:GetSequenceGroundSpeed(self:GetSequence()) end
+      else speed = self:GetSequenceGroundSpeed(self:GetSequence())/self:GetModelScale() end
       if not isnumber(speed) or speed <= 0 then speed = 1 end
     end
     self:SetSpeed(speed)

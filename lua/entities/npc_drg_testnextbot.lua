@@ -62,10 +62,10 @@ if SERVER then
 
   function ENT:Initialize()
     self:SetPlayersRelationship(D_HT)
-    self:AddAnimEventCycle("walk_all", 0.28, "StepLeft")
-    self:AddAnimEventCycle("run_all_02", 0.28, "StepLeft")
-    self:AddAnimEventCycle("walk_all", 0.78, "StepRight")
-    self:AddAnimEventCycle("run_all_02", 0.78, "StepRight")
+    self:AddAnimEventCycle("walk_all", 0.28, "drg.footstep")
+    self:AddAnimEventCycle("run_all_02", 0.28, "drg.footstep")
+    self:AddAnimEventCycle("walk_all", 0.78, "drg.footstep")
+    self:AddAnimEventCycle("run_all_02", 0.78, "drg.footstep")
   end
 
   function ENT:Use()
@@ -77,10 +77,6 @@ if SERVER then
     if binds:WasPressed("IN_ATTACK") then
       print(self:PlaySequence("gesture_wave"))
     end
-  end
-
-  function ENT:OnAnimEvent(event)
-    if event == "StepLeft" or event == "StepRight" then self:EmitFootstep() end
   end
 
 end

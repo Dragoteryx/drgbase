@@ -82,12 +82,18 @@ function ENT:DrG_PlayAnimEvents(seq, curCycle, lastCycle)
     if (curCycle > cycle and lastCycle <= cycle) or
     (curCycle < lastCycle and curCycle >= cycle) or
     (curCycle < lastCycle and lastCycle <= cycle) then
+      local now = CurTime()
       for _, event in ipairs(eventList) do
-        self:OnAnimEvent(event, -1, self:GetPos(), self:GetAngles())
-        if SERVER then self:ReactInCoroutine(self.DoAnimEvent, event, -1, self:GetPos(), self:GetAngles()) end
+        local res = self:OnAnimEvent(event, -1, self:GetPos(), self:GetAngles(), now)
+        if SERVER then self:ReactInCoroutine(self.DoAnimEvent, event, -1, self:GetPos(), self:GetAngles(), now) end
+        if not res then self:DrG_BuiltInEvents(event) end
       end
     end
   end end
+end
+
+function ENT:DrG_BuiltInEvents(event)
+  if event == "drg.footstep" then self:EmitFootstep() end
 end
 
 if SERVER then
@@ -212,9 +218,10 @@ if SERVER then
     if not isbool(options.collide) then options.collide = false end
     local args, n = table.DrG_Pack(...)
     local pos = self:GetPos()
-    local res = self:PlaySequenceAndWait(seq, options, function(self, cycle, previous)
-      local ok, vec, angles = self:GetSequenceMovement(seq, previous == -1 and 0 or previous, cycle)
+    local res = self:PlaySequenceAndWait(seq, options, function(self, cycle, lastCycle)
+      local ok, vec, angles = self:GetSequenceMovement(seq, lastCycle == -1 and 0 or lastCycle, cycle)
       if ok then
+        vec = vec*self:GetModelScale()
         if isnumber(options.multiply) or isvector(options.multiply) then vec = vec*options.multiply end
         self:SetAngles(self:LocalToWorldAngles(angles))
         vec:Rotate(self:LocalToWorldAngles(angles))
@@ -250,11 +257,26 @@ if SERVER then
     else return false end
   end
 
-  function ENT:PlaySequenceAndClimb(seq, options, fn, ...)
+  function ENT:PlaySequenceAndClimb(seq, options, ...)
     if isnumber(options) then return self:PlaySequenceAndClimb(seq, {height = options}, fn, ...) end
     if not istable(options) or not isnumber(options.height) then return false end
     if istable(seq) then
-
+      local best = nil
+      local height = nil
+      for i = 1, #seq do
+        local se = seq[i]
+        if isstring(se) then se = self:LookupSequence(se) end
+        if not isnumber(se) or se == -1 then continue end
+        local ok, vec = self:GetSequenceMovement(se, 0, 1)
+        if not ok or vec.z <= 0 then continue end
+        local seHeight = vec.z*self:GetModelScale()
+        if not best or math.abs(options.height - height) > math.abs(options.height - seHeight) then
+          best = se
+          height = seHeight
+        end
+      end
+      if not best then return false end
+      return self:PlaySequenceAndClimb(best, options, ...)
     else
       if isstring(seq) then seq = self:LookupSequence(seq) end
       if not isnumber(seq) or seq == -1 then return false end
@@ -262,10 +284,7 @@ if SERVER then
       if not ok then return false end
       options.absolute = true
       options.multiply = Vector(1, 1, options.height/vec.z/self:GetModelScale())
-      return self:PlaySequenceAndMove(seq, options, function(self, ...)
-        if not self:TraceHull(self:GetForward()*self.LedgeDetectionDistance*2).Hit then return false end
-        if isfunction(fn) then return fn(self, ...) end
-      end, ...)
+      return self:PlaySequenceAndMove(seq, options, ...)
     end
   end
   function ENT:PlayActivityAndClimb(act, ...)
@@ -426,7 +445,7 @@ if SERVER then
             local speed = velocity:Length()
             local ok, vec = self:GetSequenceMovement(self:GetSequence(), 0, 1)
             if not ok then return end
-            local seqspeed = vec:Length()/self:SequenceDuration()
+            local seqspeed = (vec:Length()/self:SequenceDuration())*self:GetModelScale()
             if seqspeed ~= 0 then self:SetPlaybackRate(speed/seqspeed) end
           end
         end

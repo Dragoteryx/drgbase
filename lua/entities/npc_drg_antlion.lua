@@ -6,7 +6,7 @@ ENT.PrintName = "Antlion"
 ENT.Category = "DrGBase"
 ENT.Models = {"models/Antlion.mdl"}
 ENT.Skins = {0, 1, 2, 3}
-ENT.CollisionBounds = Vector(20, 20, 60)
+ENT.CollisionBounds = Vector(25, 25, 60)
 ENT.BloodColor = BLOOD_COLOR_YELLOW
 ENT.RagdollOnDeath = true
 
@@ -54,6 +54,10 @@ if SERVER then
 
   function ENT:Initialize()
     print(#DrGBase.GetNextbots())
+  end
+
+  function ENT:DoUse()
+    self:PlaySequenceAndMove("attack6", true)
   end
 
   -- AI --
@@ -115,9 +119,9 @@ if SERVER then
       end
     end
     if binds:IsDown("IN_JUMP") then
-      local pos = self:PossessorEyeTrace().HitPos
+      local pos = self:PossessorEyePos() + self:PossessorEyeNormal()*500
       self:Jump(pos, function(self)
-        self:FaceTowards(pos)
+        self:FaceTowards(self:GetPos() + self:GetVelocity())
       end)
     end
   end
@@ -192,11 +196,11 @@ if SERVER then
   function ENT:OnAnimEvent()
     if self:IsAttacking() then
       if self:GetCycle() > 0.3 then
-        local hit = self:Attack({
+        --[[local hit = self:Attack({
           damage = 5, range = 50, type = DMG_SLASH,
           viewpunch = Angle(10, 0, 0)
         })
-        if #hit > 0 then self:EmitSound("NPC_Antlion.MeleeAttack") end
+        if #hit > 0 then self:EmitSound("NPC_Antlion.MeleeAttack") end]]
       else self:EmitSound("NPC_Antlion.MeleeAttackSingle") end
     elseif self:IsOnGround() then
       self:EmitSound("NPC_Antlion.Footstep")

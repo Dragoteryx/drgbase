@@ -154,15 +154,10 @@ if SERVER then
     "ENT:?(attack, fn)",
     function(self, attack, fn)
       if not istable(attack) then attack = {} end
-      if isnumber(attack.delay) or isfunction(fn) then
-        self:Timer(isnumber(attack.delay) and attack.delay or 0, function(self)
-          local hit = self:Attack(attack)
-          if isfunction(fn) then fn(self, hit) end
-        end)
-      else
-        -- attack code
-        return {}
-      end
+      self:Timer(isnumber(attack.delay) and attack.delay or 0, function(self)
+        local hit = {}
+        if isfunction(fn) then fn(self, hit) end
+      end)
     end)
 
   ENT.Wait = DrGBase.Deprecated(
@@ -170,6 +165,33 @@ if SERVER then
     "ENT:Idle(duration)",
     function(self, duration)
       return self:Idle(duration)
+    end)
+
+  ENT.GetScale = DrGBase.Deprecated(
+    "ENT:GetScale()",
+    "ENT:GetModelScale()",
+    function(self)
+      return self:GetModelScale()
+    end)
+
+  ENT.SetScale = DrGBase.Deprecated(
+    "ENT:SetScale(scale, deltaTime)",
+    "ENT:SetModelScale(scale, deltaTime)",
+    function(self, scale, deltaTime)
+      return self:SetModelScale(scale, deltaTime)
+    end)
+
+  ENT.Scale = DrGBase.Deprecated(
+    "ENT:Scale(scale, deltaTime)",
+    "ENT:ScaleModel(scale, deltaTime)",
+    function(self, scale, deltaTime)
+      return self:ScaleModel(scale, deltaTime)
+    end)
+
+  ENT.SequenceEvent = DrGBase.Deprecated(
+    "ENT:SequenceEvent(sequence, cycle, fn)",
+    "ENT:AddAnimEventCycle(sequence, cycle, event)",
+    function()
     end)
 
 end

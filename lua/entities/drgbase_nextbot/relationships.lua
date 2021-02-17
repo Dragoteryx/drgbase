@@ -48,89 +48,11 @@ if SERVER then
   end
   local function CheckPrio(prio)
     if not isnumber(prio) or prio ~= prio then return 1
-    else return math.Clamp(prio, 1, math.huge) end
+    else return math.Clamp(prio, 0.01, math.huge) end
   end
   local function CheckDispPrio(disp, prio)
     return CheckDisp(disp), CheckPrio(prio)
   end
-
-  local DEFAULT_FACTIONS = {
-    ["npc_crow"] = "FACTION_ANIMALS",
-    ["npc_monk"] = "FACTION_REBELS",
-    ["npc_pigeon"] = "FACTION_ANIMALS",
-    ["npc_seagull"] = "FACTION_ANIMALS",
-    ["npc_combine_camera"] = "FACTION_COMBINE",
-    ["npc_turret_ceiling"] = "FACTION_COMBINE",
-    ["npc_cscanner"] = "FACTION_COMBINE",
-    ["npc_combinedropship"] = "FACTION_COMBINE",
-    ["npc_combinegunship"] = "FACTION_COMBINE",
-    ["npc_combine_s"] = "FACTION_COMBINE",
-    ["npc_hunter"] = "FACTION_COMBINE",
-    ["npc_helicopter"] = "FACTION_COMBINE",
-    ["npc_manhack"] = "FACTION_COMBINE",
-    ["npc_metropolice"] = "FACTION_COMBINE",
-    ["npc_rollermine"] = "FACTION_COMBINE",
-    ["npc_clawscanner"] = "FACTION_COMBINE",
-    ["npc_stalker"] = "FACTION_COMBINE",
-    ["npc_strider"] = "FACTION_COMBINE",
-    ["npc_turret_floor"] = "FACTION_COMBINE",
-    ["npc_alyx"] = "FACTION_REBELS",
-    ["npc_barney"] = "FACTION_REBELS",
-    ["npc_citizen"] = "FACTION_REBELS",
-    ["npc_dog"] = "FACTION_REBELS",
-    ["npc_magnusson"] = "FACTION_REBELS",
-    ["npc_kleiner"] = "FACTION_REBELS",
-    ["npc_mossman"] = "FACTION_REBELS",
-    ["npc_eli"] = "FACTION_REBELS",
-    ["npc_fisherman"] = "FACTION_REBELS",
-    ["npc_gman"] = "FACTION_GMAN",
-    ["npc_odessa"] = "FACTION_REBELS",
-    ["npc_vortigaunt"] = "FACTION_REBELS",
-    ["npc_breen"] = "FACTION_COMBINE",
-    ["npc_antlion"] = "FACTION_ANTLIONS",
-    ["npc_antlion_grub"] = "FACTION_ANTLIONS",
-    ["npc_antlionguard"] = "FACTION_ANTLIONS",
-    ["npc_antlionguardian"] = "FACTION_ANTLIONS",
-    ["npc_antlion_worker"] = "FACTION_ANTLIONS",
-    ["npc_barnacle"] = "FACTION_BARNACLES",
-    ["npc_headcrab_fast"] = "FACTION_ZOMBIES",
-    ["npc_fastzombie"] = "FACTION_ZOMBIES",
-    ["npc_fastzombie_torso"] = "FACTION_ZOMBIES",
-    ["npc_headcrab"] = "FACTION_ZOMBIES",
-    ["npc_headcrab_black"] = "FACTION_ZOMBIES",
-    ["npc_poisonzombie"] = "FACTION_ZOMBIES",
-    ["npc_zombie"] = "FACTION_ZOMBIES",
-    ["npc_zombie_torso"] = "FACTION_ZOMBIES",
-    ["npc_zombine"] = "FACTION_ZOMBIES",
-    ["monster_alien_grunt"] = "FACTION_XEN_ARMY",
-    ["monster_alien_slave"] = "FACTION_XEN_ARMY",
-    ["monster_human_assassin"] = "FACTION_HECU",
-    ["monster_babycrab"] = "FACTION_ZOMBIES",
-    ["monster_bullchicken"] = "FACTION_XEN_WILDLIFE",
-    ["monster_cockroach"] = "FACTION_ANIMALS",
-    ["monster_alien_controller"] = "FACTION_XEN_ARMY",
-    ["monster_gargantua"] = "FACTION_XEN_ARMY",
-    ["monster_bigmomma"] = "FACTION_ZOMBIES",
-    ["monster_human_grunt"] = "FACTION_HECU",
-    ["monster_headcrab"] = "FACTION_ZOMBIES",
-    ["monster_houndeye"] = "FACTION_XEN_WILDLIFE",
-    ["monster_nihilanth"] = "FACTION_XEN_ARMY",
-    ["monster_scientist"] = "FACTION_REBELS",
-    ["monster_barney"] = "FACTION_REBELS",
-    ["monster_snark"] = "FACTION_XEN_WILDLIFE",
-    ["monster_tentacle"] = "FACTION_XEN_WILDLIFE",
-    ["monster_zombie"] = "FACTION_ZOMBIES",
-    ["npc_apc_dropship"] = "FACTION_COMBINE",
-    ["npc_elite_overwatch_dropship"] = "FACTION_COMBINE",
-    ["npc_civil_protection_tier1_dropship"] = "FACTION_COMBINE",
-    ["npc_civil_protection_tier2_dropship"] = "FACTION_COMBINE",
-    ["npc_shotgunner_dropship"] = "FACTION_COMBINE",
-    ["npc_overwatch_squad_tier1_dropship"] = "FACTION_COMBINE",
-    ["npc_overwatch_squad_tier2_dropship"] = "FACTION_COMBINE",
-    ["npc_overwatch_squad_tier3_dropship"] = "FACTION_COMBINE",
-    ["npc_random_combine_dropship"] = "FACTION_COMBINE",
-    ["npc_strider_dropship"] = "FACTION_COMBINE"
-  }
 
   -- Targetting --
 
@@ -292,19 +214,6 @@ if SERVER then
     return self:ResetClassRelationship(self:GetClass())
   end
 
-  function ENT:GetPlayersRelationship()
-    return self:GetClassRelationship("player")
-  end
-  function ENT:SetPlayersRelationship(disp, prio)
-    return self:SetClassRelationship("player", disp, prio)
-  end
-  function ENT:AddPlayersRelationship(disp, prio)
-    return self:AddClassRelationship("player", disp, prio)
-  end
-  function ENT:ResetPlayersRelationship()
-    return self:ResetClassRelationship("player")
-  end
-
   function ENT:GetModelRelationship(model)
     if not isstring(model) then return D_ER, 1 end
     return GetDefinedRelationship(self, "Model", string.lower(model))
@@ -352,6 +261,53 @@ if SERVER then
     return ResetDefinedRelationship(self, "Faction", string.upper(faction))
   end
 
+  function ENT:GetPlayersRelationship()
+    return self:GetFactionRelationship("FACTION_PLAYERS")
+  end
+  function ENT:SetPlayersRelationship(disp, prio)
+    return self:SetFactionRelationship("FACTION_PLAYERS", disp, prio)
+  end
+  function ENT:AddPlayersRelationship(disp, prio)
+    return self:AddFactionRelationship("FACTION_PLAYERS", disp, prio)
+  end
+  function ENT:ResetPlayersRelationship()
+    return self:ResetFactionRelationship("FACTION_PLAYERS")
+  end
+
+  -- Factions & Teams --
+
+  function ENT:SetTeam(team)
+    local current = self:Team()
+    self:SetNW2Int("DrG/Team", tonumber(team))
+    if tonumber(team) ~= current then self:UpdateRelationships() end
+  end
+
+  function ENT:JoinFaction(faction)
+    return DrGBase.JoinFaction(self, faction)
+  end
+  function ENT:JoinFactions(factions)
+    return DrGBase.JoinFactions(self, factions)
+  end
+
+  function ENT:LeaveFaction(faction)
+    return DrGBase.LeaveFaction(self, faction)
+  end
+  function ENT:LeaveFactions(factions)
+    return DrGBase.LeaveFactions(self, factions)
+  end
+  function ENT:LeaveAllFactions()
+    return DrGBase.LeaveAllFactions(self)
+  end
+
+  function ENT:IsInFaction(faction)
+    return DrGBase.IsInFaction(self, faction)
+  end
+  function ENT:GetFactions()
+    return DrGBase.GetFactions(self)
+  end
+
+  -- Ignore & Frightening --
+
   function ENT:IsFrightening()
     return tobool(self.Frightening)
   end
@@ -396,58 +352,6 @@ if SERVER then
     else self:RemoveFlags(FL_NOTARGET) end
   end
 
-  -- Factions & Teams --
-
-  function ENT:SetTeam(team)
-    local current = self:Team()
-    self:SetNW2Int("DrG/Team", tonumber(team))
-    if tonumber(team) ~= current then self:UpdateRelationships() end
-  end
-
-  ENT.DrG_Factions = {}
-
-  function ENT:JoinFaction(faction)
-    if self:IsInFaction(faction) then return end
-    self.DrG_Factions[string.upper(faction)] = true
-    self:AddFactionRelationship(faction, D_LI, 1)
-    for nextbot in DrGBase.NextbotIterator() do
-      if nextbot == self then continue end
-      nextbot:UpdateRelationshipWith(self)
-    end
-  end
-  function ENT:JoinFactions(factions)
-    for i = 1, #factions do self:JoinFaction(factions[i]) end
-  end
-
-  function ENT:LeaveFaction(faction)
-    if not self:IsInFaction(faction) then return end
-    self.DrG_Factions[string.upper(faction)] = nil
-    local disp, prio = self:GetFactionRelationship(faction)
-    if disp == D_LI and prio == 1 then self:ResetFactionRelationship(faction) end
-    for nextbot in DrGBase.NextbotIterator() do
-      if nextbot == self then continue end
-      nextbot:UpdateRelationshipWith(self)
-    end
-  end
-  function ENT:LeaveFactions(factions)
-    for i = 1, #factions do self:LeaveFaction(factions[i]) end
-  end
-  function ENT:LeaveAllFactions()
-    return self:LeaveFactions(self:GetFactions())
-  end
-
-  function ENT:IsInFaction(faction)
-    return self.DrG_Factions[string.upper(faction)] or false
-  end
-  function ENT:GetFactions()
-    local factions = {}
-    for faction, joined in pairs(self.DrG_Factions) do
-      if not joined then return end
-      table.insert(factions, faction)
-    end
-    return factions
-  end
-
   -- Update --
 
   hook.Add("OnEntityCreated", "DrG/UpdateRelationshipWithNew", function(ent)
@@ -486,13 +390,8 @@ if SERVER then
     })}
     for faction, rel in pairs(DefinedRelationshipTable(self, "Faction")) do
       if rel.disp == D_ER or rel.prio < relationships[1].prio then continue end
-      local def = DEFAULT_FACTIONS[ent:GetClass()]
-      if def == faction then
+      if DrGBase.IsInFaction(ent, faction) then
         table.insert(relationships, rel)
-      elseif ent:IsPlayer() then
-        if ent:DrG_IsInFaction(faction) then table.insert(relationships, rel) end
-      elseif ent.IsDrGNextbot then
-        if ent:IsInFaction(faction) then table.insert(relationships, rel) end
       elseif ent.IsVJBaseSNPC then
         for i = 1, #ent.VJ_NPC_Class do
           if string.upper(ent.VJ_NPC_Class[i]) == faction then

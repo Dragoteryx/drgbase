@@ -1,7 +1,7 @@
 -- Getters --
 
 function ENT:IsAIDisabled()
-  return GetConVar("ai_disabled"):GetBool() or self:GetNW2Bool("DrG/AIDisabled") or (SERVER and not self:IsInWorld()) or self:IsDormant()
+  return GetConVar("ai_disabled"):GetBool() or self:GetNW2Bool("DrG/AIDisabled")
 end
 
 if SERVER then
@@ -36,7 +36,6 @@ if SERVER then
   -- roam
 
   function ENT:RoamTo(...)
-    if not DrGBase.EnableRoam:GetBool() then return false end
     local args, n = table.DrG_Pack(...)
     if n == 0 then return false end
     for i = 1, n do
@@ -44,14 +43,12 @@ if SERVER then
       local res
       while true do
         if not DrGBase.EnableRoam:GetBool() then return false end
-        if self:HasEnemy() then return false end
+        if self:IsAIDisabled() then return false end
         if self:IsPossessed() then return false end
-        local now = CurTime()
+        if self:HasEnemy() then return false end
         res = self:DoRoam(pos)
-        if isbool(res) then break
-        elseif CurTime() == now then
-          self:YieldCoroutine(true)
-        end
+        if isbool(res) then break end
+        self:YieldCoroutine(true)
       end
       if res then self:DoRoamReached(pos)
       else self:DoRoamUnreachable(pos) end
@@ -60,7 +57,7 @@ if SERVER then
   end
   function ENT:RoamAtRandom(min, max)
     if not DrGBase.EnableRoam:GetBool() then return false end
-    if not isnumber(min) then min = 1500 max = nil end
+    if not isnumber(min) then min, max = 1500, nil end
     return self:RoamTo(self:RandomPos(min, max))
   end
 

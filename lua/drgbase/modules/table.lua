@@ -11,18 +11,6 @@ function table.DrG_Unpack(tbl, size, i)
   elseif i == size then return tbl[i] end
 end
 
--- special tables
-
-function table.DrG_Default(default, tbl)
-  return setmetatable(istable(tbl) and tbl or {}, {
-    __index = function() return default end
-  })
-end
-
-function table.DrG_Weak(tbl)
-  return setmetatable(istable(tbl) and tbl or {}, {__mode = "k"})
-end
-
 -- misc
 
 function table.DrG_Fetch(tbl, callback)

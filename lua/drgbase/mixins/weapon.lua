@@ -1,3 +1,3 @@
-return function(SWEP)
+local MIXIN = {}
 
-end
+return MIXIN

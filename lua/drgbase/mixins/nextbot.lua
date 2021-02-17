@@ -56,6 +56,7 @@ if SERVER then
   function MIXIN:HandleAnimEvent(event, time, cycle, type, options)
     local res = self:OnAnimEvent(options, event, self:GetPos(), self:GetAngles(), time)
     self:ReactInCoroutine(self.DoAnimEvent, options, event, self:GetPos(), self:GetAngles(), time)
+    if not res then self:DrG_BuiltInEvents(options) end
     local res2 = self.DrG_Mixin.HandleAnimEvent(self, event, time, cycle, type, options)
     if res == true or res2 == true then return true end
   end
@@ -66,6 +67,7 @@ else
 
   function MIXIN:FireAnimationEvent(pos, angle, event, name)
     local res = self:OnAnimEvent(name, event, pos, angle, CurTime())
+    if not res then self:DrG_BuiltInEvents(name) end
     local res2 = self.DrG_Mixin.FireAnimationEvent(self, pos, angle, event, name)
     if res == true or res2 == true then return true end
   end

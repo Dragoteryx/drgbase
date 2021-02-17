@@ -1,6 +1,6 @@
 local physMETA = FindMetaTable("PhysObj")
 
-local DebugTrajectories = CreateConVar("drgbase_debug_trajectories", "0")
+local DebugTrajectories = DrGBase.ConVar("drgbase_debug_trajectories", "0")
 
 local function DebugTrajectory(self, dir, info)
   if DebugTrajectories:GetFloat() <= 0 then return end

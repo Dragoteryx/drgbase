@@ -38,10 +38,6 @@ if SERVER then
     self:SetNW2Float("DrG/HealthRegen", regen)
   end
 
-  function ENT:ScaleModel(mult, delta)
-    self:SetModelScale(self:GetModelScale()*mult, delta)
-  end
-
   function ENT:HasGodMode()
     return self:IsFlagSet(FL_GODMODE)
   end

@@ -2,13 +2,12 @@
 
 local ICON = "drgbase/icon16.png"
 
-DrG_Icons = DrG_Icons or {}
 function DrGBase.GetIcon(name)
-  if name == "DrGBase" then return ICON
-  else return DrG_Icons[name] end
+  if name == "DrGBase" then return ICON end
+  return list.Get("DrG/Icons", name)
 end
 function DrGBase.SetIcon(name, icon)
-  DrG_Icons[name] = tostring(icon)
+  list.Set("DrG/Icons", name, tostring(icon))
 end
 
 -- Creation Tab --

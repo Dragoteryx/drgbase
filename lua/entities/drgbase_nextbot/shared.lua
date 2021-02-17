@@ -176,8 +176,8 @@ function ENT:DrG_PreInitialize()
     self:SetCollisionGroup(COLLISION_GROUP_NPC)
     if isvector(self.CollisionBounds) then
       self:SetCollisionBounds(
-        Vector(self.CollisionBounds.x, self.CollisionBounds.y, self.CollisionBounds.z),
-        Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0)
+        Vector(-self.CollisionBounds.x, -self.CollisionBounds.y, 0),
+        Vector(self.CollisionBounds.x, self.CollisionBounds.y, self.CollisionBounds.z)
       )
     else self:SetCollisionBounds(self:GetModelBounds()) end
     -- physics
@@ -190,12 +190,13 @@ function ENT:DrG_PreInitialize()
       end
     end)
     -- locomotion --
-    self:SetAcceleration(self.Acceleration)
-    self:SetDeceleration(self.Deceleration)
+    local scale = self:GetModelScale()
+    self:SetAcceleration(self.Acceleration*scale)
+    self:SetDeceleration(self.Deceleration*scale)
     self:SetMaxYawRate(self.MaxYawRate)
-    self:SetJumpHeight(self.JumpHeight)
-    self:SetStepHeight(self.StepHeight)
-    self:SetDeathDropHeight(self.DeathDropHeight)
+    self:SetJumpHeight(self.JumpHeight*scale)
+    self:SetStepHeight(self.StepHeight*scale)
+    self:SetDeathDropHeight(self.DeathDropHeight*scale)
     -- misc
     self:SetBloodColor(self.BloodColor)
     self:SetUseType(SIMPLE_USE)
@@ -348,7 +349,9 @@ if SERVER then
     while true do
       if self:IsPossessed() then
         self:PossessionBehaviour()
-      else self:AIBehaviour() end
+      elseif not self:IsAIDisabled() then
+        self:AIBehaviour()
+      end
       self:YieldCoroutine(true)
     end
   end
@@ -407,7 +410,8 @@ if SERVER then
       local now = CurTime()
       self:UpdateAnimation(true)
       self:UpdateSpeed()
-      return self:YieldNoUpdate(true) or CurTime() > now
+      local yielded = CurTime() > now
+      return self:YieldNoUpdate(true) or yielded
     else
       self:UpdateAnimation(false)
       self:UpdateSpeed()
@@ -417,21 +421,16 @@ if SERVER then
   function ENT:YieldNoUpdate(cancellable)
     if cancellable then
       local now = CurTime()
-      while true do
-        local innerNow = CurTime()
-        while #self.DrG_ThrCalls > 0 do
-          table.remove(self.DrG_ThrCalls, 1)(self)
-        end
-        self:DoThink()
-        if self:IsPossessed() then self:DoPossessionThink() end
-        if CurTime() > innerNow then self.DrG_ThrReacts = {} end
-        while #self.DrG_ThrReacts > 0 do
-          local reactNow = CurTime()
-          table.remove(self.DrG_ThrReacts, 1)(self)
-          if CurTime() > reactNow then self.DrG_ThrReacts = {} end
-        end
-        if not self:IsAIDisabled() or self:IsPossessed() then break
-        else coroutine.yield() end
+      while #self.DrG_ThrCalls > 0 do
+        table.remove(self.DrG_ThrCalls, 1)(self)
+      end
+      self:DoThink()
+      if self:IsPossessed() then self:DoPossessionThink() end
+      if CurTime() > now then self.DrG_ThrReacts = {} end
+      while #self.DrG_ThrReacts > 0 do
+        local reactNow = CurTime()
+        table.remove(self.DrG_ThrReacts, 1)(self)
+        if CurTime() > reactNow then self.DrG_ThrReacts = {} end
       end
       local yielded = CurTime() > now
       if not yielded then coroutine.yield() end
@@ -501,6 +500,9 @@ if SERVER then
 else
 
   -- ConVars --
+
+  DrGBase.BGMEnabled = DrGBase.SharedClientConVar("drgbase_bgm_enabled", "1")
+  DrGBase.BGMVolume = DrGBase.ClientConVar("drgbase_bgm_volume", "1")
 
   DrGBase.DebugSight = DrGBase.ClientConVar("drgbase_debug_sight", "0")
 

@@ -165,19 +165,13 @@ hook.Add("StartCommand", "DrG/PossessionStartCommand", function(ply, cmd)
     local possessing = ply:DrG_GetPossessing()
     -- disable movement
 		cmd:ClearMovement()
-    -- disable weapon
-		if ply:HasWeapon("drgbase_possession") then
-			cmd:SelectWeapon(ply:GetWeapon("drgbase_possession"))
-		elseif SERVER then ply:Give("drgbase_possession") end
     -- zoom
     if SERVER and cmd:GetMouseWheel() ~= 0 then
       if cmd:GetMouseWheel() == 1 then possessing:PossessionZoomIn()
       else possessing:PossessionZoomOut() end
     end
     -- lock on
-  elseif SERVER then
-		ply:StripWeapon("drgbase_possession")
-	end
+  end
 end)
 
 hook.Add("PlayerFootstep", "DrG/PossessionMuteFootsteps", function(ply)
@@ -233,6 +227,7 @@ if SERVER then
       ply.DrG_PrePossessAngles = ply:GetAngles()
       ply.DrG_PrePossessEyeAngles = ply:EyeAngles()
       ply.DrG_PrePossessWeapon = ply:GetActiveWeapon()
+      ply:SetActiveWeapon(nil)
       ply.DrG_PrePossessFlashlight = ply:FlashlightIsOn()
       ply:Flashlight(false)
       ply.DrG_PrePossessCollisionGroup = ply:GetCollisionGroup()
@@ -242,11 +237,14 @@ if SERVER then
       ply.DrG_PrePossessNoDraw = ply:GetNoDraw()
       ply:SetNoDraw(true)
       ply:DrawShadow(false)
+      ply:Spectate(OBS_MODE_CHASE)
+      ply:SpectateEntity(self)
     elseif self:IsPossessed() then
       local ply = self:GetPossessor()
       self:SetNW2Float("DrG/PossessionZoom", 1)
       self:SetNW2Entity("DrG/Possessor", nil)
       ply:SetNW2Entity("DrG/Possessing", nil)
+      ply:UnSpectate()
       ply:SetPos(ply.DrG_PrePossessPos)
       ply:SetAngles(ply.DrG_PrePossessAngles)
       ply:SetEyeAngles(ply.DrG_PrePossessEyeAngles)
@@ -263,8 +261,9 @@ if SERVER then
   end
 
   function ENT:CanPossess(ply)
-    if not IsValid(ply) or not isentity(ply) or not ply:IsValid() then return false, "not player" end
-
+    if not IsValid(ply) or not isentity(ply) or not ply:IsPlayer() then return false, "drgbase.possession.denied.notplayer" end
+    if not ply:Alive() then return false, "drgbase.possession.denied.dead" end
+    if ply:InVehicle() then return false, "drgbase.possession.denied.invehicle" end
     return true
   end
 
@@ -382,12 +381,7 @@ if SERVER then
       end
       self:DoPossessionMove(ply:DrG_Move())
       self:DoPossessionBinds(ply:DrG_Binds())
-    else
-      ply:SetPos(self:GetPos())
-      ply:SetKeyValue("waterlevel", self:WaterLevel())
-      ply:Extinguish()
-      self:OnPossessionBinds(ply:DrG_Binds())
-    end
+    else self:OnPossessionBinds(ply:DrG_Binds()) end
   end
 
   hook.Add("PlayerUse", "DrG/PossessionDisableUse", function(ply)
@@ -481,6 +475,7 @@ else
   net.Receive("DrG/PossessionAllowed", function()
     local ent = net.ReadEntity()
     if not IsValid(ent) then return end
+    notification.AddLegacy(DrGBase.GetText("drgbase.possession.allowed", ent.PrintName or ent:GetClass()), NOTIFY_HINT, 4)
     surface.PlaySound("buttons/lightswitch2.wav")
   end)
 
@@ -488,7 +483,7 @@ else
     local ent = net.ReadEntity()
     if not IsValid(ent) then return end
     local reason = net.ReadString()
-
+    notification.AddLegacy(DrGBase.GetText(reason), NOTIFY_ERROR, 4)
     surface.PlaySound("buttons/button10.wav")
   end)
 
