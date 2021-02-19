@@ -42,6 +42,7 @@ if SERVER then
         self.DrG_RelationshipCacheDetected[D_LI][ent] = nil
         self.DrG_RelationshipCacheDetected[D_HT][ent] = nil
         self.DrG_RelationshipCacheDetected[D_FR][ent] = nil
+        if self:GetEnemy() == ent then self:UpdateEnemy() end
       else
         self.DrG_DetectState[ent] = state
         local disp = self:GetRelationship(ent)
@@ -56,8 +57,12 @@ if SERVER then
     return self.DrG_DetectStateLastUpdate[ent] or -1
   end
 
-  function ENT:DetectEntity(ent)
-    return self:SetDetectState(ent, DETECT_STATE_DETECTED)
+  function ENT:DetectEntity(ent, state)
+    if state == DETECT_STATE_UNDETECTED then return end
+    if not isnumber(state) then state = DETECT_STATE_DETECTED end
+    self:UpdateLastTimeDetected(ent)
+    self:UpdateLastKnownPos(ent)
+    return self:SetDetectState(ent, math.max(state, self:GetDetectState(ent)))
   end
   function ENT:ForgetEntity(ent)
     return self:SetDetectState(ent, DETECT_STATE_UNDETECTED)
@@ -65,6 +70,23 @@ if SERVER then
 
   function ENT:HasDetected(ent)
     return self:GetDetectState(ent) > DETECT_STATE_UNDETECTED
+  end
+
+  ENT.DrG_LastKnownPos = {}
+  function ENT:LastKnownPos(ent)
+    return self.DrG_LastKnownPos[ent]
+  end
+  function ENT:UpdateLastKnownPos(ent, pos)
+    pos = isvector(pos) and pos or ent:GetPos()
+    self.DrG_LastKnownPos[ent] = pos
+  end
+
+  ENT.DrG_LastTimeDetected = {}
+  function ENT:LastTimeDetected(ent)
+    return self.DrG_LastTimeDetected[ent] or -1
+  end
+  function ENT:UpdateLastTimeDetected(ent)
+    self.DrG_LastTimeDetected[ent] = CurTime()
   end
 
   -- iterators
@@ -277,7 +299,7 @@ if SERVER then
 
   function ENT:OnEntitySight(_ent) end
   function ENT:OnEntitySightLost(_ent) end
-  function ENT:OnEntitySightKept(ent) self:DetectEntity(ent, 10) end
+  function ENT:OnEntitySightKept(ent) self:DetectEntity(ent) end
   function ENT:OnEntityNotInSight(_ent) end
 
   -- Sounds --
@@ -316,7 +338,7 @@ if SERVER then
     if isfunction(self.OnSound) then
       OnSoundDeprecation()
       self:OnSound(ent, sound)
-    else self:DetectEntity(ent) end
+    else self:DetectEntity(ent, DETECT_STATE_SEARCHING) end
   end
 
   hook.Add("EntityEmitSound", "DrG/SoundDetection", function(sound)

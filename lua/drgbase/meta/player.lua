@@ -1,14 +1,11 @@
 
 local plyMETA = FindMetaTable("Player")
 
-function plyMETA:DrG_IsPossessing()
-  return IsValid(self:DrG_Possessing())
-end
-function plyMETA:DrG_Possessing()
+function plyMETA:DrG_GetPossessing()
   return self:GetNW2Entity("DrG/Possessing")
 end
-function plyMETA:DrG_GetPossessing()
-  return self:DrG_Possessing()
+function plyMETA:DrG_IsPossessing()
+  return IsValid(self:DrG_GetPossessing())
 end
 
 hook.Add("PlayerButtonDown", "DrGBasePlayerButtonDown", function(ply, button)
@@ -235,7 +232,7 @@ if SERVER then
 
   function plyMETA:DrG_StopPossession()
     if not self:DrG_IsPossessing() then return end
-    self:DrG_Possessing():StopPossession()
+    self:DrG_GetPossessing():StopPossession()
   end
 
   -- Toolgun --

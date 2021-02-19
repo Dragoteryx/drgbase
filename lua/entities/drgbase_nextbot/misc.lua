@@ -117,8 +117,8 @@ if SERVER then
     return self:IsInRange(ent, range) and self:IsAbleToSee(ent, useFOV)
   end
 
-  function ENT:Idle(duration)
-    local delay = CurTime() + duration
+  function ENT:Idle(min, max)
+    local delay = CurTime() + math.random(min, max)
     while CurTime() < delay do
       if self:HasEnemy() then return false end
       if self:IsPossessed() then return false end

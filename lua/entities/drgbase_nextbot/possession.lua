@@ -410,7 +410,7 @@ if SERVER then
 
   hook.Add("PlayerButtonDown", "DrG/PossessionPlayerButtonDown", function(ply, button)
     if not ply:DrG_IsPossessing() then return end
-    local possessing = ply:DrG_Possessing()
+    local possessing = ply:DrG_GetPossessing()
     if button == KEY_V then
       local view = possessing:OnPossessionNextView(possessing:GetPossessionView())
       if isnumber(view) then possessing:SetPossessionView(view) end
@@ -439,7 +439,7 @@ else
 
   hook.Add("CalcView", "DrG/PossessionCalcView", function(ply, _origin, angles, fov, znear, zfar)
     if not isfunction(ply.DrG_IsPossessing) or not ply:DrG_IsPossessing() then return end
-    local possessing = ply:DrG_Possessing()
+    local possessing = ply:DrG_GetPossessing()
     local view = {}
     view.origin = possessing:PossessorEyePos()
     view.angles = angles
@@ -469,7 +469,7 @@ else
 		local ply = LocalPlayer()
 		if not isfunction(ply.DrG_IsPossessing) or not ply:DrG_IsPossessing() then return end
 		if HUD_HIDE[name] then return false end
-		--if name == "CHudCrosshair" and not ply:DrG_Possessing().PossessionCrosshair then return false end
+		--if name == "CHudCrosshair" and not ply:DrG_GetPossessing().PossessionCrosshair then return false end
 	end)
 
   net.Receive("DrG/PossessionAllowed", function()

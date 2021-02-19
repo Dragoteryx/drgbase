@@ -92,7 +92,7 @@ if SERVER then
         if res == true then self:DetectEntity(enemy) end
       end
     elseif self:IsAfraidOf(enemy) then
-
+      -- todo
     else self:DoPassive() end
   end
   function ENT:DoAttack(enemy)
@@ -157,7 +157,10 @@ if SERVER then
     end
   end
   function ENT:DoEnemyNotFound(_enemy)
-    self:ForgetHostiles()
+    for hostile in self:HostileIterator(true) do
+      self:ForgetEntity(hostile)
+    end
+    self:Idle(3, 7)
   end
 
   -- Hooks --
