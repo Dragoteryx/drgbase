@@ -1,4 +1,8 @@
 local french = DrGBase.GetLang("fr")
+french.Name = "Français"
+
+-- Misc --
+
 french:Set("drgbase.hello", "Salut !")
 
 -- Possession --

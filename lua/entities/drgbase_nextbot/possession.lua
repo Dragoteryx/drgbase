@@ -248,7 +248,7 @@ if SERVER then
       ply:SetPos(ply.DrG_PrePossessPos)
       ply:SetAngles(ply.DrG_PrePossessAngles)
       ply:SetEyeAngles(ply.DrG_PrePossessEyeAngles)
-      ply:SetActiveWeapon(ply.DrG_PrePossessWeapon)
+      --ply:SetActiveWeapon(ply.DrG_PrePossessWeapon)
       ply:Flashlight(ply.DrG_PrePossessFlashlight)
       ply:SetCollisionGroup(ply.DrG_PrePossessCollisionGroup)
       ply:SetNoTarget(ply.DrG_PrePossessNoTarget)

@@ -68,11 +68,6 @@ if SERVER then
     self:AddAnimEventCycle("run_all_02", 0.78, "drg.footstep")
   end
 
-  function ENT:Use()
-    print("use", CurTime())
-    self:AddGestureSequence(self:LookupSequence("gesture_wave"))
-  end
-
   function ENT:OnPossessionBinds(binds)
     if binds:WasPressed("IN_ATTACK") then
       print(self:PlaySequence("gesture_wave"))

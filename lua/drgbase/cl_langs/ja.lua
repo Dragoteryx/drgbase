@@ -1,4 +1,8 @@
 local japanese = DrGBase.GetLang("ja")
+japanese.Name = "日本語"
+
+-- Misc --
+
 japanese:Set("drgbase.hello", "おはよう！")
 
 -- Possession --

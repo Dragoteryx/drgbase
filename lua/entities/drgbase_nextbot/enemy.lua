@@ -93,7 +93,7 @@ if SERVER then
       end
     elseif self:IsAfraidOf(enemy) then
 
-    end
+    else self:DoPassive() end
   end
   function ENT:DoAttack(enemy)
     local weapon = self:GetWeapon()

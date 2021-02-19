@@ -35,10 +35,7 @@ ENT.EyeOffset = Vector(7.5, 0, 5)
 ENT.PossessionEnabled = true
 ENT.PossessionMove = POSSESSION_MOVE_8DIR
 ENT.PossessionViews = {
-  {
-    offset = Vector(0, 30, 20),
-    distance = 100
-  },
+  {auto = true},
   {
     offset = Vector(7.5, 0, 0),
     distance = 0,

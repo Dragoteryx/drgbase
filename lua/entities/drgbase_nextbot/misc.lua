@@ -54,38 +54,45 @@ end
 
 -- Footsteps --
 
-local DEFAULT_FOOTSTEPS = {
-  [MAT_ANTLION] = {"DrGBase.AntlionFootstep"},
-  [MAT_BLOODYFLESH] = {"DrGBase.BloodyFleshFootstep"},
-  [MAT_CONCRETE] = {"DrGBase.ConcreteFootstep"},
-  [MAT_DIRT] = {"DrGBase.DirtFootstep"},
-  [MAT_EGGSHELL] = {"DrGBase.EggShellFootstep"},
-  [MAT_FLESH] = {"DrGBase.FleshFootstep"},
-  [MAT_GRATE] = {"DrGBase.GrateFootstep"},
-  [MAT_ALIENFLESH] = {"DrGBase.AlienFleshFootstep"},
-  [MAT_SNOW] = {"DrGBase.SnowFootstep"},
-  [MAT_PLASTIC] = {"DrGBase.PlasticFootstep"},
-  [MAT_METAL] = {"DrGBase.MetalFootstep"},
-  [MAT_SAND] = {"DrGBase.SandFootstep"},
-  [MAT_FOLIAGE] = {"DrGBase.FoliageFootstep"},
-  [MAT_COMPUTER] = {"DrGBase.ComputerFootstep"},
-  [MAT_SLOSH] = {"DrGBase.SloshFootstep"},
-  [MAT_TILE] = {"DrGBase.TileFootstep"},
-  [MAT_GRASS] = {"DrGBase.GrassFootstep"},
-  [MAT_VENT] = {"DrGBase.VentFootstep"},
-  [MAT_WOOD] = {"DrGBase.WoodFootstep"},
-  [MAT_DEFAULT] = {"DrGBase.DefaultFootstep"},
-  [MAT_GLASS] = {"DrGBase.GlassFootstep"},
-  [MAT_WARPSHIELD] = {"DrGBase.WarpShieldFootstep"}
+ENT.Footsteps = {
+  [MAT_ANTLION] = "DrGBase.AntlionFootstep",
+  [MAT_BLOODYFLESH] = "DrGBase.BloodyFleshFootstep",
+  [MAT_CONCRETE] = "DrGBase.ConcreteFootstep",
+  [MAT_DIRT] = "DrGBase.DirtFootstep",
+  [MAT_EGGSHELL] = "DrGBase.EggShellFootstep",
+  [MAT_FLESH] = "DrGBase.FleshFootstep",
+  [MAT_GRATE] = "DrGBase.GrateFootstep",
+  [MAT_ALIENFLESH] = "DrGBase.AlienFleshFootstep",
+  [MAT_SNOW] = "DrGBase.SnowFootstep",
+  [MAT_PLASTIC] = "DrGBase.PlasticFootstep",
+  [MAT_METAL] = "DrGBase.MetalFootstep",
+  [MAT_SAND] = "DrGBase.SandFootstep",
+  [MAT_FOLIAGE] = "DrGBase.FoliageFootstep",
+  [MAT_COMPUTER] = "DrGBase.ComputerFootstep",
+  [MAT_SLOSH] = "DrGBase.SloshFootstep",
+  [MAT_TILE] = "DrGBase.TileFootstep",
+  [MAT_GRASS] = "DrGBase.GrassFootstep",
+  [MAT_VENT] = "DrGBase.VentFootstep",
+  [MAT_WOOD] = "DrGBase.WoodFootstep",
+  [MAT_DEFAULT] = "DrGBase.DefaultFootstep",
+  [MAT_GLASS] = "DrGBase.GlassFootstep",
+  [MAT_WARPSHIELD] = "DrGBase.WarpShieldFootstep"
 }
+
+function ENT:OnFootstep(matType)
+  return self.Footsteps[matType]
+end
 
 function ENT:EmitFootstep(soundLevel, pitchPercent, volume, channel, soundFlags, dsp)
   if not self:OnGround() then return end
-  local tr = self:TraceLine({start = self:GetPos()+Vector(0, 0, 10), direction = -self:GetUp()*self:Height()/2})
-  local sounds = self.Footsteps[tr.MatType] or DEFAULT_FOOTSTEPS[tr.MatType]
-  if not istable(sounds) then sounds = self.Footsteps[MAT_DEFAULT] or DEFAULT_FOOTSTEPS[MAT_DEFAULT] end
-  if not istable(sounds) or #sounds == 0 then return end
-  self:EmitSound(sounds[math.random(#sounds)], soundLevel, pitchPercent, volume, channel or CHAN_BODY, soundFlags, dsp)
+  local tr = self:TraceLine({start = self:WorldSpaceCenter(), direction = -self:GetUp()*self:Height()})
+  local footstep = self:OnFootstep(tr.MatType)
+  if not isstring(footstep) and not istable(footstep) then footstep = self:OnFootstep(MAT_DEFAULT) end
+  if istable(footstep) and #footstep > 0 then
+    self:EmitSound(footstep[math.random(#footstep)], soundLevel, pitchPercent, volume, channel or CHAN_BODY, soundFlags, dsp)
+  elseif isstring(footstep) then
+    self:EmitSound(footstep, soundLevel, pitchPercent, volume, channel or CHAN_BODY, soundFlags, dsp)
+  end
 end
 
 if SERVER then

@@ -101,7 +101,7 @@ ENT.JumpAnimation = ACT_JUMP
 ENT.JumpAnimRate = 1
 
 -- Sounds --
-ENT.Footsteps = {}
+
 
 -- Weapons --
 DrGBase.IncludeFile("weapons.lua")
@@ -278,7 +278,7 @@ function ENT:DrG_PreThink(...)
   end
   self:DrG_PlayAnimEvents(seq, curCycle, self.DrG_LastCycle)
   self.DrG_LastCycle = curCycle
-  -- misc
+  -- misca
   if SERVER then
     if self.DrG_OnFire and not self:IsOnFire() then
       self.DrG_OnFire = false
@@ -291,7 +291,7 @@ function ENT:DrG_PreThink(...)
       self:OnEntitySightKept(ply)
     else self:OnEntityNotInSight(ply) end
   end
-  -- possession
+  -- possessiona
   if self:IsPossessed() then
     self:PossessionThink(...)
     self:PossessionBehaviour()

@@ -376,7 +376,7 @@ if SERVER then
       end
     end
     if validAnim and isnumber(rate) then self:SetPlaybackRate(rate) end
-    self:BodyMoveXY({frame = false, direction = false})
+    self:BodyMoveXY({frameadvance = false, direction = false})
   end
 
   function ENT:OnUpdateAnimation()
@@ -415,8 +415,8 @@ if SERVER then
     if self.IsDrGNextbot then
       if self.IsDrGNextbotSprite then return end
       if not istable(options) then options = {} end
-      if options.advance ~= false then self:FrameAdvance() end
-      if self:IsMoving() and self:IsOnGround() then
+      if options.frameadvance ~= false then self:FrameAdvance() end
+      if self:IsMoving() then
         if options.direction ~= false then
           if self:LookupPoseParameter("move_x") ~= -1 and
           self:LookupPoseParameter("move_y") ~= -1 then

@@ -58,11 +58,17 @@ end
 
 -- Manage files --
 
-local function IncludeFile(fileName)
-  DrGBase.Print("Include file '"..fileName.."'")
-  return include(fileName)
+local DEPTH = 0
+local function IncludePrefix()
+  local depth = DEPTH
+  local prefix = depth > 0 and "- " or ""
+  while depth > 1 do
+    prefix = "  "..prefix
+    depth = depth-1
+  end
+  return prefix
 end
-function DrGBase.IncludeFile(fileName)
+local function ServerClient(fileName)
   local explode = string.Explode("[/\\]", fileName, true)
   local server = true
   local client = true
@@ -71,13 +77,45 @@ function DrGBase.IncludeFile(fileName)
     if str == "server" or string.StartWith(str, "sv_") then client = false end
     if str == "client" or string.StartWith(str, "cl_") then server = false end
   end
+  return server, client
+end
+
+local function IncludeFile(fileName)
+  DEPTH = DEPTH+1
+  local res = include(fileName)
+  DEPTH = DEPTH-1
+  return res
+end
+local function IncludeFolder(folder)
+  local tbl = {}
+  DEPTH = DEPTH+1
+  for _, fileName in ipairs(file.Find(folder.."/*.lua", "LUA")) do
+    tbl[folder.."/"..fileName] = DrGBase.IncludeFile(folder.."/"..fileName)
+  end
+  DEPTH = DEPTH-1
+  return tbl
+end
+
+function DrGBase.IncludeFile(fileName)
+  local server, client = ServerClient(fileName)
+  local prefix = IncludePrefix()
   if server and not client then
-    if SERVER then return IncludeFile(fileName) end
+    if CLIENT then return end
+    DrGBase.Print(prefix.."File: "..fileName.." (include)")
+    return IncludeFile(fileName)
   elseif client and not server then
-    AddCSLuaFile(fileName)
-    if CLIENT then return IncludeFile(fileName) end
+    if CLIENT then
+      DrGBase.Print(prefix.."File: "..fileName.." (include)")
+      return IncludeFile(fileName)
+    else
+      DrGBase.Print(prefix.."File: "..fileName.." (send to client)")
+      AddCSLuaFile(fileName)
+    end
   elseif server and client then
-    AddCSLuaFile(fileName)
+    if SERVER then
+      DrGBase.Print(prefix.."File: "..fileName.. " (include & send to client)")
+      AddCSLuaFile(fileName)
+    else DrGBase.Print(prefix.."File: "..fileName.." (include)") end
     return IncludeFile(fileName)
   end
 end
@@ -89,19 +127,30 @@ function DrGBase.IncludeFiles(fileNames)
   return tbl
 end
 function DrGBase.IncludeFolder(folder)
-  DrGBase.Print("Include folder '"..folder.."'")
-  local tbl = {}
-  for _, fileName in ipairs(file.Find(folder.."/*.lua", "LUA")) do
-    tbl[folder.."/"..fileName] = DrGBase.IncludeFile(folder.."/"..fileName)
-  end
-  return tbl
+  local server, client = ServerClient(folder)
+  local prefix = IncludePrefix()
+  if server and not client then
+    if CLIENT then return {} end
+    DrGBase.Print(prefix.."Folder: "..folder.." (include)")
+    return IncludeFolder(folder)
+  elseif client and not server then
+    if CLIENT then DrGBase.Print(prefix.."Folder: "..folder.." (include)")
+    else DrGBase.Print(prefix.."Folder: "..folder.." (send to client)") end
+    return IncludeFolder(folder)
+  elseif server and client then
+    if CLIENT then DrGBase.Print(prefix.."Folder: "..folder.." (include)")
+    else DrGBase.Print(prefix.."Folder: "..folder.. " (include & send to client)") end
+    return IncludeFolder(folder)
+  else return {} end
 end
 function DrGBase.RecursiveInclude(folder)
   local tbl = DrGBase.IncludeFolder(folder)
   local _, folders = file.Find(folder.."/*", "LUA")
+  DEPTH = DEPTH+1
   for _, folderName in ipairs(folders) do
     table.Merge(tbl, DrGBase.RecursiveInclude(folder.."/"..folderName))
   end
+  DEPTH = DEPTH-1
   return tbl
 end
 
