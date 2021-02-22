@@ -1,49 +1,81 @@
 if CLIENT then
 
+  local GmodLanguage = GetConVar("gmod_language")
+
   -- Lang class --
 
-  local Lang = DrGBase.CreateClass()
+  local Language = DrGBase.CreateClass()
 
-  function Lang:new(name, parent)
-    self.Name = tostring(name)
+  function Language:new(id, parent)
+    self.Name = tostring(id)
     self.Parent = parent
     self.Data = {}
-  end
-
-  function Lang.prototype:Set(id, translated)
-    self.Data[id] = translated
-    return self
-  end
-  function Lang.prototype:Get(id, ...)
-    local translated = self.Data[id]
-    if translated then
-      if isfunction(translated) then translated = translated(...) end
-      if isstring(translated) then return translated end
-    elseif self.Parent then
-      return self.Parent:Get(id, ...)
+    function self:GetID()
+      return tostring(id)
+    end
+    function self:IsCurrent()
+      return self:GetID() == GmodLanguage:GetString()
     end
   end
 
-  function Lang.prototype:tostring()
-    return "Lang("..self.Name..")"
+  function Language.prototype:Set(placeholder, translation)
+    self.Data[placeholder:TrimLeft("#")] = translation
+    return self
+  end
+  function Language.prototype:Get(placeholder, ...)
+    local translation = self.Data[placeholder:TrimLeft("#")]
+    if translation then
+      if isfunction(translation) then translation = translation(...) end
+      return tostring(translation)
+    elseif self.Parent then
+      return self.Parent:Get(placeholder, ...)
+    end
+  end
+
+  function Language.prototype:UpdateLanguage()
+    if self:IsCurrent() then DrGBase.UpdateLanguage() end
+  end
+
+  function Language.prototype:tostring()
+    return "Language("..self.Name..")"
   end
 
   -- Functions --
 
-  local LANGS = {en = Lang("en")}
+  local LANGS = {en = Language("en")}
 
-  function DrGBase.GetLang(lang)
-    if not isstring(lang) then lang = GetConVar("gmod_language"):GetString() end
-    if not LANGS[lang] then LANGS[lang] = Lang(lang, LANGS.en) end
+  function DrGBase.GetLanguage(lang)
+    if not isstring(lang) then lang = GmodLanguage:GetString() end
+    if not LANGS[lang] then LANGS[lang] = Language(lang, LANGS.en) end
     return LANGS[lang]
   end
 
-  function DrGBase.GetText(id, ...)
-    return DrGBase.GetLang():Get(id, ...)
+  function DrGBase.GetText(placeholder, ...)
+    return DrGBase.GetLanguage():Get(placeholder, ...)
   end
+
+  -- Update lang --
+
+  local function UpdateLanguage(lang)
+    if lang.Parent then UpdateLanguage(lang.Parent) end
+    for placeholder, translation in pairs(lang.Data) do
+      if not isstring(translation) then continue end
+      language.Add(placeholder, translation)
+    end
+  end
+
+  function DrGBase.UpdateLanguage()
+    UpdateLanguage(DrGBase.GetLanguage())
+  end
+
+  cvars.AddChangeCallback("gmod_language", DrGBase.UpdateLanguage, "DrG/LanguageChange")
 
 end
 
--- Import buiilt-in languages --
+-- Import languages --
 
 DrGBase.IncludeFolder("drgbase/cl_langs")
+if CLIENT then
+  hook.Run("DrG/SetupLanguages")
+  DrGBase.UpdateLanguage()
+end

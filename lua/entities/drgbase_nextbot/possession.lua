@@ -70,11 +70,13 @@ end
 function ENT:PossessorEyeNormal()
   return self:PossessorEyeAngles():Forward()
 end
-function ENT:PossessorEyeTrace()
-  return self:TraceLine({
-    start = self:PossessorEyePos(),
-    direction = self:PossessorEyeNormal()*100000
-  })
+function ENT:PossessorEyeTrace(data)
+  if isnumber(data) then data = {distance = data} end
+  if not istable(data) then data = {} end
+  if not isvector(data.start) then data.start = self:PossessorEyePos() end
+  if not isvector(data.direction) and not isvector(data.endpos) then
+    data.direction = self:PossessorEyeNormal()*(data.distance or math.huge)
+  end return self:TraceLine(data)
 end
 function ENT:PossessorForward()
   local normal = self:PossessorEyeNormal()
@@ -93,7 +95,7 @@ end
 -- Internals --
 
 properties.Add("drg/possess", {
-  MenuLabel = "Possess",
+  MenuLabel = "#drgbase.possession.possess",
 	Order = 1101,
 	MenuIcon = "drgbase/icon16.png",
 	Filter = function(_self, ent, _ply)
@@ -186,6 +188,10 @@ hook.Add("EntityEmitSound", "DrG/PossessionMutePlayerSounds", function(sound)
   end
 end)
 
+hook.Add("CanDrive", "DrG/PossessionDisablePropDrive", function(_ply, ent)
+  if ent.IsDrGNextbot then return false end
+end)
+
 if SERVER then
   util.AddNetworkString("DrG/PossessionAllowed")
   util.AddNetworkString("DrG/PossessionDenied")
@@ -261,9 +267,9 @@ if SERVER then
   end
 
   function ENT:CanPossess(ply)
-    if not IsValid(ply) or not isentity(ply) or not ply:IsPlayer() then return false, "drgbase.possession.denied.notplayer" end
-    if not ply:Alive() then return false, "drgbase.possession.denied.dead" end
-    if ply:InVehicle() then return false, "drgbase.possession.denied.invehicle" end
+    if not IsValid(ply) or not isentity(ply) or not ply:IsPlayer() then return false, "#drgbase.possession.denied.notplayer" end
+    if not ply:Alive() then return false, "#drgbase.possession.denied.dead" end
+    if ply:InVehicle() then return false, "#drgbase.possession.denied.invehicle" end
     return true
   end
 
@@ -285,6 +291,7 @@ if SERVER then
   -- Movements --
 
   function ENT:PossessionFaceForward()
+    if not self:IsPossessed() then return end
     --[[local lockedOn = self:PossessionGetLockedOn()
     if not IsValid(lockedOn) then]]
       self:FaceTowards(self:GetPos() + self:PossessorEyeNormal())
@@ -292,15 +299,19 @@ if SERVER then
   end
 
   function ENT:PossessionMoveForward()
+    if not self:IsPossessed() then return end
     self:Approach(self:GetPos() + self:PossessorForward())
   end
   function ENT:PossessionMoveBackward()
+    if not self:IsPossessed() then return end
     self:Approach(self:GetPos() - self:PossessorForward())
   end
   function ENT:PossessionMoveLeft()
+    if not self:IsPossessed() then return end
     self:Approach(self:GetPos() - self:PossessorRight())
   end
   function ENT:PossessionMoveRight()
+    if not self:IsPossessed() then return end
     self:Approach(self:GetPos() + self:PossessorRight())
   end
 
@@ -417,6 +428,10 @@ if SERVER then
     end
   end)
 
+  hook.Add("PlayerSpawn", "DrG/SpawnWithPossessor", function(ply)
+    if DrGBase.SpawnWithPossessor:GetBool() then ply:Give("drgbase_possessor") end
+  end)
+
 else
 
   -- Getters --
@@ -450,10 +465,6 @@ else
     return view
   end)
 
-  hook.Add("PreDrawViewModel", "DrG/PossessionHideViewModel", function(_vm, _ply, wep)
-    if wep:GetClass() == "drgbase_possession" then return true end
-  end)
-
   hook.Add("ShouldDisableLegs", "DrG/GmodLegs3Disable", function()
     local ply = LocalPlayer()
     if isfunction(ply.DrG_IsPossessing) and ply:DrG_IsPossessing() then return true end
@@ -483,7 +494,7 @@ else
     local ent = net.ReadEntity()
     if not IsValid(ent) then return end
     local reason = net.ReadString()
-    notification.AddLegacy(DrGBase.GetText(reason), NOTIFY_ERROR, 4)
+    notification.AddLegacy(reason, NOTIFY_ERROR, 4)
     surface.PlaySound("buttons/button10.wav")
   end)
 

@@ -112,7 +112,8 @@ if SERVER then
     end
   end
   function ENT:FaceEnemy()
-    if self:HasEnemy() then self:FaceTowards(self:GetEnemy()) end
+    if not self:HasEnemy() then return end
+    self:FaceTowards(self:GetEnemy())
   end
 
   function ENT:MoveTowards(pos)
@@ -171,7 +172,8 @@ if SERVER then
       if ShouldCompute(self, path, pos) then path:Compute(self, pos, options.generator) end
       if not IsValid(path) then return "unreachable" end
       --local current = path:GetCurrentGoal()
-      if not self.DrG_UnstuckDelay or self.DrG_UnstuckDelay < CurTime() then
+      if DrGBase.AvoidObstacles:GetBool() and
+      not self.DrG_UnstuckDelay or self.DrG_UnstuckDelay < CurTime() then
         self.DrG_UnstuckDelay = CurTime() + 0.25
         local nw, ne, sw, se = CollisionHulls(self)
         if nw.Hit or ne.Hit or sw.Hit or se.Hit then
@@ -187,7 +189,8 @@ if SERVER then
       if not IsValid(path) then return "reached" end
     else
       local tolerance = isnumber(options.tolerance) and options.tolerance or 20
-      if not self.DrG_UnstuckDelay or self.DrG_UnstuckDelay < CurTime() then
+      if DrGBase.AvoidObstacles:GetBool() and
+      not self.DrG_UnstuckDelay or self.DrG_UnstuckDelay < CurTime() then
         self.DrG_UnstuckDelay = CurTime() + 0.25
         local nw, ne, sw, se = CollisionHulls(self)
         if nw.Hit or ne.Hit or sw.Hit or se.Hit then

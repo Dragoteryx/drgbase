@@ -283,27 +283,27 @@ if SERVER then
   end
 
   function ENT:JoinFaction(faction)
-    return DrGBase.JoinFaction(self, faction)
+    return self:DrG_JoinFaction(faction)
   end
   function ENT:JoinFactions(factions)
-    return DrGBase.JoinFactions(self, factions)
+    return self:DrG_JoinFactions(factions)
   end
 
   function ENT:LeaveFaction(faction)
-    return DrGBase.LeaveFaction(self, faction)
+    return self:DrG_LeaveFaction(faction)
   end
   function ENT:LeaveFactions(factions)
-    return DrGBase.LeaveFactions(self, factions)
+    return self:DrG_LeaveFactions(factions)
   end
   function ENT:LeaveAllFactions()
-    return DrGBase.LeaveAllFactions(self)
+    return self:DrG_LeaveAllFactions()
   end
 
   function ENT:IsInFaction(faction)
-    return DrGBase.IsInFaction(self, faction)
+    return self:DrG_IsInFaction(faction)
   end
   function ENT:GetFactions()
-    return DrGBase.GetFactions(self)
+    return self:DrG_GetFactions()
   end
 
   -- Ignore & Frightening --
@@ -390,7 +390,7 @@ if SERVER then
     })}
     for faction, rel in pairs(DefinedRelationshipTable(self, "Faction")) do
       if rel.disp == D_ER or rel.prio < relationships[1].prio then continue end
-      if DrGBase.IsInFaction(ent, faction) then
+      if self:DrG_IsInFaction(faction) then
         table.insert(relationships, rel)
       elseif ent.IsVJBaseSNPC then
         for i = 1, #ent.VJ_NPC_Class do

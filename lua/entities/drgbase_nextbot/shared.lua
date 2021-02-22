@@ -124,6 +124,7 @@ DrGBase.IncludeFile("deprecated.lua")
 DrGBase.MultHealth = DrGBase.ConVar("drgbase_multiplier_health", "1")
 DrGBase.MultSpeed = DrGBase.ConVar("drgbase_multiplier_speed", "1")
 
+DrGBase.AIDisabled = DrGBase.ConVar("drgbase_ai_disabled", "0")
 DrGBase.AllOmniscient = DrGBase.ConVar("drgbase_ai_omniscient", "0")
 DrGBase.AIBlind = DrGBase.ConVar("drgbase_ai_blind", "0")
 DrGBase.AIDeaf = DrGBase.ConVar("drgbase_ai_deaf", "0")
@@ -132,14 +133,15 @@ DrGBase.TargetInsects = DrGBase.ConVar("drgbase_ai_target_insects", "0")
 DrGBase.TargetRepMelons = DrGBase.ConVar("drgbase_ai_target_repmelons", "1")
 
 DrGBase.PossessionEnabled = DrGBase.ConVar("drgbase_possession_enabled", "1")
+DrGBase.SpawnWithPossessor = DrGBase.ConVar("drgbase_possession_spawn_with_possessor", "0")
 DrGBase.LockOnEnabled = DrGBase.ConVar("drgbase_possession_lockon", "1")
 
 DrGBase.PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", "Pathfinding mode:\n"..
   "    'custom' => DrGBase custom pathfinding, allows climbing at the cost of performance\n"..
   "    'default' => default Garry's Mod nextbot pathfinding, more efficient than custom but dumber\n"..
   "    'none' => disable pathfinding entirely, best performance at the cost of having nextbots running into every wall")
-DrGBase.ComputeDelay = DrGBase.ConVar("drgbase_compute_delay", "0.1")
-DrGBase.AvoidObstacles = DrGBase.ConVar("drgbase_avoid_obstacles", "1")
+DrGBase.ComputeDelay = DrGBase.ConVar("drgbase_pathfindng_delay", "0.1")
+DrGBase.AvoidObstacles = DrGBase.ConVar("drgbase_pathfinding_avoid_obstacles", "1")
 
 DrGBase.RemoveRagdolls = DrGBase.ConVar("drgbase_ragdolls_remove", "-1")
 DrGBase.RagdollFadeOut = DrGBase.ConVar("drgbase_ragdolls_fadeout", "3")
@@ -327,6 +329,8 @@ if SERVER then
       nb.DrG_DetectState[ent] = nil
       nb.DrG_DetectStateLastUpdate[ent] = nil
       nb.DrG_InSight[ent] = nil
+      nb.DrG_LastKnownPos[ent] = nil
+      nb.DrG_LastTimeDetected[ent] = nil
       -- relationships
       nb.DrG_Relationships[ent] = nil
       nb.DrG_RelationshipCache[D_LI][ent] = nil

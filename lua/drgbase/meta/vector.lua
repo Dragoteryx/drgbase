@@ -14,10 +14,11 @@ end
 
 -- Ballistic stuff --
 
-function vecMETA:DrG_TrajectoryInfo(direction, ballistic)
+function vecMETA:DrG_TrajectoryInfo(direction, ballistic, options)
+  if not istable(options) then optons = {} end
   local data = VecData(self)
   if ballistic then
-    local gravity = physenv.GetGravity():Length()
+    local gravity = options.gravity or physenv.GetGravity():Length()
     local magnitude = data.length
     local pitch = math.rad(data.pitch)
     local forward = data.forward
@@ -58,7 +59,7 @@ function vecMETA:DrG_CalcLineTrajectory(target, options)
   if isnumber(options) then return self:DrG_CalcLineTrajectory(target, {speed = options}) end
   if istable(options) and isnumber(options.speed) and options.speed > 0 then
     if isentity(target) and IsValid(target) then
-      local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
+      local aimAt = options.center == false and target:GetPos() or target:WorldSpaceCenter()
       local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
       local dist = self:Distance(aimAt)
       return self:DrG_CalcLineTrajectory(aimAt+velocity*(dist/speed), speed)
@@ -73,18 +74,15 @@ function vecMETA:DrG_CalcLineTrajectory(target, options)
   return dir, self:DrG_TrajectoryInfo(dir, false)
 end
 
-function vecMETA:DrG_CalcBallisticTrajectory(target, options, feet)
-  if not istable(options) then options = {} end
-  if isentity(target) and IsValid(target) then
-    local aimAt = feet and target:GetPos() or target:WorldSpaceCenter()
+function vecMETA:DrG_CalcBallisticTrajectory(target, options, recursive)
+  if istable(options) and isentity(target) and IsValid(target) then
+    local aimAt = options.center == false and target:GetPos() or target:WorldSpaceCenter()
     local velocity = target:IsNPC() and target:GetGroundSpeedVelocity() or target:GetVelocity()
-    local options2 = table.Copy(options)
-    options2.recursive = true
-    local _, info = self:DrG_CalcBallisticTrajectory(aimAt, options2)
-    return self:DrG_CalcBallisticTrajectory(aimAt+velocity*info.duration, options)
-  elseif isvector(target) then
+    local _, info = self:DrG_CalcBallisticTrajectory(aimAt, table.Copy(options), true)
+    return self:DrG_CalcBallisticTrajectory(aimAt+velocity*info.duration, options, recursive)
+  elseif istable(options) and isvector(target) then
     local dir = Vector(target.x - self.x, target.y - self.y, 0)
-    local g = physenv.GetGravity():Length()
+    local g = options.gravity or physenv.GetGravity():Length()
     local x = dir:Length()
     local y = target.z - self.z
     local pitch = nil
@@ -93,9 +91,9 @@ function vecMETA:DrG_CalcBallisticTrajectory(target, options, feet)
       pitch = math.rad(math.Clamp(options.pitch, -90, 90))
       local n = math.tan(pitch)*x
       if y >= n then
-        if options.recursive then
+        if recursive then
           options.pitch = math.deg(pitch)+1
-          return self:DrG_CalcBallisticTrajectory(target, options)
+          return self:DrG_CalcBallisticTrajectory(target, options, true)
         else
           dir.z = n
           local velocity = dir:GetNormalized()
@@ -109,9 +107,9 @@ function vecMETA:DrG_CalcBallisticTrajectory(target, options, feet)
       local v = magnitude
       local n = math.sqrt(v^4-g*(g*x*x+2*y*v*v))
       if n ~= n then
-        if options.recursive then
+        if recursive then
           options.magnitude = v*1.05
-          return self:DrG_CalcBallisticTrajectory(target, options)
+          return self:DrG_CalcBallisticTrajectory(target, options, true)
         else
           local velocity = self:DrG_Dir(target):GetNormalized()*v
           local info = self:DrG_TrajectoryInfo(velocity)
@@ -134,7 +132,7 @@ function vecMETA:DrG_CalcBallisticTrajectory(target, options, feet)
     end
     dir.z = math.tan(pitch)*x
     local velocity = dir:GetNormalized()*magnitude
-    local info = self:DrG_TrajectoryInfo(velocity, true)
+    local info = self:DrG_TrajectoryInfo(velocity, true, {gravity = g})
     local calc = math.sqrt(((velocity.z^2)/(g^2))-((2*y)/g))
     local duration1 = (velocity.z/g)+calc
     local duration2 = (velocity.z/g)-calc
@@ -145,7 +143,8 @@ function vecMETA:DrG_CalcBallisticTrajectory(target, options, feet)
     return velocity, info
   else
     local dir = Vector(0, 0, 0)
-    return dir, self:DrG_TrajectoryInfo(dir, true)
+    local g = options.gravity or physenv.GetGravity():Length()
+    return dir, self:DrG_TrajectoryInfo(dir, true, {gravity = g})
   end
 end
 

@@ -1,7 +1,9 @@
 -- Getters --
 
 function ENT:IsAIDisabled()
-  return GetConVar("ai_disabled"):GetBool() or self:GetNW2Bool("DrG/AIDisabled")
+  return GetConVar("ai_disabled"):GetBool() or
+  DrGBase.AIDisabled:GetBool() or
+  self:GetNW2Bool("DrG/AIDisabled")
 end
 
 if SERVER then
@@ -92,7 +94,7 @@ if SERVER then
   -- misc
 
   function ENT:ShouldRun()
-    return self:HasDetectedEnemy()
+    return self:GetEnemyDetectState() == DETECT_STATE_DETECTED
   end
 
   function ENT:ShouldDropWeapon()

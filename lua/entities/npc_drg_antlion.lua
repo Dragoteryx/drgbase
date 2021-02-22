@@ -17,7 +17,7 @@ ENT.OnDamageSounds = {"NPC_Antlion.Pain"}
 ENT.SpawnHealth = 40
 
 -- AI --
-ENT.RangeAttackRange = 1000
+ENT.RangeAttackRange = 100000
 ENT.MeleeAttackRange = 50
 ENT.ReachEnemyRange = 50
 ENT.AvoidEnemyRange = 0
@@ -75,7 +75,7 @@ if SERVER then
   end
 
   function ENT:DoRangeAttack(enemy)
-    if math.random(1, 500) > 1 then return end
+    if math.random(1, 10) > 1 then return end
     if self:PlaySequenceAndMove("charge_start", true) then
       self:ResetSequence("charge_run")
       self:UpdateSpeed()
@@ -119,7 +119,7 @@ if SERVER then
       end
     end
     if binds:IsDown("IN_JUMP") then
-      local pos = self:PossessorEyePos() + self:PossessorEyeNormal()*500
+      local pos = self:PossessorEyeTrace(1000).HitPos
       self:Jump(pos, function(self)
         self:FaceTowards(self:GetPos() + self:GetVelocity())
       end)
@@ -138,7 +138,7 @@ if SERVER then
   end
 
   function ENT:OnLeaveGround()
-    self:PlaySequence("jump_start")
+    --self:PlaySequence("jump_start")
   end
 
   function ENT:DoTakeDamage(dmg)
@@ -196,11 +196,12 @@ if SERVER then
   function ENT:OnAnimEvent()
     if self:IsAttacking() then
       if self:GetCycle() > 0.3 then
-        --[[local hit = self:Attack({
+        self:Attack({
           damage = 5, range = 50, type = DMG_SLASH,
           viewpunch = Angle(10, 0, 0)
-        })
-        if #hit > 0 then self:EmitSound("NPC_Antlion.MeleeAttack") end]]
+        }, function(self, hit)
+            if #hit > 0 then self:EmitSound("NPC_Antlion.MeleeAttack") end
+        end)
       else self:EmitSound("NPC_Antlion.MeleeAttackSingle") end
     elseif self:IsOnGround() then
       self:EmitSound("NPC_Antlion.Footstep")

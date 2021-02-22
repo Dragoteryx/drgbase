@@ -16,8 +16,8 @@ ENT.SpawnHealth = 100
 
 -- AI --
 ENT.RangeAttackRange = 0
-ENT.MeleeAttackRange = 30
-ENT.ReachEnemyRange = 30
+ENT.MeleeAttackRange = 50
+ENT.ReachEnemyRange = 50
 ENT.AvoidEnemyRange = 0
 
 -- Relationships --

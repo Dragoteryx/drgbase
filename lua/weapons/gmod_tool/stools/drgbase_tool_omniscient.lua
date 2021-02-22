@@ -1,5 +1,5 @@
-TOOL.Tab = "DrGBase"
-TOOL.Category = "Tools"
+TOOL.Tab = "drgbase"
+TOOL.Category = "tools"
 TOOL.Name = "#tool.drgbase_tool_omniscient.name"
 TOOL.BuildCPanel = function(panel)
 	panel:Help("#tool.drgbase_tool_omniscient.desc")

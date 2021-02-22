@@ -70,10 +70,6 @@ if SERVER then
     return self:SetDetectState(self:GetEnemy(), state)
   end
 
-  function ENT:HasDetectedEnemy()
-    return self:GetEnemyDetectState() == DETECT_STATE_DETECTED
-  end
-
   -- Coroutine --
 
   function ENT:DoHandleEnemy(enemy, state)

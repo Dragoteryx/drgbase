@@ -172,14 +172,14 @@ if SERVER then
         --[[if #self.OnDamageSounds > 0 then
           self:EmitSlotSound("DrGBaseDamageSounds", self.DamageSoundDelay, self.OnDamageSounds[math.random(#self.OnDamageSounds)])
         end]]
-        if isfunction(self.AfterTakeDamage) then -- backwards compatibility #2
+        if isfunction(self.AfterTakeDamage) then -- backwards compatibility
           AfterTakeDamageDeprecation()
           local data = SaveDmg(dmg)
           self:ReactInCoroutine(function(self)
             if self:IsDown() or self:IsDead() then return end
             self:AfterTakeDamage(LoadDmg(data), 0, hitgroup)
           end)
-        elseif isfunction(self.OnTookDamage) then -- backwards compatibility
+        elseif isfunction(self.OnTookDamage) then -- backwards compatibility #2
           OnTookDamageDeprecation()
           local data = SaveDmg(dmg)
           self:ReactInCoroutine(function(self)

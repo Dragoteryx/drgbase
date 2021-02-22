@@ -1,5 +1,5 @@
-TOOL.Tab = "DrGBase"
-TOOL.Category = "Tools"
+TOOL.Tab = "drgbase"
+TOOL.Category = "tools"
 TOOL.Name = "#tool.drgbase_tool_faction.name"
 TOOL.ClientConVar = {["list"] = "[]"}
 TOOL.BuildCPanel = function(panel)

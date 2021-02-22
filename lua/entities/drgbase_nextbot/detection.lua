@@ -58,6 +58,7 @@ if SERVER then
   end
 
   function ENT:DetectEntity(ent, state)
+    if not IsValid(ent) or self:IsOmniscient() then return end
     if state == DETECT_STATE_UNDETECTED then return end
     if not isnumber(state) then state = DETECT_STATE_DETECTED end
     self:UpdateLastTimeDetected(ent)
@@ -146,18 +147,13 @@ if SERVER then
     self.MaxLuminosity = tonumber(luminosity)
   end
 
-  function ENT:EntitySightAngle(ent)
-    local eyepos = self:EyePos()
-    local eyeangles = self:EyeAngles()
-    return eyepos:DrG_Degrees(
-      eyepos + eyeangles:Forward(),
-      ent:WorldSpaceCenter()
-    )
-  end
-
   -- sight info
 
   local SightInfo = DrGBase.FlagsHelper(4)
+
+  function SightInfo:new(flags, angle)
+
+  end
 
   function SightInfo.prototype:IsAbleToSee()
     return self:GetFlags() == SIGHT_TEST_PASSED_ALL
@@ -194,7 +190,12 @@ if SERVER then
     return self:EyePos():DistToSqr(ent:WorldSpaceCenter()) <= self:GetMaxVisionRange()^2
   end
   local function AngleTest(self, ent)
-    return self:EntitySightAngle(ent) <= self:GetFOV()/2
+    local eyepos = self:EyePos()
+    local eyeangles = self:EyeAngles()
+    return eyepos:DrG_Degrees(
+      eyepos + eyeangles:Forward(),
+      ent:WorldSpaceCenter()
+    ) <= self:GetFOV()/2
   end
   local function LuminosityTest(self, ent)
     if not ent:IsPlayer() then return true end

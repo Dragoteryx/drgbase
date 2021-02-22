@@ -54,9 +54,13 @@ function DrGBase.AddNextbot(ENT)
     resource.AddFile("materials/entities/"..class..".png")
   end
 
-  -- language & killicon
+  -- language
   if CLIENT then
     language.Add(class, ENT.PrintName)
+  end
+
+  -- killicon
+  if CLIENT then
     ENT.Killicon = ENT.Killicon or {
       icon = "HUD/killicons/default",
       color = Color(255, 80, 0, 255)

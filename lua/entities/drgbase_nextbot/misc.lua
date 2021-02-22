@@ -101,14 +101,49 @@ if SERVER then
 
   function ENT:DealDamage(attack, fn)
     local hit = {}
-    local entities = ents.GetAll()
-    for i = 1, #entities do
-      local ent = entities[i]
-      if not IsValid(ent) then continue end
+    if not istable(attack) then attack = {} end
+    if not isnumber(attack.angle) then attack.angle = 90 end
+    if not isnumber(attack.range) then attack.range = self.MeleeAttackRange end
+    if not istable(attack.relationships) then
+      attack.relationships = {D_HT, D_FR} end
+    local iterators = {}
+    if table.HasValue(attack.relationships, D_LI) then
+      table.insert(iterators, self:AllyIterator()) end
+    if table.HasValue(attack.relationships, D_HT) then
+      table.insert(iterators, self:EnemyIterator()) end
+    if table.HasValue(attack.relationships, D_FR) then
+      table.insert(iterators, self:AfraidOfIterator()) end
+    if table.HasValue(attack.relationships, D_NU) then
+      table.insert(iterators, self:NeutralIterator()) end
+    for ent in util.DrG_MergeIterators(iterators) do
+      if not self:Visible(ent) then continue end
+      if self:GetPos():DrG_Degrees(self:GetPos() + self:GetForward(), ent:GetPos()) > attack.angle then continue end
+      if self:GetHullRangeSquaredTo(ent) > attack.range^2 then continue end
       local dmg = DamageInfo()
-      
+      dmg:SetAttacker(self)
+      dmg:SetInflictor(self)
+      dmg:SetDamagePosition(self:GetPos())
+      dmg:SetReportedPosition(self:GetPos())
+      if isnumber(attack.damage) then dmg:SetDamage(attack.damage) end
+      if isnumber(attack.type) then dmg:SetDamageType(attack.type) end
+      if isvector(attack.force) then dmg:SetDamageForce(Vector()) end
+      if not isfunction(fn) or fn(self, ent, dmg) ~= true then
+        if isangle(attack.viewpunch) and ent:IsPlayer() then ent:ViewPunch(attack.viewpunch) end
+        ent:TakeDamageInfo(dmg)
+        table.insert(hit, ent)
+      end
     end
     return hit
+  end
+
+  function ENT:DealRadialDamage(attack, fn)
+    if not istable(attack) then attack = {} end
+    attack.angle = 360
+    return self:DealDamage(attack, function(self, ent, dmg)
+      local damage = dmg:GetDamage()
+      dmg:SetDamage(damage*(self:GetHullRangeTo(ent)/attack.range))
+      if isfunction(fn) then return fn(self, ent, dmg) end
+    end)
   end
 
   -- Misc --
@@ -152,13 +187,6 @@ if SERVER then
     self:ResetSequence(seq)
     self:SetCycle(cycle)
   end
-  local function LocoJumpGap(self, pos)
-    local seq = self:GetSequence()
-    local cycle = self:GetCycle()
-    self.loco:JumpAcrossGap(pos, self:GetForward())
-    self:ResetSequence(seq)
-    self:SetCycle(cycle)
-  end
 
   function ENT:LeaveGround()
     if not self:IsOnGround() then return end
@@ -168,16 +196,22 @@ if SERVER then
     self.loco:SetJumpHeight(height)
   end
 
-  function ENT:Jump(height, fn, ...)
+  function ENT:Jump(target, fn, ...)
     if not self:IsOnGround() then return end
-    if isnumber(height) then
-      local oldHeight = self.loco:GetJumpHeight()
-      self.loco:SetJumpHeight(height)
+    if isnumber(target) then
+      local height = self.loco:GetJumpHeight()
+      self:SetJumpHeight(target)
       LocoJump(self)
-      self.loco:SetJumpHeight(oldHeight)
-    elseif isvector(height) then
-      LocoJumpGap(self, height)
-    else LocoJump(self) end
+      self:SetJumpHeight(height)
+    elseif isvector(target) or isentity(target) then
+      local vel, info = self:GetPos():DrG_CalcBallisticTrajectory(target, {magnitude = 1, gravity = self:GetGravity()}, true)
+      if vel.z < 0 then
+        vel, info = self:GetPos():DrG_CalcBallisticTrajectory(target, {magnitude = 1, gravity = self:GetGravity(), highest = true}, true)
+      end
+      DrG_DebugTrajectory(self:GetPos(), vel, info)
+      self:LeaveGround()
+      self:SetVelocity(vel)
+    else return LocoJump(self) end
     local args, n = table.DrG_Pack(...)
     local function Jumping(self)
       while not self:IsOnGround() do

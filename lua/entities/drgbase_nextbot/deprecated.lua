@@ -151,11 +151,22 @@ if SERVER then
 
   ENT.Attack = DrGBase.Deprecated(
     "ENT:Attack(attack, fn)",
-    "ENT:?(attack, fn)",
+    "ENT:DealDamage(attack, fn)",
     function(self, attack, fn)
       if not istable(attack) then attack = {} end
       self:Timer(isnumber(attack.delay) and attack.delay or 0, function(self)
-        local hit = {}
+        local hit = self:DealDamage(attack)
+        if isfunction(fn) then fn(self, hit) end
+      end)
+    end)
+
+  ENT.BlastAttack = DrGBase.Deprecated(
+    "ENT:BlastAttack(attack, fn)",
+    "ENT:DealRadialDamage(attack, fn)",
+    function(self, attack, fn)
+      if not istable(attack) then attack = {} end
+      self:Timer(isnumber(attack.delay) and attack.delay or 0, function(self)
+        local hit = self:DealRadialDamage(attack)
         if isfunction(fn) then fn(self, hit) end
       end)
     end)
@@ -191,7 +202,6 @@ if SERVER then
   ENT.SequenceEvent = DrGBase.Deprecated(
     "ENT:SequenceEvent(sequence, cycle, fn)",
     "ENT:AddAnimEventCycle(sequence, cycle, event)",
-    function()
-    end)
+    function() end)
 
 end
