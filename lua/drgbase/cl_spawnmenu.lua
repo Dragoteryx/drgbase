@@ -37,45 +37,93 @@ hook.Add("AddToolMenuCategories", "DrG/AddToolMenuCategories", function()
     return spawnmenu.AddToolCategory("drgbase", category, "#drgbase.spawnmenu."..category)
   end
 
+  AddCategory("main")
   AddCategory("nextbots")
 
   spawnmenu.AddToolCategory("drgbase", "tools", "#spawnmenu.tools_tab")
 end)
 
 hook.Add("PopulateToolMenu", "DrG/PopulateToolMenu", function()
-  local function AddToolMenuOption(category, class, fn)
+  local function AddOption(category, class, fn, cmd)
     local placeholder = "#drgbase.spawnmenu."..category.."."..class
-    return spawnmenu.AddToolMenuOption("drgbase", category, class, placeholder, "", "", function(panel)
-      fn(panel, function(str)
+    return spawnmenu.AddToolMenuOption("drgbase", category, class, placeholder, cmd or "", "", function(panel)
+      fn(panel, function(str, ...)
         local placeholder2 = placeholder.."."..str
-        return DrGBase.GetText(placeholder2) or placeholder2
+        return DrGBase.GetText(placeholder2, ...) or placeholder2
       end)
     end)
   end
 
+  -- Main menu --
+
+  AddOption("main", "info", function(panel, GetText)
+
+  end)
+
+  AddOption("main", "server", function(panel, GetText)
+
+  end)
+
+  AddOption("main", "client", function(panel, GetText)
+    panel:ControlHelp("\n"..GetText("language"))
+    panel:Help(GetText("language.text"))
+    local combo = vgui.Create("DComboBox")
+    local langs = DrGBase.GetLanguages()
+    table.sort(langs, function(lang1, lang2)
+      if lang1:GetID() == "en" then return true end
+      if lang2:GetID() == "en" then return false end
+      return lang1.Name > lang2.Name
+    end)
+    for _, lang in ipairs(langs) do
+      local name = lang.Name
+      local nbMissing = table.Count(lang:MissingTranslations())
+      if nbMissing > 0 then name = name.." "..GetText("language.missing_translations", nbMissing) end
+      combo:AddChoice(name, lang:GetID(), lang:IsCurrent(), lang.Flag)
+    end
+    function combo:OnSelect(_, _, id)
+      if GetConVar("gmod_language"):GetString() ~= id then
+        RunConsoleCommand("gmod_language", id)
+        RunConsoleCommand("spawnmenu_reload")
+      end
+    end
+    panel:AddPanel(combo)
+  end)
+
   -- Nextbot settings --
 
-  AddToolMenuOption("nextbots", "ai", function(panel, Text)
-    panel:ControlHelp("\n"..Text("behaviour"))
-    panel:CheckBox(Text("behaviour.roam"), DrGBase.EnableRoam:GetName())
-    panel:ControlHelp("\n"..Text("detection"))
-    panel:CheckBox(Text("detection.omniscience"), DrGBase.AllOmniscient:GetName())
-    panel:CheckBox(Text("detection.blind"), DrGBase.AIBlind:GetName())
-    panel:CheckBox(Text("detection.deaf"), DrGBase.AIDeaf:GetName())
+  AddOption("nextbots", "ai", function(panel, GetText)
+    panel:ControlHelp("\n"..GetText("behaviour"))
+    panel:CheckBox(GetText("behaviour.ai_disabled"), DrGBase.AIDisabled:GetName())
+    panel:CheckBox(GetText("behaviour.ignore_players"), DrGBase.IgnorePlayers:GetName())
+    panel:CheckBox(GetText("behaviour.ignore_npcs"), DrGBase.IgnoreNPCs:GetName())
+    panel:CheckBox(GetText("behaviour.ignore_others"), DrGBase.IgnoreOthers:GetName())
+    panel:CheckBox(GetText("behaviour.roam"), DrGBase.EnableRoam:GetName())
+    panel:ControlHelp("\n"..GetText("detection"))
+    panel:CheckBox(GetText("detection.omniscience"), DrGBase.AllOmniscient:GetName())
+    panel:CheckBox(GetText("detection.blind"), DrGBase.AIBlind:GetName())
+    panel:CheckBox(GetText("detection.deaf"), DrGBase.AIDeaf:GetName())
   end)
 
-  AddToolMenuOption("nextbots", "possession", function(panel, Text)
-    panel:ControlHelp("\n"..Text("server"))
-    panel:CheckBox(Text("server.enable"), DrGBase.PossessionEnabled:GetName())
-    panel:CheckBox(Text("server.spawn_with_possessor"), DrGBase.SpawnWithPossessor:GetName())
-    panel:ControlHelp("\n"..Text("client"))
+  AddOption("nextbots", "possession", function(panel, GetText)
+    panel:ControlHelp("\n"..GetText("server"))
+    panel:CheckBox(GetText("server.enable"), DrGBase.PossessionEnabled:GetName())
+    panel:CheckBox(GetText("server.spawn_with_possessor"), DrGBase.SpawnWithPossessor:GetName())
+    panel:ControlHelp("\n"..GetText("client"))
+    panel:AddControl("numpad", {
+      label = GetText("client.binds.views"),
+      command = DrGBase.PossessionBindsViews:GetName(),
+      label2 = GetText("client.binds.views"),
+      command2 = DrGBase.PossessionBindsViews:GetName()
+    })
   end)
 
-  AddToolMenuOption("nextbots", "misc", function(panel, Text)
-    panel:ControlHelp("\n"..Text("stats"))
-    panel:NumSlider(Text("stats.health"), DrGBase.MultHealth:GetName(), 0.1, 10, 1)
-    /*panel:NumSlider(Text("stats.player_damage"), "drgbase_multiplier_damage_players", 0.1, 10, 1)
-    panel:NumSlider(Text("stats.npc_damage"), "drgbase_multiplier_damage_npc", 0.1, 10, 1)*/
-    panel:NumSlider(Text("stats.speed"), DrGBase.MultSpeed:GetName(), 0.1, 10, 1)
+  AddOption("nextbots", "misc", function(panel, GetText)
+    panel:ControlHelp("\n"..GetText("stats"))
+    panel:NumSlider(GetText("stats.health"), DrGBase.HealthMultiplier:GetName(), 0.1, 10, 1)
+    panel:NumSlider(GetText("stats.player_damage"), DrGBase.PlayerDamageMultiplier:GetName(), 0.1, 10, 1)
+    panel:NumSlider(GetText("stats.npc_damage"), DrGBase.NPCDamageMultiplier:GetName(), 0.1, 10, 1)
+    panel:NumSlider(GetText("stats.other_damage"), DrGBase.OtherDamageMultiplier:GetName(), 0.1, 10, 1)
+    panel:NumSlider(GetText("stats.speed"), DrGBase.SpeedMultiplier:GetName(), 0.1, 10, 1)
   end)
+
 end)

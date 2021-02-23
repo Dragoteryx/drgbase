@@ -1,5 +1,6 @@
-hook.Add("DrG/SetupLanguages", "DrG/SetupEnglish", function()
-  local lang = DrGBase.GetLanguage("en")
+hook.Add("DrG/LoadLanguages", "DrG/EnglishLanguage", function()
+  local lang = DrGBase.GetOrCreateLanguage("en")
+  lang.Flag = "flags16/gb.png"
   lang.Name = "English"
 
   -- Misc --
@@ -16,10 +17,25 @@ hook.Add("DrG/SetupLanguages", "DrG/SetupEnglish", function()
 
   -- Spawnmenu --
 
+  lang:Set("drgbase.spawnmenu.main", "Main Menu")
+
+  lang:Set("drgbase.spawnmenu.main.info", "Information")
+
+  lang:Set("drgbase.spawnmenu.main.server", "Server Settings")
+
+  lang:Set("drgbase.spawnmenu.main.client", "Client Settings")
+  lang:Set("drgbase.spawnmenu.main.client.language", "Language")
+  lang:Set("drgbase.spawnmenu.main.client.language.text", "Set the current language, this will automatically reload the spawnmenu.")
+  lang:Set("drgbase.spawnmenu.main.client.language.missing_translations", function(nb) return "(missing translations: "..nb..")" end)
+
   lang:Set("drgbase.spawnmenu.nextbots", "Nextbots")
 
   lang:Set("drgbase.spawnmenu.nextbots.ai", "AI Settings")
   lang:Set("drgbase.spawnmenu.nextbots.ai.behaviour", "Behaviour")
+  lang:Set("drgbase.spawnmenu.nextbots.ai.behaviour.ai_disabled", "AI disabled")
+  lang:Set("drgbase.spawnmenu.nextbots.ai.behaviour.ignore_players", "Ignore players")
+  lang:Set("drgbase.spawnmenu.nextbots.ai.behaviour.ignore_npcs", "Ignore NPCs")
+  lang:Set("drgbase.spawnmenu.nextbots.ai.behaviour.ignore_others", "Ignore other entities")
   lang:Set("drgbase.spawnmenu.nextbots.ai.behaviour.roam", "Enable roaming")
   lang:Set("drgbase.spawnmenu.nextbots.ai.detection", "Detection")
   lang:Set("drgbase.spawnmenu.nextbots.ai.detection.omniscience", "Omniscience")
@@ -37,10 +53,9 @@ hook.Add("DrG/SetupLanguages", "DrG/SetupEnglish", function()
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats.health", "Health multiplier")
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats.player_damage", "Player damage multiplier")
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats.npc_damage", "NPC damage multiplier")
+  lang:Set("drgbase.spawnmenu.nextbots.misc.stats.other_damage", "Other entities damage multiplier")
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats.speed", "Speed multiplier")
 
-
   -- Tools --
-
 
 end)

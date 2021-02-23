@@ -121,10 +121,16 @@ DrGBase.IncludeFile("deprecated.lua")
 
 -- ConVars --
 
-DrGBase.MultHealth = DrGBase.ConVar("drgbase_multiplier_health", "1")
-DrGBase.MultSpeed = DrGBase.ConVar("drgbase_multiplier_speed", "1")
+DrGBase.HealthMultiplier = DrGBase.ConVar("drgbase_multiplier_health", "1")
+DrGBase.PlayerDamageMultiplier = DrGBase.ConVar("drgbase_multiplier_player_damage", "1")
+DrGBase.NPCDamageMultiplier = DrGBase.ConVar("drgbase_multiplier_npc_damage", "1")
+DrGBase.OtherDamageMultiplier = DrGBase.ConVar("drgbase_multiplier_other_damage", "1")
+DrGBase.SpeedMultiplier = DrGBase.ConVar("drgbase_multiplier_speed", "1")
 
 DrGBase.AIDisabled = DrGBase.ConVar("drgbase_ai_disabled", "0")
+DrGBase.IgnorePlayers = DrGBase.ConVar("drgbase_ai_ignore_players", "0")
+DrGBase.IgnoreNPCs = DrGBase.ConVar("drgbase_ai_ignore_npcs", "0")
+DrGBase.IgnoreOthers = DrGBase.ConVar("drgbase_ai_ignore_others", "0")
 DrGBase.AllOmniscient = DrGBase.ConVar("drgbase_ai_omniscient", "0")
 DrGBase.AIBlind = DrGBase.ConVar("drgbase_ai_blind", "0")
 DrGBase.AIDeaf = DrGBase.ConVar("drgbase_ai_deaf", "0")
@@ -170,7 +176,7 @@ function ENT:DrG_PreInitialize()
     -- status
     self:SetMaxHealth(self.SpawnHealth)
     self:SetHealth(self.SpawnHealth)
-    self:ScaleHealth(DrGBase.MultHealth:GetFloat())
+    self:ScaleHealth(DrGBase.HealthMultiplier:GetFloat())
     -- vision
     self:SetMaxVisionRange(self.SightRange)
     self:SetFOV(self.SightFOV)
@@ -507,6 +513,8 @@ else
 
   DrGBase.BGMEnabled = DrGBase.SharedClientConVar("drgbase_bgm_enabled", "1")
   DrGBase.BGMVolume = DrGBase.ClientConVar("drgbase_bgm_volume", "1")
+
+  DrGBase.PossessionBindsViews = DrGBase.SharedClientConVar("drgbase_possession_bind_views", KEY_H)
 
   DrGBase.DebugSight = DrGBase.ClientConVar("drgbase_debug_sight", "0")
 

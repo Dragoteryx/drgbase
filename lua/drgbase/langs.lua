@@ -7,7 +7,7 @@ if CLIENT then
   local Language = DrGBase.CreateClass()
 
   function Language:new(id, parent)
-    self.Name = tostring(id)
+    self.Name = id
     self.Parent = parent
     self.Data = {}
     function self:GetID()
@@ -32,8 +32,15 @@ if CLIENT then
     end
   end
 
-  function Language.prototype:UpdateLanguage()
-    if self:IsCurrent() then DrGBase.UpdateLanguage() end
+  function Language.prototype:MissingTranslations()
+    if self.Parent then
+      local missing = self.Parent:MissingTranslations()
+      for key in pairs(self.Parent.Data) do
+        if self.Data[key] then missing[key] = nil
+        else missing[key] = self.Parent end
+      end
+      return missing
+    else return {} end
   end
 
   function Language.prototype:tostring()
@@ -42,40 +49,83 @@ if CLIENT then
 
   -- Functions --
 
-  local LANGS = {en = Language("en")}
+  local LANGS
 
+  function DrGBase.CreateLanguage(lang)
+    if not LANGS then return false end
+    if not isstring(lang) then return false end
+    if not LANGS[lang] then
+      LANGS[lang] = Language(lang, LANGS.en)
+      return true
+    else return false end
+  end
   function DrGBase.GetLanguage(lang)
+    if not LANGS then return end
     if not isstring(lang) then lang = GmodLanguage:GetString() end
-    if not LANGS[lang] then LANGS[lang] = Language(lang, LANGS.en) end
+    return LANGS[lang]
+  end
+
+  function DrGBase.GetOrCreateLanguage(lang)
+    if not LANGS then return end
+    if not isstring(lang) then return end
+    DrGBase.CreateLanguage(lang)
     return LANGS[lang]
   end
 
   function DrGBase.GetText(placeholder, ...)
+    if not LANGS then return end
     return DrGBase.GetLanguage():Get(placeholder, ...)
   end
 
-  -- Update lang --
+  function DrGBase.LanguageIterator()
+    return pairs(LANGS or {})
+  end
+  function DrGBase.GetLanguages()
+    local langs = {}
+    for _, lang in DrGBase.LanguageIterator() do
+      table.insert(langs, lang)
+    end
+    return langs
+  end
 
-  local function UpdateLanguage(lang)
-    if lang.Parent then UpdateLanguage(lang.Parent) end
+  -- Add translation --
+
+  local function AddTranslation(lang)
+    if lang.Parent then AddTranslation(lang.Parent) end
     for placeholder, translation in pairs(lang.Data) do
       if not isstring(translation) then continue end
       language.Add(placeholder, translation)
     end
   end
 
-  function DrGBase.UpdateLanguage()
-    UpdateLanguage(DrGBase.GetLanguage())
+  local function AddCurrentTranslation()
+    AddTranslation(DrGBase.GetLanguage())
   end
 
-  cvars.AddChangeCallback("gmod_language", DrGBase.UpdateLanguage, "DrG/LanguageChange")
+  -- (Re)load languages --
+
+  local function LoadLanguages()
+    LANGS = {en = Language("en")}
+    hook.Run("DrG/LoadLanguages")
+    AddCurrentTranslation()
+  end
+
+  hook.Add("PreGamemodeLoaded", "DrG/LoadLanguages", function()
+    LoadLanguages()
+  end)
+  concommand.Add("drgbase_command_reload_languages", function()
+    LoadLanguages()
+  end)
+  cvars.AddChangeCallback("gmod_language", function()
+    AddCurrentTranslation()
+  end, "DrG/LanguageChange")
+
+  function DrGBase.ReloadLanguages()
+    LoadLanguages()
+  end
 
 end
 
 -- Import languages --
 
 DrGBase.IncludeFolder("drgbase/cl_langs")
-if CLIENT then
-  hook.Run("DrG/SetupLanguages")
-  DrGBase.UpdateLanguage()
-end

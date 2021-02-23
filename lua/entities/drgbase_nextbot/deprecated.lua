@@ -151,22 +151,22 @@ if SERVER then
 
   ENT.Attack = DrGBase.Deprecated(
     "ENT:Attack(attack, fn)",
-    "ENT:DealDamage(attack, fn)",
+    "ENT:MeleeAttack(attack, fn)",
     function(self, attack, fn)
       if not istable(attack) then attack = {} end
       self:Timer(isnumber(attack.delay) and attack.delay or 0, function(self)
-        local hit = self:DealDamage(attack)
+        local hit = self:MeleeAttack(attack)
         if isfunction(fn) then fn(self, hit) end
       end)
     end)
 
   ENT.BlastAttack = DrGBase.Deprecated(
     "ENT:BlastAttack(attack, fn)",
-    "ENT:DealRadialDamage(attack, fn)",
+    "ENT:RadialAttack(attack, fn)",
     function(self, attack, fn)
       if not istable(attack) then attack = {} end
       self:Timer(isnumber(attack.delay) and attack.delay or 0, function(self)
-        local hit = self:DealRadialDamage(attack)
+        local hit = self:RadialAttack(attack)
         if isfunction(fn) then fn(self, hit) end
       end)
     end)

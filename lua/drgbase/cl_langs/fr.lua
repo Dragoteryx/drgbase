@@ -1,5 +1,6 @@
-hook.Add("DrG/SetupLanguages", "DrG/SetupFrench", function()
-  local lang = DrGBase.GetLanguage("fr")
+hook.Add("DrG/LoadLanguages", "DrG/FrenchLanguage", function()
+  local lang = DrGBase.GetOrCreateLanguage("fr")
+  lang.Flag = "flags16/fr.png"
   lang.Name = "Français"
 
   -- Misc --
@@ -16,10 +17,25 @@ hook.Add("DrG/SetupLanguages", "DrG/SetupFrench", function()
 
   -- Spawnmenu --
 
+  lang:Set("drgbase.spawnmenu.main", "Menu principal")
+
+  lang:Set("drgbase.spawnmenu.main.info", "Informations")
+
+  lang:Set("drgbase.spawnmenu.main.server", "Paramètres serveur")
+
+  lang:Set("drgbase.spawnmenu.main.client", "Paramètres client")
+  lang:Set("drgbase.spawnmenu.main.client.language", "Langue")
+  lang:Set("drgbase.spawnmenu.main.client.language.text", "Définir la langue utilisée, cela recharge automatiquement le spawnmenu.")
+  lang:Set("drgbase.spawnmenu.main.client.language.missing_translations", function(nb) return "(traductions manquantes: "..nb..")" end)
+
   lang:Set("drgbase.spawnmenu.nextbots", "Nextbots")
 
   lang:Set("drgbase.spawnmenu.nextbots.ai", "Paramètres IA")
   lang:Set("drgbase.spawnmenu.nextbots.ai.behaviour", "Comportement")
+  lang:Set("drgbase.spawnmenu.nextbots.ai.behaviour.ai_disabled", "Désactiver l'IA")
+  lang:Set("drgbase.spawnmenu.nextbots.ai.behaviour.ignore_players", "Ignorer les joueurs")
+  lang:Set("drgbase.spawnmenu.nextbots.ai.behaviour.ignore_npcs", "Ignorer les PNJs")
+  lang:Set("drgbase.spawnmenu.nextbots.ai.behaviour.ignore_others", "Ignorer les autres entités")
   lang:Set("drgbase.spawnmenu.nextbots.ai.behaviour.roam", "Activer l'errance")
   lang:Set("drgbase.spawnmenu.nextbots.ai.detection", "Détection")
   lang:Set("drgbase.spawnmenu.nextbots.ai.detection.omniscience", "Omniscience")
@@ -37,7 +53,9 @@ hook.Add("DrG/SetupLanguages", "DrG/SetupFrench", function()
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats.health", "Multiplicateur de santé")
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats.player_damage", "Multiplicateur de dégâts aux joueurs")
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats.npc_damage", "Multiplicateur de dégâts aux PNJs")
+  lang:Set("drgbase.spawnmenu.nextbots.misc.stats.other_damage", "Multiplicateur de dégâts aux autres entités")
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats.speed", "Multiplicateur de vitesse")
 
   -- Tools --
+
 end)

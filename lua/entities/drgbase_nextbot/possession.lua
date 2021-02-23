@@ -4,6 +4,13 @@ function ENT:IsPossessionEnabled()
   return self:GetNW2Bool("DrG/DrGBase.PossessionEnabled", self.PossessionEnabled)
 end
 
+--[[function ENT:GetPossessor()
+  return self:IsPossessed() and self.DrG_Possessor or NULL
+end
+function ENT:IsPossessed()
+  return IsValid(self.DrG_Possessor)
+end]]
+
 function ENT:GetPossessor()
   return self:GetNW2Entity("DrG/Possessor")
 end
@@ -43,7 +50,7 @@ function ENT:PossessorEyePos()
       self:PossessorRight()*offset.y*self:GetModelScale() +
       self:PossessorUp()*offset.z*self:GetModelScale()
     origin = self:TraceLine({
-      startpos = Vector(pos.x, pos.y, origin.z),
+      start = Vector(pos.x, pos.y, origin.z),
       endpos = origin
     }).HitPos
     distance = view.distance or 0
@@ -127,6 +134,27 @@ properties.Add("drg/possess", {
 	end
 })
 
+drive.Register("drg/possess_nextbot", {
+  Init = function(self)
+    --[[self.Entity.DrG_Possessor = self.Player
+    self.Player.DrG_Possessing = self.Entity]]
+    if CLIENT then self.Entity:SetPredictable(false) end
+  end,
+  StartMove = function(self)
+    self.Player:SetObserverMode(OBS_MODE_CHASE)
+  end,
+  FinishMove = function(self)
+    self.Player:SetPos(self.Entity:GetPos())
+    if SERVER then
+      self.Player:Extinguish()
+    end
+  end,
+  CalcView = function(self, view)
+    view.origin = self.Entity:PossessorEyePos()
+    view.angles = self.Entity:PossessorEyeAngles()
+  end
+}, "drive_base")
+
 local PossessionBindsTableDeprecation = DrGBase.Deprecation("ENT.PossessionBinds", "ENT:Do/OnPossessionBinds(binds)")
 local function PossessionBindsTable(self, thr)
   if not istable(self.PossessionBinds) then return end
@@ -165,8 +193,6 @@ hook.Add("StartCommand", "DrG/PossessionStartCommand", function(ply, cmd)
   if not isfunction(ply.DrG_IsPossessing) then return end
   if ply:DrG_IsPossessing() then
     local possessing = ply:DrG_GetPossessing()
-    -- disable movement
-		cmd:ClearMovement()
     -- zoom
     if SERVER and cmd:GetMouseWheel() ~= 0 then
       if cmd:GetMouseWheel() == 1 then possessing:PossessionZoomIn()
@@ -236,15 +262,16 @@ if SERVER then
       ply:SetActiveWeapon(nil)
       ply.DrG_PrePossessFlashlight = ply:FlashlightIsOn()
       ply:Flashlight(false)
+      ply.DrG_PrePossessCanZoom = ply:GetCanZoom()
+      ply:SetCanZoom(false)
       ply.DrG_PrePossessCollisionGroup = ply:GetCollisionGroup()
       ply:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
-      ply.DrG_PrePossessNoTarget = ply:GetNoTarget()
+      ply.DrG_PrePossessNoTarget = ply:IsFlagSet(FL_NOTARGET)
       ply:SetNoTarget(true)
       ply.DrG_PrePossessNoDraw = ply:GetNoDraw()
       ply:SetNoDraw(true)
       ply:DrawShadow(false)
-      ply:Spectate(OBS_MODE_CHASE)
-      ply:SpectateEntity(self)
+      drive.PlayerStartDriving(ply, self, "drg/possess_nextbot")
     elseif self:IsPossessed() then
       local ply = self:GetPossessor()
       self:SetNW2Float("DrG/PossessionZoom", 1)
@@ -256,10 +283,12 @@ if SERVER then
       ply:SetEyeAngles(ply.DrG_PrePossessEyeAngles)
       --ply:SetActiveWeapon(ply.DrG_PrePossessWeapon)
       ply:Flashlight(ply.DrG_PrePossessFlashlight)
+      ply:SetCanZoom(ply.DrG_PrePossessCanZoom)
       ply:SetCollisionGroup(ply.DrG_PrePossessCollisionGroup)
       ply:SetNoTarget(ply.DrG_PrePossessNoTarget)
       ply:SetNoDraw(ply.DrG_PrePossessNoDraw)
       ply:DrawShadow(true)
+      drive.PlayerStopDriving(ply)
     end
   end
   function ENT:StopPossession()
@@ -422,7 +451,7 @@ if SERVER then
   hook.Add("PlayerButtonDown", "DrG/PossessionPlayerButtonDown", function(ply, button)
     if not ply:DrG_IsPossessing() then return end
     local possessing = ply:DrG_GetPossessing()
-    if button == KEY_V then
+    if button == ply:GetInfoNum("drgbase_possession_bind_views", KEY_H) then
       local view = possessing:OnPossessionNextView(possessing:GetPossessionView())
       if isnumber(view) then possessing:SetPossessionView(view) end
     end
@@ -451,24 +480,6 @@ else
   end
 
   -- Internal --
-
-  hook.Add("CalcView", "DrG/PossessionCalcView", function(ply, _origin, angles, fov, znear, zfar)
-    if not isfunction(ply.DrG_IsPossessing) or not ply:DrG_IsPossessing() then return end
-    local possessing = ply:DrG_GetPossessing()
-    local view = {}
-    view.origin = possessing:PossessorEyePos()
-    view.angles = angles
-    view.fov = fov
-    view.znear = znear
-    view.zfar = zfar
-    view.drawviewer = false
-    return view
-  end)
-
-  hook.Add("ShouldDisableLegs", "DrG/GmodLegs3Disable", function()
-    local ply = LocalPlayer()
-    if isfunction(ply.DrG_IsPossessing) and ply:DrG_IsPossessing() then return true end
-  end)
 
   local HUD_HIDE = {
 		["CHudWeaponSelection"] = true,

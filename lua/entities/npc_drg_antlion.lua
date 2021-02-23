@@ -54,10 +54,7 @@ if SERVER then
 
   function ENT:Initialize()
     print(#DrGBase.GetNextbots())
-  end
-
-  function ENT:DoUse()
-    self:PlaySequenceAndMove("attack6", true)
+    self:SetClassRelationship("prop_thumper", D_FR, 1)
   end
 
   -- AI --
@@ -75,7 +72,7 @@ if SERVER then
   end
 
   function ENT:DoRangeAttack(enemy)
-    if math.random(1, 10) > 1 then return end
+    if math.random(1, 500) > 1 then return end
     if self:PlaySequenceAndMove("charge_start", true) then
       self:ResetSequence("charge_run")
       self:UpdateSpeed()
@@ -120,9 +117,7 @@ if SERVER then
     end
     if binds:IsDown("IN_JUMP") then
       local pos = self:PossessorEyeTrace(1000).HitPos
-      self:Jump(pos, function(self)
-        self:FaceTowards(self:GetPos() + self:GetVelocity())
-      end)
+      self:Jump(pos, self.FaceForward)
     end
   end
 
@@ -139,6 +134,11 @@ if SERVER then
 
   function ENT:OnLeaveGround()
     --self:PlaySequence("jump_start")
+  end
+
+  function ENT:DoLandOnGround()
+    print("hey")
+    self:PlaySequenceAndMove("jump_stop")
   end
 
   function ENT:DoTakeDamage(dmg)
@@ -196,12 +196,11 @@ if SERVER then
   function ENT:OnAnimEvent()
     if self:IsAttacking() then
       if self:GetCycle() > 0.3 then
-        self:Attack({
+        local hit = self:MeleeAttack({
           damage = 5, range = 50, type = DMG_SLASH,
           viewpunch = Angle(10, 0, 0)
-        }, function(self, hit)
-            if #hit > 0 then self:EmitSound("NPC_Antlion.MeleeAttack") end
-        end)
+        })
+        if #hit > 0 then self:EmitSound("NPC_Antlion.MeleeAttack") end
       else self:EmitSound("NPC_Antlion.MeleeAttackSingle") end
     elseif self:IsOnGround() then
       self:EmitSound("NPC_Antlion.Footstep")

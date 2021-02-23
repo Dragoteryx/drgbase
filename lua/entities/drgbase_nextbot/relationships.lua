@@ -328,10 +328,14 @@ if SERVER then
   }
   function ENT:IsIgnored(ent)
     if ent:IsPlayer() and not ent:Alive() then return true end
+    if ent:IsPlayer() and ent:DrG_IsPossessing() then return true end
     if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return true end
-    if ent:IsPlayer() and self:GetPossessor() == ent then return true end
+    if ent:IsPlayer() and DrGBase.IgnorePlayers:GetBool() then return true
+    elseif DrG_IsTarget(ent) then
+      if DrGBase.IgnoreNPCs:GetBool() then return true end
+    elseif DrGBase.IgnoreOthers:GetBool() then return true end
     if ent:IsFlagSet(FL_NOTARGET) then return true end
-    if ent.IsVJBaseSNPC and ent.VJ_NoTarget then return true end -- why the fuck
+    if ent.IsVJBaseSNPC and ent.VJ_NoTarget then return true end -- why the f❤ck
     if ent.CPTBase_NPC and ent.UseNotarget then return true end -- don't you use
     if ent.IV04NextBot and ent.IsNTarget then return true end -- the built-in no target
     if ent:IsNPC() and NPC_STATES_IGNORED[ent:GetNPCState()] then return true end
@@ -390,7 +394,7 @@ if SERVER then
     })}
     for faction, rel in pairs(DefinedRelationshipTable(self, "Faction")) do
       if rel.disp == D_ER or rel.prio < relationships[1].prio then continue end
-      if self:DrG_IsInFaction(faction) then
+      if ent:DrG_IsInFaction(faction) then
         table.insert(relationships, rel)
       elseif ent.IsVJBaseSNPC then
         for i = 1, #ent.VJ_NPC_Class do
@@ -451,7 +455,7 @@ if SERVER then
             ent = next(cache, ent)
             if not ent then return end
             if not IsValid(ent) then continue end
-            if self:IsIgnored(ent) then continue end
+            if self:GetRelationship(ent) ~= disp then continue end
             return ent
           end
         end
@@ -462,7 +466,7 @@ if SERVER then
             if not ent then return end
             if not IsValid(ent) then continue end
             if isbool(detected) and self:HasDetected(ent) ~= detected then continue end
-            if self:IsIgnored(ent) then continue end
+            if self:GetRelationship(ent) ~= disp then continue end
             return ent
           end
         end

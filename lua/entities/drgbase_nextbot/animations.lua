@@ -228,14 +228,22 @@ if SERVER then
         if options.absolute then
           self:SetVelocity(Vector())
           pos = pos + vec
-          if options.collide and self:TraceHull(vec, {step = true}).Hit then
+          if options.collide and self:TraceHull({direction = vec, step = true}).Hit then
             return false
           else self:SetPos(pos) end
-        elseif not self:TraceHull(vec, {step = true}).Hit then
-          pos = self:GetPos() + vec
+        elseif options.collide then
+          local tr = self:TraceHull({direction = vec, step = true})
+          if not tr.Hit then
+            pos = self:GetPos() + vec
+            self:SetPos(pos)
+          else return false end
+        else
+          local trX = self:TraceHull({direction = Vector(vec.x, 0, 0), step = true})
+          local trY = self:TraceHull({direction = Vector(0, vec.y, 0), start = trX.HitPos, step = true})
+          local trZ = self:TraceHull({direction = Vector(0, 0, vec.z), start = trY.HitPos, step = true})
+          pos = trZ.HitPos
           self:SetPos(pos)
-        elseif options.collide then return false
-        else pos = self:GetPos() end
+        end
       end
       if isfunction(fn) then
         if n > 0 then return fn(self, table.DrG_Unpack(args, n))
@@ -310,9 +318,7 @@ if SERVER then
     local args, n = table.DrG_Pack(...)
     local layer = self:AddGestureSequence(seq, true)
     if layer == -1 then return false end
-    self:SetLayerPlaybackRate(layer, self:IsPossessed() and
-      options.rate/2 or
-      options.rate)
+    self:SetLayerPlaybackRate(layer, options.rate)
     self:SetLayerWeight(layer, 1)
     self:ParallelCoroutine(function(self)
       local lastCycle = -1
@@ -444,7 +450,7 @@ if SERVER then
           elseif not velocity:IsZero() then
             local speed = velocity:Length()
             local ok, vec = self:GetSequenceMovement(self:GetSequence(), 0, 1)
-            if not ok then return end
+            if not ok or vec.z == 0 then return end
             local seqspeed = (vec:Length()/self:SequenceDuration())*self:GetModelScale()
             if seqspeed ~= 0 then self:SetPlaybackRate(speed/seqspeed) end
           end

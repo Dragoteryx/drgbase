@@ -69,7 +69,7 @@ if SERVER then
   -- Getters/setters --
 
   function ENT:SetSpeed(speed)
-    self.loco:SetDesiredSpeed(speed*DrGBase.MultSpeed:GetFloat()*self:GetModelScale())
+    self.loco:SetDesiredSpeed(speed*DrGBase.SpeedMultiplier:GetFloat()*self:GetModelScale())
   end
 
   function ENT:IsRunning()
@@ -93,23 +93,8 @@ if SERVER then
     if isentity(pos) then pos = pos:GetPos() end
     self.loco:FaceTowards(pos)
   end
-  function ENT:FaceInstant(pos)
-    if isentity(pos) then pos = pos:GetPos() end
-    local angle = (pos - self:GetPos()):Angle()
-    self:SetAngles(Angle(0, angle.y, 0))
-  end
-  function ENT:FaceTo(toface)
-    while true do
-      local pos = toface
-      if isentity(pos) then
-        if not IsValid(pos) then return end
-        pos = pos:GetPos()
-      end
-      local angle = (pos - self:GetPos()):Angle()
-      if math.NormalizeAngle(math.Round(self:GetAngles().y)) == math.NormalizeAngle(math.Round(angle.y)) then return end
-      self:FaceTowards(pos)
-      self:YieldCoroutine(true)
-    end
+  function ENT:FaceForward()
+    self:FaceTowards(self:GetPos() + self:GetVelocity())
   end
   function ENT:FaceEnemy()
     if not self:HasEnemy() then return end

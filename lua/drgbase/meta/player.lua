@@ -1,5 +1,12 @@
-
+local entMETA = FindMetaTable("Entity")
 local plyMETA = FindMetaTable("Player")
+
+--[[function plyMETA:DrG_GetPossessing()
+  return self:DrG_IsPossessing() and self.DrG_Possessing or NULL
+end
+function plyMETA:DrG_IsPossessing()
+  return IsValid(self.DrG_Possessing)
+end]]
 
 function plyMETA:DrG_GetPossessing()
   return self:GetNW2Entity("DrG/Possessing")
@@ -378,5 +385,19 @@ else
     if not isfunction(ply.DrG_Luminosity) then return 1
     else return ply:DrG_Luminosity() end
   end)
+
+  -- Possession health --
+
+  function plyMETA:Health(...)
+    if self:DrG_IsPossessing() then
+      return self:DrG_GetPossessing():Health(...)
+    else return entMETA.Health(self, ...) end
+  end
+
+  function plyMETA:GetMaxHealth(...)
+    if self:DrG_IsPossessing() then
+      return self:DrG_GetPossessing():GetMaxHealth(...)
+    else return entMETA.GetMaxHealth(self, ...) end
+  end
 
 end

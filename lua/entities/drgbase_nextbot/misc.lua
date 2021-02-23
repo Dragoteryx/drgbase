@@ -99,13 +99,16 @@ if SERVER then
 
   -- Attacks --
 
-  function ENT:DealDamage(attack, fn)
+  function ENT:MeleeAttack(attack, fn)
     local hit = {}
     if not istable(attack) then attack = {} end
     if not isnumber(attack.angle) then attack.angle = 90 end
     if not isnumber(attack.range) then attack.range = self.MeleeAttackRange end
     if not istable(attack.relationships) then
-      attack.relationships = {D_HT, D_FR} end
+      if self:IsPossessed() then
+        attack.relationships = {D_LI, D_HT, D_FR}
+      else attack.relationships = {D_HT, D_FR} end
+    end
     local iterators = {}
     if table.HasValue(attack.relationships, D_LI) then
       table.insert(iterators, self:AllyIterator()) end
@@ -117,7 +120,7 @@ if SERVER then
       table.insert(iterators, self:NeutralIterator()) end
     for ent in util.DrG_MergeIterators(iterators) do
       if not self:Visible(ent) then continue end
-      if self:GetPos():DrG_Degrees(self:GetPos() + self:GetForward(), ent:GetPos()) > attack.angle then continue end
+      if attack.angle < 360 and self:GetPos():DrG_Degrees(self:GetPos() + self:GetForward(), ent:GetPos()) > attack.angle then continue end
       if self:GetHullRangeSquaredTo(ent) > attack.range^2 then continue end
       local dmg = DamageInfo()
       dmg:SetAttacker(self)
@@ -136,10 +139,10 @@ if SERVER then
     return hit
   end
 
-  function ENT:DealRadialDamage(attack, fn)
+  function ENT:RadialAttack(attack, fn)
     if not istable(attack) then attack = {} end
     attack.angle = 360
-    return self:DealDamage(attack, function(self, ent, dmg)
+    return self:MeleeAttack(attack, function(self, ent, dmg)
       local damage = dmg:GetDamage()
       dmg:SetDamage(damage*(self:GetHullRangeTo(ent)/attack.range))
       if isfunction(fn) then return fn(self, ent, dmg) end
@@ -197,7 +200,7 @@ if SERVER then
   end
 
   function ENT:Jump(target, fn, ...)
-    if not self:IsOnGround() then return end
+    if not self:IsOnGround() then return false end
     if isnumber(target) then
       local height = self.loco:GetJumpHeight()
       self:SetJumpHeight(target)
@@ -209,20 +212,59 @@ if SERVER then
         vel, info = self:GetPos():DrG_CalcBallisticTrajectory(target, {magnitude = 1, gravity = self:GetGravity(), highest = true}, true)
       end
       DrG_DebugTrajectory(self:GetPos(), vel, info)
-      self:LeaveGround()
       self:SetVelocity(vel)
     else return LocoJump(self) end
     local args, n = table.DrG_Pack(...)
     local function Jumping(self)
       while not self:IsOnGround() do
-        if isfunction(fn) and fn(self, table.DrG_Unpack(args, n)) then break end
-        if self:InCoroutine() and self:YieldCoroutine(true) then break
+        if isfunction(fn) then
+          local res = fn(self, table.DrG_Unpack(args, n))
+          if res ~= nil then return res end
+        end
+        if self:InCoroutine() then
+          if self:YieldCoroutine(true) then return false end
         else coroutine.yield() end
       end
     end
     if not self:InCoroutine() then
       self:ParallelCoroutine(Jumping)
-    else Jumping(self) end
+      return true
+    else return Jumping(self) end
+  end
+
+  function ENT:Glide(vel, fn, ...)
+    local gravity = self:GetGravity()
+    self:SetGravity(0)
+    while not self:IsOnGround() do
+      self:SetVelocity((
+        self:GetForward()*vel.x +
+        self:GetRight()*vel.y +
+        self:GetUp()*vel.z
+      ):GetNormalized()*vel:Length())
+      if isfunction(fn) then
+        local res = fn(self, ...)
+        if res ~= nil then
+          self:SetGravity(gravity)
+          return res
+        end
+      end
+      if self:YieldCoroutine(true) then
+        self:SetGravity(gravity)
+        return false
+      end
+    end
+    self:SetGravity(gravity)
+    return true
+  end
+
+  function ENT:JumpThenGlide(jump, glide, fn, ...)
+    local res = self:Jump(jump, function(self, ...)
+      if self:GetVelocity().z < 0 then return "glide" end
+      if isfunction(fn) then return fn(self, ...) end
+    end, ...)
+    if res == "glide" then
+      return self:Glide(glide, fn, ...)
+    else return res end
   end
 
   -- Meta --
