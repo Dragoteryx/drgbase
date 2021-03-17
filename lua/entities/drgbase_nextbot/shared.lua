@@ -131,16 +131,16 @@ DrGBase.AIDisabled = DrGBase.ConVar("drgbase_ai_disabled", "0")
 DrGBase.IgnorePlayers = DrGBase.ConVar("drgbase_ai_ignore_players", "0")
 DrGBase.IgnoreNPCs = DrGBase.ConVar("drgbase_ai_ignore_npcs", "0")
 DrGBase.IgnoreOthers = DrGBase.ConVar("drgbase_ai_ignore_others", "0")
-DrGBase.AllOmniscient = DrGBase.ConVar("drgbase_ai_omniscient", "0")
+DrGBase.AIOmniscient = DrGBase.ConVar("drgbase_ai_omniscient", "0")
 DrGBase.AIBlind = DrGBase.ConVar("drgbase_ai_blind", "0")
 DrGBase.AIDeaf = DrGBase.ConVar("drgbase_ai_deaf", "0")
-DrGBase.EnableRoam = DrGBase.ConVar("drgbase_ai_roam", "1")
+DrGBase.AIRoam = DrGBase.ConVar("drgbase_ai_roam", "1")
 DrGBase.TargetInsects = DrGBase.ConVar("drgbase_ai_target_insects", "0")
 DrGBase.TargetRepMelons = DrGBase.ConVar("drgbase_ai_target_repmelons", "1")
 
 DrGBase.PossessionEnabled = DrGBase.ConVar("drgbase_possession_enabled", "1")
 DrGBase.SpawnWithPossessor = DrGBase.ConVar("drgbase_possession_spawn_with_possessor", "0")
-DrGBase.LockOnEnabled = DrGBase.ConVar("drgbase_possession_lockon", "1")
+DrGBase.PossessionLockOn = DrGBase.ConVar("drgbase_possession_lockon", "1")
 
 DrGBase.PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", "Pathfinding mode:\n"..
   "    'custom' => DrGBase custom pathfinding, allows climbing at the cost of performance\n"..
@@ -149,9 +149,9 @@ DrGBase.PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", "Pathf
 DrGBase.ComputeDelay = DrGBase.ConVar("drgbase_pathfindng_delay", "0.1")
 DrGBase.AvoidObstacles = DrGBase.ConVar("drgbase_pathfinding_avoid_obstacles", "1")
 
-DrGBase.RemoveRagdolls = DrGBase.ConVar("drgbase_ragdolls_remove", "-1")
-DrGBase.RagdollFadeOut = DrGBase.ConVar("drgbase_ragdolls_fadeout", "3")
-DrGBase.DisableRagCollisions = DrGBase.ConVar("drgbase_ragdolls_collisions_disabled", "0")
+DrGBase.RagdollsRemove = DrGBase.ConVar("drgbase_ragdolls_remove", "-1")
+DrGBase.RagdollsFadeOut = DrGBase.ConVar("drgbase_ragdolls_fadeout", "3")
+DrGBase.RagdollsDisableCollisions = DrGBase.ConVar("drgbase_ragdolls_disable_collisions", "0")
 
 -- Initialize --
 
@@ -514,7 +514,8 @@ else
   DrGBase.BGMEnabled = DrGBase.SharedClientConVar("drgbase_bgm_enabled", "1")
   DrGBase.BGMVolume = DrGBase.ClientConVar("drgbase_bgm_volume", "1")
 
-  DrGBase.PossessionBindsViews = DrGBase.SharedClientConVar("drgbase_possession_bind_views", KEY_H)
+  DrGBase.PossessionBindsViews = DrGBase.SharedClientConVar("drgbase_possession_bind_views", KEY_V)
+  DrGBase.PossessionPlayerStats = DrGBase.ClientConVar("drgbase_possession_player_stats", "1")
 
   DrGBase.DebugSight = DrGBase.ClientConVar("drgbase_debug_sight", "0")
 

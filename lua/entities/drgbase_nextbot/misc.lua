@@ -2,7 +2,7 @@
 
 function ENT:IsInRange(pos, range)
   if isentity(pos) and not IsValid(pos) then return false end
-  return self:GetHullRangeSquaredTo(pos) <= range^2
+  return self:GetHullRangeSquaredTo(pos) <= (range*self:GetModelScale())^2
 end
 function ENT:GetHullRangeTo(pos)
   if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
@@ -129,9 +129,17 @@ if SERVER then
       dmg:SetReportedPosition(self:GetPos())
       if isnumber(attack.damage) then dmg:SetDamage(attack.damage) end
       if isnumber(attack.type) then dmg:SetDamageType(attack.type) end
-      if isvector(attack.force) then dmg:SetDamageForce(Vector()) end
+      if isvector(attack.force) then dmg:SetDamageForce(Vector(
+        attack.force.x*self:GetForward(),
+        attack.force.y*self:GetRight(),
+        attack.force.z*self:GetUp()
+      ):GetNormalized()*attack.force:Length()) end
       if not isfunction(fn) or fn(self, ent, dmg) ~= true then
         if isangle(attack.viewpunch) and ent:IsPlayer() then ent:ViewPunch(attack.viewpunch) end
+        if attack.push then
+          if ent:IsPlayer() then ent:SetVelocity(dmg:GetDamageForce())
+          else ent:SetVelocity(ent:GetVelocity() + dmg:GetDamageForce()) end
+        end
         ent:TakeDamageInfo(dmg)
         table.insert(hit, ent)
       end
@@ -143,8 +151,9 @@ if SERVER then
     if not istable(attack) then attack = {} end
     attack.angle = 360
     return self:MeleeAttack(attack, function(self, ent, dmg)
-      local damage = dmg:GetDamage()
-      dmg:SetDamage(damage*(self:GetHullRangeTo(ent)/attack.range))
+      local fallOff = math.Clamp(1 - self:GetHullRangeTo(ent)/attack.range, 0, 1)
+      dmg:SetDamage(dmg:GetDamage()*fallOff)
+      dmg:SetDamageForce(dmg:GetDamageForce()*fallOff)
       if isfunction(fn) then return fn(self, ent, dmg) end
     end)
   end
@@ -155,12 +164,16 @@ if SERVER then
     return self:IsInRange(ent, range) and self:IsAbleToSee(ent, useFOV)
   end
 
-  function ENT:Idle(min, max)
-    local delay = CurTime() + math.random(min, max)
+  function ENT:Idle(duration, fn, ...)
+    local delay = CurTime() + duration
     while CurTime() < delay do
       if self:HasEnemy() then return false end
       if self:IsPossessed() then return false end
       if self:IsAIDisabled() then return false end
+      if isfunction(fn) then
+        local res = fn(self,...)
+        if res ~= nil then return res end
+      end
       if self:YieldCoroutine(true) then return false end
     end
     return true

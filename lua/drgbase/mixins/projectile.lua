@@ -1,3 +1,0 @@
-local MIXIN = {}
-
-return MIXIN

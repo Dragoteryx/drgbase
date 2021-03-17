@@ -361,8 +361,8 @@ if SERVER then
   hook.Add("OnEntityCreated", "DrG/UpdateRelationshipWithNew", function(ent)
     timer.Simple(0, function()
       if not IsValid(ent) then return end
-      for nextbot in DrGBase.NextbotIterator() do
-        nextbot:UpdateRelationshipWith(ent)
+      for nb in DrGBase.NextbotIterator() do
+        nb:UpdateRelationshipWith(ent)
       end
     end)
   end)

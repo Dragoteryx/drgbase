@@ -148,7 +148,9 @@ if SERVER then
   end
 
   function ENT:DoSearchEnemy(enemy)
-    if self:FollowPath(self:LastKnownPos(enemy)) == "reached" then
+    local lastKnowPos = self:LastKnownPos(enemy)
+    if not lastKnowPos then return false end
+    if self:FollowPath(lastKnowPos) == "reached" then
       return false
     end
   end
@@ -156,7 +158,7 @@ if SERVER then
     for hostile in self:HostileIterator(true) do
       self:ForgetEntity(hostile)
     end
-    self:Idle(3, 7)
+    self:Idle(math.random(3, 7))
   end
 
   -- Hooks --

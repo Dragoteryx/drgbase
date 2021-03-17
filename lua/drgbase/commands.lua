@@ -40,4 +40,9 @@ else
     end
   end)
 
+  concommand.Add("drbase_command_reload_languages_and_spawnmenu", function()
+    RunConsoleCommand("drbase_command_reload_languages")
+    RunConsoleCommand("spawnmenu_reload")
+  end)
+
 end

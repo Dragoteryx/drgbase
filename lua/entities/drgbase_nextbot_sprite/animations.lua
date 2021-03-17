@@ -96,7 +96,7 @@ end
 
 -- Hooks --
 
--- Handlers --
+-- ModuleHandlers --
 
 function ENT:_InitAnimations()
   self._DrGBaseSpriteAnimInfo = {}
@@ -251,7 +251,7 @@ if SERVER then
 
   function ENT:BodyUpdate() end
 
-  -- Handlers --
+  -- ModuleHandlers --
 
 else
 
@@ -263,6 +263,6 @@ else
 
   -- Hooks --
 
-  -- Handlers --
+  -- ModuleHandlers --
 
 end

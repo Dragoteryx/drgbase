@@ -47,6 +47,9 @@ hook.Add("DrG/LoadLanguages", "DrG/FrenchLanguage", function()
   lang:Set("drgbase.spawnmenu.nextbots.possession.server.enable", "Activer la possession")
   lang:Set("drgbase.spawnmenu.nextbots.possession.server.spawn_with_possessor", "Spawn avec le possesseur")
   lang:Set("drgbase.spawnmenu.nextbots.possession.client", "Paramètres client")
+  lang:Set("drgbase.spawnmenu.nextbots.possession.client.player_stats", "Remplacer les stats du joueur")
+  lang:Set("drgbase.spawnmenu.nextbots.possession.client.player_stats.text",
+    "Force les HUDs à afficher les stats du nextbot plutôt que celles du joueur pendant la possession. N'a aucun effet sur le HUD vanilla.")
 
   lang:Set("drgbase.spawnmenu.nextbots.misc", "Divers")
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats", "Stats")
@@ -55,6 +58,10 @@ hook.Add("DrG/LoadLanguages", "DrG/FrenchLanguage", function()
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats.npc_damage", "Multiplicateur de dégâts aux PNJs")
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats.other_damage", "Multiplicateur de dégâts aux autres entités")
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats.speed", "Multiplicateur de vitesse")
+  lang:Set("drgbase.spawnmenu.nextbots.misc.ragdolls", "Corps")
+  lang:Set("drgbase.spawnmenu.nextbots.misc.ragdolls.remove", "Retirer les corps")
+  lang:Set("drgbase.spawnmenu.nextbots.misc.ragdolls.fadeout", "Durée de la disparition")
+  lang:Set("drgbase.spawnmenu.nextbots.misc.ragdolls.disable_collisions", "Désactiver les collisions")
 
   -- Tools --
 

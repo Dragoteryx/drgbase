@@ -216,6 +216,7 @@ if SERVER then
     if not istable(options) then options = {} end
     if not isbool(options.absolute) then options.absolute = false end
     if not isbool(options.collide) then options.collide = false end
+    if not isbool(options.rotate) then options.rotate = true end
     local args, n = table.DrG_Pack(...)
     local pos = self:GetPos()
     local res = self:PlaySequenceAndWait(seq, options, function(self, cycle, lastCycle)
@@ -223,7 +224,7 @@ if SERVER then
       if ok then
         vec = vec*self:GetModelScale()
         if isnumber(options.multiply) or isvector(options.multiply) then vec = vec*options.multiply end
-        self:SetAngles(self:LocalToWorldAngles(angles))
+        if options.rotate then self:SetAngles(self:LocalToWorldAngles(angles)) end
         vec:Rotate(self:LocalToWorldAngles(angles))
         if options.absolute then
           self:SetVelocity(Vector())

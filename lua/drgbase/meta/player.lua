@@ -386,16 +386,18 @@ else
     else return ply:DrG_Luminosity() end
   end)
 
-  -- Possession health --
+  -- Possession stats --
 
   function plyMETA:Health(...)
-    if self:DrG_IsPossessing() then
+    if self:DrG_IsPossessing() and
+    DrGBase.PossessionPlayerStats:GetBool() then
       return self:DrG_GetPossessing():Health(...)
     else return entMETA.Health(self, ...) end
   end
 
   function plyMETA:GetMaxHealth(...)
-    if self:DrG_IsPossessing() then
+    if self:DrG_IsPossessing() and
+    DrGBase.PossessionPlayerStats:GetBool() then
       return self:DrG_GetPossessing():GetMaxHealth(...)
     else return entMETA.GetMaxHealth(self, ...) end
   end

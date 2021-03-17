@@ -6,9 +6,12 @@ function DrGBase.ApplyMixin(class, mixin)
   table.insert(MIXINS[class], mixin)
 end
 
-hook.Add("PreRegisterSENT", "DrG/ApplySENTMixins", function(ENT, class)
+-- SENTs --
+
+--[[local function ApplySENTMixins(ENT, class)
   for mixinClass, mixins in pairs(MIXINS) do
-    if class ~= mixinClass and ENT.Base ~= mixinClass then continue end
+    if class ~= mixinClass and
+    not scripted_ents.IsBasedOn(class, mixinClass) then continue end
     ENT.DrG_Mixin = ENT.DrG_Mixin or {}
     for _, mixin in ipairs(mixins) do
       for key, value in pairs(mixin) do
@@ -18,7 +21,25 @@ hook.Add("PreRegisterSENT", "DrG/ApplySENTMixins", function(ENT, class)
       end
     end
   end
+end
+
+hook.Add("PreRegisterSENT", "DrG/ApplySENTMixins", function(ENT, class)
+  --if not DrG_scripted_ents_OnLoaded_Ok then return end
+  --ApplySENTMixins(ENT, class)
 end)
+
+DrG_scripted_ents_OnLoaded = DrG_scripted_ents_OnLoaded or scripted_ents.OnLoaded
+function scripted_ents.OnLoaded()
+  DrG_scripted_ents_OnLoaded()
+  if not DrG_scripted_ents_OnLoaded_Ok then
+    for class, tbl in pairs(scripted_ents.GetList()) do ApplySENTMixins(tbl.t, class) end
+    DrG_scripted_ents_OnLoaded_Ok = true
+  end
+end
+
+-- SWEPS --
+
+
 
 -- Built-in --
 
@@ -35,4 +56,4 @@ DrGBase.ApplyMixin("drgbase_projectile", GenericMixin)
 DrGBase.ApplyMixin("drgbase_projectile", ProjectileMixin)
 
 DrGBase.ApplyMixin("drgbase_spawner", GenericMixin)
-DrGBase.ApplyMixin("drgbase_spawner", SpawnerMixin)
+DrGBase.ApplyMixin("drgbase_spawner", SpawnerMixin)]]

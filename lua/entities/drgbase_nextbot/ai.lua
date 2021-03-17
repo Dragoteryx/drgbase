@@ -44,7 +44,7 @@ if SERVER then
       local pos = args[i]
       local res
       while true do
-        if not DrGBase.EnableRoam:GetBool() then return false end
+        if not DrGBase.AIRoam:GetBool() then return false end
         if self:IsAIDisabled() then return false end
         if self:IsPossessed() then return false end
         if self:HasEnemy() then return false end
@@ -58,7 +58,7 @@ if SERVER then
     return true
   end
   function ENT:RoamAtRandom(min, max)
-    if not DrGBase.EnableRoam:GetBool() then return false end
+    if not DrGBase.AIRoam:GetBool() then return false end
     if not isnumber(min) then min, max = 1500, nil end
     return self:RoamTo(self:RandomPos(min, max))
   end
@@ -80,7 +80,7 @@ if SERVER then
     if isfunction(self.OnReachedPatrol) then
       OnReachedPatrolDeprecation()
       self:OnReachedPatrol(pos)
-    else self:Idle(3, 7) end
+    else self:Idle(math.random(3, 7)) end
   end
 
   local OnPatrolUnreachableDeprecation = DrGBase.Deprecation("ENT:OnPatrolUnreachable(pos)", "ENT:DoRoamUnreachable(pos)")

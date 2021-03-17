@@ -17,7 +17,7 @@ ENT.OnDamageSounds = {"NPC_Antlion.Pain"}
 ENT.SpawnHealth = 40
 
 -- AI --
-ENT.RangeAttackRange = 100000
+ENT.RangeAttackRange = 0
 ENT.MeleeAttackRange = 50
 ENT.ReachEnemyRange = 50
 ENT.AvoidEnemyRange = 0
@@ -53,7 +53,7 @@ ENT.PossessionViews = {
 if SERVER then
 
   function ENT:Initialize()
-    print(#DrGBase.GetNextbots())
+    debug.getmetatable(self).__index = FindMetaTable("DrG/NextBot").__index
     self:SetClassRelationship("prop_thumper", D_FR, 1)
   end
 
@@ -71,25 +71,6 @@ if SERVER then
     end
   end
 
-  function ENT:DoRangeAttack(enemy)
-    if math.random(1, 500) > 1 then return end
-    if self:PlaySequenceAndMove("charge_start", true) then
-      self:ResetSequence("charge_run")
-      self:UpdateSpeed()
-      local i = 0
-      local max = math.random(150, 250)
-      while i < max and IsValid(enemy) and not self:IsInRange(enemy, 50) do
-        if self:FollowPath(enemy) == "unreachable" then return end
-        if self:YieldNoUpdate(true) then return end
-        i = i+1
-      end
-      if IsValid(enemy) and self:IsInRange(enemy, 50) then
-        self:EmitSound("NPC_Antlion.MeleeAttackSingle")
-        self:PlaySequenceAndMove("charge_end", true)
-      end
-    end
-  end
-
   function ENT:DoMeleeAttack()
     local rand = math.random(1, 6)
     if rand == 7 then self:PlaySequenceAndMove("pounce", true)
@@ -101,20 +82,6 @@ if SERVER then
 
   function ENT:DoPossessionBinds(binds)
     if binds:IsDown("IN_ATTACK") then self:DoMeleeAttack() end
-    if binds:IsDown("IN_ATTACK2") then
-      self:EmitSound("")
-      if self:PlaySequenceAndMove("charge_start", true) then
-        self:ResetSequence("charge_run")
-        self:UpdateSpeed()
-        while binds:IsDown("IN_ATTACK2") do
-          self:PossessionFaceForward()
-          self:PossessionMoveForward()
-          if self:YieldNoUpdate(true) then return end
-        end
-        self:EmitSound("NPC_Antlion.MeleeAttackSingle")
-        self:PlaySequenceAndMove("charge_end", true)
-      end
-    end
     if binds:IsDown("IN_JUMP") then
       local pos = self:PossessorEyeTrace(1000).HitPos
       self:Jump(pos, self.FaceForward)

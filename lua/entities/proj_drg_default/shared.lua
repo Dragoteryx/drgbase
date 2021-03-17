@@ -34,7 +34,7 @@ DrGBase.IncludeFile("meta.lua")
 
 local ProjectileTickrate = CreateConVar("drgbase_projectile_tickrate", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
--- Handlers --
+-- ModuleHandlers --
 
 hook.Add("PhysgunPickup", "DrGBaseProjectilePhysgun", function(ply, ent)
   if ent.IsDrGProjectile then return ent.Physgun or false end
@@ -214,7 +214,7 @@ if SERVER then
     self:RadiusDamage(damage, DMG_BLAST, range, filter)
   end
 
-  -- Handlers --
+  -- ModuleHandlers --
 
   hook.Add("GravGunPickupAllowed", "DrGBaseProjectileGravgun", function(ply, ent)
     if ent.IsDrGProjectile then return ent.Gravgun or false end

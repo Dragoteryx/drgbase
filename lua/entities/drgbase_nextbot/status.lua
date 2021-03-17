@@ -203,13 +203,13 @@ if SERVER then
     if self.RagdollOnDeath then
       local ragdoll = self:BecomeRagdoll(dmg)
       if IsValid(ragdoll) then
-        if DrGBase.DisableRagCollisions:GetBool() or
+        if DrGBase.RagdollsDisableCollisions:GetBool() or
         not GetConVar("ai_serverragdolls"):GetBool() then
           ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
         end
         if not self.DrG_OnRagdollRes and
-        DrGBase.RemoveRagdolls:GetFloat() >= 0 then
-          ragdoll:Fire("fadeandremove", math.Clamp(DrGBase.RagdollFadeOut:GetFloat(), 0, math.huge), DrGBase.RemoveRagdolls:GetFloat())
+        DrGBase.RagdollsRemove:GetFloat() >= 0 then
+          ragdoll:Fire("fadeandremove", math.Clamp(DrGBase.RagdollsFadeOut:GetFloat(), 0, math.huge), DrGBase.RagdollsRemove:GetFloat())
         end
       end
     else self:Remove() end

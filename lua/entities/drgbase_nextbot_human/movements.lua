@@ -12,7 +12,7 @@ if SERVER then
     self:SetNW2Bool("DrGBaseCrouching", bool)
   end
 
-  -- Handlers --
+  -- ModuleHandlers --
 
   function ENT:OnUpdateSpeed()
     if self:IsClimbing() then return self.ClimbSpeed

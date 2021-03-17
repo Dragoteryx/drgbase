@@ -1,7 +1,7 @@
 -- Detection --
 
 function ENT:IsOmniscient()
-  return DrGBase.AllOmniscient:GetBool() or self:GetNW2Bool("DrG/Omniscient", tobool(self.Omniscient))
+  return DrGBase.AIOmniscient:GetBool() or self:GetNW2Bool("DrG/Omniscient", tobool(self.Omniscient))
 end
 
 -- Hooks --
@@ -64,6 +64,9 @@ if SERVER then
     self:UpdateLastTimeDetected(ent)
     self:UpdateLastKnownPos(ent)
     return self:SetDetectState(ent, math.max(state, self:GetDetectState(ent)))
+  end
+  function ENT:SearchEntity(ent)
+    return self:DetectEntity(ent, DETECT_STATE_SEARCHING)
   end
   function ENT:ForgetEntity(ent)
     return self:SetDetectState(ent, DETECT_STATE_UNDETECTED)
@@ -150,10 +153,6 @@ if SERVER then
   -- sight info
 
   local SightInfo = DrGBase.FlagsHelper(4)
-
-  function SightInfo:new(flags, angle)
-
-  end
 
   function SightInfo.prototype:IsAbleToSee()
     return self:GetFlags() == SIGHT_TEST_PASSED_ALL
@@ -339,7 +338,7 @@ if SERVER then
     if isfunction(self.OnSound) then
       OnSoundDeprecation()
       self:OnSound(ent, sound)
-    else self:DetectEntity(ent, DETECT_STATE_SEARCHING) end
+    else self:SearchEntity(ent) end
   end
 
   hook.Add("EntityEmitSound", "DrG/SoundDetection", function(sound)
@@ -363,7 +362,7 @@ if SERVER then
   -- Other --
 
   function ENT:OnContact(ent)
-    self:DetectEntity(ent)
+    self:SearchEntity(ent)
   end
 
 else
