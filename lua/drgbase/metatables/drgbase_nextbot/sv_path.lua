@@ -1,6 +1,8 @@
+local META = FindMetaTable("DrG/NextBot")
+
 -- Path --
 
-function ENT:GetPath()
+function META:GetPath()
   if not self.DrG_Path then
     self.DrG_Path = Path("Follow")
     self.DrG_Path:SetGoalTolerance(20)
@@ -9,13 +11,13 @@ function ENT:GetPath()
   return self.DrG_Path
 end
 
-function ENT:InvalidatePath()
+function META:InvalidatePath()
   return self:GetPath():Invalidate()
 end
 
 -- Nav areas --
 
-function ENT:CurrentNavArea()
+function META:CurrentNavArea()
   if not navmesh.IsLoaded() then return nil end
   if not self:GetGroundEntity():IsWorld() then return nil end
   if not IsValid(self.DrG_CurrentNavArea) then self.DrG_CurrentNavArea = navmesh.GetNearestNavArea(self:GetPos(), 10) end
@@ -23,25 +25,25 @@ function ENT:CurrentNavArea()
     return self.DrG_CurrentNavArea
   else return nil end
 end
-function ENT:PreviousNavArea()
+function META:PreviousNavArea()
   if not IsValid(self:CurrentNavArea()) then
     return self.DrG_CurrentNavArea or nil
   else return self.DrG_PreviousNavArea or nil end
 end
 
-function ENT:OnNavAreaChanged() end
-function ENT:DrG_OnNavAreaChanged(old, new)
+function META:OnNavAreaChanged() end
+function META:DrG_OnNavAreaChanged(old, new)
   self.DrG_PreviousNavArea = old
   self.DrG_CurrentNavArea = new
 end
 
 -- Helpers --
 
-function ENT:LastComputeResult()
+function META:LastComputeResult()
   return self.DrG_LastComputeResult or false
 end
 
-function ENT:LastComputeTime()
+function META:LastComputeTime()
   local path = self:GetPath()
   if not IsValid(path) then return -1 end
   return CurTime()-path:GetAge()
@@ -50,7 +52,7 @@ end
 -- Compute --
 
 local ENABLE_JUMPING = false
-function ENT:PathGenerator(area, from, ladder, _elevator, length)
+function META:PathGenerator(area, from, ladder, _elevator, length)
   if not IsValid(from) then return 0 end
   --if self:IsNavAreaBlacklisted(area) then return -1 end
   if not self.loco:IsAreaTraversable(area) then return -1 end
@@ -101,7 +103,7 @@ function ENT:PathGenerator(area, from, ladder, _elevator, length)
   if res >= 0 then return cost + dist*res else return -1 end
 end
 
-function ENT:GetPathGenerator()
+function META:GetPathGenerator()
   return function(...)
     return self:PathGenerator(...)
   end
@@ -109,14 +111,14 @@ end
 
 -- hooks
 
-function ENT:OnComputePath(_area, _from) return 0 end
-function ENT:OnComputePathLadderUp(_area, _from, _ladder) return 2 end
-function ENT:OnComputePathLadderDown(_area, _from, _ladder) return 2 end
-function ENT:OnComputePathLedge(_area, _from, _height) return 3 end
-function ENT:OnComputePathStep(_area, _from, _height) return 0 end
-function ENT:OnComputePathJump(_area, _from, _height) return 1 end
-function ENT:OnComputePathDrop(_area, _from, _drop) return 1 end
-function ENT:OnComputePathFlat(_area, _from) return 0 end
+function META:OnComputePath(_area, _from) return 0 end
+function META:OnComputePathLadderUp(_area, _from, _ladder) return 2 end
+function META:OnComputePathLadderDown(_area, _from, _ladder) return 2 end
+function META:OnComputePathLedge(_area, _from, _height) return 3 end
+function META:OnComputePathStep(_area, _from, _height) return 0 end
+function META:OnComputePathJump(_area, _from, _height) return 1 end
+function META:OnComputePathDrop(_area, _from, _drop) return 1 end
+function META:OnComputePathFlat(_area, _from) return 0 end
 
 -- Meta --
 

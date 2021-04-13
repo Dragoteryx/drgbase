@@ -1,13 +1,15 @@
+local META = FindMetaTable("DrG/NextBot")
+
 -- Detection --
 
-function ENT:IsOmniscient()
+function META:IsOmniscient()
   return DrGBase.AIOmniscient:GetBool() or self:GetNW2Bool("DrG/Omniscient", tobool(self.Omniscient))
 end
 
 -- Hooks --
 
-function ENT:OnDetectEntity() end
-function ENT:OnForgetEntity() end
+function META:OnDetectEntity() end
+function META:OnForgetEntity() end
 
 if SERVER then
   util.AddNetworkString("DrG/PlayerDetectState")
@@ -17,18 +19,18 @@ if SERVER then
 
   -- Detection --
 
-  function ENT:SetOmniscient(omniscient)
+  function META:SetOmniscient(omniscient)
     self:SetNW2Bool("DrG/Omniscient", tobool(omniscient))
   end
 
   ENT.DrG_DetectState = {}
   ENT.DrG_DetectStateLastUpdate = {}
-  function ENT:GetDetectState(ent)
+  function META:GetDetectState(ent)
     if not IsValid(ent) then return DETECT_STATE_INVALID end
     if self:IsOmniscient() then return DETECT_STATE_DETECTED end
     return self.DrG_DetectState[ent] or DETECT_STATE_UNDETECTED
   end
-  function ENT:SetDetectState(ent, state)
+  function META:SetDetectState(ent, state)
     if not IsValid(ent) then return end
     if self:IsOmniscient() then return end
     local oldState = self:GetDetectState(ent)
@@ -53,11 +55,11 @@ if SERVER then
     end
   end
 
-  function ENT:GetDetectStateLastUpdate(ent)
+  function META:GetDetectStateLastUpdate(ent)
     return self.DrG_DetectStateLastUpdate[ent] or -1
   end
 
-  function ENT:DetectEntity(ent, state)
+  function META:DetectEntity(ent, state)
     if not IsValid(ent) or self:IsOmniscient() then return end
     if state == DETECT_STATE_UNDETECTED then return end
     if not isnumber(state) then state = DETECT_STATE_DETECTED end
@@ -65,37 +67,37 @@ if SERVER then
     self:UpdateLastKnownPos(ent)
     return self:SetDetectState(ent, math.max(state, self:GetDetectState(ent)))
   end
-  function ENT:SearchEntity(ent)
+  function META:SearchEntity(ent)
     return self:DetectEntity(ent, DETECT_STATE_SEARCHING)
   end
-  function ENT:ForgetEntity(ent)
+  function META:ForgetEntity(ent)
     return self:SetDetectState(ent, DETECT_STATE_UNDETECTED)
   end
 
-  function ENT:HasDetected(ent)
+  function META:HasDetected(ent)
     return self:GetDetectState(ent) > DETECT_STATE_UNDETECTED
   end
 
   ENT.DrG_LastKnownPos = {}
-  function ENT:LastKnownPos(ent)
+  function META:LastKnownPos(ent)
     return self.DrG_LastKnownPos[ent]
   end
-  function ENT:UpdateLastKnownPos(ent, pos)
+  function META:UpdateLastKnownPos(ent, pos)
     pos = isvector(pos) and pos or ent:GetPos()
     self.DrG_LastKnownPos[ent] = pos
   end
 
   ENT.DrG_LastTimeDetected = {}
-  function ENT:LastTimeDetected(ent)
+  function META:LastTimeDetected(ent)
     return self.DrG_LastTimeDetected[ent] or -1
   end
-  function ENT:UpdateLastTimeDetected(ent)
+  function META:UpdateLastTimeDetected(ent)
     self.DrG_LastTimeDetected[ent] = CurTime()
   end
 
   -- iterators
 
-  function ENT:DetectedEntities(state)
+  function META:DetectedEntities(state)
     if self:IsOmniscient() then
       local i = 1
       local entities = ents.GetAll()
@@ -118,7 +120,7 @@ if SERVER then
       end
     end
   end
-  function ENT:GetDetectedEntities(state)
+  function META:GetDetectedEntities(state)
     local entities = {}
     for ent in self:DetectedEntities(state) do
       table.insert(entities, ent)
@@ -128,7 +130,7 @@ if SERVER then
 
   -- hooks
 
-  function ENT:OnUpdateDetectState(_ent, state, lastUpdate)
+  function META:OnUpdateDetectState(_ent, state, lastUpdate)
     if state == DETECT_STATE_DETECTED and lastUpdate > 10 then
       return DETECT_STATE_SEARCHING
     end
@@ -136,17 +138,17 @@ if SERVER then
 
   -- Vision --
 
-  function ENT:GetMinLuminosity()
+  function META:GetMinLuminosity()
     return math.Clamp(self.MinLuminosity, 0, 1)
   end
-  function ENT:SetMinLuminosity(luminosity)
+  function META:SetMinLuminosity(luminosity)
     self.MinLuminosity = tonumber(luminosity)
   end
 
-  function ENT:GetMaxLuminosity()
+  function META:GetMaxLuminosity()
     return math.Clamp(self.MaxLuminosity, 0, 1)
   end
-  function ENT:SetMaxLuminosity(luminosity)
+  function META:SetMaxLuminosity(luminosity)
     self.MaxLuminosity = tonumber(luminosity)
   end
 
@@ -257,9 +259,9 @@ if SERVER then
 
   ENT.DrG_InSight = {}
 
-  local OnSightDeprecation = DrGBase.Deprecation("ENT:OnSight(ent)", "ENT:OnEntitySight(ent, angle)")
-  local OnLostSightDeprecation = DrGBase.Deprecation("ENT:OnLostSight(ent)", "ENT:OnEntitySightLost(ent, angle)")
-  function ENT:UpdateSight(ent)
+  local OnSightDeprecation = DrGBase.Deprecation("META:OnSight(ent)", "META:OnEntitySight(ent, angle)")
+  local OnLostSightDeprecation = DrGBase.Deprecation("META:OnLostSight(ent)", "META:OnEntitySightLost(ent, angle)")
+  function META:UpdateSight(ent)
     if not IsValid(ent) then return end
     local res = self:IsAbleToSee(ent)
     if res then
@@ -297,21 +299,21 @@ if SERVER then
 
   -- hooks
 
-  function ENT:OnEntitySight(_ent) end
-  function ENT:OnEntitySightLost(_ent) end
-  function ENT:OnEntitySightKept(ent) self:DetectEntity(ent) end
-  function ENT:OnEntityNotInSight(_ent) end
+  function META:OnEntitySight(_ent) end
+  function META:OnEntitySightLost(_ent) end
+  function META:OnEntitySightKept(ent) self:DetectEntity(ent) end
+  function META:OnEntityNotInSight(_ent) end
 
   -- Sounds --
 
-  function ENT:GetHearingCoefficient()
+  function META:GetHearingCoefficient()
     return math.max(0, self.HearingCoefficient)
   end
-  function ENT:SetHearingCoefficient(coeff)
+  function META:SetHearingCoefficient(coeff)
     self.HearingCoefficient = tonumber(coeff)
   end
 
-  function ENT:ListenTo(ent, listen)
+  function META:ListenTo(ent, listen)
     if not IsValid(ent) or ent == self then return end
     ent.DrG_Listening = ent.DrG_Listening or {}
     local rmv = "DrG/Remove"..self:GetCreationID().."FromListening"
@@ -326,15 +328,15 @@ if SERVER then
       self:RemoveCallOnRemove(rmv)
     end
   end
-  function ENT:IsListeningTo(ent)
+  function META:IsListeningTo(ent)
     if not IsValid(ent) or ent == self then return false end
     return istable(ent.DrG_Listening) and ent.DrG_Listening[self] or false
   end
 
   -- hooks
 
-  local OnSoundDeprecation = DrGBase.Deprecation("ENT:OnSound(entity, sound)", "ENT:OnEntitySound(ent, sound)")
-  function ENT:OnEntitySound(ent, sound)
+  local OnSoundDeprecation = DrGBase.Deprecation("META:OnSound(entity, sound)", "META:OnEntitySound(ent, sound)")
+  function META:OnEntitySound(ent, sound)
     if isfunction(self.OnSound) then
       OnSoundDeprecation()
       self:OnSound(ent, sound)
@@ -361,7 +363,7 @@ if SERVER then
 
   -- Other --
 
-  function ENT:OnContact(ent)
+  function META:OnContact(ent)
     self:SearchEntity(ent)
   end
 
@@ -396,26 +398,26 @@ else
 
   -- Hooks --
 
-  function ENT:OnEntitySight() end
-  function ENT:OnEntitySightLost() end
-  function ENT:OnEntitySightKept() end
-  function ENT:OnEntityNotInSight() end
-  function ENT:OnEntitySound() end
+  function META:OnEntitySight() end
+  function META:OnEntitySightLost() end
+  function META:OnEntitySightKept() end
+  function META:OnEntityNotInSight() end
+  function META:OnEntitySound() end
 
   -- Getters --
 
-  function ENT:HasDetected(ent)
+  function META:HasDetected(ent)
     if self:IsOmniscient() then return true end
     if ent ~= LocalPlayer() then return false end
     return self.DrG_LocalPlayerDetected == true
   end
-  function ENT:HasForgotten(ent)
+  function META:HasForgotten(ent)
     if self:IsOmniscient() then return false end
     if ent ~= LocalPlayer() then return false end
     return self.DrG_LocalPlayerDetected == false
   end
 
-  function ENT:IsAbleToSee(ent)
+  function META:IsAbleToSee(ent)
     if ent == self then return true end
     if ent ~= LocalPlayer() then return false end
     return self.DrG_LocalPlayerInSight or false

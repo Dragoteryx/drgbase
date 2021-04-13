@@ -5,15 +5,17 @@ local function IsBasedOn(class, base)
 end
 
 local function CreateMetaTable(class)
-  local meta = DrGBase.IncludeFile("drgbase/metatables/"..class.."/shared.lua")
-  debug.getregistry()[meta.MetaName] = meta
+  local meta, init = DrGBase.IncludeFile("drgbase/metatables/"..class.."/shared.lua")
   hook.Add("OnEntityCreated", "DrG/SetMetatable("..class..")", function(ent)
-    if not IsBasedOn(ent:GetClass(), class) then return end
+    if not IsValid(ent) or not IsBasedOn(ent:GetClass(), class) then return end
     debug.setmetatable(ent, meta)
+    if init then init(ent) end
   end)
   return meta
 end
 
 -- Create metatables --
 
-local nextbot = CreateMetaTable("drgbase_nextbot")
+CreateMetaTable("drgbase_nextbot")
+CreateMetaTable("drgbase_projectile")
+CreateMetaTable("drgbase_spawner")

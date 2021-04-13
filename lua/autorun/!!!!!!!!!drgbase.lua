@@ -1,7 +1,7 @@
 DrGBase = DrGBase or {}
 DrGBase.Version = "2.0"
 
--- Colours --
+-- Colors --
 
 DrGBase.CLR_WHITE = Color(255, 255, 255)
 DrGBase.CLR_GREEN = Color(150, 255, 40)
@@ -325,7 +325,7 @@ function DrGBase.RecursiveInclude(folder)
   return tbl
 end
 
--- Misc --
+-- Misc
 
 if CLIENT then
   hook.Add("InitPostEntity", "DrG/SayHi", function()

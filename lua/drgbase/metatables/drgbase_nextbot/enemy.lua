@@ -1,6 +1,8 @@
+local META = FindMetaTable("DrG/NextBot")
+
 -- Getters --
 
-function ENT:HasEnemy()
+function META:HasEnemy()
   return IsValid(self:GetEnemy())
 end
 
@@ -36,7 +38,7 @@ if SERVER then
 
   -- Getters/setters --
 
-  function ENT:UpdateEnemy()
+  function META:UpdateEnemy()
     if not self:IsPossessed() then
       local enemy = self.DrG_SetEnemy
       if not IsValid(enemy) then enemy = self:OnUpdateEnemy() end
@@ -52,27 +54,27 @@ if SERVER then
     return NULL
   end
 
-  function ENT:GetEnemy()
+  function META:GetEnemy()
     local enemy = self:GetNW2Entity("DrG/Enemy")
     if IsValid(enemy) then return enemy end
     if not self.DrG_HadEnemy then return NULL
     else return self:UpdateEnemy() end
   end
-  function ENT:SetEnemy(enemy)
+  function META:SetEnemy(enemy)
     self.DrG_SetEnemy = enemy
     self:UpdateEnemy()
   end
 
-  function ENT:GetEnemyDetectState()
+  function META:GetEnemyDetectState()
     return self:GetDetectState(self:GetEnemy())
   end
-  function ENT:SetEnemyDetectState(state)
+  function META:SetEnemyDetectState(state)
     return self:SetDetectState(self:GetEnemy(), state)
   end
 
   -- Coroutine --
 
-  function ENT:DoHandleEnemy(enemy, state)
+  function META:DoHandleEnemy(enemy, state)
     if self:IsEnemy(enemy) then
       if state == DETECT_STATE_DETECTED then
         local visible = self:Visible(enemy)
@@ -91,7 +93,7 @@ if SERVER then
       -- todo
     else self:DoPassive() end
   end
-  function ENT:DoAttack(enemy)
+  function META:DoAttack(enemy)
     local weapon = self:GetWeapon()
     if self:IsInRange(enemy, self.MeleeAttackRange) and
     self:DoMeleeAttack(enemy, weapon) ~= false then
@@ -101,13 +103,13 @@ if SERVER then
     end
   end
 
-  local OnChaseEnemyDeprecation = DrGBase.Deprecation("ENT:OnChaseEnemy(enemy)", "ENT:DoApproachEnemy(enemy)")
-  local OnAvoidEnemyDeprecation = DrGBase.Deprecation("ENT:OnAvoidEnemy(enemy)", "ENT:DoMoveAwayFromEnemy(enemy)")
-  local OnIdleEnemyDeprecation = DrGBase.Deprecation("ENT:OnIdleEnemy(enemy)", "ENT:DoObserveEnemy(enemy)")
-  local OnEnemyUnreachableDeprecation = DrGBase.Deprecation("ENT:OnEnemyUnreachable(enemy)", "ENT:DoEnemyUnreachable(enemy)")
-  local OnMeleeAttackDeprecation = DrGBase.Deprecation("ENT:OnMeleeAttack(enemy, weapon)", "ENT:DoMeleeAttack(enemy, weapon)")
-  local OnRangeAttackDeprecation = DrGBase.Deprecation("ENT:OnRangeAttack(enemy, weapon)", "ENT:DoRangeAttack(enemy, weapon)")
-  function ENT:DoApproachEnemy(enemy)
+  local OnChaseEnemyDeprecation = DrGBase.Deprecation("META:OnChaseEnemy(enemy)", "META:DoApproachEnemy(enemy)")
+  local OnAvoidEnemyDeprecation = DrGBase.Deprecation("META:OnAvoidEnemy(enemy)", "META:DoMoveAwayFromEnemy(enemy)")
+  local OnIdleEnemyDeprecation = DrGBase.Deprecation("META:OnIdleEnemy(enemy)", "META:DoObserveEnemy(enemy)")
+  local OnEnemyUnreachableDeprecation = DrGBase.Deprecation("META:OnEnemyUnreachable(enemy)", "META:DoEnemyUnreachable(enemy)")
+  local OnMeleeAttackDeprecation = DrGBase.Deprecation("META:OnMeleeAttack(enemy, weapon)", "META:DoMeleeAttack(enemy, weapon)")
+  local OnRangeAttackDeprecation = DrGBase.Deprecation("META:OnRangeAttack(enemy, weapon)", "META:DoRangeAttack(enemy, weapon)")
+  function META:DoApproachEnemy(enemy)
     if isfunction(self.OnChaseEnemy) then
       OnChaseEnemyDeprecation()
       return self:OnChaseEnemy(enemy)
@@ -116,45 +118,45 @@ if SERVER then
       if res == "unreachable" then return false end
     end
   end
-  function ENT:DoMoveAwayFromEnemy(enemy)
+  function META:DoMoveAwayFromEnemy(enemy)
     if isfunction(self.OnAvoidEnemy) then
       OnAvoidEnemyDeprecation()
       return self:OnAvoidEnemy(enemy)
     else self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos())) end
   end
-  function ENT:DoObserveEnemy(enemy)
+  function META:DoObserveEnemy(enemy)
     if isfunction(self.OnIdleEnemy) then
       OnIdleEnemyDeprecation()
       return self:OnIdleEnemy(enemy)
     else self:FaceTowards(enemy) end
   end
-  function ENT:DoEnemyUnreachable(enemy)
+  function META:DoEnemyUnreachable(enemy)
     if isfunction(self.OnEnemyUnreachable) then
       OnEnemyUnreachableDeprecation()
       return self:OnEnemyUnreachable(enemy)
     end
   end
-  function ENT:DoMeleeAttack(enemy, weapon)
+  function META:DoMeleeAttack(enemy, weapon)
     if isfunction(self.OnMeleeAttack) then
       OnMeleeAttackDeprecation()
       return self:OnMeleeAttack(enemy, weapon)
     end
   end
-  function ENT:DoRangeAttack(enemy, weapon)
+  function META:DoRangeAttack(enemy, weapon)
     if isfunction(self.OnRangeAttack) then
       OnRangeAttackDeprecation()
       return self:OnRangeAttack(enemy, weapon)
     end
   end
 
-  function ENT:DoSearchEnemy(enemy)
+  function META:DoSearchEnemy(enemy)
     local lastKnowPos = self:LastKnownPos(enemy)
     if not lastKnowPos then return false end
     if self:FollowPath(lastKnowPos) == "reached" then
       return false
     end
   end
-  function ENT:DoEnemyNotFound(_enemy)
+  function META:DoEnemyNotFound(_enemy)
     for hostile in self:HostileIterator(true) do
       self:ForgetEntity(hostile)
     end
@@ -163,14 +165,14 @@ if SERVER then
 
   -- Hooks --
 
-  function ENT:OnUpdateEnemy() end
-  function ENT:CompareEnemies(_enemy1, _enemy2) end
+  function META:OnUpdateEnemy() end
+  function META:CompareEnemies(_enemy1, _enemy2) end
 
 else
 
   -- Getters --
 
-  function ENT:GetEnemy()
+  function META:GetEnemy()
     return self:GetNW2Entity("DrG/Enemy")
   end
 

@@ -1,32 +1,34 @@
+local META = FindMetaTable("DrG/NextBot")
+
 -- Getters --
 
-function ENT:GetHealthRegen()
+function META:GetHealthRegen()
   return self:GetNW2Float("DrG/HealthRegen", self.HealthRegen)
 end
 
 -- Alive? --
 
-function ENT:IsDown()
+function META:IsDown()
   return self:GetNW2Bool("DrG/Down")
 end
-function ENT:IsDowned()
+function META:IsDowned()
   return self:IsDown()
 end
-function ENT:IsDying()
+function META:IsDying()
   return self:GetNW2Bool("DrG/Dying")
 end
-function ENT:IsDead()
+function META:IsDead()
   return self:GetNW2Bool("DrG/Dead") or self:IsDying()
 end
 
-function ENT:IsAlive()
+function META:IsAlive()
   return not self:IsDead()
 end
-function ENT:Alive()
+function META:Alive()
   return self:IsAlive()
 end
 
-function ENT:GetDowned()
+function META:GetDowned()
   return self:GetNW2Int("DrG/Downed")
 end
 
@@ -34,43 +36,43 @@ if SERVER then
 
   -- Setters --
 
-  function ENT:SetHealthRegen(regen)
+  function META:SetHealthRegen(regen)
     self:SetNW2Float("DrG/HealthRegen", regen)
   end
 
-  function ENT:HasGodMode()
+  function META:HasGodMode()
     return self:IsFlagSet(FL_GODMODE)
   end
-  function ENT:SetGodMode(god)
+  function META:SetGodMode(god)
     if tobool(god) then self:AddFlags(FL_GODMODE)
     else self:RemoveFlags(FL_GODMODE) end
   end
-  function ENT:EnableGodMode()
+  function META:EnableGodMode()
     self:SetGodMode(true)
   end
-  function ENT:DisableGodMode()
+  function META:DisableGodMode()
     self:SetGodMode(false)
   end
 
-  function ENT:LastHitGroup()
+  function META:LastHitGroup()
     return this.DrG_LastHitGroup or DMG_GENERIC
   end
-  function ENT:LastTimeHit()
+  function META:LastTimeHit()
 
   end
-  function ENT:LastDamageInfo()
+  function META:LastDamageInfo()
 
   end
 
   -- Health --
 
-  function ENT:ScaleHealth(scale)
+  function META:ScaleHealth(scale)
     scale = math.Clamp(scale, 0, math.huge)
     self:SetHealth(self:Health()*scale)
     self:SetMaxHealth(self:GetMaxHealth()*scale)
   end
 
-  --[[function ENT:_DrGBaseThink_HealthRegen()
+  --[[function META:_DrGBaseThink_HealthRegen()
     self:SetHealth(math.Clamp(self:Health() + self:GetHealthRegen(), 0, self:GetMaxHealth()))
     return 1
   end]]
@@ -114,24 +116,24 @@ if SERVER then
     return dmg
   end
 
-  function ENT:Kill(attacker, inflictor)
+  function META:Kill(attacker, inflictor)
     local dmg = DamageInfo()
     dmg:SetAttacker(attacker or self)
     dmg:SetInflictor(inflictor)
     self:OnKilled(dmg)
   end
 
-  function ENT:OnTraceAttack() end
-  function ENT:DrG_OnTraceAttack(_, _, tr)
+  function META:OnTraceAttack() end
+  function META:DrG_OnTraceAttack(_, _, tr)
     self.DrG_LastHitGroup = tr.HitGroup
     self.DrG_HitGroupToHandle = true
   end
 
-  local OnTookDamageDeprecation = DrGBase.Deprecation("ENT:OnTookDamage(dmginfo, hitgroup)", "ENT:DoTakeDamage(dmginfo, hitgroup)")
-  local AfterTakeDamageDeprecation = DrGBase.Deprecation("ENT:AfterTakeDamage(dmginfo, delay, hitgroup)", "ENT:DoTakeDamage(dmginfo, hitgroup)")
-  local OnDownedDeprecation = DrGBase.Deprecation("ENT:OnDowned(dmginfo, hitgroup)", "ENT:DoDowned(dmginfo, hitgroup)")
-  function ENT:OnInjured() end
-  function ENT:DrG_OnInjured(dmg)
+  local OnTookDamageDeprecation = DrGBase.Deprecation("META:OnTookDamage(dmginfo, hitgroup)", "META:DoTakeDamage(dmginfo, hitgroup)")
+  local AfterTakeDamageDeprecation = DrGBase.Deprecation("META:AfterTakeDamage(dmginfo, delay, hitgroup)", "META:DoTakeDamage(dmginfo, hitgroup)")
+  local OnDownedDeprecation = DrGBase.Deprecation("META:OnDowned(dmginfo, hitgroup)", "META:DoDowned(dmginfo, hitgroup)")
+  function META:OnInjured() end
+  function META:DrG_OnInjured(dmg)
     if self:HasGodMode() then dmg:ScaleDamage(0) end
     self:Timer(0, function() self:SetNW2Int("DrG/Health", self:Health()) end)
     local hitgroup = self.DrG_HitGroupToHandle and self.DrG_LastHitGroup or HITGROUP_GENERIC
@@ -215,9 +217,9 @@ if SERVER then
     else self:Remove() end
   end
 
-  local OnDeathDeprecation = DrGBase.Deprecation("ENT:OnDeath(dmginfo, hitgroup)", "ENT:DoDeath(dmginfo, hitgroup)")
-  function ENT:OnKilled() end
-  function ENT:DrG_OnKilled(dmg)
+  local OnDeathDeprecation = DrGBase.Deprecation("META:OnDeath(dmginfo, hitgroup)", "META:DoDeath(dmginfo, hitgroup)")
+  function META:OnKilled() end
+  function META:DrG_OnKilled(dmg)
     local hitgroup = self.DrG_HitGroupToHandle and self.DrG_LastHitGroup or HITGROUP_GENERIC
     self.DrG_HitGroupToHandle = false
     if self:IsDead() then return end
@@ -254,47 +256,33 @@ if SERVER then
     end
   end
 
-  function ENT:OnTakeDamage() end
-  function ENT:OnFatalDamage() end
-  function ENT:DoDowned() end
+  function META:OnTakeDamage() end
+  function META:OnFatalDamage() end
+  function META:DoDowned() end
 
   -- Meta --
 
   local entMETA = FindMetaTable("Entity")
 
-  local SetHealth = entMETA.SetHealth
-  function entMETA:SetHealth(health, ...)
-    if self.IsDrGNextbot then
-      if self:IsDead() then health = 0 end
-      self:SetNW2Int("DrG/Health", health)
-    end
-    return SetHealth(self, health, ...)
+  function META:SetHealth(health, ...)
+    if self:IsDead() then health = 0 end
+    self:SetNW2Int("DrG/Health", health)
+    return entMETA.SetHealth(self, health, ...)
   end
 
-  local SetMaxHealth = entMETA.SetMaxHealth
-  function entMETA:SetMaxHealth(health, ...)
-    if self.IsDrGNextbot then self:SetNW2Int("DrG/MaxHealth", health) end
-    return SetMaxHealth(self, health, ...)
+  function META:SetMaxHealth(health, ...)
+    self:SetNW2Int("DrG/MaxHealth", health)
+    return entMETA.SetMaxHealth(self, health, ...)
   end
 
 else
 
-  -- Meta --
-
-  local entMETA = FindMetaTable("Entity")
-
-  local Health = entMETA.Health
-  function entMETA:Health(...)
-    if self.IsDrGNextbot then
-      return self:GetNW2Int("DrG/Health", self.SpawnHealth)
-    else return Health(self, ...) end
+  function META:Health(...)
+    return self:GetNW2Int("DrG/Health", self.SpawnHealth)
   end
 
-  local GetMaxHealth = entMETA.GetMaxHealth
-  function entMETA:GetMaxHealth(...)
-    if self.IsDrGNextbot then
-      return self:GetNW2Int("DrG/MaxHealth", self.SpawnHealth)
-    else return GetMaxHealth(self, ...) end
+  function META:GetMaxHealth(...)
+    return self:GetNW2Int("DrG/MaxHealth", self.SpawnHealth)
   end
 
 end

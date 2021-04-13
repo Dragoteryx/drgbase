@@ -1,13 +1,15 @@
+local META = FindMetaTable("DrG/NextBot")
+
 -- Getters --
 
-function ENT:GetWeapon()
+function META:GetWeapon()
   return self:GetNW2Entity("DrG/Weapon")
 end
-function ENT:GetActiveWeapon()
+function META:GetActiveWeapon()
   return self:GetWeapon()
 end
 
-function ENT:HasWeapon()
+function META:HasWeapon()
   return IsValid(self:GetWeapon())
 end
 

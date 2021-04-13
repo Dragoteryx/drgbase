@@ -1,3 +1,5 @@
+local META = FindMetaTable("DrG/NextBot")
+
 -- Helpers --
 
 local function GetNumFrames(self, seq)
@@ -31,7 +33,7 @@ local function GetActivityIDFromName(self, name)
   end
 end
 
-function ENT:IsAttack(seq)
+function META:IsAttack(seq)
   if isstring(seq) then seq = self:LookupSequence(seq) end
   if not isnumber(seq) or seq == -1 then return false end
   local res = self:GetNW2Bool("DrG/IsAttack/"..seq, 0)
@@ -40,14 +42,14 @@ function ENT:IsAttack(seq)
   string.find(self:GetSequenceActivityName(seq), "ATTACK")
 end
 
-function ENT:IsAttacking()
+function META:IsAttacking()
   return self:IsAttack(self:GetSequence())
 end
 
 -- Anim events --
 
 ENT.DrG_AnimEvents = {}
-function ENT:AddAnimEventCycle(seq, cycles, event)
+function META:AddAnimEventCycle(seq, cycles, event)
   if isstring(seq) then seq = self:LookupSequence(seq) end
   if not isnumber(seq) or seq == -1 then return false end
   if not istable(cycles) then cycles = {cycles} end
@@ -58,7 +60,7 @@ function ENT:AddAnimEventCycle(seq, cycles, event)
     table.insert(events[cycle], event)
   end
 end
-function ENT:AddAnimEvent(seq, frames, event)
+function META:AddAnimEvent(seq, frames, event)
   if isstring(seq) then seq = self:LookupSequence(seq) end
   if not isnumber(seq) or seq == -1 then return false end
   if not istable(frames) then frames = {frames} end
@@ -70,13 +72,13 @@ function ENT:AddAnimEvent(seq, frames, event)
   end
   self:AddAnimEventCycle(seq, cycles, event)
 end
-function ENT:RemoveAnimEvents(seq)
+function META:RemoveAnimEvents(seq)
   if isstring(seq) then seq = self:LookupSequence(seq) end
   if not isnumber(seq) or seq == -1 then return false end
   self.DrG_AnimEvents[seq] = nil
 end
 
-function ENT:DrG_PlayAnimEvents(seq, curCycle, lastCycle)
+function META:DrG_PlayAnimEvents(seq, curCycle, lastCycle)
   local events = self.DrG_AnimEvents[seq]
   if events then for cycle, eventList in pairs(events) do
     if (curCycle > cycle and lastCycle <= cycle) or
@@ -86,14 +88,12 @@ function ENT:DrG_PlayAnimEvents(seq, curCycle, lastCycle)
       for _, event in ipairs(eventList) do
         local res = self:OnAnimEvent(event, -1, self:GetPos(), self:GetAngles(), now)
         if SERVER then self:ReactInCoroutine(self.DoAnimEvent, event, -1, self:GetPos(), self:GetAngles(), now) end
-        if not res then self:DrG_BuiltInEvents(event) end
+        if not res then
+          if event == "drg.footstep" then self:EmitFootstep() end
+        end
       end
     end
   end end
-end
-
-function ENT:DrG_BuiltInEvents(event)
-  if event == "drg.footstep" then self:EmitFootstep() end
 end
 
 if SERVER then
@@ -137,7 +137,7 @@ if SERVER then
 
   -- Helpers --
 
-  function ENT:SetAttack(seq, attack)
+  function META:SetAttack(seq, attack)
     if isstring(seq) then seq = self:LookupSequence(seq) end
     if not isnumber(seq) or seq == -1 then return end
     self:SetNW2Bool("DrG/IsAttack/"..seq, attack)
@@ -145,7 +145,7 @@ if SERVER then
 
   -- PSAW and friends --
 
-  function ENT:PlaySequenceAndWait(seq, options, fn, ...)
+  function META:PlaySequenceAndWait(seq, options, fn, ...)
     if istable(seq) then return self:PlaySequenceAndWait(seq[math.random(#seq)], options, fn, ...) end
     if isfunction(options) then return self:PlaySequenceAndWait(seq, 1, options, fn, ...) end
     if isnumber(options) then return self:PlaySequenceAndWait(seq, {rate = options}, fn, ...) end
@@ -194,10 +194,10 @@ if SERVER then
     if not options.gravity then self:SetVelocity(Vector()) end
     return res
   end
-  function ENT:PlayActivityAndWait(act, ...)
+  function META:PlayActivityAndWait(act, ...)
     return self:PlaySequenceAndWait(RandomSequence(self, act), ...)
   end
-  function ENT:PlayAnimationAndWait(anim, ...)
+  function META:PlayAnimationAndWait(anim, ...)
     local kind = SequenceOrActivity(anim)
     if istable(anim) or kind == SEQUENCE then
       return self:PlaySequenceAndWait(anim, ...)
@@ -206,7 +206,7 @@ if SERVER then
     else return false end
   end
 
-  function ENT:PlaySequenceAndMove(seq, options, fn, ...)
+  function META:PlaySequenceAndMove(seq, options, fn, ...)
     if istable(seq) then return self:PlaySequenceAndMove(seq[math.random(#seq)], options, fn, ...) end
     if isfunction(options) then return self:PlaySequenceAndMove(seq, 1, options, fn, ...) end
     if isnumber(options) then return self:PlaySequenceAndMove(seq, {rate = options}, fn, ...) end
@@ -254,10 +254,10 @@ if SERVER then
     if options.absolute then self:SetVelocity(Vector()) end
     return res
   end
-  function ENT:PlayActivityAndMove(act, ...)
+  function META:PlayActivityAndMove(act, ...)
     return self:PlaySequenceAndMove(RandomSequence(self, act), ...)
   end
-  function ENT:PlayAnimationAndMove(anim, ...)
+  function META:PlayAnimationAndMove(anim, ...)
     local kind = SequenceOrActivity(anim)
     if istable(anim) or kind == SEQUENCE then
       return self:PlaySequenceAndMove(anim, ...)
@@ -266,7 +266,7 @@ if SERVER then
     else return false end
   end
 
-  function ENT:PlaySequenceAndClimb(seq, options, ...)
+  function META:PlaySequenceAndClimb(seq, options, ...)
     if isnumber(options) then return self:PlaySequenceAndClimb(seq, {height = options}, fn, ...) end
     if not istable(options) or not isnumber(options.height) then return false end
     if istable(seq) then
@@ -296,10 +296,10 @@ if SERVER then
       return self:PlaySequenceAndMove(seq, options, ...)
     end
   end
-  function ENT:PlayActivityAndClimb(act, ...)
+  function META:PlayActivityAndClimb(act, ...)
     return self:PlaySequenceAndClimb(GetSequences(self, act), ...)
   end
-  function ENT:PlayAnimationAndClimb(anim, ...)
+  function META:PlayAnimationAndClimb(anim, ...)
     local kind = SequenceOrActivity(anim)
     if istable(anim) or kind == SEQUENCE then
       return self:PlaySequenceAndClimb(anim, ...)
@@ -308,7 +308,7 @@ if SERVER then
     else return false end
   end
 
-  function ENT:PlaySequence(seq, options, fn, ...)
+  function META:PlaySequence(seq, options, fn, ...)
     if istable(seq) then return self:PlaySequence(seq[math.random(#seq)], options, fn, ...) end
     if isfunction(options) then return self:PlaySequence(seq, 1, options, fn, ...) end
     if isnumber(options) then return self:PlaySequence(seq, {rate = options}, fn, ...) end
@@ -336,10 +336,10 @@ if SERVER then
     end)
     return true, layer
   end
-  function ENT:PlayActivity(act, ...)
+  function META:PlayActivity(act, ...)
     return self:PlaySequence(RandomSequence(self, act), ...)
   end
-  function ENT:PlayAnimations(anim, ...)
+  function META:PlayAnimations(anim, ...)
     local kind = SequenceOrActivity(anim)
     if istable(anim) or kind == SEQUENCE then
       return self:PlaySequence(anim, ...)
@@ -350,16 +350,16 @@ if SERVER then
 
   -- Hooks --
 
-  function ENT:BodyUpdate()
+  function META:BodyUpdate()
     self:BodyMoveXY({rate = false})
   end
 
-  function ENT:OnAnimChange(_old, _new) end
-  function ENT:DoAnimChange(_old, _new) end
+  function META:OnAnimChange(_old, _new) end
+  function META:DoAnimChange(_old, _new) end
 
   -- Update --
 
-  function ENT:UpdateAnimation(cancellable)
+  function META:UpdateAnimation(cancellable)
     local anim, rate = self:OnUpdateAnimation()
     local type = SequenceOrActivity(anim)
     local validAnim = false
@@ -386,7 +386,7 @@ if SERVER then
     self:BodyMoveXY({frameadvance = false, direction = false})
   end
 
-  function ENT:OnUpdateAnimation()
+  function META:OnUpdateAnimation()
     --[[if self:IsClimbingUp() then return self.ClimbUpAnimation, self.ClimbAnimRate
     elseif self:IsClimbingDown() then return self.ClimbDownAnimation, self.ClimbAnimRate]]
     if not self:IsOnGround() then return self.JumpAnimation, self.JumpAnimRate

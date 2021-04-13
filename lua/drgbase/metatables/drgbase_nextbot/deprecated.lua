@@ -1,6 +1,8 @@
+local META = FindMetaTable("DrG/NextBot")
+
 -- AI --
 
-ENT.HadEnemy = DrGBase.Deprecated(
+META.HadEnemy = DrGBase.Deprecated(
   "ENT:HadEnemy()",
   "ENT:HasEnemy()",
   function(self)
@@ -9,21 +11,21 @@ ENT.HadEnemy = DrGBase.Deprecated(
 
 -- Possession --
 
-ENT.PossessorView = DrGBase.Deprecated(
+META.PossessorView = DrGBase.Deprecated(
   "ENT:PossessorView()",
   "ENT:PossessorEyePos() & ENT:PossessorEyeAngles()",
   function(self)
     return self:PossessorEyePos(), self:PossessorEyeAngles()
   end)
 
-ENT.PossessorNormal = DrGBase.Deprecated(
+META.PossessorNormal = DrGBase.Deprecated(
   "ENT:PossessorNormal()",
   "ENT:PossessorEyeNormal()",
   function(self)
     return self:PossessorEyeNormal()
   end)
 
-ENT.PossessorTrace = DrGBase.Deprecated(
+META.PossessorTrace = DrGBase.Deprecated(
   "ENT:PossessorTrace()",
   "ENT:PossessorEyeTrace()",
   function(self)
@@ -32,7 +34,7 @@ ENT.PossessorTrace = DrGBase.Deprecated(
 
 -- Misc --
 
-ENT.EmitStep = DrGBase.Deprecated(
+META.EmitStep = DrGBase.Deprecated(
   "ENT:EmitStep(soundLevel, pitchPercent, volume, channel, soundFlags, dsp)",
   "ENT:EmitFootstep(soundLevel, pitchPercent, volume, channel, soundFlags, dsp)",
   function(self, ...)
@@ -43,7 +45,7 @@ if SERVER then
 
   -- AI --
 
-  ENT.AddPatrolPos = DrGBase.Deprecated(
+  META.AddPatrolPos = DrGBase.Deprecated(
     "ENT:AddPatrolPos(pos)",
     "ENT:RoamTo(pos)",
     function(self, pos)
@@ -52,7 +54,7 @@ if SERVER then
 
   -- Animations --
 
-  ENT.PlaySequenceAndMoveAbsolute = DrGBase.Deprecated(
+  META.PlaySequenceAndMoveAbsolute = DrGBase.Deprecated(
     "ENT:PlaySequenceAndMoveAbsolute(sequence, options, fn)",
     "ENT:PlaySequenceAndMove(sequence, {absolute = true}, fn)",
     function(self, sequence, options, fn, ...)
@@ -62,7 +64,7 @@ if SERVER then
       return self:PlaySequenceAndMove(sequence, options, fn, ...)
     end)
 
-  ENT.PlayClimbSequence = DrGBase.Deprecated(
+  META.PlayClimbSequence = DrGBase.Deprecated(
     "ENT:PlayClimbSequence(sequence, height, rate, fn)",
     "ENT:PlaySequenceAndClimb(sequence, options, fn)",
     function(self, sequences, height, rate, fn)
@@ -75,57 +77,57 @@ if SERVER then
 
   -- Detection --
 
-  ENT.HasSpotted = DrGBase.Deprecated(
+  META.HasSpotted = DrGBase.Deprecated(
     "ENT:HasSpotted(entity)",
     "ENT:HasDetected(entity)",
     function(self, ent)
       return self:HasDetected(ent)
     end)
-  ENT.HasLost = DrGBase.Deprecated(
+  META.HasLost = DrGBase.Deprecated(
     "ENT:HasLost(entity)",
     "ENT:HasForgotten(entity)",
     function(self, ent)
       return self:HasForgotten(ent)
     end)
 
-  ENT.SpotEntity = DrGBase.Deprecated(
+  META.SpotEntity = DrGBase.Deprecated(
     "ENT:SpotEntity(entity)",
     "ENT:DetectEntity(entity)",
     function(self, ent)
       return self:DetectEntity(ent)
     end)
-  ENT.LoseEntity = DrGBase.Deprecated(
+  META.LoseEntity = DrGBase.Deprecated(
     "ENT:LoseEntity(entity)",
     "ENT:ForgetEntity(entity)",
     function(self, ent)
       return self:ForgetEntity(ent)
     end)
 
-  ENT.IsInSight = DrGBase.Deprecated(
+  META.IsInSight = DrGBase.Deprecated(
     "ENT:IsInSight(entity)",
     "ENT:IsAbleToSee(entity, useFOV)",
     function(self, ent)
       return self:IsAbleToSee(ent)
     end)
-  ENT.GetSightFOV = DrGBase.Deprecated(
+  META.GetSightFOV = DrGBase.Deprecated(
     "ENT:GetSightFOV()",
     "ENT:GetFOV()",
     function(self)
       return self:GetFOV()
     end)
-  ENT.SetSightFOV = DrGBase.Deprecated(
+  META.SetSightFOV = DrGBase.Deprecated(
     "ENT:SetSightFOV(fov)",
     "ENT:SetFOV(fov)",
     function(self, fov)
       return self:SetFOV(fov)
     end)
-  ENT.GetSightRange = DrGBase.Deprecated(
+  META.GetSightRange = DrGBase.Deprecated(
     "ENT:GetSightRange()",
     "ENT:GetMaxVisionRange()",
     function(self)
       return self:GetMaxVisionRange()
     end)
-  ENT.SetSightRange = DrGBase.Deprecated(
+  META.SetSightRange = DrGBase.Deprecated(
     "ENT:SetSightRange(range)",
     "ENT:SetMaxVisionRange(range)",
     function(self, range)
@@ -134,13 +136,13 @@ if SERVER then
 
   -- Possession --
 
-  ENT.Possess = DrGBase.Deprecated(
+  META.Possess = DrGBase.Deprecated(
     "ENT:Possess(player)",
     "ENT:SetPossessor(player)",
     function(self, ply)
       return self:SetPossessor(ply)
     end)
-  ENT.Dispossess = DrGBase.Deprecated(
+  META.Dispossess = DrGBase.Deprecated(
     "ENT:Dispossess()",
     "ENT:StopPossession()",
     function(self)
@@ -149,7 +151,7 @@ if SERVER then
 
   -- Misc --
 
-  ENT.Attack = DrGBase.Deprecated(
+  META.Attack = DrGBase.Deprecated(
     "ENT:Attack(attack, fn)",
     "ENT:MeleeAttack(attack, fn)",
     function(self, attack, fn)
@@ -160,7 +162,7 @@ if SERVER then
       end)
     end)
 
-  ENT.BlastAttack = DrGBase.Deprecated(
+  META.BlastAttack = DrGBase.Deprecated(
     "ENT:BlastAttack(attack, fn)",
     "ENT:RadialAttack(attack, fn)",
     function(self, attack, fn)
@@ -171,35 +173,35 @@ if SERVER then
       end)
     end)
 
-  ENT.Wait = DrGBase.Deprecated(
+  META.Wait = DrGBase.Deprecated(
     "ENT:Wait(duration)",
     "ENT:Idle(duration)",
     function(self, duration)
       return self:Idle(duration)
     end)
 
-  ENT.GetScale = DrGBase.Deprecated(
+  META.GetScale = DrGBase.Deprecated(
     "ENT:GetScale()",
     "ENT:GetModelScale()",
     function(self)
       return self:GetModelScale()
     end)
 
-  ENT.SetScale = DrGBase.Deprecated(
+  META.SetScale = DrGBase.Deprecated(
     "ENT:SetScale(scale, deltaTime)",
     "ENT:SetModelScale(scale, deltaTime)",
     function(self, scale, deltaTime)
       return self:SetModelScale(scale, deltaTime)
     end)
 
-  ENT.Scale = DrGBase.Deprecated(
+  META.Scale = DrGBase.Deprecated(
     "ENT:Scale(scale, deltaTime)",
     "ENT:ScaleModel(scale, deltaTime)",
     function(self, scale, deltaTime)
       return self:ScaleModel(scale, deltaTime)
     end)
 
-  ENT.SequenceEvent = DrGBase.Deprecated(
+  META.SequenceEvent = DrGBase.Deprecated(
     "ENT:SequenceEvent(sequence, cycle, fn)",
     "ENT:AddAnimEventCycle(sequence, cycle, event)",
     function() end)

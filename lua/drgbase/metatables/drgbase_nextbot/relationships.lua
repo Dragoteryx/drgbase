@@ -1,6 +1,8 @@
+local META = FindMetaTable("DrG/NextBot")
+
 -- Getters --
 
-function ENT:Team()
+function META:Team()
   return self:GetNW2Int("DrG/Team", 0)
 end
 
@@ -167,151 +169,151 @@ if SERVER then
     return SetDefinedRelationship(self, type, value, D_NU, 1)
   end
 
-  function ENT:GetDefaultRelationship()
+  function META:GetDefaultRelationship()
     return CheckDisp(self.DefaultRelationship), 1
   end
-  function ENT:SetDefaultRelationship(disp)
+  function META:SetDefaultRelationship(disp)
     self.DefaultRelationship = disp
     self:UpdateRelationships()
   end
 
-  function ENT:GetEntityRelationship(ent)
+  function META:GetEntityRelationship(ent)
     return GetDefinedRelationship(self, "Entity", ent)
   end
-  function ENT:SetEntityRelationship(ent, disp, prio)
+  function META:SetEntityRelationship(ent, disp, prio)
     return SetDefinedRelationship(self, "Entity", ent, disp, prio)
   end
-  function ENT:AddEntityRelationship(ent, disp, prio)
+  function META:AddEntityRelationship(ent, disp, prio)
     return AddDefinedRelationship(self, "Entity", ent, disp, prio)
   end
-  function ENT:ResetEntityRelationship(ent)
+  function META:ResetEntityRelationship(ent)
     return ResetDefinedRelationship(self, "Entity", ent)
   end
 
-  function ENT:GetClassRelationship(class)
+  function META:GetClassRelationship(class)
     return GetDefinedRelationship(self, "Class", string.lower(class))
   end
-  function ENT:SetClassRelationship(class, disp, prio)
+  function META:SetClassRelationship(class, disp, prio)
     return SetDefinedRelationship(self, "Class", string.lower(class), disp, prio)
   end
-  function ENT:AddClassRelationship(class, disp, prio)
+  function META:AddClassRelationship(class, disp, prio)
     return AddDefinedRelationship(self, "Class", string.lower(class), disp, prio)
   end
-  function ENT:ResetClassRelationship(class)
+  function META:ResetClassRelationship(class)
     return ResetDefinedRelationship(self, "Class", string.lower(class))
   end
 
-  function ENT:GetOwnClassRelationship()
+  function META:GetOwnClassRelationship()
     return self:GetClassRelationship(self:GetClass())
   end
-  function ENT:SetOwnClassRelationship(disp, prio)
+  function META:SetOwnClassRelationship(disp, prio)
     return self:SetClassRelationship(self:GetClass(), disp, prio)
   end
-  function ENT:AddOwnClassRelationship(disp, prio)
+  function META:AddOwnClassRelationship(disp, prio)
     return self:AddClassRelationship(self:GetClass(), disp, prio)
   end
-  function ENT:ResetOwnClassRelationship()
+  function META:ResetOwnClassRelationship()
     return self:ResetClassRelationship(self:GetClass())
   end
 
-  function ENT:GetModelRelationship(model)
+  function META:GetModelRelationship(model)
     if not isstring(model) then return D_ER, 1 end
     return GetDefinedRelationship(self, "Model", string.lower(model))
   end
-  function ENT:SetModelRelationship(model, disp, prio)
+  function META:SetModelRelationship(model, disp, prio)
     if not isstring(model) then return end
     return SetDefinedRelationship(self, "Model", string.lower(model), disp, prio)
   end
-  function ENT:AddModelRelationship(model, disp, prio)
+  function META:AddModelRelationship(model, disp, prio)
     if not isstring(model) then return end
     return AddDefinedRelationship(self, "Model", string.lower(model), disp, prio)
   end
-  function ENT:ResetModelRelationship(model)
+  function META:ResetModelRelationship(model)
     if not isstring(model) then return end
     return ResetDefinedRelationship(self, "Model", string.lower(model))
   end
 
-  function ENT:GetOwnModelRelationship()
+  function META:GetOwnModelRelationship()
     return self:GetModelRelationship(self:GetModel())
   end
-  function ENT:SetOwnModelRelationship(disp, prio)
+  function META:SetOwnModelRelationship(disp, prio)
     return self:SetModelRelationship(self:GetModel(), disp, prio)
   end
-  function ENT:AddOwnModelRelationship(disp, prio)
+  function META:AddOwnModelRelationship(disp, prio)
     return self:AddModelRelationship(self:GetModel(), disp, prio)
   end
-  function ENT:ResetOwnModelRelationship()
+  function META:ResetOwnModelRelationship()
     return self:ResetModelRelationship(self:GetModel())
   end
 
-  function ENT:GetFactionRelationship(faction)
+  function META:GetFactionRelationship(faction)
     if not isstring(faction) then return D_ER, 1 end
     return GetDefinedRelationship(self, "Faction", string.upper(faction))
   end
-  function ENT:SetFactionRelationship(faction, disp, prio)
+  function META:SetFactionRelationship(faction, disp, prio)
     if not isstring(faction) then return end
     return SetDefinedRelationship(self, "Faction", string.upper(faction), disp, prio)
   end
-  function ENT:AddFactionRelationship(faction, disp, prio)
+  function META:AddFactionRelationship(faction, disp, prio)
     if not isstring(faction) then return end
     return AddDefinedRelationship(self, "Faction", string.upper(faction), disp, prio)
   end
-  function ENT:ResetFactionRelationship(faction)
+  function META:ResetFactionRelationship(faction)
     if not isstring(faction) then return end
     return ResetDefinedRelationship(self, "Faction", string.upper(faction))
   end
 
-  function ENT:GetPlayersRelationship()
+  function META:GetPlayersRelationship()
     return self:GetFactionRelationship("FACTION_PLAYERS")
   end
-  function ENT:SetPlayersRelationship(disp, prio)
+  function META:SetPlayersRelationship(disp, prio)
     return self:SetFactionRelationship("FACTION_PLAYERS", disp, prio)
   end
-  function ENT:AddPlayersRelationship(disp, prio)
+  function META:AddPlayersRelationship(disp, prio)
     return self:AddFactionRelationship("FACTION_PLAYERS", disp, prio)
   end
-  function ENT:ResetPlayersRelationship()
+  function META:ResetPlayersRelationship()
     return self:ResetFactionRelationship("FACTION_PLAYERS")
   end
 
   -- Factions & Teams --
 
-  function ENT:SetTeam(team)
+  function META:SetTeam(team)
     local current = self:Team()
     self:SetNW2Int("DrG/Team", tonumber(team))
     if tonumber(team) ~= current then self:UpdateRelationships() end
   end
 
-  function ENT:JoinFaction(faction)
+  function META:JoinFaction(faction)
     return self:DrG_JoinFaction(faction)
   end
-  function ENT:JoinFactions(factions)
+  function META:JoinFactions(factions)
     return self:DrG_JoinFactions(factions)
   end
 
-  function ENT:LeaveFaction(faction)
+  function META:LeaveFaction(faction)
     return self:DrG_LeaveFaction(faction)
   end
-  function ENT:LeaveFactions(factions)
+  function META:LeaveFactions(factions)
     return self:DrG_LeaveFactions(factions)
   end
-  function ENT:LeaveAllFactions()
+  function META:LeaveAllFactions()
     return self:DrG_LeaveAllFactions()
   end
 
-  function ENT:IsInFaction(faction)
+  function META:IsInFaction(faction)
     return self:DrG_IsInFaction(faction)
   end
-  function ENT:GetFactions()
+  function META:GetFactions()
     return self:DrG_GetFactions()
   end
 
   -- Ignore & Frightening --
 
-  function ENT:IsFrightening()
+  function META:IsFrightening()
     return tobool(self.Frightening)
   end
-  function ENT:SetFrightening(frightening)
+  function META:SetFrightening(frightening)
     local old = self:IsFrightening()
     self.Frightening = tobool(frightening)
     if old == self.Frightening then return end
@@ -326,7 +328,7 @@ if SERVER then
     [NPC_STATE_PLAYDEAD] = true,
     [NPC_STATE_DEAD] = true
   }
-  function ENT:IsIgnored(ent)
+  function META:IsIgnored(ent)
     if ent:IsPlayer() and not ent:Alive() then return true end
     if ent:IsPlayer() and ent:DrG_IsPossessing() then return true end
     if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return true end
@@ -344,14 +346,14 @@ if SERVER then
     if self:ShouldIgnore(ent) then return true end
     return self.DrG_IgnoredEntities[ent] or false
   end
-  function ENT:SetIgnored(ent, ignored)
+  function META:SetIgnored(ent, ignored)
     self.DrG_IgnoredEntities[ent] = tobool(ignored)
   end
 
-  function ENT:GetNoTarget()
+  function META:GetNoTarget()
     return self:IsFlagSet(FL_NOTARGET)
   end
-  function ENT:SetNoTarget(noTarget)
+  function META:SetNoTarget(noTarget)
     if noTarget then self:AddFlags(FL_NOTARGET)
     else self:RemoveFlags(FL_NOTARGET) end
   end
@@ -367,19 +369,19 @@ if SERVER then
     end)
   end)
 
-  function ENT:InitRelationships()
+  function META:InitRelationships()
     if self.DrG_RelationshipsReady then return end
     self.DrG_RelationshipsReady = true
     self:UpdateRelationships()
   end
-  function ENT:UpdateRelationships()
+  function META:UpdateRelationships()
     if not self.DrG_RelationshipsReady then return end
     local entities = ents.GetAll()
     for i = 1, #entities do
       self:UpdateRelationshipWith(entities[i])
     end
   end
-  function ENT:UpdateRelationshipWith(ent)
+  function META:UpdateRelationshipWith(ent)
     if not self.DrG_RelationshipsReady then return D_ER, 1 end
     if not IsValid(ent) or ent == self then return D_ER, 1 end
     local default_disp = DrG_IsTarget(ent) and self:GetDefaultRelationship() or D_NU
@@ -414,27 +416,27 @@ if SERVER then
 
   -- Getters --
 
-  function ENT:GetRelationship(ent, absolute)
+  function META:GetRelationship(ent, absolute)
     if ent == self then return D_ER, 1 end
     local rel = self.DrG_Relationships[ent]
     if rel and (absolute or not self:IsIgnored(ent)) then
       return rel.disp, rel.prio
     else return D_NU, 1 end
   end
-  function ENT:IsAlly(ent, absolute)
+  function META:IsAlly(ent, absolute)
     return self:GetRelationship(ent, absolute) == D_LI
   end
-  function ENT:IsEnemy(ent, absolute)
+  function META:IsEnemy(ent, absolute)
     return self:GetRelationship(ent, absolute) == D_HT
   end
-  function ENT:IsAfraidOf(ent, absolute)
+  function META:IsAfraidOf(ent, absolute)
     return self:GetRelationship(ent, absolute) == D_FR
   end
-  function ENT:IsHostile(ent, absolute)
+  function META:IsHostile(ent, absolute)
     local disp = self:GetRelationship(ent, absolute)
     return disp == D_HT or disp == D_FR
   end
-  function ENT:IsNeutral(ent, absolute)
+  function META:IsNeutral(ent, absolute)
     return self:GetRelationship(ent, absolute) == D_NU
   end
 
@@ -486,19 +488,19 @@ if SERVER then
       end
     end
   end
-  function ENT:AllyIterator(detected)
+  function META:AllyIterator(detected)
     return EntityIterator(self, D_LI, detected)
   end
-  function ENT:EnemyIterator(detected)
+  function META:EnemyIterator(detected)
     return EntityIterator(self, D_HT, detected)
   end
-  function ENT:AfraidOfIterator(detected)
+  function META:AfraidOfIterator(detected)
     return EntityIterator(self, D_FR, detected)
   end
-  function ENT:HostileIterator(detected)
+  function META:HostileIterator(detected)
     return EntityIterator(self, D_HS, detected)
   end
-  function ENT:NeutralIterator(detected)
+  function META:NeutralIterator(detected)
     return EntityIterator(self, D_NU, detected)
   end
 
@@ -510,19 +512,19 @@ if SERVER then
     end
     return entities
   end
-  function ENT:GetAllies(detected)
+  function META:GetAllies(detected)
     return GetEntities(self, D_LI, detected)
   end
-  function ENT:GetEnemies(detected)
+  function META:GetEnemies(detected)
     return GetEntities(self, D_HT, detected)
   end
-  function ENT:GetAfraidOf(detected)
+  function META:GetAfraidOf(detected)
     return GetEntities(self, D_FR, detected)
   end
-  function ENT:GetHostiles(detected)
+  function META:GetHostiles(detected)
     return GetEntities(self, D_HS, detected)
   end
-  function ENT:GetNeutrals(detected)
+  function META:GetNeutrals(detected)
     return GetEntities(self, D_NU, detected)
   end
 
@@ -537,35 +539,35 @@ if SERVER then
     end
     return closest
   end
-  function ENT:GetClosestAlly(detected)
+  function META:GetClosestAlly(detected)
     return GetClosestEntity(self, D_LI, detected)
   end
-  function ENT:GetClosestEnemy(detected)
+  function META:GetClosestEnemy(detected)
     return GetClosestEntity(self, D_HT, detected)
   end
-  function ENT:GetClosestAfraidOf(detected)
+  function META:GetClosestAfraidOf(detected)
     return GetClosestEntity(self, D_FR, detected)
   end
-  function ENT:GetClosestHostile(detected)
+  function META:GetClosestHostile(detected)
     return GetClosestEntity(self, D_HS, detected)
   end
-  function ENT:GetClosestNeutral(detected)
+  function META:GetClosestNeutral(detected)
     return GetClosestEntity(self, D_NU, detected)
   end
 
   -- Hooks --
 
-  function ENT:CustomRelationship() end
-  function ENT:ShouldIgnore() end
-  function ENT:OnRelationshipChange() end
+  function META:CustomRelationship() end
+  function META:ShouldIgnore() end
+  function META:OnRelationshipChange() end
 
   -- NPC Aliases --
 
-  function ENT:Disposition(ent)
+  function META:Disposition(ent)
     local disp = self:GetRelationship(ent)
     return disp
   end
-  function ENT:AddRelationship(str)
+  function META:AddRelationship(str)
     local split = string.Explode("[%s]+", str, true)
     if #split ~= 3 then return end
     local class = split[1]
@@ -585,7 +587,7 @@ else
 
   -- Hooks --
 
-  function ENT:OnRelationshipChange(_old, _new) end
+  function META:OnRelationshipChange(_old, _new) end
 
   -- Getters --
 
@@ -594,23 +596,23 @@ else
     nb.DrG_LocalPlayerDisp = new
     nb:OnRelationshipChange(LocalPlayer(), old, new)
   end)
-  function ENT:GetRelationship(ent)
+  function META:GetRelationship(ent)
     if ent ~= LocalPlayer() then return D_ER, 1 end
     return self.DrG_LocalPlayerDisp or D_NU, 1
   end
-  function ENT:IsAlly(ent)
+  function META:IsAlly(ent)
     return self:GetRelationship(ent) == D_LI
   end
-  function ENT:IsEnemy(ent)
+  function META:IsEnemy(ent)
     return self:GetRelationship(ent) == D_HT
   end
-  function ENT:IsAfraidOf(ent)
+  function META:IsAfraidOf(ent)
     return self:GetRelationship(ent) == D_FR
   end
-  function ENT:IsNeutral(ent)
+  function META:IsNeutral(ent)
     return self:GetRelationship(ent) == D_NU
   end
-  function ENT:IsHostile(ent)
+  function META:IsHostile(ent)
     return self:IsEnemy(ent) or self:IsHostile(ent)
   end
 

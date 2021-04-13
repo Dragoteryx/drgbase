@@ -1,34 +1,36 @@
+local META = FindMetaTable("DrG/NextBot")
+
 -- Getters --
 
-function ENT:IsPossessionEnabled()
+function META:IsPossessionEnabled()
   return self:GetNW2Bool("DrG/DrGBase.PossessionEnabled", self.PossessionEnabled)
 end
 
---[[function ENT:GetPossessor()
+--[[function META:GetPossessor()
   return self:IsPossessed() and self.DrG_Possessor or NULL
 end
-function ENT:IsPossessed()
+function META:IsPossessed()
   return IsValid(self.DrG_Possessor)
 end]]
 
-function ENT:GetPossessor()
+function META:GetPossessor()
   return self:GetNW2Entity("DrG/Possessor")
 end
-function ENT:IsPossessed()
+function META:IsPossessed()
   return IsValid(self:GetPossessor())
 end
 
-function ENT:GetPossessionZoom()
+function META:GetPossessionZoom()
   return self:GetNW2Float("DrG/PossessionZoom", 1)
 end
 
-function ENT:GetPossessionView()
+function META:GetPossessionView()
   return self:GetNW2Int("DrG/PossessionView")
 end
 
 -- View --
 
-function ENT:PossessorEyePos()
+function META:PossessorEyePos()
   local view = self:OnPossessionCalcView(self:GetPossessionView())
   if isvector(view) then return view end
   local origin
@@ -64,20 +66,20 @@ function ENT:PossessorEyePos()
   return tr.HitPos +
     self:PossessorEyeNormal()*10
 end
-function ENT:PossessorEyeAngles()
+function META:PossessorEyeAngles()
   return self:GetPossessor():EyeAngles()
 end
 
-function ENT:OnPossessionCalcView(view)
+function META:OnPossessionCalcView(view)
   return istable(self.PossessionViews) and self.PossessionViews[view+1] or {auto = true}
 end
 
 -- Util --
 
-function ENT:PossessorEyeNormal()
+function META:PossessorEyeNormal()
   return self:PossessorEyeAngles():Forward()
 end
-function ENT:PossessorEyeTrace(data)
+function META:PossessorEyeTrace(data)
   if isnumber(data) then data = {distance = data} end
   if not istable(data) then data = {} end
   if not isvector(data.start) then data.start = self:PossessorEyePos() end
@@ -85,17 +87,17 @@ function ENT:PossessorEyeTrace(data)
     data.direction = self:PossessorEyeNormal()*(data.distance or math.huge)
   end return self:TraceLine(data)
 end
-function ENT:PossessorForward()
+function META:PossessorForward()
   local normal = self:PossessorEyeNormal()
   normal.z = 0
   return normal:GetNormalized()
 end
-function ENT:PossessorRight()
+function META:PossessorRight()
   local forward = self:PossessorForward()
   forward:Rotate(Angle(0, -90, 0))
   return forward
 end
-function ENT:PossessorUp()
+function META:PossessorUp()
   return self:GetUp()
 end
 
@@ -155,7 +157,7 @@ drive.Register("drg/possess_nextbot", {
   end
 }, "drive_base")
 
-local PossessionBindsTableDeprecation = DrGBase.Deprecation("ENT.PossessionBinds", "ENT:Do/OnPossessionBinds(binds)")
+local PossessionBindsTableDeprecation = DrGBase.Deprecation("ENT.PossessionBinds", "META:Do/OnPossessionBinds(binds)")
 local function PossessionBindsTable(self, thr)
   if not istable(self.PossessionBinds) then return end
   if SERVER then PossessionBindsTableDeprecation() end
@@ -224,30 +226,30 @@ if SERVER then
 
   -- Getters/setters --
 
-  function ENT:SetPossessionEnabled(bool)
+  function META:SetPossessionEnabled(bool)
     self:SetNW2Bool("DrG/DrGBase.PossessionEnabled", bool)
     if not bool then self:StopPossession() end
   end
 
-  function ENT:EnablePossession()
+  function META:EnablePossession()
     self:SetPossessionEnabled(true)
   end
-  function ENT:DisablePossession()
+  function META:DisablePossession()
     self:SetPossessionEnabled(false)
   end
 
   local PossessionMovementDeprecation = DrGBase.Deprecation("ENT.PossessionMovement", "ENT.PossessionMove")
-  function ENT:GetPossessionMove()
+  function META:GetPossessionMove()
     if self.PossessionMovement then
       PossessionMovementDeprecation()
       return self.PossessionMovement
     else return self.PossessionMove end
   end
-  function ENT:SetPossessionMove(move)
+  function META:SetPossessionMove(move)
     self.PossessionMove = move
   end
 
-  function ENT:SetPossessor(ply)
+  function META:SetPossessor(ply)
     if IsValid(ply) and ply:IsPlayer() then
       if not self:CanPossess(ply) then return end
       ply:DrG_StopPossession()
@@ -291,35 +293,35 @@ if SERVER then
       drive.PlayerStopDriving(ply)
     end
   end
-  function ENT:StopPossession()
+  function META:StopPossession()
     return self:SetPossessor(nil)
   end
 
-  function ENT:CanPossess(ply)
+  function META:CanPossess(ply)
     if not IsValid(ply) or not isentity(ply) or not ply:IsPlayer() then return false, "#drgbase.possession.denied.notplayer" end
     if not ply:Alive() then return false, "#drgbase.possession.denied.dead" end
     if ply:InVehicle() then return false, "#drgbase.possession.denied.invehicle" end
     return true
   end
 
-  function ENT:SetPossessionZoom(zoom)
+  function META:SetPossessionZoom(zoom)
     self:SetNW2Float("DrG/PossessionZoom", zoom)
   end
-  function ENT:PossessionZoomIn(mult)
+  function META:PossessionZoomIn(mult)
     self:SetPossessionZoom(self:GetPossessionZoom()*1.05*(mult or 1))
   end
-  function ENT:PossessionZoomOut(mult)
+  function META:PossessionZoomOut(mult)
     self:SetPossessionZoom(self:GetPossessionZoom()*0.95*(mult or 1))
   end
 
 
-  function ENT:SetPossessionView(view)
+  function META:SetPossessionView(view)
     self:SetNW2Int("DrG/PossessionView", view)
   end
 
   -- Movements --
 
-  function ENT:PossessionFaceForward()
+  function META:PossessionFaceForward()
     if not self:IsPossessed() then return end
     --[[local lockedOn = self:PossessionGetLockedOn()
     if not IsValid(lockedOn) then]]
@@ -327,27 +329,27 @@ if SERVER then
     --else self:FaceTowards(lockedOn) end
   end
 
-  function ENT:PossessionMoveForward()
+  function META:PossessionMoveForward()
     if not self:IsPossessed() then return end
     self:Approach(self:GetPos() + self:PossessorForward())
   end
-  function ENT:PossessionMoveBackward()
+  function META:PossessionMoveBackward()
     if not self:IsPossessed() then return end
     self:Approach(self:GetPos() - self:PossessorForward())
   end
-  function ENT:PossessionMoveLeft()
+  function META:PossessionMoveLeft()
     if not self:IsPossessed() then return end
     self:Approach(self:GetPos() - self:PossessorRight())
   end
-  function ENT:PossessionMoveRight()
+  function META:PossessionMoveRight()
     if not self:IsPossessed() then return end
     self:Approach(self:GetPos() + self:PossessorRight())
   end
 
   -- Hooks --
 
-  local PossessionMovementDeprecation = DrGBase.Deprecation("ENT:PossessionMovement(forward, backward, right, left)", "ENT:DoPossessionMoveCustom(move)")
-  function ENT:DoPossessionMove(move)
+  local PossessionMovementDeprecation = DrGBase.Deprecation("META:PossessionMovement(forward, backward, right, left)", "META:DoPossessionMoveCustom(move)")
+  function META:DoPossessionMove(move)
     local moving = move:IsMoving()
     local forward = move:IsMovingForward()
     local backward = move:IsMovingBackward()
@@ -397,22 +399,22 @@ if SERVER then
       else self:DoPossessionMoveCustom(move) end
     end
   end
-  function ENT:DoPossessionMoveCustom() end
+  function META:DoPossessionMoveCustom() end
 
-  function ENT:DoPossessionBinds()
+  function META:DoPossessionBinds()
     PossessionBindsTable(self, true)
   end
-  function ENT:OnPossessionBinds()
+  function META:OnPossessionBinds()
     PossessionBindsTable(self, false)
   end
 
-  function ENT:OnPossessionNextView(view)
+  function META:OnPossessionNextView(view)
     if istable(self.PossessionViews) then return (view+1)%#self.PossessionViews end
   end
 
   -- Internal --
 
-  function ENT:PossessionBehaviour()
+  function META:PossessionBehaviour()
     local ply = self:GetPossessor()
     if self:InCoroutine() then
       if ply:KeyDown(IN_USE) then
@@ -465,17 +467,17 @@ else
 
   -- Getters --
 
-  function ENT:IsPossessedByLocalPlayer()
+  function META:IsPossessedByLocalPlayer()
     return self:GetPossessor() == LocalPlayer()
   end
 
   -- Hooks --
 
-  function ENT:PossessionBehaviour()
+  function META:PossessionBehaviour()
     self:OnPossessionBinds(LocalPlayer():DrG_Binds())
   end
 
-  function ENT:OnPossessionBinds()
+  function META:OnPossessionBinds()
     PossessionBindsTable(self, false)
   end
 

@@ -1,47 +1,49 @@
+local META = FindMetaTable("DrG/NextBot")
+
 -- Getters --
 
-function ENT:GetSpeed()
+function META:GetSpeed()
   return self:GetNW2Float("DrG/Speed", 300)
 end
 
-function ENT:GetMovement(ignoreZ)
+function META:GetMovement(ignoreZ)
   if not self:IsMoving() then return Vector(0, 0, 0) end
   local dir = self:GetVelocity()
   if ignoreZ then dir.z = 0 end
   return (self:GetAngles()-dir:Angle()):Forward()
 end
 
-function ENT:IsMoving()
+function META:IsMoving()
   return not self:GetVelocity():IsZero()
 end
-function ENT:IsMovingUp()
+function META:IsMovingUp()
   return math.Round(self:GetMovement().z, 2) > 0
 end
-function ENT:IsMovingDown()
+function META:IsMovingDown()
   return math.Round(self:GetMovement().z, 2) < 0
 end
-function ENT:IsMovingForward()
+function META:IsMovingForward()
   return math.Round(self:GetMovement().x, 2) > 0
 end
-function ENT:IsMovingBackward()
+function META:IsMovingBackward()
   return math.Round(self:GetMovement().x, 2) < 0
 end
-function ENT:IsMovingRight()
+function META:IsMovingRight()
   return math.Round(self:GetMovement().y, 2) > 0
 end
-function ENT:IsMovingLeft()
+function META:IsMovingLeft()
   return math.Round(self:GetMovement().y, 2) < 0
 end
-function ENT:IsMovingForwardLeft()
+function META:IsMovingForwardLeft()
   return self:IsMovingForward() and self:IsMovingLeft()
 end
-function ENT:IsMovingForwardRight()
+function META:IsMovingForwardRight()
   return self:IsMovingForward() and self:IsMovingRight()
 end
-function ENT:IsMovingBackwardLeft()
+function META:IsMovingBackwardLeft()
   return self:IsMovingBackward() and self:IsMovingLeft()
 end
-function ENT:IsMovingBackwardRight()
+function META:IsMovingBackwardRight()
   return self:IsMovingBackward() and self:IsMovingRight()
 end
 
@@ -68,45 +70,45 @@ if SERVER then
 
   -- Getters/setters --
 
-  function ENT:SetSpeed(speed)
+  function META:SetSpeed(speed)
     self.loco:SetDesiredSpeed(speed*DrGBase.SpeedMultiplier:GetFloat()*self:GetModelScale())
   end
 
-  function ENT:IsRunning()
+  function META:IsRunning()
     if self:IsMoving() then
       if self:IsPossessed() then
         return self:GetPossessor():KeyDown(IN_SPEED)
       else return self:ShouldRun() end
     else return false end
   end
-  function ENT:IsWalking()
+  function META:IsWalking()
     return self:IsMoving() and not self:IsRunning()
   end
 
   -- Movements --
 
-  function ENT:Approach(pos, nb)
+  function META:Approach(pos, nb)
     if isentity(pos) then pos = pos:GetPos() end
     self.loco:Approach(pos, nb or 1)
   end
-  function ENT:FaceTowards(pos)
+  function META:FaceTowards(pos)
     if isentity(pos) then pos = pos:GetPos() end
     self.loco:FaceTowards(pos)
   end
-  function ENT:FaceForward()
+  function META:FaceForward()
     self:FaceTowards(self:GetPos() + self:GetVelocity())
   end
-  function ENT:FaceEnemy()
+  function META:FaceEnemy()
     if not self:HasEnemy() then return end
     self:FaceTowards(self:GetEnemy())
   end
 
-  function ENT:MoveTowards(pos)
+  function META:MoveTowards(pos)
     if isentity(pos) then pos = pos:GetPos() end
     self:FaceTowards(pos)
     self:Approach(pos)
   end
-  function ENT:MoveAwayFrom(pos, face)
+  function META:MoveAwayFrom(pos, face)
     if isentity(pos) then pos = pos:GetPos() end
     local away = self:GetPos()*2 - pos
     if face then
@@ -115,16 +117,16 @@ if SERVER then
     else self:MoveTowards(away) end
   end
 
-  function ENT:MoveForward()
+  function META:MoveForward()
     self:Approach(self:GetPos() + self:GetForward())
   end
-  function ENT:MoveBackward()
+  function META:MoveBackward()
     self:Approach(self:GetPos() - self:GetForward())
   end
-  function ENT:MoveRight()
+  function META:MoveRight()
     self:Approach(self:GetPos() + self:GetRight())
   end
-  function ENT:MoveLeft()
+  function META:MoveLeft()
     self:Approach(self:GetPos() - self:GetRight())
   end
 
@@ -137,7 +139,7 @@ if SERVER then
       return path:GetEnd():DistToSqr(pos) > path:GetGoalTolerance()^2
     else return false end
   end
-  function ENT:FollowPath(pos, options)
+  function META:FollowPath(pos, options)
     if isentity(pos) then
       if not IsValid(pos) then return "unreachable" end
       if pos:GetClass() == "npc_barnacle" then
@@ -192,7 +194,7 @@ if SERVER then
     end
   end
 
-  function ENT:GoTo(pos, options, fn, ...)
+  function META:GoTo(pos, options, fn, ...)
     if isfunction(options) then return self:GoTo(pos, nil, options, ...) end
     if isentity(pos) then pos = pos:GetPos() end
     while true do
@@ -207,7 +209,7 @@ if SERVER then
     end
   end
 
-  function ENT:ChaseEntity(ent, options, fn, ...)
+  function META:ChaseEntity(ent, options, fn, ...)
     if isfunction(options) then return self:ChaseEntity(ent, nil, options, ...) end
     if not isentity(ent) then return false end
     while IsValid(ent) do
@@ -227,7 +229,7 @@ if SERVER then
   local SOUTH = -NORTH
   local EAST = Vector(0, 999999999)
   local WEST = -EAST
-  function ENT:Unstuck()
+  function META:Unstuck()
     while true do
       local nw, ne, sw, se = CollisionHulls(self, 5)
       local hit = 0
@@ -256,30 +258,30 @@ if SERVER then
     end
   end
 
-  function ENT:HandleStuck()
+  function META:HandleStuck()
     self.loco:ClearStuck()
   end
 
   -- Climbing --
 
-  function ENT:ClimbLadder(ladder, fn)
+  function META:ClimbLadder(ladder, fn)
 
   end
 
-  function ENT:ClimbLedge(ledge, fn)
+  function META:ClimbLedge(ledge, fn)
 
   end
 
   -- Update --
 
-  function ENT:OnUpdateSpeed()
+  function META:OnUpdateSpeed()
     if self.UseWalkframes then return -1
     --[[if self:IsClimbing() then return self.ClimbSpeed]]
     elseif self:IsRunning() then return self.RunSpeed
     else return self.WalkSpeed end
   end
 
-  function ENT:UpdateSpeed()
+  function META:UpdateSpeed()
     local speed = self:OnUpdateSpeed()
     if not isnumber(speed) or speed < 0 then
       if not self:IsOnGround() then

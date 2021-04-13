@@ -1,31 +1,33 @@
+local META = FindMetaTable("DrG/NextBot")
+
 -- Util --
 
-function ENT:IsInRange(pos, range)
+function META:IsInRange(pos, range)
   if isentity(pos) and not IsValid(pos) then return false end
   return self:GetHullRangeSquaredTo(pos) <= (range*self:GetModelScale())^2
 end
-function ENT:GetHullRangeTo(pos)
+function META:GetHullRangeTo(pos)
   if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
   return self:NearestPoint(pos):Distance(pos)
 end
-function ENT:GetHullRangeSquaredTo(pos)
+function META:GetHullRangeSquaredTo(pos)
   if isentity(pos) then pos = pos:NearestPoint(self:GetPos()) end
   return self:NearestPoint(pos):DistToSqr(pos)
 end
 
 -- Misc --
 
-function ENT:Height()
+function META:Height()
   local bound1, bound2 = self:GetCollisionBounds()
   return math.abs(bound1.z - bound2.z)
 end
-function ENT:Length()
+function META:Length()
   local bound1, bound2 = self:GetCollisionBounds()
   bound1.z, bound2.z = 0, 0
   return bound1:Distance(bound2)
 end
 
-function ENT:ScaleModel(mult, delta)
+function META:ScaleModel(mult, delta)
   self:SetModelScale(self:GetModelScale()*mult, delta)
 end
 
@@ -79,11 +81,11 @@ ENT.Footsteps = {
   [MAT_WARPSHIELD] = "DrGBase.WarpShieldFootstep"
 }
 
-function ENT:OnFootstep(matType)
+function META:OnFootstep(matType)
   return self.Footsteps[matType]
 end
 
-function ENT:EmitFootstep(soundLevel, pitchPercent, volume, channel, soundFlags, dsp)
+function META:EmitFootstep(soundLevel, pitchPercent, volume, channel, soundFlags, dsp)
   if not self:OnGround() then return end
   local tr = self:TraceLine({start = self:WorldSpaceCenter(), direction = -self:GetUp()*self:Height()})
   local footstep = self:OnFootstep(tr.MatType)
@@ -99,7 +101,7 @@ if SERVER then
 
   -- Attacks --
 
-  function ENT:MeleeAttack(attack, fn)
+  function META:MeleeAttack(attack, fn)
     local hit = {}
     if not istable(attack) then attack = {} end
     if not isnumber(attack.angle) then attack.angle = 90 end
@@ -147,7 +149,7 @@ if SERVER then
     return hit
   end
 
-  function ENT:RadialAttack(attack, fn)
+  function META:RadialAttack(attack, fn)
     if not istable(attack) then attack = {} end
     attack.angle = 360
     return self:MeleeAttack(attack, function(self, ent, dmg)
@@ -160,11 +162,11 @@ if SERVER then
 
   -- Misc --
 
-  function ENT:IsInRangeAndSight(ent, range, useFOV)
+  function META:IsInRangeAndSight(ent, range, useFOV)
     return self:IsInRange(ent, range) and self:IsAbleToSee(ent, useFOV)
   end
 
-  function ENT:Idle(duration, fn, ...)
+  function META:Idle(duration, fn, ...)
     local delay = CurTime() + duration
     while CurTime() < delay do
       if self:HasEnemy() then return false end
@@ -179,7 +181,7 @@ if SERVER then
     return true
   end
 
-  function ENT:DirectPoseParametersAt(pos, pitch, yaw, center)
+  function META:DirectPoseParametersAt(pos, pitch, yaw, center)
     if not isstring(yaw) then
       return self:DirectPoseParametersAt(pos, pitch.."_pitch", pitch.."_yaw", yaw)
     elseif isentity(pos) then pos = pos:WorldSpaceCenter() end
@@ -204,7 +206,7 @@ if SERVER then
     self:SetCycle(cycle)
   end
 
-  function ENT:LeaveGround()
+  function META:LeaveGround()
     if not self:IsOnGround() then return end
     local height = self.loco:GetJumpHeight()
     self.loco:SetJumpHeight(1)
@@ -212,7 +214,7 @@ if SERVER then
     self.loco:SetJumpHeight(height)
   end
 
-  function ENT:Jump(target, fn, ...)
+  function META:Jump(target, fn, ...)
     if not self:IsOnGround() then return false end
     if isnumber(target) then
       local height = self.loco:GetJumpHeight()
@@ -245,7 +247,7 @@ if SERVER then
     else return Jumping(self) end
   end
 
-  function ENT:Glide(vel, fn, ...)
+  function META:Glide(vel, fn, ...)
     local gravity = self:GetGravity()
     self:SetGravity(0)
     while not self:IsOnGround() do
@@ -270,7 +272,7 @@ if SERVER then
     return true
   end
 
-  function ENT:JumpThenGlide(jump, glide, fn, ...)
+  function META:JumpThenGlide(jump, glide, fn, ...)
     local res = self:Jump(jump, function(self, ...)
       if self:GetVelocity().z < 0 then return "glide" end
       if isfunction(fn) then return fn(self, ...) end
@@ -305,18 +307,18 @@ if SERVER then
 
   -- Hooks --
 
-  function ENT:OnRagdoll(_ragdoll, _dmg) end
+  function META:OnRagdoll(_ragdoll, _dmg) end
 
 else
 
   -- Getters --
 
-  function ENT:GetRangeTo(pos)
+  function META:GetRangeTo(pos)
     if isentity(pos) then pos = pos:GetPos() end
     return self:GetPos():Distance(pos)
   end
 
-  function ENT:GetRangeSquaredTo(pos)
+  function META:GetRangeSquaredTo(pos)
     if isentity(pos) then pos = pos:GetPos() end
     return self:GetPos():DistToSqr(pos)
   end

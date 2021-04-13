@@ -1,3 +1,5 @@
+local META = FindMetaTable("DrG/NextBot")
+
 if SERVER then
 
   -- Water level --

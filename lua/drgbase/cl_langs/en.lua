@@ -49,7 +49,7 @@ hook.Add("DrG/LoadLanguages", "DrG/EnglishLanguage", function()
   lang:Set("drgbase.spawnmenu.nextbots.possession.client", "Client Settings")
   lang:Set("drgbase.spawnmenu.nextbots.possession.client.player_stats", "Overwrite player stats")
   lang:Set("drgbase.spawnmenu.nextbots.possession.client.player_stats.text",
-    "Forces HUDs to display the nextbot's stats instead of the player's when possessing a nextbot. Has no effect on the vanilla HUD.")
+    "Forces Lua HUDs to display the nextbot's stats instead of the player's when possessing a nextbot. Does not work on the vanilla HUD.")
 
   lang:Set("drgbase.spawnmenu.nextbots.misc", "Misc")
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats", "Stats")

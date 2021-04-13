@@ -53,7 +53,6 @@ ENT.PossessionViews = {
 if SERVER then
 
   function ENT:Initialize()
-    debug.getmetatable(self).__index = FindMetaTable("DrG/NextBot").__index
     self:SetClassRelationship("prop_thumper", D_FR, 1)
   end
 

@@ -1,6 +1,8 @@
+local META = FindMetaTable("DrG/NextBot")
+
 -- Getters --
 
-function ENT:IsAIDisabled()
+function META:IsAIDisabled()
   return GetConVar("ai_disabled"):GetBool() or
   DrGBase.AIDisabled:GetBool() or
   self:GetNW2Bool("DrG/AIDisabled")
@@ -8,27 +10,27 @@ end
 
 if SERVER then
 
-  function ENT:SetAIDisabled(disabled)
+  function META:SetAIDisabled(disabled)
     self:SetNW2Bool("DrG/AIDisabled", tobool(disabled))
   end
-  function ENT:DisableAI()
+  function META:DisableAI()
     self:SetAIDisabled(true)
   end
-  function ENT:EnableAI()
+  function META:EnableAI()
     self:SetAIDisabled(false)
   end
 
   -- Hooks --
 
-  function ENT:AIBehaviour()
+  function META:AIBehaviour()
     if self:HasEnemy() then
       local enemy = self:GetEnemy()
       self:DoHandleEnemy(enemy, self:GetDetectState(enemy))
     else self:DoPassive() end
   end
 
-  local OnIdleDeprecation = DrGBase.Deprecation("ENT:OnIdle()", "ENT:DoPassive()")
-  function ENT:DoPassive()
+  local OnIdleDeprecation = DrGBase.Deprecation("META:OnIdle()", "META:DoPassive()")
+  function META:DoPassive()
     if isfunction(self.OnIdle) then
       OnIdleDeprecation()
       self:OnIdle()
@@ -37,7 +39,7 @@ if SERVER then
 
   -- roam
 
-  function ENT:RoamTo(...)
+  function META:RoamTo(...)
     local args, n = table.DrG_Pack(...)
     if n == 0 then return false end
     for i = 1, n do
@@ -57,14 +59,14 @@ if SERVER then
     end
     return true
   end
-  function ENT:RoamAtRandom(min, max)
+  function META:RoamAtRandom(min, max)
     if not DrGBase.AIRoam:GetBool() then return false end
     if not isnumber(min) then min, max = 1500, nil end
     return self:RoamTo(self:RandomPos(min, max))
   end
 
-  local OnPatrollingDeprecation = DrGBase.Deprecation("ENT:OnPatrolling()", "ENT:DoRoam()")
-  function ENT:DoRoam(pos)
+  local OnPatrollingDeprecation = DrGBase.Deprecation("META:OnPatrolling()", "META:DoRoam()")
+  function META:DoRoam(pos)
     if isfunction(self.OnPatrolling) then -- backwards compatibility
       OnPatrollingDeprecation()
       return self:OnPatrolling(pos)
@@ -75,16 +77,16 @@ if SERVER then
     end
   end
 
-  local OnReachedPatrolDeprecation = DrGBase.Deprecation("ENT:OnReachedPatrol(pos)", "ENT:DoRoamReached(pos)")
-  function ENT:DoRoamReached(pos)
+  local OnReachedPatrolDeprecation = DrGBase.Deprecation("META:OnReachedPatrol(pos)", "META:DoRoamReached(pos)")
+  function META:DoRoamReached(pos)
     if isfunction(self.OnReachedPatrol) then
       OnReachedPatrolDeprecation()
       self:OnReachedPatrol(pos)
     else self:Idle(math.random(3, 7)) end
   end
 
-  local OnPatrolUnreachableDeprecation = DrGBase.Deprecation("ENT:OnPatrolUnreachable(pos)", "ENT:DoRoamUnreachable(pos)")
-  function ENT:DoRoamUnreachable(pos)
+  local OnPatrolUnreachableDeprecation = DrGBase.Deprecation("META:OnPatrolUnreachable(pos)", "META:DoRoamUnreachable(pos)")
+  function META:DoRoamUnreachable(pos)
     if isfunction(self.OnPatrolUnreachable) then
       OnPatrolUnreachableDeprecation()
       self:OnPatrolUnreachable(pos)
@@ -93,11 +95,11 @@ if SERVER then
 
   -- misc
 
-  function ENT:ShouldRun()
+  function META:ShouldRun()
     return self:GetEnemyDetectState() == DETECT_STATE_DETECTED
   end
 
-  function ENT:ShouldDropWeapon()
+  function META:ShouldDropWeapon()
     return self.DropWeaponOnDeath
   end
 
