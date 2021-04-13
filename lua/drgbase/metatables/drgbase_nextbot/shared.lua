@@ -1,23 +1,40 @@
-local ent_meta = FindMetaTable("Entity")
-local nb_meta = FindMetaTable("NextBot")
+local nbMETA = FindMetaTable("NextBot")
 
-local meta = {}
-meta.__newindex = nb_meta.__newindex
-meta.__tostring = nb_meta.__tostring
-meta.MetaBaseClass = nb_meta
-meta.MetaName = "DrG/NextBot"
-meta.MetaID = 9
+local META = {}
+META.__newindex = nbMETA.__newindex
+META.__tostring = nbMETA.__tostring
+META.MetaBaseClass = nbMETA
+META.MetaName = "DrG/NextBot"
+META.MetaID = 9
 
-function meta:__index(key)
-  local val = meta[key]
+function META:__index(key)
+  local val = META[key]
   if val ~= nil then return val end
-  local val = nb_meta[key]
-  if val ~= nil then return val end
-  local val = ent_meta.__index(self, key)
-  if val ~= nil then return val end
-  return nil
+  return nbMETA[key]
 end
 
-function meta:ThisIsATest() end
+debug.getregistry()[META.MetaName] = META
+DrGBase.IncludeFile("ai.lua")
+DrGBase.IncludeFile("animations.lua")
+DrGBase.IncludeFile("bgm.lua")
+DrGBase.IncludeFile("deprecated.lua")
+DrGBase.IncludeFile("detection.lua")
+DrGBase.IncludeFile("enemy.lua")
+--DrGBase.IncludeFile("drgbase/metatables/drgbase_nextbot/hooks.lua")
+DrGBase.IncludeFile("misc.lua")
+DrGBase.IncludeFile("movements.lua")
+DrGBase.IncludeFile("possession.lua")
+DrGBase.IncludeFile("relationships.lua")
+DrGBase.IncludeFile("status.lua")
+DrGBase.IncludeFile("sv_locomotion.lua")
+DrGBase.IncludeFile("sv_path.lua")
+DrGBase.IncludeFile("weapons.lua")
 
-return meta
+function META:OnReloaded()
+
+end
+
+return META, function(self)
+  print("hello!")
+
+end
