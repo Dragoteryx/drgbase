@@ -20,6 +20,11 @@ function ENT:_InitHooks()
   self:DrG_AddListener("OnNavAreaChanged", self._HandleNavAreaChanged)
   self:DrG_AddListener("OnLeaveGround", self._HandleLeaveGround)
   self:DrG_AddListener("OnLandOnGround", self._HandleLandOnGround)
+  local old_TakeDamage = self.OnTakeDamage
+  function self:OnTakeDamage(dmg, hitgroup)
+    if not isnumber(hitgroup) then return end
+    return old_TakeDamage(self, dmg, hitgroup)
+  end
 end
 
 if SERVER then
@@ -59,6 +64,7 @@ if SERVER then
       self:Timer(0, self._UpdateHealth)
       local hitgroup = self._DrGBaseHitGroupToHandle and self:LastHitGroup() or HITGROUP_GENERIC
       local attacker = dmg:GetAttacker()
+      print("on injured call take damage")
       local res = self:OnTakeDamage(dmg, hitgroup)
       if IsValid(attacker) and DrGBase.IsTarget(attacker) then
         if self:IsAlly(attacker) then
@@ -79,7 +85,7 @@ if SERVER then
         self._DrGBaseHitGroupToHandle = false
         return dmg:ScaleDamage(0)
       else
-        if isnumber(res) then dmg:ScaleDamage(res) end
+        if isnumber(res) then dmg:SetDamage(res) end
         if dmg:GetDamage() >= self:Health() then
           if self:OnFatalDamage(dmg, hitgroup) then
             self._DrGBaseHitGroupToHandle = false

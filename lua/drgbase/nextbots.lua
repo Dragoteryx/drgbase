@@ -43,6 +43,13 @@ function DrGBase.AddNextbot(ENT)
         if isfunction(ENT.OnLandOnGround) then
           ent:DrG_AddListener("OnLandOnGround", ent._HandleLandOnGround)
         end
+        if isfunction(ENT.OnTakeDamage) then
+          local old_TakeDamage = ENT.OnTakeDamage
+          function ENT:OnTakeDamage(dmg, hitgroup)
+            if not isnumber(hitgroup) then return end
+            return old_TakeDamage(self, dmg, hitgroup)
+          end
+        end
       end)
     end
   end
