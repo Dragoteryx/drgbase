@@ -64,7 +64,6 @@ if SERVER then
       self:Timer(0, self._UpdateHealth)
       local hitgroup = self._DrGBaseHitGroupToHandle and self:LastHitGroup() or HITGROUP_GENERIC
       local attacker = dmg:GetAttacker()
-      print("on injured call take damage")
       local res = self:OnTakeDamage(dmg, hitgroup)
       if IsValid(attacker) and DrGBase.IsTarget(attacker) then
         if self:IsAlly(attacker) then
