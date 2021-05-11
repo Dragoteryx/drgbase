@@ -13,9 +13,10 @@ if CLIENT then
     function self:GetID()
       return tostring(id)
     end
-    function self:IsCurrent()
-      return self:GetID() == GmodLanguage:GetString()
-    end
+  end
+
+  function Language.prototype:IsCurrent()
+    return self:GetID() == GmodLanguage:GetString()
   end
 
   function Language.prototype:Set(placeholder, translation)

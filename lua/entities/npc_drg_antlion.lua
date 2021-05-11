@@ -53,8 +53,8 @@ ENT.PossessionViews = {
 if SERVER then
 
   function ENT:Initialize()
-    debug.getmetatable(self).__index = FindMetaTable("DrG/NextBot").__index
     self:SetClassRelationship("prop_thumper", D_FR, 1)
+    print(#DrGBase.GetNextbots())
   end
 
   -- AI --
@@ -106,6 +106,10 @@ if SERVER then
   function ENT:DoLandOnGround()
     print("hey")
     self:PlaySequenceAndMove("jump_stop")
+  end
+
+  function ENT:OnTakeDamage(...)
+    print(CurTime(), ...)
   end
 
   function ENT:DoTakeDamage(dmg)

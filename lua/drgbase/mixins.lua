@@ -8,7 +8,7 @@ end
 
 -- SENTs --
 
---[[local function ApplySENTMixins(ENT, class)
+local function ApplySENTMixins(ENT, class)
   for mixinClass, mixins in pairs(MIXINS) do
     if class ~= mixinClass and
     not scripted_ents.IsBasedOn(class, mixinClass) then continue end
@@ -24,8 +24,8 @@ end
 end
 
 hook.Add("PreRegisterSENT", "DrG/ApplySENTMixins", function(ENT, class)
-  --if not DrG_scripted_ents_OnLoaded_Ok then return end
-  --ApplySENTMixins(ENT, class)
+  if not DrG_scripted_ents_OnLoaded_Ok then return end
+  ApplySENTMixins(ENT, class)
 end)
 
 DrG_scripted_ents_OnLoaded = DrG_scripted_ents_OnLoaded or scripted_ents.OnLoaded
@@ -56,4 +56,4 @@ DrGBase.ApplyMixin("drgbase_projectile", GenericMixin)
 DrGBase.ApplyMixin("drgbase_projectile", ProjectileMixin)
 
 DrGBase.ApplyMixin("drgbase_spawner", GenericMixin)
-DrGBase.ApplyMixin("drgbase_spawner", SpawnerMixin)]]
+DrGBase.ApplyMixin("drgbase_spawner", SpawnerMixin)

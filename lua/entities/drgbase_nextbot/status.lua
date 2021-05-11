@@ -142,8 +142,8 @@ if SERVER then
       self.DrG_HitGroupToHandle = false
       dmg:ScaleDamage(0)
     else
-      if res == true then dmg:ScaleDamage(0) end
-      if isnumber(res) then dmg:ScaleDamage(res) end
+      if res == true then dmg:SetDamage(0) end
+      if isnumber(res) then dmg:SetDamage(res) end
       if dmg:GetDamage() >= self:Health() then
         if self:OnFatalDamage(dmg, hitgroup) then
           self.DrG_HitGroupToHandle = false
