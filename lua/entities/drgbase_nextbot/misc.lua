@@ -284,9 +284,8 @@ if SERVER then
 
   local SetPos = entMETA.SetPos
   function entMETA:SetPos(pos, ...)
-    if self.IsDrGNextbot and
-    not game.SinglePlayer() and
-    IsValid(self:GetPhysicsObject())then
+    if self.IsDrGNextbot and not game.SinglePlayer()
+    and IsValid(self:GetPhysicsObject()) then
       self:PhysicsDestroy()
       local res = SetPos(self, pos, ...)
       self:PhysicsInitShadow()

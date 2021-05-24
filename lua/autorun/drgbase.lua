@@ -1,7 +1,7 @@
 DrGBase = DrGBase or {}
 DrGBase.Version = "2.0"
 
--- Colours --
+-- Colors --
 
 DrGBase.CLR_WHITE = Color(255, 255, 255)
 DrGBase.CLR_GREEN = Color(150, 255, 40)
@@ -340,7 +340,7 @@ end
 
 DrGBase.IncludeFolder("drgbase/modules")
 DrGBase.IncludeFolder("drgbase")
-DrGBase.IncludeFolder("drgbase/meta")
+DrGBase.IncludeFolder("drgbase/metatables")
 DrGBase.IncludeFolder("drgbase/autorun")
 DrGBase.IncludeFolder("drgbase/autorun/server")
 DrGBase.IncludeFolder("drgbase/autorun/client")

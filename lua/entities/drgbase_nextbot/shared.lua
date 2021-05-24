@@ -146,7 +146,7 @@ DrGBase.PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", "Pathf
   "    'custom' => DrGBase custom pathfinding, allows climbing at the cost of performance\n"..
   "    'default' => default Garry's Mod nextbot pathfinding, more efficient than custom but dumber\n"..
   "    'none' => disable pathfinding entirely, best performance at the cost of having nextbots running into every wall")
-DrGBase.ComputeDelay = DrGBase.ConVar("drgbase_pathfindng_delay", "0.1")
+DrGBase.ComputeDelay = DrGBase.ConVar("drgbase_pathfinding_delay", "0.1")
 DrGBase.AvoidObstacles = DrGBase.ConVar("drgbase_pathfinding_avoid_obstacles", "1")
 
 DrGBase.RagdollsRemove = DrGBase.ConVar("drgbase_ragdolls_remove", "-1")

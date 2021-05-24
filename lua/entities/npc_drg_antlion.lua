@@ -104,12 +104,8 @@ if SERVER then
   end
 
   function ENT:DoLandOnGround()
-    print("hey")
+    print("a")
     self:PlaySequenceAndMove("jump_stop")
-  end
-
-  function ENT:OnTakeDamage(...)
-    print(CurTime(), ...)
   end
 
   function ENT:DoTakeDamage(dmg)

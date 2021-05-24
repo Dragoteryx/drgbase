@@ -2,7 +2,7 @@ if CLIENT then
 
   local GmodLanguage = GetConVar("gmod_language")
 
-  -- Lang class --
+  -- Language class --
 
   local Language = DrGBase.CreateClass()
 

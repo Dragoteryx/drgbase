@@ -136,8 +136,6 @@ properties.Add("drg/possess", {
 
 drive.Register("drg/possess_nextbot", {
   Init = function(self)
-    --[[self.Entity.DrG_Possessor = self.Player
-    self.Player.DrG_Possessing = self.Entity]]
     if CLIENT then self.Entity:SetPredictable(false) end
   end,
   StartMove = function(self)
@@ -311,7 +309,6 @@ if SERVER then
   function ENT:PossessionZoomOut(mult)
     self:SetPossessionZoom(self:GetPossessionZoom()*0.95*(mult or 1))
   end
-
 
   function ENT:SetPossessionView(view)
     self:SetNW2Int("DrG/PossessionView", view)

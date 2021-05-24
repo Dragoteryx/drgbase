@@ -219,10 +219,10 @@ if SERVER then
         if not isbool(res) then return flags == SIGHT_TEST_PASSED_ALL
         else return res end
       else
-        return LuminosityTest(self, ent) and
-        RangeTest(self, ent) and
-        (useFOV == false or AngleTest(self, ent)) and
-        LOSTest(self, ent)
+        return LuminosityTest(self, ent)
+        and RangeTest(self, ent)
+        and (useFOV == false or AngleTest(self, ent))
+        and LOSTest(self, ent)
       end
     else return IsAbleToSee(self, ent, useFOV, ...) end
   end
@@ -396,11 +396,11 @@ else
 
   -- Hooks --
 
-  function ENT:OnEntitySight() end
-  function ENT:OnEntitySightLost() end
-  function ENT:OnEntitySightKept() end
-  function ENT:OnEntityNotInSight() end
-  function ENT:OnEntitySound() end
+  function ENT:OnEntitySight(_ent) end
+  function ENT:OnEntitySightLost(_ent) end
+  function ENT:OnEntitySightKept(_ent) end
+  function ENT:OnEntityNotInSight(_ent) end
+  function ENT:OnEntitySound(_ent) end
 
   -- Getters --
 

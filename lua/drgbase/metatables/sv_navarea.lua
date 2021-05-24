@@ -46,6 +46,8 @@ end
 
 local Remove = areaMETA.Remove
 function areaMETA:Remove(...)
-  MAT_TYPES[self:GetID()] = nil
+  local id = self:GetID()
+  MAT_TYPES[id] = nil
+  CLUSTERS[id] = nil
   return Remove(self, ...)
 end

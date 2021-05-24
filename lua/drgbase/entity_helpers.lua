@@ -9,7 +9,7 @@ function ENT:PrintPoseParameters()
   end
 end
 function ENT:PrintAnimations()
-  for _, seq in pairs(self:GetSequenceList()) do
+  for i, seq in pairs(self:GetSequenceList()) do
     local act = self:GetSequenceActivity(i)
     if act ~= -1 then
       print(i.." => "..seq.." / "..act.." => "..self:GetSequenceActivityName(i))
@@ -94,9 +94,10 @@ if SERVER then
   function ENT:PushEntity(ent, force)
     if istable(ent) then
       local vecs = {}
-      for i, en in ipairs(ent) do
-        if not IsValid(en) then continue end
-        vecs[en:EntIndex()] = self:PushEntity(en, force)
+      for _, en in ipairs(ent) do
+        if IsValid(en) then
+          vecs[en:EntIndex()] = self:PushEntity(en, force)
+        end
       end
       return vecs
     elseif isentity(ent) and IsValid(ent) then

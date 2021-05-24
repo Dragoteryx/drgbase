@@ -36,8 +36,8 @@ function ENT:IsAttack(seq)
   if not isnumber(seq) or seq == -1 then return false end
   local res = self:GetNW2Bool("DrG/IsAttack/"..seq, 0)
   if isbool(res) then return res end
-  return string.find(string.lower(self:GetSequenceName(seq)), "attack") or
-  string.find(self:GetSequenceActivityName(seq), "ATTACK")
+  return string.find(string.lower(self:GetSequenceName(seq)), "attack")
+  or string.find(self:GetSequenceActivityName(seq), "ATTACK")
 end
 
 function ENT:IsAttacking()
