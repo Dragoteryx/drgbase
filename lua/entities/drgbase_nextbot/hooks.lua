@@ -16,15 +16,6 @@ end
 function ENT:_InitHooks()
   if CLIENT then return end
   self._DrGBaseLastDmgInflicted = {}
-  self:DrG_AddListener("OnTraceAttack", self._HandleTraceAttack)
-  self:DrG_AddListener("OnNavAreaChanged", self._HandleNavAreaChanged)
-  self:DrG_AddListener("OnLeaveGround", self._HandleLeaveGround)
-  self:DrG_AddListener("OnLandOnGround", self._HandleLandOnGround)
-  local old_TakeDamage = self.OnTakeDamage
-  function self:OnTakeDamage(dmg, hitgroup)
-    if not isnumber(hitgroup) then return end
-    return old_TakeDamage(self, dmg, hitgroup)
-  end
 end
 
 if SERVER then

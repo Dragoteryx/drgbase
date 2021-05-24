@@ -26,18 +26,6 @@ function entMETA:DrG_IsDoor()
   return DOORS[self:GetClass()] or false
 end
 
-function entMETA:DrG_AddListener(name, callback)
-  if not isfunction(callback) then return false end
-  local old_function = self[name]
-  if not isfunction(old_function) then return false end
-  self[name] = function(...)
-    local res = callback(...)
-    if res ~= nil then return res
-    else return old_function(...) end
-  end
-  return true
-end
-
 function entMETA:DrG_SearchBone(searchBone)
   local lookup = self:LookupBone(searchBone)
   if lookup then return lookup end
