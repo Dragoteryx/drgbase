@@ -51,12 +51,13 @@ if SERVER then
   function DrGBase.IsTarget(ent)
     if not IsValid(ent) then return false end
     local class = ent:GetClass()
+    if ent:HasSpawnFlags(SF_NPC_TEMPLATE) then return false end
     if TARGET_BLACKLIST[class] then return false end
     if TARGET_WHITELIST[class] then return true end
     if ent.DrGBase_Target then return true end
     if ent:IsNextBot() then return true end
     if ent:IsPlayer() then return true end
-    if ent:IsNPC() then return true end    
+    if ent:IsNPC() then return true end
     return false
   end
 
