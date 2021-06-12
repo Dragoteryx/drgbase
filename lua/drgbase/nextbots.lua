@@ -31,7 +31,7 @@ function DrGBase.AddNextbot(ENT)
     if isfunction(ENT.OnTraceAttack) then
       local old_OnTraceAttack = ENT.OnTraceAttack
       function ENT:OnTraceAttack(...)
-        local res = self._HandleTraceAttack(...)
+        local res = self:_HandleTraceAttack(...)
         if res ~= nil then return res end
         return old_OnTraceAttack(self, ...)
       end
@@ -39,7 +39,7 @@ function DrGBase.AddNextbot(ENT)
     if isfunction(ENT.OnNavAreaChanged) then
       local old_OnNavAreaChanged = ENT.OnNavAreaChanged
       function ENT:OnNavAreaChanged(...)
-        local res = self._HandleNavAreaChanged(...)
+        local res = self:_HandleNavAreaChanged(...)
         if res ~= nil then return res end
         return old_OnNavAreaChanged(self, ...)
       end
@@ -47,7 +47,7 @@ function DrGBase.AddNextbot(ENT)
     if isfunction(ENT.OnLeaveGround) then
       local old_OnLeaveGround = ENT.OnLeaveGround
       function ENT:OnLeaveGround(...)
-        local res = self._HandleLeaveGround(...)
+        local res = self:_HandleLeaveGround(...)
         if res ~= nil then return res end
         return old_OnLeaveGround(self, ...)
       end
@@ -55,7 +55,7 @@ function DrGBase.AddNextbot(ENT)
     if isfunction(ENT.OnLandOnGround) then
       local old_OnLandOnGround = ENT.OnLandOnGround
       function ENT:OnLandOnGround(...)
-        local res = self._HandleLandOnGround(...)
+        local res = self:_HandleLandOnGround(...)
         if res ~= nil then return res end
         return old_OnLandOnGround(self, ...)
       end
