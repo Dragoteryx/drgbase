@@ -45,6 +45,13 @@ function ENT:IsMovingBackwardRight()
   return self:IsMovingBackward() and self:IsMovingRight()
 end
 
+function ENT:IsTurningLeft()
+  return false
+end
+function ENT:IsTurningRight()
+  return false
+end
+
 if SERVER then
 
   local function CalcRadius(self)

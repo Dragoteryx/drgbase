@@ -114,7 +114,7 @@ if CLIENT then
   hook.Add("PreGamemodeLoaded", "DrG/LoadLanguages", function()
     LoadLanguages()
   end)
-  concommand.Add("drgbase_command_reload_languages", function()
+  concommand.Add("drgbase_cmd_reload_languages", function()
     LoadLanguages()
   end)
   cvars.AddChangeCallback("gmod_language", function()

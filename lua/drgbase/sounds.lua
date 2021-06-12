@@ -1,7 +1,7 @@
 -- Footsteps --
 
 local level = 75
-local volume = 0.2
+local volume = 1
 
 sound.Add({
   name = "DrGBase.AntlionFootstep",

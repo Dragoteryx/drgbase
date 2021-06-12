@@ -2,7 +2,7 @@
 
 local function GetNumFrames(self, seq)
   if isstring(sequence) then sequence = self:LookupSequence(sequence) end
-  if not isnumber(sequence) or sequence == -1 then return {} end
+  if not isnumber(sequence) or sequence == -1 then return end
   local seqName = self:GetSequenceName(seq)
   local seqInfo = self:GetSequenceInfo(seq)
   for i = 1, #seqInfo.anims do
@@ -154,7 +154,7 @@ if SERVER then
     if not isnumber(seq) or seq == -1 then return false end
     if not istable(options) then options = {} end
     if not isnumber(options.rate) then options.rate = 1 end
-    if not isbool(options.cancellable) then options.cancellable = false end
+    if not isbool(options.cancellable) then options.cancellable = self.CancellableByDefault end
     if not isbool(options.gravity) then options.gravity = true end
     local args, n = table.DrG_Pack(...)
     ResetSequence(self, seq)
@@ -164,7 +164,7 @@ if SERVER then
     local res = nil
     while true do
       local cycle = self:GetCycle()
-      if lastCycle >= cycle then
+      if lastCycle == 1 then
         res = true
         break
       end

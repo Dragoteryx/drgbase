@@ -3,11 +3,11 @@ if SERVER then
 
 else
 
-  concommand.Add("drgbase_command_reset_binds", function()
+  concommand.Add("drgbase_cmd_reset_binds", function()
 
   end)
 
-  concommand.Add("drgbase_command_print_missing_translations", function(_, _, args)
+  concommand.Add("drgbase_cmd_print_missing_translations", function(_, _, args)
     local lang = DrGBase.GetLanguage(args[1])
     if lang then
       local missing = lang:MissingTranslations()
@@ -41,7 +41,7 @@ else
   end)
 
   concommand.Add("drbase_command_reload_languages_and_spawnmenu", function()
-    RunConsoleCommand("drbase_command_reload_languages")
+    RunConsoleCommand("drgbase_cmd_reload_languages")
     RunConsoleCommand("spawnmenu_reload")
   end)
 

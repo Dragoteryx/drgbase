@@ -50,6 +50,7 @@ hook.Add("DrG/LoadLanguages", "DrG/FrenchLanguage", function()
   lang:Set("drgbase.spawnmenu.nextbots.possession.client.player_stats", "Remplacer les stats du joueur")
   lang:Set("drgbase.spawnmenu.nextbots.possession.client.player_stats.text",
     "Force les HUDs à afficher les stats du nextbot plutôt que celles du joueur pendant la possession. N'a aucun effet sur le HUD vanilla.")
+  lang:Set("drgbase.spawnmenu.nextbots.possession.client.binds.views", "Caméra suivante")
 
   lang:Set("drgbase.spawnmenu.nextbots.misc", "Divers")
   lang:Set("drgbase.spawnmenu.nextbots.misc.stats", "Stats")

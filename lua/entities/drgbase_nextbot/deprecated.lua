@@ -171,6 +171,13 @@ if SERVER then
       end)
     end)
 
+  ENT.Leap = DrGBase.Deprecated(
+    "ENT:Leap(pos, speed, fn)",
+    "ENT:Jump(target, fn, ...)",
+    function(self, pos, speed, fn)
+      return self:Jump(pos, fn)
+    end)
+
   ENT.Wait = DrGBase.Deprecated(
     "ENT:Wait(duration)",
     "ENT:Idle(duration)",

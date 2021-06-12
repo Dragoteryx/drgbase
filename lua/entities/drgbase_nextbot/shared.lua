@@ -12,6 +12,7 @@ ENT.ModelScale = 1
 ENT.CollisionBounds = Vector(10, 10, 72)
 ENT.BloodColor = BLOOD_COLOR_RED
 ENT.RagdollOnDeath = true
+ENT.CancellableByDefault = false
 
 -- Status --
 DrGBase.IncludeFile("status.lua")
@@ -347,6 +348,9 @@ if SERVER then
       nb.DrG_RelationshipCacheDetected[D_FR][ent] = nil
       nb.DrG_DefinedRelationships["Entity"][ent] = nil
       nb.DrG_IgnoredEntities[ent] = nil
+      if nb:GetEnemy() == ent then
+        nb:UpdateEnemy()
+      end
     end
   end)
 
