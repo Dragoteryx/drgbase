@@ -85,7 +85,7 @@ if SERVER then
       elseif state == DETECT_STATE_SEARCHING then
         local res = self:DoSearchEnemy(enemy)
         if res == false then self:DoEnemyNotFound(enemy) end
-        if res == true then self:DetectEntity(enemy) end
+        if res == true then self:DoFoundEnemy(enemy) end
       end
     elseif self:IsAfraidOf(enemy) then
       -- todo
@@ -110,40 +110,42 @@ if SERVER then
   function ENT:DoApproachEnemy(enemy)
     if isfunction(self.OnChaseEnemy) then
       OnChaseEnemyDeprecation()
-      return self:OnChaseEnemy(enemy)
-    else
-      local res = self:FollowPath(enemy)
-      if res == "unreachable" then return false end
-    end
+      local res = self:OnChaseEnemy(enemy)
+      if res ~= true and self:FollowPath(enemy) == "unreachable" then return false end
+    elseif self:FollowPath(enemy) == "unreachable" then return false end
   end
   function ENT:DoMoveAwayFromEnemy(enemy)
     if isfunction(self.OnAvoidEnemy) then
       OnAvoidEnemyDeprecation()
-      return self:OnAvoidEnemy(enemy)
+      if self:OnAvoidEnemy(enemy) ~= true then
+        self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
+      end
     else self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos())) end
   end
   function ENT:DoObserveEnemy(enemy)
     if isfunction(self.OnIdleEnemy) then
       OnIdleEnemyDeprecation()
-      return self:OnIdleEnemy(enemy)
-    else self:FaceTowards(enemy) end
+      if self:OnIdleEnemy(enemy) ~= true then
+        self:FaceEnemy()
+      end
+    else self:FaceEnemy() end
   end
   function ENT:DoEnemyUnreachable(enemy)
     if isfunction(self.OnEnemyUnreachable) then
       OnEnemyUnreachableDeprecation()
-      return self:OnEnemyUnreachable(enemy)
+      self:OnEnemyUnreachable(enemy)
     end
   end
   function ENT:DoMeleeAttack(enemy, weapon)
     if isfunction(self.OnMeleeAttack) then
       OnMeleeAttackDeprecation()
-      return self:OnMeleeAttack(enemy, weapon)
+      self:OnMeleeAttack(enemy, weapon)
     end
   end
   function ENT:DoRangeAttack(enemy, weapon)
     if isfunction(self.OnRangeAttack) then
       OnRangeAttackDeprecation()
-      return self:OnRangeAttack(enemy, weapon)
+      self:OnRangeAttack(enemy, weapon)
     end
   end
 
@@ -153,6 +155,9 @@ if SERVER then
     if self:FollowPath(lastKnowPos) == "reached" then
       return false
     end
+  end
+  function ENT:DoFoundEnemy(enemy)
+    self:DetectEntity(enemy)
   end
   function ENT:DoEnemyNotFound(_enemy)
     for hostile in self:HostileIterator(true) do

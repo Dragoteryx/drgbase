@@ -201,16 +201,16 @@ if SERVER then
     return ResetDefinedRelationship(self, "Class", string.lower(class))
   end
 
-  function ENT:GetOwnClassRelationship()
+  function ENT:GetSelfClassRelationship()
     return self:GetClassRelationship(self:GetClass())
   end
-  function ENT:SetOwnClassRelationship(disp, prio)
+  function ENT:SetSelfClassRelationship(disp, prio)
     return self:SetClassRelationship(self:GetClass(), disp, prio)
   end
-  function ENT:AddOwnClassRelationship(disp, prio)
+  function ENT:AddSelfClassRelationship(disp, prio)
     return self:AddClassRelationship(self:GetClass(), disp, prio)
   end
-  function ENT:ResetOwnClassRelationship()
+  function ENT:ResetSelfClassRelationship()
     return self:ResetClassRelationship(self:GetClass())
   end
 
@@ -231,16 +231,16 @@ if SERVER then
     return ResetDefinedRelationship(self, "Model", string.lower(model))
   end
 
-  function ENT:GetOwnModelRelationship()
+  function ENT:GetSelfModelRelationship()
     return self:GetModelRelationship(self:GetModel())
   end
-  function ENT:SetOwnModelRelationship(disp, prio)
+  function ENT:SetSelfModelRelationship(disp, prio)
     return self:SetModelRelationship(self:GetModel(), disp, prio)
   end
-  function ENT:AddOwnModelRelationship(disp, prio)
+  function ENT:AddSelfModelRelationship(disp, prio)
     return self:AddModelRelationship(self:GetModel(), disp, prio)
   end
-  function ENT:ResetOwnModelRelationship()
+  function ENT:ResetSelfModelRelationship()
     return self:ResetModelRelationship(self:GetModel())
   end
 

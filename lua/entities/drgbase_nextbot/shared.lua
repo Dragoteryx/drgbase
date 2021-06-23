@@ -143,10 +143,10 @@ DrGBase.PossessionEnabled = DrGBase.ConVar("drgbase_possession_enabled", "1")
 DrGBase.SpawnWithPossessor = DrGBase.ConVar("drgbase_possession_spawn_with_possessor", "0")
 DrGBase.PossessionLockOn = DrGBase.ConVar("drgbase_possession_lockon", "1")
 
-DrGBase.PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", "Pathfinding mode:\n"..
-  "    'custom' => DrGBase custom pathfinding, allows climbing at the cost of performance\n"..
-  "    'default' => default Garry's Mod nextbot pathfinding, more efficient than custom but dumber\n"..
-  "    'none' => disable pathfinding entirely, best performance at the cost of having nextbots running into every wall")
+DrGBase.PathfindingMode = DrGBase.ConVar("drgbase_pathfinding", "custom", [[Pathfinding mode:
+  'custom' => DrGBase custom pathfinding, allows climbing at the cost of performance
+  'default' => default Garry's Mod nextbot pathfinding, more efficient than custom but dumber
+  'none' => disable pathfinding entirely, best performance at the cost of having nextbots running into every wall]])
 DrGBase.ComputeDelay = DrGBase.ConVar("drgbase_pathfinding_delay", "0.1")
 DrGBase.AvoidObstacles = DrGBase.ConVar("drgbase_pathfinding_avoid_obstacles", "1")
 

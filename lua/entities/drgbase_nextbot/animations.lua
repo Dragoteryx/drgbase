@@ -86,14 +86,10 @@ function ENT:DrG_PlayAnimEvents(seq, curCycle, lastCycle)
       for _, event in ipairs(eventList) do
         local res = self:OnAnimEvent(event, -1, self:GetPos(), self:GetAngles(), now)
         if SERVER then self:ReactInCoroutine(self.DoAnimEvent, event, -1, self:GetPos(), self:GetAngles(), now) end
-        if not res then self:DrG_BuiltInEvents(event) end
+        if not res and event == "drg.footstep" then self:EmitFootstep() end
       end
     end
   end end
-end
-
-function ENT:DrG_BuiltInEvents(event)
-  if event == "drg.footstep" then self:EmitFootstep() end
 end
 
 if SERVER then

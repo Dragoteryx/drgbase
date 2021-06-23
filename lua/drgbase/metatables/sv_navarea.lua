@@ -60,11 +60,11 @@ function areaMETA:DrG_GetCluster()
 end
 
 hook.Add("Think", "DrG/ShowClusters", function()
-  if not DrGBase.DebugEnabled() then return end
+  --[[if not DrGBase.DebugEnabled() then return end
   for _, area in ipairs(navmesh.GetAllNavAreas()) do
     local cluster = area:DrG_GetCluster()
     debugoverlay.Text(area:GetCenter() + Vector(0, 0, 5), cluster:GetID(), 0.05, true)
-  end
+  end]]
 end)
 
 -- misc

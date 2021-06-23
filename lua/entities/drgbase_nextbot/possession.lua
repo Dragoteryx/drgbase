@@ -351,8 +351,7 @@ if SERVER then
     local left = move:IsMovingLeft()
     local right = move:IsMovingRight()
     if self:GetPossessionMove() == POSSESSION_MOVE_8DIR then
-      if not moving then return end
-      self:PossessionFaceForward()
+      if moving then self:PossessionFaceForward() end
       if forward then self:PossessionMoveForward() end
       if backward then self:PossessionMoveBackward() end
       if left then self:PossessionMoveLeft() end
