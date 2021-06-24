@@ -293,10 +293,10 @@ if SERVER then
     else return SetPos(self, pos, ...) end
   end
 
-  local nextbotMETA = FindMetaTable("NextBot")
+  local nbMETA = FindMetaTable("NextBot")
 
-  local BecomeRagdoll = nextbotMETA.BecomeRagdoll
-  function nextbotMETA:BecomeRagdoll(...)
+  local BecomeRagdoll = nbMETA.BecomeRagdoll
+  function nbMETA:BecomeRagdoll(...)
     if self.IsDrGNextbot then
       return self:DrG_BecomeRagdoll(...) -- calls self:OnRagdoll
     else return BecomeRagdoll(self, ...) end

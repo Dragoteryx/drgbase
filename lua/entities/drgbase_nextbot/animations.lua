@@ -86,10 +86,14 @@ function ENT:DrG_PlayAnimEvents(seq, curCycle, lastCycle)
       for _, event in ipairs(eventList) do
         local res = self:OnAnimEvent(event, -1, self:GetPos(), self:GetAngles(), now)
         if SERVER then self:ReactInCoroutine(self.DoAnimEvent, event, -1, self:GetPos(), self:GetAngles(), now) end
-        if not res and event == "drg.footstep" then self:EmitFootstep() end
+        if not res then self:DrG_BuiltInEvents(event) end
       end
     end
   end end
+end
+
+function ENT:DrG_BuiltInEvents(event)
+  if event == "drg.footstep" then self:EmitFootstep() end
 end
 
 if SERVER then
@@ -393,17 +397,17 @@ if SERVER then
 
   -- Meta --
 
-  local nextbotMETA = FindMetaTable("NextBot")
+  local nbMETA = FindMetaTable("NextBot")
 
-  local GetActivity = nextbotMETA.GetActivity
-  function nextbotMETA:GetActivity(...)
+  local GetActivity = nbMETA.GetActivity
+  function nbMETA:GetActivity(...)
     if self.IsDrGNextbot then
       return self:GetSequenceActivity(self:GetSequence())
     else return GetActivity(self, ...) end
   end
 
-  local StartActivity = nextbotMETA.StartActivity
-  function nextbotMETA:StartActivity(act, ...)
+  local StartActivity = nbMETA.StartActivity
+  function nbMETA:StartActivity(act, ...)
     if self.IsDrGNextbot then
       if isstring(act) then act = GetActivityIDFromName(self, act) end
       if not isnumber(act) or act == ACT_INVALID then return end
@@ -413,8 +417,8 @@ if SERVER then
     else return StartActivity(self, act, ...) end
   end
 
-  local BodyMoveXY = nextbotMETA.BodyMoveXY
-  function nextbotMETA:BodyMoveXY(options, ...)
+  local BodyMoveXY = nbMETA.BodyMoveXY
+  function nbMETA:BodyMoveXY(options, ...)
     if self.IsDrGNextbot then
       if self.IsDrGNextbotSprite then return end
       if not istable(options) then options = {} end

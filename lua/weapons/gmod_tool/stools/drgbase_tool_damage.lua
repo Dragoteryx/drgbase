@@ -1,68 +1,65 @@
-TOOL.Tab = "drgbase"
-TOOL.Category = "tools"
-TOOL.Name = "#tool.drgbase_tool_damage.name"
-TOOL.ClientConVar = {
-	["value"] = 0,
-	["type"] = DMG_GENERIC
-}
-TOOL.BuildCPanel = function(panel)
-	GetConVar("drgbase_tool_damage_type"):SetInt(DMG_GENERIC)
-	panel:Help("#tool.drgbase_tool_damage.desc")
-	panel:NumSlider("Damage", "drgbase_tool_damage_value", 0, 500, 0)
-	local dlist = DrGBase.DListView({"Type", "Enabled"})
-	dlist:AddLine("Crush", "False", DMG_CRUSH)
-	dlist:AddLine("Slash", "False", DMG_SLASH)
-	dlist:AddLine("Blast", "False", DMG_BLAST)
-	dlist:AddLine("Burn", "False", DMG_BURN)
-	dlist:AddLine("Slow burn", "False", DMG_SLOWBURN)
-	dlist:AddLine("Shock", "False", DMG_SHOCK)
-	dlist:AddLine("Plasma", "False", DMG_PLASMA)
-	dlist:AddLine("Dissolve", "False", DMG_DISSOLVE)
-	dlist:AddLine("Sonic", "False", DMG_SONIC)
-	dlist:AddLine("Poison", "False", DMG_POISON)
-	dlist:AddLine("Acid", "False", DMG_ACID)
-	dlist:AddLine("Radiation", "False", DMG_RADIATION)
-	dlist:AddLine("Neurotoxin", "False", DMG_NERVEGAS)
-	dlist:SetSize(10, 250)
-	dlist:SetMultiSelect(false)
-	function dlist:OnRowSelected(id, line)
-		local type = GetConVar("drgbase_tool_damage_type")
-		if line:GetValue(2) == "True" then
-			line:SetValue(2, "False")
-			type:SetInt(type:GetInt()-line:GetValue(3))
-		else
-			line:SetValue(2, "True")
-			type:SetInt(type:GetInt()+line:GetValue(3))
+DrGBase.AddTool(function(TOOL, GetText, GetToolConVar)
+	TOOL.ClientConVar = {
+		["value"] = 0,
+		["type"] = DMG_GENERIC
+	}
+
+	function TOOL.BuildCPanel(panel)
+		local type = GetToolConVar("type")
+		panel:Help(GetText("desc"))
+		panel:NumSlider(GetText("damage"), "drgbase_tool_damage_value", 0, 500, 0)
+		local dlist = DrGBase.DListView({GetText("type"), GetText("enabled")})
+		function AddDamageType(name, value)
+			dlist:AddLine(GetText(name), GetText(bit.band(type:GetInt(), value) ~= 0 and "true" or "false"), value)
 		end
+		AddDamageType("dmg_crush", DMG_CRUSH)
+		AddDamageType("dmg_slash", DMG_SLASH)
+		AddDamageType("dmg_blast", DMG_BLAST)
+		AddDamageType("dmg_burn", DMG_BURN)
+		AddDamageType("dmg_slowburn", DMG_SLOWBURN)
+		AddDamageType("dmg_shock", DMG_SHOCK)
+		AddDamageType("dmg_plasma", DMG_PLASMA)
+		AddDamageType("dmg_dissolve", DMG_DISSOLVE)
+		AddDamageType("dmg_sonic", DMG_SONIC)
+		AddDamageType("dmg_poison", DMG_POISON)
+		AddDamageType("dmg_acid", DMG_ACID)
+		AddDamageType("dmg_radiation", DMG_RADIATION)
+		AddDamageType("dmg_neurotoxin", DMG_NERVEGAS)
+		dlist:SetSize(10, 250)
+		dlist:SetMultiSelect(false)
+		function dlist:OnRowSelected(_, line)
+			if bit.band(type:GetInt(), line:GetValue(3)) ~= 0 then
+				line:SetValue(2, GetText("false"))
+				type:SetInt(type:GetInt()-line:GetValue(3))
+			else
+				line:SetValue(2, GetText("true"))
+				type:SetInt(type:GetInt()+line:GetValue(3))
+			end
+		end
+		panel:AddItem(dlist)
 	end
-	panel:AddItem(dlist)
-end
 
-function TOOL:LeftClick(tr)
-	local ent = tr.Entity
-	if IsValid(ent) and SERVER then
-		local dmg = DamageInfo()
-		dmg:SetDamage(self:GetClientNumber("value"))
-		dmg:SetDamageType(self:GetClientNumber("type"))
-		dmg:SetAttacker(self:GetOwner())
-		dmg:SetInflictor(self:GetOwner():GetActiveWeapon())
-		dmg:SetDamageForce(tr.Normal*self:GetClientNumber("value"))
-		dmg:SetDamagePosition(tr.HitPos)
-		dmg:SetReportedPosition(tr.HitPos)
-		ent:DispatchTraceAttack(dmg, tr)
+	function TOOL:LeftClick(tr)
+		local ent = tr.Entity
+		if IsValid(ent) and SERVER then
+			local dmg = DamageInfo()
+			dmg:SetDamage(self:GetClientNumber("value"))
+			dmg:SetDamageType(self:GetClientNumber("type"))
+			dmg:SetAttacker(self:GetOwner())
+			dmg:SetInflictor(self:GetOwner():GetActiveWeapon())
+			dmg:SetDamageForce(tr.Normal*self:GetClientNumber("value"))
+			dmg:SetDamagePosition(tr.HitPos)
+			dmg:SetReportedPosition(tr.HitPos)
+			ent:DispatchTraceAttack(dmg, tr)
+		end
+		return true
 	end
-	return true
-end
-function TOOL:Reload()
-	local owner = self:GetOwner()
-	return self:LeftClick({
-		Normal = -owner:EyeAngles():Forward(),
-		Entity = owner, HitPos = owner:GetPos()
-	})
-end
 
-if CLIENT then
-  language.Add("tool.drgbase_tool_damage.name", "Inflict Damage")
-	language.Add("tool.drgbase_tool_damage.desc", "Inflict damage to an entity.")
-	language.Add("tool.drgbase_tool_damage.0", "Left click to inflict damage.")
-end
+	function TOOL:Reload()
+		local owner = self:GetOwner()
+		return self:LeftClick({
+			Normal = -owner:EyeAngles():Forward(),
+			Entity = owner, HitPos = owner:GetPos()
+		})
+	end
+end)

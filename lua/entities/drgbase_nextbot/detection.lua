@@ -180,7 +180,7 @@ if SERVER then
 
   -- meta
 
-  local nextbotMETA = FindMetaTable("NextBot")
+  local nbMETA = FindMetaTable("NextBot")
 
   local function LOSTest(self, ent)
     return self:Visible(ent)
@@ -202,8 +202,8 @@ if SERVER then
     return luminosity >= self:GetMinLuminosity() and luminosity <= self:GetMaxLuminosity()
   end
 
-  local IsAbleToSee = nextbotMETA.IsAbleToSee
-  function nextbotMETA:IsAbleToSee(ent, useFOV, ...)
+  local IsAbleToSee = nbMETA.IsAbleToSee
+  function nbMETA:IsAbleToSee(ent, useFOV, ...)
     if self.IsDrGNextbot then
       if not IsValid(ent) then return false end
       if ent == self then return true end
@@ -227,27 +227,27 @@ if SERVER then
     else return IsAbleToSee(self, ent, useFOV, ...) end
   end
 
-  local GetFOV = nextbotMETA.GetFOV
-  function nextbotMETA:GetFOV(...)
+  local GetFOV = nbMETA.GetFOV
+  function nbMETA:GetFOV(...)
     if self.IsDrGNextbot then
       return math.Clamp(self.SightFOV, 0, 360)
     else return GetFOV(self, ...) end
   end
-  local SetFOV = nextbotMETA.SetFOV
-  function nextbotMETA:SetFOV(fov, ...)
+  local SetFOV = nbMETA.SetFOV
+  function nbMETA:SetFOV(fov, ...)
     if self.IsDrGNextbot then
       self.SightFOV = tonumber(fov)
     else return SetFOV(self, fov, ...) end
   end
 
-  local GetMaxVisionRange = nextbotMETA.GetMaxVisionRange
-  function nextbotMETA:GetMaxVisionRange(...)
+  local GetMaxVisionRange = nbMETA.GetMaxVisionRange
+  function nbMETA:GetMaxVisionRange(...)
     if self.IsDrGNextbot then
       return math.max(0, self.SightRange)
     else return GetMaxVisionRange(self, ...) end
   end
-  local SetMaxVisionRange = nextbotMETA.SetMaxVisionRange
-  function nextbotMETA:SetMaxVisionRange(range, ...)
+  local SetMaxVisionRange = nbMETA.SetMaxVisionRange
+  function nbMETA:SetMaxVisionRange(range, ...)
     if self.IsDrGNextbot then
       self.SightRange = tonumber(range)
     else return SetMaxVisionRange(self, range, ...) end

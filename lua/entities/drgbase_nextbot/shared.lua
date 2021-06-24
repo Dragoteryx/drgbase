@@ -519,7 +519,6 @@ else
   DrGBase.BGMVolume = DrGBase.ClientConVar("drgbase_bgm_volume", "1")
 
   DrGBase.PossessionBindsViews = DrGBase.SharedClientConVar("drgbase_possession_bind_views", KEY_V)
-  DrGBase.PossessionPlayerStats = DrGBase.ClientConVar("drgbase_possession_player_stats", "1")
 
   DrGBase.DebugSight = DrGBase.ClientConVar("drgbase_debug_sight", "0")
 

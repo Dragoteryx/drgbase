@@ -109,8 +109,6 @@ hook.Add("PopulateToolMenu", "DrG/PopulateToolMenu", function()
     panel:CheckBox(GetText("server.enable"), DrGBase.PossessionEnabled:GetName())
     panel:CheckBox(GetText("server.spawn_with_possessor"), DrGBase.SpawnWithPossessor:GetName())
     panel:ControlHelp("\n"..GetText("client"))
-    panel:CheckBox(GetText("client.player_stats"), DrGBase.PossessionPlayerStats:GetName())
-    panel:Help(GetText("client.player_stats.text"))
     panel:AddControl("numpad", {
       label = GetText("client.binds.views"),
       command = DrGBase.PossessionBindsViews:GetName(),

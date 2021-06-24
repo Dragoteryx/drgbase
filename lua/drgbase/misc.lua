@@ -29,6 +29,18 @@ function DrGBase.Deprecated(old, new, fn)
   end
 end
 
+function DrGBase.AddTool(fn)
+  local TOOL = TOOL
+  TOOL.Name = "#tool."..TOOL.Mode..".name"
+  TOOL.Tab = "drgbase"
+  TOOL.Category = "tools"
+  fn(TOOL, function(placeholder, ...)
+    return DrGBase.GetText("tool."..TOOL.Mode.."."..placeholder)
+  end, function(name)
+    return GetConVar(TOOL.Mode.."_"..name)
+  end)
+end
+
 if SERVER then
 
   -- Misc --

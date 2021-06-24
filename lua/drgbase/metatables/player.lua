@@ -1,4 +1,3 @@
-local entMETA = FindMetaTable("Entity")
 local plyMETA = FindMetaTable("Player")
 
 --[[function plyMETA:DrG_GetPossessing()
@@ -14,6 +13,8 @@ end
 function plyMETA:DrG_IsPossessing()
   return IsValid(self:DrG_GetPossessing())
 end
+
+-- Buttons --
 
 hook.Add("PlayerButtonDown", "DrGBasePlayerButtonDown", function(ply, button)
   ply.DrG_ButtonsDown = ply.DrG_ButtonsDown or {}
@@ -60,43 +61,6 @@ function plyMETA:DrG_ButtonReleased(button)
   return tobool(not data.down and data.recent)
 end
 
--- Toolgun --
-
-function plyMETA:DrG_GetSelectionTable(mode)
-  self.DrG_SelectionTables = self.DrG_SelectionTables or {}
-  if isstring(mode) then
-    self.DrG_SelectionTables[mode] = self.DrG_SelectionTables[mode] or {}
-    return self.DrG_SelectionTables[mode]
-  else
-    local tool = self:GetTool()
-    if tool == nil then return {}
-    else return self:DrG_GetSelectionTable(tool.Mode) end
-  end
-end
-
-local function NextSelectedEntity(ply, previous, mode)
-  local ent = next(ply:DrG_GetSelectionTable(mode), previous)
-  if ent == nil then return nil
-  elseif not IsValid(ent) then
-    return NextSelectedEntity(ply, ent, mode)
-  else return ent end
-end
-function plyMETA:DrG_SelectedEntities(mode)
-  return function(inv, previous)
-    return NextSelectedEntity(self, previous, mode)
-  end
-end
-function plyMETA:DrG_GetSelectedEntities(mode)
-  local entities = {}
-  for ent in self:DrG_SelectedEntities(mode) do
-    table.insert(entities, ent)
-  end
-  return entities
-end
-function plyMETA:DrG_IsEntitySelected(ent, mode)
-  return self:DrG_GetSelectionTable(mode)[ent] or false
-end
-
 -- Move --
 
 local PlayerMove = DrGBase.CreateClass()
@@ -136,10 +100,9 @@ function PlayerMove.prototype:tostring()
     "| Right = " .. tostring(self:IsMovingRight())
 end
 
-local MOVE = {}
 function plyMETA:DrG_Move()
-  if not MOVE[self] then MOVE[self] = PlayerMove(self) end
-  return MOVE[self]
+  if not self.DrG_MoveObj then self.DrG_MoveObj = PlayerMove(self) end
+  return self.DrG_MoveObj
 end
 
 -- Binds --
@@ -227,10 +190,56 @@ function PlayerBinds.prototype:tostring()
   return ""
 end
 
-local BINDS = {}
 function plyMETA:DrG_Binds()
-  if not BINDS[self] then BINDS[self] = PlayerBinds(self) end
-  return BINDS[self]
+  if not self.DrG_BindsObj then self.DrG_BindsObj = PlayerBinds(self) end
+  return self.DrG_BindsObj
+end
+
+-- Selection
+
+local PlayerSelection = DrGBase.CreateClass()
+
+function PlayerSelection:new(ply, mode)
+  self.Entities = {}
+  self.Player = ply
+  self.Mode = mode
+end
+
+function PlayerSelection.prototype:SelectedIterator()
+  return function(_, ent)
+    while true do
+      ent = next(self.Entities, ent)
+      if not ent then return end
+      if not IsValid(ent) then continue end
+      return ent
+    end
+  end
+end
+function PlayerSelection.prototype:GetSelected()
+  local selected = {}
+  for ent in self:SelectedIterator() do
+    table.insert(selected, ent)
+  end
+  return selected
+end
+function PlayerSelection.prototype:IsSelected(ent)
+  return self.Entities[ent] or false
+end
+
+function PlayerSelection.prototype:tostring()
+  return ""
+end
+
+function plyMETA:DrG_ToolSelection(mode)
+  local tool = self:GetTool(mode)
+  if not tool then return end
+  if not self.DrG_Selection then
+    self.DrG_Selection = {}
+  end
+  if not self.DrG_Selection[tool.Mode] then
+    self.DrG_Selection[tool.Mode] = PlayerSelection(self, tool.Mode)
+  end
+  return self.DrG_Selection[tool.Mode]
 end
 
 if SERVER then
@@ -242,70 +251,35 @@ if SERVER then
     self:DrG_GetPossessing():StopPossession()
   end
 
-  -- Toolgun --
+  -- Selection --
 
-  util.AddNetworkString("DrGBaseSelectEntity")
-  function plyMETA:DrG_SelectEntity(ent, mode)
-    if not IsValid(ent) then return end
-    self:DrG_GetSelectionTable(mode)[ent] = true
-    net.Start("DrGBaseSelectEntity")
+  function PlayerSelection.prototype:SelectEntity(ent)
+    self.Entities[ent] = true
+    net.Start("DrG/SelectEntity")
+    net.WriteString(self.Mode)
     net.WriteEntity(ent)
-    if isstring(mode) then
-      net.WriteBool(true)
-      net.WriteString(mode)
-    else net.WriteBool(false) end
-    net.Send(self)
+    net.Send(self.Player)
   end
-
-  util.AddNetworkString("DrGBaseDeselectEntity")
-  function plyMETA:DrG_DeselectEntity(ent, mode)
-    if not IsValid(ent) then return end
-    self:DrG_GetSelectionTable(mode)[ent] = nil
-    net.Start("DrGBaseDeselectEntity")
+  function PlayerSelection.prototype:DeselectEntity(ent)
+    self.Entities[ent] = nil
+    net.Start("DrG/DeselectEntity")
+    net.WriteString(self.Mode)
     net.WriteEntity(ent)
-    if isstring(mode) then
-      net.WriteBool(true)
-      net.WriteString(mode)
-    else net.WriteBool(false) end
-    net.Send(self)
+    net.Send(self.Player)
   end
-
-  function plyMETA:DrG_ClearSelectedEntities(mode)
-    for ent in self:DrG_SelectedEntities(mode) do
-      self:DrG_DeselectEntity(ent, mode)
-    end
+  function PlayerSelection.prototype:ClearSelection()
+    self.Entities = {}
+    net.Start("DrG/ClearSelection")
+    net.WriteString(self.Mode)
+    net.Send(self.Player)
   end
-
-  function plyMETA:DrG_ToggleEntitySelect(ent, mode)
-    if self:DrG_IsEntitySelected(ent, mode) then
-      self:DrG_DeselectEntity(ent, mode)
-    else self:DrG_SelectEntity(ent, mode) end
+  function PlayerSelection.prototype:ClearAndSelectEntity(ent)
+    self.Entities = {[ent] = true}
+    net.Start("DrG/ClearAndSelectEntity")
+    net.WriteString(self.Mode)
+    net.WriteEntity(ent)
+    net.Send(self.Player)
   end
-
-  function plyMETA:DrG_CleverEntitySelect(ent, mode)
-    local selected = self:DrG_GetSelectedEntities(mode)
-    if (#selected > 1 or selected[1] ~= ent) and
-    not self:KeyDown(IN_SPEED) then
-      self:DrG_ClearSelectedEntities(mode)
-    end
-    self:DrG_ToggleEntitySelect(ent, mode)
-  end
-
-  function plyMETA:DrG_SingleEntitySelect(ent, mode)
-    if not self:DrG_IsEntitySelected(ent, mode) then
-      self:DrG_ClearSelectedEntities(mode)
-      self:DrG_SelectEntity(ent, mode)
-    else self:DrG_DeselectEntity(ent, mode) end
-  end
-
-  hook.Add("SetupPlayerVisibility", "DrGBaseSelectedEntitiesAddToPVS", function(ply)
-		local wep = ply:GetActiveWeapon()
-    if not IsValid(wep) or wep:GetClass() ~= "gmod_tool" then return end
-    if ply:GetTool() == nil then return end
-		for ent in ply:DrG_SelectedEntities() do
-      AddOriginToPVS(ent:GetPos())
-    end
-	end)
 
   -- Luminosity --
 
@@ -354,20 +328,35 @@ else
 
   -- Toolgun --
 
-  net.Receive("DrGBaseSelectEntity", function()
+  net.Receive("DrG/SelectEntity", function()
     local ply = LocalPlayer()
+    local mode = net.ReadString()
     local ent = net.ReadEntity()
-    local mode = net.ReadBool() and net.ReadString()
     if IsValid(ent) then
-      ply:DrG_GetSelectionTable(mode)[ent] = true
+      ply:DrG_Selection(mode).Entities[ent] = true
     end
   end)
-  net.Receive("DrGBaseDeselectEntity", function()
+  net.Receive("DrG/DeselectEntity", function()
     local ply = LocalPlayer()
+    local mode = net.ReadString()
     local ent = net.ReadEntity()
-    local mode = net.ReadBool() and net.ReadString()
     if IsValid(ent) then
-      ply:DrG_GetSelectionTable(mode)[ent] = nil
+      ply:DrG_Selection(mode).Entities[ent] = nil
+    end
+  end)
+  net.Receive("DrG/ClearSelection", function()
+    local ply = LocalPlayer()
+    local mode = net.ReadString()
+    if IsValid(ent) then
+      ply:DrG_Selection(mode).Entities = {}
+    end
+  end)
+  net.Receive("DrG/ClearAndSelectEntity", function()
+    local ply = LocalPlayer()
+    local mode = net.ReadString()
+    local ent = net.ReadEntity()
+    if IsValid(ent) then
+      ply:DrG_Selection(mode).Entities = {[ent] = true}
     end
   end)
 
@@ -385,21 +374,5 @@ else
     if not isfunction(ply.DrG_Luminosity) then return 1
     else return ply:DrG_Luminosity() end
   end)
-
-  -- Possession stats --
-
-  function plyMETA:Health(...)
-    if self:DrG_IsPossessing() and
-    DrGBase.PossessionPlayerStats:GetBool() then
-      return self:DrG_GetPossessing():Health(...)
-    else return entMETA.Health(self, ...) end
-  end
-
-  function plyMETA:GetMaxHealth(...)
-    if self:DrG_IsPossessing() and
-    DrGBase.PossessionPlayerStats:GetBool() then
-      return self:DrG_GetPossessing():GetMaxHealth(...)
-    else return entMETA.GetMaxHealth(self, ...) end
-  end
 
 end
