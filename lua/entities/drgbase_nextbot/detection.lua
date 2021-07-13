@@ -32,9 +32,7 @@ if SERVER then
     if not IsValid(ent) then return end
     if self:IsOmniscient() then return end
     local oldState = self:GetDetectState(ent)
-    state = math.Clamp(state,
-      DETECT_STATE_UNDETECTED,
-      DETECT_STATE_DETECTED)
+    state = math.Clamp(state, DETECT_STATE_UNDETECTED, DETECT_STATE_DETECTED)
     self.DrG_DetectStateLastUpdate[ent] = CurTime()
     if oldState ~= state then
       if state == DETECT_STATE_UNDETECTED then

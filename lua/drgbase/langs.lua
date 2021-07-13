@@ -62,8 +62,11 @@ if CLIENT then
   end
   function DrGBase.GetLanguage(lang)
     if not LANGS then return end
-    if not isstring(lang) then lang = GmodLanguage:GetString() end
+    if not isstring(lang) then return end
     return LANGS[lang]
+  end
+  function DrGBase.GetCurrentLanguage()
+    return DrGBase.GetLanguage(GmodLanguage:GetString())
   end
 
   function DrGBase.GetOrCreateLanguage(lang)
@@ -75,7 +78,7 @@ if CLIENT then
 
   function DrGBase.GetText(placeholder, ...)
     if not LANGS then return end
-    return DrGBase.GetLanguage():Get(placeholder, ...)
+    return DrGBase.GetCurrentLanguage():Get(placeholder, ...)
   end
 
   function DrGBase.LanguageIterator()
@@ -100,7 +103,7 @@ if CLIENT then
   end
 
   local function AddCurrentTranslation()
-    AddTranslation(DrGBase.GetLanguage())
+    AddTranslation(DrGBase.GetCurrentLanguage())
   end
 
   -- (Re)load languages --

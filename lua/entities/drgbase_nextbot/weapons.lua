@@ -9,8 +9,8 @@ function ENT:GetWeapon(class)
   else return self:GetActiveWeapon() end
 end
 
-function ENT:HasWeapon()
-  return IsValid(self:GetWeapon())
+function ENT:HasWeapon(class)
+  return IsValid(self:GetWeapon(class))
 end
 
 if SERVER then

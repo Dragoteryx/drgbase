@@ -154,7 +154,6 @@ if SERVER then
     if not isnumber(seq) or seq == -1 then return false end
     if not istable(options) then options = {} end
     if not isnumber(options.rate) then options.rate = 1 end
-    if not isbool(options.cancellable) then options.cancellable = self.CancellableByDefault end
     if not isbool(options.gravity) then options.gravity = true end
     local args, n = table.DrG_Pack(...)
     ResetSequence(self, seq)
@@ -339,7 +338,7 @@ if SERVER then
   function ENT:PlayActivity(act, ...)
     return self:PlaySequence(RandomSequence(self, act), ...)
   end
-  function ENT:PlayAnimations(anim, ...)
+  function ENT:PlayAnimation(anim, ...)
     local kind = SequenceOrActivity(anim)
     if istable(anim) or kind == SEQUENCE then
       return self:PlaySequence(anim, ...)

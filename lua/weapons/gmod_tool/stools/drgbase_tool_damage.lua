@@ -10,7 +10,7 @@ DrGBase.AddTool(function(TOOL, GetText, GetToolConVar)
 		panel:NumSlider(GetText("damage"), "drgbase_tool_damage_value", 0, 500, 0)
 		local dlist = DrGBase.DListView({GetText("type"), GetText("enabled")})
 		function AddDamageType(name, value)
-			dlist:AddLine(GetText(name), GetText(bit.band(type:GetInt(), value) ~= 0 and "true" or "false"), value)
+			dlist:AddLine(GetText(name), GetText(bit.band(type:GetInt(), value) ~= 0 and "yes" or "no"), value)
 		end
 		AddDamageType("dmg_crush", DMG_CRUSH)
 		AddDamageType("dmg_slash", DMG_SLASH)
@@ -29,10 +29,10 @@ DrGBase.AddTool(function(TOOL, GetText, GetToolConVar)
 		dlist:SetMultiSelect(false)
 		function dlist:OnRowSelected(_, line)
 			if bit.band(type:GetInt(), line:GetValue(3)) ~= 0 then
-				line:SetValue(2, GetText("false"))
+				line:SetValue(2, GetText("no"))
 				type:SetInt(type:GetInt()-line:GetValue(3))
 			else
-				line:SetValue(2, GetText("true"))
+				line:SetValue(2, GetText("yes"))
 				type:SetInt(type:GetInt()+line:GetValue(3))
 			end
 		end

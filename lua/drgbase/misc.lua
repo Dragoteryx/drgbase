@@ -35,7 +35,7 @@ function DrGBase.AddTool(fn)
   TOOL.Tab = "drgbase"
   TOOL.Category = "tools"
   fn(TOOL, function(placeholder, ...)
-    return DrGBase.GetText("tool."..TOOL.Mode.."."..placeholder)
+    return DrGBase.GetText("tool."..TOOL.Mode.."."..placeholder, ...)
   end, function(name)
     return GetConVar(TOOL.Mode.."_"..name)
   end)

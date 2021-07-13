@@ -1,9 +1,7 @@
 -- Getters --
 
 function ENT:IsAIDisabled()
-  return GetConVar("ai_disabled"):GetBool() or
-  DrGBase.AIDisabled:GetBool() or
-  self:GetNW2Bool("DrG/AIDisabled")
+  return GetConVar("ai_disabled"):GetBool() or DrGBase.AIDisabled:GetBool() or self:GetNW2Bool("DrG/AIDisabled")
 end
 
 if SERVER then

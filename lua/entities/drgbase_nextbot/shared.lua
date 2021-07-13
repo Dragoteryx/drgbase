@@ -12,7 +12,6 @@ ENT.ModelScale = 1
 ENT.CollisionBounds = Vector(10, 10, 72)
 ENT.BloodColor = BLOOD_COLOR_RED
 ENT.RagdollOnDeath = true
-ENT.CancellableByDefault = false
 
 -- Status --
 DrGBase.IncludeFile("status.lua")
