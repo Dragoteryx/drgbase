@@ -30,7 +30,6 @@ ENT.MeleeAttackRange = 50
 ENT.ReachEnemyRange = 50
 ENT.AvoidEnemyRange = 0
 ENT.AvoidAfraidOfRange = 500
-ENT.WatchAfraidOfRange = 750
 
 -- Relationships --
 DrGBase.IncludeFile("relationships.lua")
@@ -176,6 +175,7 @@ function ENT:DrG_PreInitialize()
     -- status
     self:SetMaxHealth(self.SpawnHealth)
     self:SetHealth(self.SpawnHealth)
+    self:SetHealthRegen(self.HealthRegen)
     self:ScaleHealth(DrGBase.HealthMultiplier:GetFloat())
     -- vision
     self:SetMaxVisionRange(self.SightRange)

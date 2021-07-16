@@ -21,7 +21,6 @@ ENT.RangeAttackRange = 0
 ENT.MeleeAttackRange = 50
 ENT.ReachEnemyRange = 50
 ENT.AvoidEnemyRange = 0
-ENT.FollowPlayers = true
 
 -- Relationships --
 ENT.Factions = {"FACTION_ANTLIONS"}
@@ -29,7 +28,6 @@ ENT.DefaultRelationship = D_HT
 
 -- Movements/animations --
 ENT.UseWalkframes = true
-ENT.IdleAnimation = "distractidle2"
 ENT.JumpAnimation = ACT_GLIDE
 
 -- Locomotion --

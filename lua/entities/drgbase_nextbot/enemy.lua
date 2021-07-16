@@ -9,6 +9,12 @@ if SERVER then
   local function CompareEnemies(self, ent1, ent2)
     local res = self:CompareEnemies(ent1, ent2)
     if isbool(res) then return res end
+    if self:IsAfraidOf(ent1)
+    and not self:IsAfraidOf(ent2)
+    and not self:IsInRange(ent1, self.AvoidAfraidOfRange) then return false end
+    if self:IsAfraidOf(ent2)
+    and not self:IsAfraidOf(ent1)
+    and not self:IsInRange(ent2, self.AvoidAfraidOfRange) then return true end
     local state1 = self:GetDetectState(ent1)
     local state2 = self:GetDetectState(ent2)
     if state1 > state2 then return true end
@@ -88,7 +94,13 @@ if SERVER then
         if res == true then self:DoFoundEnemy(enemy) end
       end
     elseif self:IsAfraidOf(enemy) then
-      -- todo
+      if state == DETECT_STATE_DETECTED then
+        local visible = self:Visible(enemy)
+        if self:IsInRange(enemy, self.AvoidAfraidOfRange) and visible then
+          self:DoMoveAwayFromEnemy(enemy)
+          if IsValid(enemy) then self:DoAttack(enemy) end
+        else self:DoPassive() end
+      else self:DoPassive() end
     else self:DoPassive() end
   end
   function ENT:DoAttack(enemy)
@@ -118,9 +130,13 @@ if SERVER then
     if isfunction(self.OnAvoidEnemy) then
       OnAvoidEnemyDeprecation()
       if self:OnAvoidEnemy(enemy) ~= true then
+        self:FaceTowards(enemy) self:FaceTowards(enemy)
         self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
       end
-    else self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos())) end
+    else
+      self:FaceTowards(enemy) self:FaceTowards(enemy)
+      self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
+    end
   end
   function ENT:DoObserveEnemy(enemy)
     if isfunction(self.OnIdleEnemy) then
