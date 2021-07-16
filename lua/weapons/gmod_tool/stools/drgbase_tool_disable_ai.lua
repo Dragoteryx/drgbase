@@ -17,7 +17,7 @@ if CLIENT then
     local wep = LocalPlayer():GetActiveWeapon()
     if not IsValid(wep) or wep:GetClass() ~= "gmod_tool" then return end
     local tool = LocalPlayer():GetTool()
-    if tool == nil or tool.Mode ~= "drgbase_tool_disableai" then return end
+    if tool == nil or tool.Mode ~= "drgbase_tool_disable_ai" then return end
     local enabled = {}
     local disabled = {}
     for nextbot in DrGBase.NextbotIterator() do

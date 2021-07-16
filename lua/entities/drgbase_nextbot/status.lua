@@ -1,7 +1,7 @@
 -- Getters --
 
 function ENT:GetHealthRegen()
-  return self:GetNW2Float("DrG/HealthRegen", self.HealthRegen)
+  return self:GetNW2Int("DrG/HealthRegen", self.HealthRegen)
 end
 
 -- Alive? --
@@ -35,7 +35,7 @@ if SERVER then
   -- Setters --
 
   function ENT:SetHealthRegen(regen)
-    self:SetNW2Float("DrG/HealthRegen", regen)
+    self:SetNW2Int("DrG/HealthRegen", regen)
   end
 
   function ENT:HasGodMode()
@@ -264,10 +264,7 @@ if SERVER then
 
   local SetHealth = entMETA.SetHealth
   function entMETA:SetHealth(health, ...)
-    if self.IsDrGNextbot then
-      if self:IsDead() then health = 0 end
-      self:SetNW2Int("DrG/Health", health)
-    end
+    if self.IsDrGNextbot then self:SetNW2Int("DrG/Health", health) end
     return SetHealth(self, health, ...)
   end
 

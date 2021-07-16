@@ -50,39 +50,33 @@ if CLIENT then
 
   -- Functions --
 
-  local LANGS
+  DrG_Langs = DrG_Langs or {}
 
-  function DrGBase.CreateLanguage(lang)
-    if not LANGS then return false end
-    if not isstring(lang) then return false end
-    if not LANGS[lang] then
-      LANGS[lang] = Language(lang, LANGS.en)
-      return true
-    else return false end
+  function DrGBase.CreateLanguage(id)
+    if not isstring(id) then return end
+    local lang = Language(id, DrG_Langs.en)
+    DrG_Langs[id] = lang
+    return lang
   end
-  function DrGBase.GetLanguage(lang)
-    if not LANGS then return end
-    if not isstring(lang) then return end
-    return LANGS[lang]
+  function DrGBase.GetLanguage(id)
+    if not isstring(id) then return end
+    return DrG_Langs[id]
   end
   function DrGBase.GetCurrentLanguage()
     return DrGBase.GetLanguage(GmodLanguage:GetString())
   end
 
-  function DrGBase.GetOrCreateLanguage(lang)
-    if not LANGS then return end
-    if not isstring(lang) then return end
-    DrGBase.CreateLanguage(lang)
-    return LANGS[lang]
+  function DrGBase.GetOrCreateLanguage(id)
+    return DrGBase.GetLanguage(id)
+    or DrGBase.CreateLanguage(id)
   end
 
   function DrGBase.GetText(placeholder, ...)
-    if not LANGS then return end
     return DrGBase.GetCurrentLanguage():Get(placeholder, ...)
   end
 
   function DrGBase.LanguageIterator()
-    return pairs(LANGS or {})
+    return pairs(DrG_Langs)
   end
   function DrGBase.GetLanguages()
     local langs = {}
@@ -109,7 +103,7 @@ if CLIENT then
   -- (Re)load languages --
 
   local function LoadLanguages()
-    LANGS = {en = Language("en")}
+    DrG_Langs = {en = Language("en")}
     hook.Run("DrG/LoadLanguages")
     AddCurrentTranslation()
   end

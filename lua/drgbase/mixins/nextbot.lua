@@ -6,7 +6,7 @@ if SERVER then
 
   function MIXIN:OnTakeDamage(dmg, hitgroup)
     if not isnumber(hitgroup) then return end
-    return self.DrG_Mixin.OnTakeDamage(dmg, hitgroup)
+    return self.DrG_Mixin.OnTakeDamage(self, dmg, hitgroup)
   end
 
   function MIXIN:OnTraceAttack(...)

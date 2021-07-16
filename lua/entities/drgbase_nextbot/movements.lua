@@ -107,6 +107,24 @@ if SERVER then
     if not self:HasEnemy() then return end
     self:FaceTowards(self:GetEnemy())
   end
+  function ENT:FaceInstant(pos)
+    if isentity(pos) then pos = pos:GetPos() end
+    local angle = (pos - self:GetPos()):Angle()
+    self:SetAngles(Angle(0, angle.y, 0))
+  end
+  function ENT:FaceTo(toface)
+    while true do
+      local pos = toface
+      if isentity(pos) then
+        if not IsValid(pos) then return end
+        pos = pos:GetPos()
+      end
+      local angle = (pos - self:GetPos()):Angle()
+      if math.NormalizeAngle(math.Round(self:GetAngles().y)) == math.NormalizeAngle(math.Round(angle.y)) then return end
+      self:FaceTowards(pos)
+      if self:YieldCoroutine(true) then return end
+    end
+  end
 
   function ENT:MoveTowards(pos)
     if isentity(pos) then pos = pos:GetPos() end

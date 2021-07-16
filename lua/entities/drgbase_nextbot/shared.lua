@@ -257,6 +257,15 @@ function ENT:DrG_PreInitialize()
         coroutine.yield()
       end
     end)
+    self:ParallelCoroutine(function(self)
+      while true do
+        local health = self:Health()
+        local regen = self:GetHealthRegen()
+        local maxHealth = self:GetMaxHealth()
+        self:SetHealth(math.Clamp(health + regen, 1, maxHealth))
+        coroutine.wait(1)
+      end
+    end)
   else self:SetIK(true) end
   self:AddFlags(FL_OBJECT + FL_NPC)
   table.insert(DrG_Nextbots, self)
@@ -402,14 +411,14 @@ if SERVER then
     for thr, done in pairs(self.DrG_ThrParallel) do
       local ok, args = coroutine.resume(thr)
       if coroutine.status(thr) == "dead" then
-        dead[thr] = true
+        table.insert(dead, thr)
         if not ok then
           ErrorNoHalt(self, " Parallel Error: ", args, "\n")
           self:OnParallelError(args)
         else done(self, args) end
       end
     end
-    for thr in pairs(dead) do
+    for _, thr in ipairs(dead) do
       self.DrG_ThrParallel[thr] = nil
     end
   end
