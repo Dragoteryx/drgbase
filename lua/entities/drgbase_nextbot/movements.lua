@@ -116,13 +116,13 @@ if SERVER then
     while true do
       local pos = toface
       if isentity(pos) then
-        if not IsValid(pos) then return end
+        if not IsValid(pos) then return false end
         pos = pos:GetPos()
       end
       local angle = (pos - self:GetPos()):Angle()
-      if math.NormalizeAngle(math.Round(self:GetAngles().y)) == math.NormalizeAngle(math.Round(angle.y)) then return end
+      if math.NormalizeAngle(math.Round(self:GetAngles().y)) == math.NormalizeAngle(math.Round(angle.y)) then return true end
       self:FaceTowards(pos)
-      if self:YieldCoroutine(true) then return end
+      if self:YieldCoroutine(true) then return false end
     end
   end
 

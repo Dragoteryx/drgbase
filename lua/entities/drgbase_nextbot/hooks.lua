@@ -42,6 +42,10 @@ if SERVER then
     self:ReactInCoroutine(self.DoContact, ...)
   end
 
+  function ENT:OnAngleChange(ang)
+    self:SetAngles(Angle(0, ang.y, 0))
+  end
+
   function ENT:HandleAnimEvent() end
   function ENT:OnAnimEvent() end
 

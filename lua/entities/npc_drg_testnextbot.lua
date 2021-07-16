@@ -62,10 +62,8 @@ if SERVER then
 
   function ENT:Initialize()
     self:SetPlayersRelationship(D_HT)
-    self:AddAnimEventCycle("walk_all", 0.28, "drg.footstep")
-    self:AddAnimEventCycle("run_all_02", 0.28, "drg.footstep")
-    self:AddAnimEventCycle("walk_all", 0.78, "drg.footstep")
-    self:AddAnimEventCycle("run_all_02", 0.78, "drg.footstep")
+    self:AddAnimEventCycle("walk_all", {0.28, 0.78}, "drg.footstep")
+    self:AddAnimEventCycle("run_all_02", {0.28, 0.78}, "drg.footstep")
   end
 
   function ENT:OnPossessionBinds(binds)

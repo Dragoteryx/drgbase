@@ -175,11 +175,7 @@ function ENT:DrG_PreInitialize()
     -- status
     self:SetMaxHealth(self.SpawnHealth)
     self:SetHealth(self.SpawnHealth)
-    self:SetHealthRegen(self.HealthRegen)
     self:ScaleHealth(DrGBase.HealthMultiplier:GetFloat())
-    -- vision
-    self:SetMaxVisionRange(self.SightRange)
-    self:SetFOV(self.SightFOV)
     -- collisions
     self:SetCollisionGroup(COLLISION_GROUP_NPC)
     if isvector(self.CollisionBounds) then
@@ -209,7 +205,7 @@ function ENT:DrG_PreInitialize()
     self:SetBloodColor(self.BloodColor)
     self:SetUseType(SIMPLE_USE)
     self:AddCallback("OnAngleChange", function(self, ang)
-      if true then self:SetAngles(Angle(0, ang.y, 0)) end
+      self:OnAngleChange(ang)
     end)
     self:JoinFactions(self.Factions)
     self.VJ_AddEntityToSNPCAttackList = true
@@ -295,7 +291,7 @@ function ENT:DrG_PreThink(...)
   end
   self:DrG_PlayAnimEvents(seq, curCycle, self.DrG_LastCycle)
   self.DrG_LastCycle = curCycle
-  -- misca
+  -- misc
   if SERVER then
     if self.DrG_OnFire and not self:IsOnFire() then
       self.DrG_OnFire = false
