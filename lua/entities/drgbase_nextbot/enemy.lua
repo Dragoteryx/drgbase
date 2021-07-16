@@ -130,11 +130,9 @@ if SERVER then
     if isfunction(self.OnAvoidEnemy) then
       OnAvoidEnemyDeprecation()
       if self:OnAvoidEnemy(enemy) ~= true then
-        self:FaceTowards(enemy) self:FaceTowards(enemy)
         self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
       end
     else
-      self:FaceTowards(enemy) self:FaceTowards(enemy)
       self:FollowPath(self:GetPos():DrG_Away(enemy:GetPos()))
     end
   end

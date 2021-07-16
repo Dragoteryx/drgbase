@@ -136,7 +136,6 @@ if SERVER then
       ):GetNormalized()*attack.force:Length()) end
       if not isfunction(fn) or fn(self, ent, dmg) ~= true then
         if isangle(attack.viewpunch) and ent:IsPlayer() then ent:ViewPunch(attack.viewpunch) end
-        if attack.statusEffect then ent:DrG_ApplyStatusEffect(attack.statusEffect, attack.statusEffectDuration) end
         if attack.push then
           if ent:IsPlayer() then ent:SetVelocity(dmg:GetDamageForce())
           else ent:SetVelocity(ent:GetVelocity() + dmg:GetDamageForce()) end

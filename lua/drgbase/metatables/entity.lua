@@ -247,47 +247,6 @@ if SERVER then
     return true
   end
 
-  -- Status effects --
-
-  function entMETA:DrG_ApplyStatusEffect(effect, duration)
-    self.DrG_StatusEffects = self.DrG_StatusEffects or {}
-    local clear
-    if self.DrG_StatusEffects[effect] then
-      local oldClear = self.DrG_StatusEffects[effect]
-      clear = function(self) oldClear(self) end
-    else clear = effect(self) or function() end end
-    self.DrG_StatusEffects[effect] = clear
-    if isnumber(duration) then
-      self:DrG_Timer(duration, function(self)
-        if self.DrG_StatusEffects[effect] == clear then
-          self:DrG_ClearStatusEffect(effect)
-        end
-      end)
-    end
-  end
-  function entMETA:DrG_ClearStatusEffect(effect)
-    if not istable(self.DrG_StatusEffects) then return end
-    self.DrG_StatusEffects[effect](self)
-    self.DrG_StatusEffects[effect] = nil
-  end
-  function entMETA:DrG_ClearAllStatusEffects()
-    if not istable(self.DrG_StatusEffects) then return end
-    for effect in pairs(self.DrG_StatusEffects) do
-      self:DrG_ClearStatusEffect(effect)
-    end
-  end
-  function entMETA:DrG_HasStatusEffect(effect)
-    if not istable(self.DrG_StatusEffects) then return false end
-    return self.DrG_StatusEffects[effect] ~= nil
-  end
-
-  hook.Add("PlayerDeath", "DrG/ClearPlayerStatusEffects", function(ply)
-    ply:DrG_ClearAllStatusEffects()
-  end)
-  hook.Add("PlayerSilentDeath", "DrG/ClearPlayerStatusEffects", function(ply)
-    ply:DrG_ClearAllStatusEffects()
-  end)
-
   -- Effects --
 
   function entMETA:DrG_ParticleEffect(effect, ...)
