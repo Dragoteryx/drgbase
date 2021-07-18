@@ -118,6 +118,14 @@ function entMETA:DrG_LoopTimer(delay, callback, ...)
   end, ...)
 end
 
+-- Ductape --
+
+local old_GetModelScale = entMETA.GetModelScale
+function entMETA:GetModelScale(...)
+  local scale = old_GetModelScale(self, ...)
+  return scale or 1
+end
+
 if SERVER then
 
   -- Misc --

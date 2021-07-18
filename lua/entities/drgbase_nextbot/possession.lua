@@ -69,7 +69,6 @@ function ENT:PossessorView()
         center = self:GetBonePosition(boneid)
       end
     end
-    local offset = preset.offset or Vector(0, 0, 0)
     local forward = -Angle(0, angles.y, 0):Forward()
     local right = Angle(0, angles.y + 90, 0):Forward()
     local up = Vector(0, 0, 1)
