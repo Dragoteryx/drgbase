@@ -100,9 +100,6 @@ if SERVER then
     if isentity(pos) then pos = pos:GetPos() end
     self.loco:FaceTowards(pos)
   end
-  function ENT:FaceForward()
-    self:FaceTowards(self:GetPos() + self:GetVelocity())
-  end
   function ENT:FaceEnemy()
     if not self:HasEnemy() then return end
     self:FaceTowards(self:GetEnemy())

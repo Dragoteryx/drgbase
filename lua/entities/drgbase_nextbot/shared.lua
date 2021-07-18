@@ -460,6 +460,36 @@ if SERVER then
     end
   end
 
+  function ENT:AwaitCoroutine(duration, cancellable)
+    if duration <= 0 then return end
+    local now = CurTime()
+    while CurTime() < now + duration do
+      if self:YieldCoroutine(cancellable) then return true end
+    end
+    return false
+  end
+
+  local PauseAsAwaitDeprecation = DrGBase.Deprecation("ENT:PauseCoroutine(duration, cancellable)", "ENT:AwaitCoroutine(duration, cancellable)")
+  function ENT:PauseCoroutine(cancellable, arg2)
+    if isnumber(cancellable) then
+      PauseAsAwaitDeprecation()
+      return self:AwaitCoroutine(cancellable, arg2)
+    end
+    self.DrG_ResumeCoroutine = false
+    while not self.DrG_ResumeCoroutine do
+      if self:YieldCoroutine(cancellable) then
+        self.DrG_ResumeCoroutine = nil
+        return true
+      end
+    end
+    self.DrG_ResumeCoroutine = nil
+    return false
+  end
+  function ENT:ResumeCoroutine()
+    if self.DrG_ResumeCoroutine ~= false then return end
+    self.DrG_ResumeCoroutine = true
+  end
+
   function ENT:ReactInCoroutine(fn, arg1, ...)
     if not isfunction(fn) then return end
     if not self:InCoroutine() then

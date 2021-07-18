@@ -29,7 +29,7 @@ if SERVER then
 
   function ENT:OnLeaveGround() end
   function ENT:DrG_OnLeaveGround(...)
-    self:ReactInCoroutine(self.DoLeaveOnGround, ...)
+    self:ReactInCoroutine(self.DoLeaveGround, ...)
   end
 
   -- Misc --

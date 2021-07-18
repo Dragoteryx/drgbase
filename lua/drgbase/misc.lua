@@ -12,14 +12,26 @@ function DrGBase.IsMeleeWeapon(weapon)
   return weapon.DrGBase_Melee or string.find(holdType, "melee") ~= nil
 end
 
-function DrGBase.Deprecation(old, new)
-  local warned = false
+function DrGBase.OneTimeMessage(msg, options)
+  local printed = false
   return function()
-    if not warned and GetConVar("developer"):GetBool() then
-      ErrorNoHalt("[DrGBase] Deprecation warning: '", old, "' is deprecated, you should use '", new, "' instead", "\n")
-      warned = true
+    if not printed and GetConVar("developer"):GetBool() then
+      DrGBase.Print(msg, options)
+      printed = true
     end
   end
+end
+function DrGBase.OneTimeError(err)
+  local printed = false
+  return function()
+    if not printed and GetConVar("developer"):GetBool() then
+      ErrorNoHalt(err.."\n")
+      printed = true
+    end
+  end
+end
+function DrGBase.Deprecation(old, new)
+  return DrGBase.OneTimeError("[DrGBase] Deprecation warning: '"..old.."' is deprecated, you should use '"..new.."' instead")
 end
 function DrGBase.Deprecated(old, new, fn)
   local deprecation = DrGBase.Deprecation(old, new)

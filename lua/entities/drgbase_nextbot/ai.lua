@@ -20,8 +20,7 @@ if SERVER then
 
   function ENT:AIBehaviour()
     if self:HasEnemy() then
-      local enemy = self:GetEnemy()
-      self:DoHandleEnemy(enemy, self:GetDetectState(enemy))
+      self:DoHandleEnemy(self:GetEnemy(), self:GetEnemyDetectState())
     else self:DoPassive() end
   end
 
