@@ -64,6 +64,7 @@ if CLIENT then
   end
   function DrGBase.GetCurrentLanguage()
     return DrGBase.GetLanguage(GmodLanguage:GetString())
+    or DrGBase.GetLanguage("en")
   end
 
   function DrGBase.GetOrCreateLanguage(id)

@@ -70,8 +70,6 @@ hook.Add("PopulateToolMenu", "DrG/PopulateToolMenu", function()
     local combo = vgui.Create("DComboBox")
     local langs = DrGBase.GetLanguages()
     table.sort(langs, function(lang1, lang2)
-      if lang1:GetID() == "en" then return true end
-      if lang2:GetID() == "en" then return false end
       return lang1.Name > lang2.Name
     end)
     for _, lang in ipairs(langs) do
@@ -106,7 +104,7 @@ hook.Add("PopulateToolMenu", "DrG/PopulateToolMenu", function()
 
   AddOption("nextbots", "possession", function(panel, GetText)
     panel:ControlHelp("\n"..GetText("server"))
-    panel:CheckBox(GetText("server.enable"), DrGBase.PossessionEnabled:GetName())
+    panel:CheckBox(GetText("server.enabled"), DrGBase.PossessionEnabled:GetName())
     panel:CheckBox(GetText("server.spawn_with_possessor"), DrGBase.SpawnWithPossessor:GetName())
     panel:ControlHelp("\n"..GetText("client"))
     panel:AddControl("numpad", {

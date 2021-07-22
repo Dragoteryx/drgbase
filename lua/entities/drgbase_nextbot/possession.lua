@@ -1,7 +1,8 @@
 -- Getters --
 
 function ENT:IsPossessionEnabled()
-  return self:GetNW2Bool("DrG/DrGBase.PossessionEnabled", self.PossessionEnabled)
+  return DrGBase.PossessionEnabled:GetBool()
+  and self:GetNW2Bool("DrG/DrGBase.PossessionEnabled", self.PossessionEnabled)
 end
 
 --[[function ENT:GetPossessor()
@@ -108,7 +109,6 @@ properties.Add("drg/possess", {
 	Filter = function(_self, ent, _ply)
     if not IsValid(ent) then return end
 		if not ent.IsDrGNextbot then return false end
-		if not DrGBase.PossessionEnabled:GetBool() then return false end
 		if not ent.PossessionPrompt then return false end
 		if not ent:IsPossessionEnabled() then return false end
 		return true
@@ -294,9 +294,9 @@ if SERVER then
   end
 
   function ENT:CanPossess(ply)
-    if not IsValid(ply) or not isentity(ply) or not ply:IsPlayer() then return false, "#drgbase.possession.denied.notplayer" end
-    if not ply:Alive() then return false, "#drgbase.possession.denied.dead" end
-    if ply:InVehicle() then return false, "#drgbase.possession.denied.invehicle" end
+    if not IsValid(ply) or not isentity(ply) or not ply:IsPlayer() then return false, "notplayer" end
+    if not ply:Alive() then return false, "dead" end
+    if ply:InVehicle() then return false, "invehicle" end
     return true
   end
 
@@ -501,7 +501,7 @@ else
     local ent = net.ReadEntity()
     if not IsValid(ent) then return end
     local reason = net.ReadString()
-    notification.AddLegacy(reason, NOTIFY_ERROR, 4)
+    notification.AddLegacy("#drgbase.possession.denied."..reason, NOTIFY_ERROR, 4)
     surface.PlaySound("buttons/button10.wav")
   end)
 
