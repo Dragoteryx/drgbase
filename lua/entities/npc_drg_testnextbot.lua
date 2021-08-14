@@ -143,7 +143,6 @@ if SERVER then
 
   -- Damage --
 
-  function ENT:OnTraceAttack() end
   function ENT:OnTakeDamage(dmg, hitgroup)
     local attacker = dmg:GetAttacker()
     if hitgroup == HITGROUP_HEAD then

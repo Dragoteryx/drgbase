@@ -616,3 +616,5 @@ else
   end
 
 end
+
+DrGBase.AddNextbotMixins(ENT)

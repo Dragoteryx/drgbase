@@ -43,6 +43,7 @@ if SERVER then
     else self:Remove() end
   end
 
+  function ENT:OnTraceAttack() end
   function ENT:_HandleTraceAttack(dmg, dir, tr)
     self:SetNW2Int("DrGBaseLastHitGroup", tr.HitGroup)
     self._DrGBaseHitGroupToHandle = true
@@ -184,7 +185,6 @@ if SERVER then
   function ENT:OnPhysDamage(ent, data)
     return (data.TheirOldVelocity:Length()*data.HitObject:GetMass())/1000
   end
-
   function ENT:_HandleCollide(data)
     local ent = data.HitEntity
     if not IsValid(ent) then return end
@@ -245,6 +245,7 @@ if SERVER then
   -- function ENT:OnLeftGround() end
   -- function ENT:OnLandedOnGround() end
 
+  function ENT:OnLeaveGround() end
   function ENT:_HandleLeaveGround()
     self:SetNW2Bool("DrGBaseOnGround", false)
     self:UpdateAnimation()
@@ -253,6 +254,8 @@ if SERVER then
       self:ReactInCoroutine(self.OnLeftGround)
     end
   end
+
+  function ENT:OnLandOnGround() end
   function ENT:_HandleLandOnGround()
     self:SetNW2Bool("DrGBaseOnGround", true)
     self:UpdateAnimation()
@@ -281,6 +284,8 @@ if SERVER then
   function ENT:GetNavArea()
     return self._DrGBaseNavArea
   end
+
+  function ENT:OnNavAreaChanged() end
   function ENT:_HandleNavAreaChanged(old, new)
     self._DrGBasePreviousNavArea = old
     self._DrGBaseNavArea = new

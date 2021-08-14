@@ -1,5 +1,47 @@
 -- Registry --
 
+function DrGBase.AddNextbotMixins(ENT)
+  if isfunction(ENT.OnTraceAttack) then
+    local old_OnTraceAttack = ENT.OnTraceAttack
+    function ENT:OnTraceAttack(...)
+      local res = self:_HandleTraceAttack(...)
+      if res ~= nil then return res end
+      return old_OnTraceAttack(self, ...)
+    end
+  end
+  if isfunction(ENT.OnNavAreaChanged) then
+    local old_OnNavAreaChanged = ENT.OnNavAreaChanged
+    function ENT:OnNavAreaChanged(...)
+      local res = self:_HandleNavAreaChanged(...)
+      if res ~= nil then return res end
+      return old_OnNavAreaChanged(self, ...)
+    end
+  end
+  if isfunction(ENT.OnLeaveGround) then
+    local old_OnLeaveGround = ENT.OnLeaveGround
+    function ENT:OnLeaveGround(...)
+      local res = self:_HandleLeaveGround(...)
+      if res ~= nil then return res end
+      return old_OnLeaveGround(self, ...)
+    end
+  end
+  if isfunction(ENT.OnLandOnGround) then
+    local old_OnLandOnGround = ENT.OnLandOnGround
+    function ENT:OnLandOnGround(...)
+      local res = self:_HandleLandOnGround(...)
+      if res ~= nil then return res end
+      return old_OnLandOnGround(self, ...)
+    end
+  end
+  if isfunction(ENT.OnTakeDamage) then
+    local old_TakeDamage = ENT.OnTakeDamage
+    function ENT:OnTakeDamage(dmg, hitgroup)
+      if not isnumber(hitgroup) then return end
+      return old_TakeDamage(self, dmg, hitgroup)
+    end
+  end
+end
+
 function DrGBase.AddNextbot(ENT)
   local class = string.Replace(ENT.Folder, "entities/", "")
   if ENT.PrintName == nil or ENT.Category == nil then return false end
@@ -28,45 +70,7 @@ function DrGBase.AddNextbot(ENT)
     killicon.Add(class, ENT.Killicon.icon, ENT.Killicon.color)
   else
     resource.AddFile("materials/entities/"..class..".png")
-    if isfunction(ENT.OnTraceAttack) then
-      local old_OnTraceAttack = ENT.OnTraceAttack
-      function ENT:OnTraceAttack(...)
-        local res = self:_HandleTraceAttack(...)
-        if res ~= nil then return res end
-        return old_OnTraceAttack(self, ...)
-      end
-    end
-    if isfunction(ENT.OnNavAreaChanged) then
-      local old_OnNavAreaChanged = ENT.OnNavAreaChanged
-      function ENT:OnNavAreaChanged(...)
-        local res = self:_HandleNavAreaChanged(...)
-        if res ~= nil then return res end
-        return old_OnNavAreaChanged(self, ...)
-      end
-    end
-    if isfunction(ENT.OnLeaveGround) then
-      local old_OnLeaveGround = ENT.OnLeaveGround
-      function ENT:OnLeaveGround(...)
-        local res = self:_HandleLeaveGround(...)
-        if res ~= nil then return res end
-        return old_OnLeaveGround(self, ...)
-      end
-    end
-    if isfunction(ENT.OnLandOnGround) then
-      local old_OnLandOnGround = ENT.OnLandOnGround
-      function ENT:OnLandOnGround(...)
-        local res = self:_HandleLandOnGround(...)
-        if res ~= nil then return res end
-        return old_OnLandOnGround(self, ...)
-      end
-    end
-    if isfunction(ENT.OnTakeDamage) then
-      local old_TakeDamage = ENT.OnTakeDamage
-      function ENT:OnTakeDamage(dmg, hitgroup)
-        if not isnumber(hitgroup) then return end
-        return old_TakeDamage(self, dmg, hitgroup)
-      end
-    end
+    DrGBase.AddNextbotMixins(ENT)
   end
   local nextbot = {
     Name = ENT.PrintName,
