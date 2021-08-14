@@ -266,8 +266,8 @@ if SERVER then
     if damage > math.max(0, self.MinFallDamage) then
       local dmg = DamageInfo()
       dmg:SetDamage(damage)
-      dmg:SetAttacker(self)
-      dmg:SetInflictor(self)
+      --dmg:SetAttacker(self)
+      --dmg:SetInflictor(self)
       dmg:SetDamageType(DMG_FALL)
       self:TakeDamageInfo(dmg)
     end
