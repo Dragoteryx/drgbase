@@ -32,7 +32,7 @@ end
 local entMETA = FindMetaTable("Entity")
 
 local EyePos = entMETA.EyePos
-function entMETA:EyePos()
+function entMETA:EyePos(...)
   if self.IsDrGNextbot then
     local eyepos = self:WorldSpaceCenter()
     local eyebone = self.EyeBone
@@ -42,14 +42,14 @@ function entMETA:EyePos()
       self.EyeOffset.x*self:GetForward() +
       self.EyeOffset.y*self:GetRight() +
       self.EyeOffset.z*self:GetUp()
-  else return EyePos(self) end
+  else return EyePos(self, ...) end
 end
 
 local EyeAngles = entMETA.EyeAngles
-function entMETA:EyeAngles()
+function entMETA:EyeAngles(...)
   if self.IsDrGNextbot then
     return self:GetAngles() + self.EyeAngle
-  else return EyeAngles(self) end
+  else return EyeAngles(self, ...) end
 end
 
 -- Footsteps --
@@ -124,7 +124,7 @@ if SERVER then
       if self:GetHullRangeSquaredTo(ent) > attack.range^2 then continue end
       local dmg = DamageInfo()
       dmg:SetAttacker(self)
-      dmg:SetInflictor(self)
+      dmg:SetInflictor(attack.inflictor or self)
       dmg:SetDamagePosition(self:GetPos())
       dmg:SetReportedPosition(self:GetPos())
       if isnumber(attack.damage) then dmg:SetDamage(attack.damage) end
@@ -134,7 +134,7 @@ if SERVER then
         attack.force.y*self:GetRight(),
         attack.force.z*self:GetUp()
       ):GetNormalized()*attack.force:Length()) end
-      if not isfunction(fn) or fn(self, ent, dmg) ~= true then
+      if not isfunction(fn) or fn(self, ent, dmg) ~= false then
         if isangle(attack.viewpunch) and ent:IsPlayer() then ent:ViewPunch(attack.viewpunch) end
         if attack.push then
           if ent:IsPlayer() then ent:SetVelocity(dmg:GetDamageForce())

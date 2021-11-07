@@ -271,8 +271,7 @@ if SERVER then
     if istable(seq) then
       local best = nil
       local height = nil
-      for i = 1, #seq do
-        local se = seq[i]
+      for _, se in ipairs(seq) do
         if isstring(se) then se = self:LookupSequence(se) end
         if not isnumber(se) or se == -1 then continue end
         local ok, vec = self:GetSequenceMovement(se, 0, 1)

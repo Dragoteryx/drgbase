@@ -284,6 +284,10 @@ if SERVER then
 
   -- Climbing --
 
+  function ENT:IsClimbing()
+    return false
+  end
+
   function ENT:ClimbLadder(ladder, fn)
 
   end

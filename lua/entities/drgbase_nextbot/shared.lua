@@ -404,14 +404,14 @@ if SERVER then
       else self.BehaveThread = nil end
     end
     local dead = {}
-    for thr, done in pairs(self.DrG_ThrParallel) do
+    for thr in pairs(self.DrG_ThrParallel) do
       local ok, args = coroutine.resume(thr)
       if coroutine.status(thr) == "dead" then
         table.insert(dead, thr)
         if not ok then
           ErrorNoHalt(self, " Parallel Error: ", args, "\n")
           self:OnParallelError(args)
-        else done(self, args) end
+        end
       end
     end
     for _, thr in ipairs(dead) do
@@ -502,12 +502,15 @@ if SERVER then
   end
   function ENT:CallInCoroutine(fn, ...)
     if not isfunction(fn) then return end
+    local args, n = table.DrG_Pack(...)
     if not self:InCoroutine() then
-      local args, n = table.DrG_Pack(...)
+      local now = CurTime()
       table.insert(self.DrG_ThrCalls, function(self)
-        fn(self, table.DrG_Unpack(args, n))
+        if n > 0 then fn(self, table.DrG_Unpack(args, n))
+        else fn(self, Curtime() - now) end
       end)
-    else fn(self, ...) end
+    elseif n > 0 then fn(self, ...)
+    else fn(self, 0) end
   end
   function ENT:OverrideCoroutine(fn, ...)
     if not isfunction(fn) then return end
@@ -522,11 +525,12 @@ if SERVER then
   end
 
   ENT.DrG_ThrParallel = {}
-  function ENT:ParallelCoroutine(fn, done)
+  function ENT:ParallelCoroutine(fn, ...)
     if not isfunction(fn) then return end
+    local args, n = table.DrG_Pack(...)
     self.DrG_ThrParallel[coroutine.create(function()
-      fn(self)
-    end)] = done or function() end
+      fn(self, table.DrG_Unpack(args, n))
+    end)] = true
   end
 
   function ENT:InCoroutine()

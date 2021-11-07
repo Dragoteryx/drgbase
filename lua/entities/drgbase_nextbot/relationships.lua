@@ -330,9 +330,8 @@ if SERVER then
     if ent:IsPlayer() and not ent:Alive() then return true end
     if ent:IsPlayer() and ent:DrG_IsPossessing() then return true end
     if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return true end
-    if ent:IsPlayer() and DrGBase.IgnorePlayers:GetBool() then return true
-    elseif DrG_IsTarget(ent) then
-      if DrGBase.IgnoreNPCs:GetBool() then return true end
+    if ent:IsPlayer() then if DrGBase.IgnorePlayers:GetBool() then return true end
+    elseif DrG_IsTarget(ent) then if DrGBase.IgnoreNPCs:GetBool() then return true end
     elseif DrGBase.IgnoreOthers:GetBool() then return true end
     if ent:IsFlagSet(FL_NOTARGET) then return true end
     if ent.IsVJBaseSNPC and ent.VJ_NoTarget then return true end -- why the f❤ck

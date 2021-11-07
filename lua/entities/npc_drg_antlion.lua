@@ -97,10 +97,6 @@ if SERVER then
     end
   end
 
-  function ENT:OnLeaveGround()
-    --self:PlaySequence("jump_start")
-  end
-
   function ENT:DoLandOnGround()
     print("a")
     self:PlaySequenceAndMove("jump_stop")

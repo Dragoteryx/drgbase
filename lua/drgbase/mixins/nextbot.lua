@@ -21,7 +21,6 @@ if SERVER then
     return res
   end
 
-
   function MIXIN:OnKilled(...)
     local res = self.DrG_Mixin.OnKilled(self, ...)
     self:DrG_OnKilled(...)

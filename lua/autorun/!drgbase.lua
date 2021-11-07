@@ -187,36 +187,35 @@ function DrGBase.FlagsHelper(length)
   local ALL = (2^length)-1
   local class = DrGBase.CreateClass()
 
-  local FLAGS = setmetatable({}, {__mode = "k"})
   function class:new(flags)
-    FLAGS[self] = isnumber(flags) and flags or 0
+    self.Flags = isnumber(flags) and flags or 0
   end
 
   function class.prototype:GetFlags()
-    return FLAGS[self]
+    return self.Flags
   end
   function class.prototype:AddFlags(flags)
-    FLAGS[self] = bit.bor(FLAGS[self], flags)
+    self.Flags = bit.bor(self.Flags, flags)
   end
   function class.prototype:RemoveFlags(flags)
     if not self:IsFlagSet(flags) then return end
-    FLAGS[self] = self:GetFlags() - flags
+    self.Flags = self.Flags - flags
   end
   function class.prototype:IsFlagSet(flags)
-    return bit.band(self:GetFlags(), flags) == flags
+    return bit.band(self.Flags, flags) == flags
   end
 
   function class.prototype:equals(other)
-    return self:GetFlags() == other:GetFlags()
+    return self.Flags == other:GetFlags()
   end
   function class.prototype:unm()
-    return GetClass(self)(ALL - self:GetFlags())
+    return GetClass(self)(ALL - self.Flags)
   end
   function class.prototype:add(other)
-    return GetClass(self)(bit.bor(self:GetFlags(), other:GetFlags()))
+    return GetClass(self)(bit.bor(self.Flags, other:GetFlags()))
   end
   function class.prototype:mul(other)
-    return GetClass(self)(bit.band(self:GetFlags(), other:GetFlags()))
+    return GetClass(self)(bit.band(self.Flags, other:GetFlags()))
   end
   function class.prototype:sub(other)
     return self * (-other)
@@ -328,7 +327,7 @@ end
 -- Misc --
 
 if CLIENT then
-  hook.Add("InitPostEntity", "DrG/SayHi", function()
+  hook.Add("InitPostEntity", "DrG/SayHello", function()
     timer.Simple(1, function()
       DrGBase.Info(DrGBase.GetText("drgbase.hello"))
       hook.Run("DrG/Handshake")
@@ -344,3 +343,7 @@ DrGBase.IncludeFolder("drgbase/metatables")
 DrGBase.IncludeFolder("drgbase/autorun")
 DrGBase.IncludeFolder("drgbase/autorun/server")
 DrGBase.IncludeFolder("drgbase/autorun/client")
+
+-- Binary module --
+
+require("drgbase")
