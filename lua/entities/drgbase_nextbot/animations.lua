@@ -278,8 +278,8 @@ if SERVER then
         if not ok or vec.z <= 0 then continue end
         local seHeight = vec.z*self:GetModelScale()
         if not best or math.abs(options.height - height) > math.abs(options.height - seHeight) then
-          best = se
           height = seHeight
+          best = se
         end
       end
       if not best then return false end

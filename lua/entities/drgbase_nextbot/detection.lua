@@ -107,11 +107,11 @@ if SERVER then
     else
       return function(_, ent)
         while true do
-          ent, entState = next(self.DrG_DetectState, ent)
+          ent, detectState = next(self.DrG_DetectState, ent)
           if not ent then return end
           if not IsValid(ent) then continue end
-          if state and entState ~= state then continue end
-          return ent, entState
+          if state and detectState ~= state then continue end
+          return ent, detectState
         end
       end
     end
@@ -271,10 +271,7 @@ if SERVER then
           self:ReactInCoroutine(self.DoEntitySight, ent)
         end
         if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSight", self) end
-      else
-        self:OnEntitySightKept(ent, angle)
-        self:ReactInCoroutine(self.DoEntitySightKept, ent)
-      end
+      else self:OnEntitySightKept(ent, angle) end
     else
       if self.DrG_InSight[ent] then
         self.DrG_InSight[ent] = nil
@@ -286,10 +283,7 @@ if SERVER then
           self:ReactInCoroutine(self.DoEntitySightLost, ent)
         end
         if ent:IsPlayer() then ent:DrG_Send("DrG/PlayerSightLost", self) end
-      else
-        self:OnEntityNotInSight(ent)
-        self:ReactInCoroutine(self.DoEntityNotInSight, ent)
-      end
+      else self:OnEntityNotInSight(ent) end
     end
   end
 

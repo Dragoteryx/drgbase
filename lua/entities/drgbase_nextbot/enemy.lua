@@ -9,6 +9,8 @@ if SERVER then
   local function CompareEnemies(self, ent1, ent2)
     local res = self:CompareEnemies(ent1, ent2)
     if isbool(res) then return res end
+    if res == ent1 then return true end
+    if res == ent2 then return false end
     if self:IsAfraidOf(ent1)
     and not self:IsAfraidOf(ent2)
     and not self:IsInRange(ent1, self.AvoidAfraidOfRange) then return false end
