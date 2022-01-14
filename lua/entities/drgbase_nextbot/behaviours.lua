@@ -21,7 +21,6 @@ if SERVER then
     if callback == nil then callback = function() end end
     self:SetNW2Bool("DrGBaseWaiting", true)
     local delay = CurTime() + duration
-    local targetdelay = 0
     local now = CurTime()
     while CurTime() < delay do
       if self:IsPossessed() then break end
