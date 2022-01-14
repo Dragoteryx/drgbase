@@ -388,9 +388,19 @@ if SERVER then
     --[[if self:IsClimbingUp() then return self.ClimbUpAnimation, self.ClimbAnimRate
     elseif self:IsClimbingDown() then return self.ClimbDownAnimation, self.ClimbAnimRate]]
     if not self:IsOnGround() then return self.JumpAnimation, self.JumpAnimRate
-    elseif self:IsRunning() then return self.RunAnimation, self.RunAnimRate
-    elseif self:IsMoving() then return self.WalkAnimation, self.WalkAnimRate
-    else return self.IdleAnimation, self.IdleAnimRate end
+    elseif self:IsCrouching() then
+      if self:IsRunning() then return self.CrouchRunAnimation, self.CrouchRunAnimRate
+      elseif self:IsMoving() then return self.CrouchWalkAnimation, self.CrouchWalkAnimRate
+      else return self.CrouchIdleAnimation, self.CrouchIdleAnimRate end
+    else
+      if self:IsRunning() then return self.RunAnimation, self.RunAnimRate
+      elseif self:IsMoving() then return self.WalkAnimation, self.WalkAnimRate
+      elseif self.EnableTurning then
+        if self:IsTurningLeft() then return self.TurnLeftAnimation, self.TurnLeftAnimRate
+        elseif self:IsTurningRight() then return self.TurnRightAnimation, self.TurnRightAnimRate end
+      end
+      return self.IdleAnimation, self.IdleAnimRate
+    end
   end
 
   -- Meta --

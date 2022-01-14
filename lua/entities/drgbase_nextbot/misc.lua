@@ -152,7 +152,7 @@ if SERVER then
     attack.angle = 360
     return self:MeleeAttack(attack, function(self, ent, dmg)
       local fallOff = math.Clamp(1 - self:GetHullRangeTo(ent)/attack.range, 0, 1)
-      dmg:SetDamage(dmg:GetDamage()*fallOff)
+      dmg:ScaleDamage(fallOff)
       dmg:SetDamageForce(dmg:GetDamageForce()*fallOff)
       if isfunction(fn) then return fn(self, ent, dmg) end
     end)
@@ -197,6 +197,7 @@ if SERVER then
   -- Jump --
 
   local function LocoJump(self)
+    if not self:IsOnGround() then return end
     local seq = self:GetSequence()
     local cycle = self:GetCycle()
     self.loco:Jump()
@@ -216,9 +217,9 @@ if SERVER then
     if not self:IsOnGround() then return false end
     if isnumber(target) then
       local height = self.loco:GetJumpHeight()
-      self:SetJumpHeight(target)
+      self.loco:SetJumpHeight(target)
       LocoJump(self)
-      self:SetJumpHeight(height)
+      self.loco:SetJumpHeight(height)
     elseif isvector(target) or isentity(target) then
       local vel, info = self:GetPos():DrG_CalcBallisticTrajectory(target, {magnitude = 1, gravity = self:GetGravity()}, true)
       if vel.z < 0 then
@@ -270,12 +271,13 @@ if SERVER then
     return true
   end
 
+  local GLIDE = {}
   function ENT:JumpThenGlide(jump, glide, fn, ...)
     local res = self:Jump(jump, function(self, ...)
-      if self:GetVelocity().z < 0 then return "glide" end
+      if self:GetVelocity().z < 0 then return GLIDE end
       if isfunction(fn) then return fn(self, ...) end
     end, ...)
-    if res == "glide" then
+    if res == GLIDE then
       return self:Glide(glide, fn, ...)
     else return res end
   end

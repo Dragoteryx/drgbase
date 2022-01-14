@@ -610,7 +610,7 @@ else
     return self:GetRelationship(ent) == D_NU
   end
   function ENT:IsHostile(ent)
-    return self:IsEnemy(ent) or self:IsHostile(ent)
+    return self:IsEnemy(ent) or self:IsAfraidOf(ent)
   end
 
 end

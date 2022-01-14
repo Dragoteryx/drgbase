@@ -5,13 +5,6 @@ function ENT:IsPossessionEnabled()
   and self:GetNW2Bool("DrG/DrGBase.PossessionEnabled", self.PossessionEnabled)
 end
 
---[[function ENT:GetPossessor()
-  return self:IsPossessed() and self.DrG_Possessor or NULL
-end
-function ENT:IsPossessed()
-  return IsValid(self.DrG_Possessor)
-end]]
-
 function ENT:GetPossessor()
   return self:GetNW2Entity("DrG/Possessor")
 end
@@ -68,6 +61,9 @@ end
 function ENT:PossessorEyeAngles()
   return self:GetPossessor():EyeAngles()
 end
+function ENT:PossessorEyeNormal()
+  return self:PossessorEyeAngles():Forward()
+end
 
 function ENT:OnPossessionCalcView(view)
   return istable(self.PossessionViews) and self.PossessionViews[view+1] or {auto = true}
@@ -75,9 +71,6 @@ end
 
 -- Util --
 
-function ENT:PossessorEyeNormal()
-  return self:PossessorEyeAngles():Forward()
-end
 function ENT:PossessorEyeTrace(data)
   if isnumber(data) then data = {distance = data} end
   if not istable(data) then data = {} end
@@ -97,7 +90,7 @@ function ENT:PossessorRight()
   return forward
 end
 function ENT:PossessorUp()
-  return self:GetUp()
+  return Vector(0, 0, 1)
 end
 
 -- Internals --
@@ -134,7 +127,7 @@ properties.Add("drg/possess", {
 	end
 })
 
-drive.Register("drg/possess_nextbot", {
+drive.Register("drg/possess", {
   Init = function(self)
     if CLIENT then self.Entity:SetPredictable(false) end
   end,
@@ -269,7 +262,7 @@ if SERVER then
       ply.DrG_PrePossessNoDraw = ply:GetNoDraw()
       ply:SetNoDraw(true)
       ply:DrawShadow(false)
-      drive.PlayerStartDriving(ply, self, "drg/possess_nextbot")
+      drive.PlayerStartDriving(ply, self, "drg/possess")
     elseif self:IsPossessed() then
       local ply = self:GetPossessor()
       self:SetNW2Float("DrG/PossessionZoom", 1)

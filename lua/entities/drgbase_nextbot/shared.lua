@@ -99,6 +99,22 @@ ENT.IdleAnimRate = 1
 ENT.JumpAnimation = ACT_JUMP
 ENT.JumpAnimRate = 1
 
+-- Turning
+ENT.EnableTurning = false
+ENT.TurnLeftAnimation = ACT_TURN_LEFT
+ENT.TurnLeftAnimRate = 1
+ENT.TurnRightAnimation = ACT_TURN_RIGHT
+ENT.TurnRightAnimRate = 1
+
+-- Crouching
+ENT.EnableCrouching = false
+ENT.CrouchWalkAnimation = ACT_WALK_CROUCH
+ENT.CrouchWalkAnimRate = 1
+ENT.CrouchRunAnimation = ACT_RUN_CROUCH
+ENT.CrouchRunAnimRate = 1
+ENT.CrouchIdleAnimation = ACT_CROUCHIDLE
+ENT.CrouchIdleAnimRate = 1
+
 -- Sounds --
 
 
@@ -186,7 +202,7 @@ function ENT:DrG_PreInitialize()
     else self:SetCollisionBounds(self:GetModelBounds()) end
     -- physics
     self:PhysicsInitShadow()
-    self:AddCallback("PhysicsCollide", function(self, data)
+    self:AddCallback("PhysicsCollide", function(_self, data)
       local ent = data.HitEntity
       if not IsValid(ent) then return end
       if ent:GetClass() == "prop_combine_ball" then
@@ -500,6 +516,7 @@ if SERVER then
       end)
     else fn(self, arg1, ...) end
   end
+
   function ENT:CallInCoroutine(fn, ...)
     if not isfunction(fn) then return end
     local args, n = table.DrG_Pack(...)
@@ -507,11 +524,12 @@ if SERVER then
       local now = CurTime()
       table.insert(self.DrG_ThrCalls, function(self)
         if n > 0 then fn(self, table.DrG_Unpack(args, n))
-        else fn(self, Curtime() - now) end
+        else fn(self, CurTime() - now) end
       end)
     elseif n > 0 then fn(self, ...)
     else fn(self, 0) end
   end
+
   function ENT:OverrideCoroutine(fn, ...)
     if not isfunction(fn) then return end
     if not self:InCoroutine() then

@@ -39,7 +39,6 @@ end
 
 local CLUSTERS = {}
 function InvalidateClusters()
-  print("invalidate")
   CLUSTERS = {}
 end
 function SetCluster(self, cluster)
@@ -70,7 +69,7 @@ end)
 -- misc
 
 local MAT_TYPES = {}
-function areaMETA:DrG_GetMaterialType()
+function areaMETA:DrG_GetMaterial()
   local id = self:GetID()
   if not MAT_TYPES[id] then
     MAT_TYPES[id] = util.DrG_TraceLine({
@@ -83,7 +82,6 @@ end
 
 local Remove = areaMETA.Remove
 function areaMETA:Remove(...)
-  print("remove")
   local id = self:GetID()
   MAT_TYPES[id] = nil
   InvalidateClusters()

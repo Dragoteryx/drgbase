@@ -80,14 +80,17 @@ if SERVER then
   end
 
   function ENT:IsRunning()
-    if self:IsMoving() then
-      if self:IsPossessed() then
-        return self:GetPossessor():KeyDown(IN_SPEED)
-      else return self:ShouldRun() end
-    else return false end
+    if not self:IsMoving() then return false end
+    if self:IsPossessed() then
+      return self:GetPossessor():KeyDown(IN_SPEED)
+    else return self:ShouldRun() end
   end
-  function ENT:IsWalking()
-    return self:IsMoving() and not self:IsRunning()
+
+  function ENT:IsCrouching()
+    if not self.EnableCrouching then return false end
+    if self:IsPossessed() then
+      return self:GetPossessor():KeyDown(IN_DUCK)
+    else return self:ShouldCrouch() end
   end
 
   -- Movements --

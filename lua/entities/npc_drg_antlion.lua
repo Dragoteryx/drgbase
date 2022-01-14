@@ -58,14 +58,14 @@ if SERVER then
   -- AI --
 
   function ENT:DoThink()
-    while self:WaterLevel() >= 2 do
-      self:PlaySequenceAndWait("drown", {gravity = false})
-      if self:WaterLevel() >= 2 then
+    if self:WaterLevel() >= 2 then
+      self:PlaySequenceAndWait("drown", {gravity = false}, function(self)
+        if self:WaterLevel() < 2 then return true end
         local dmg = DamageInfo()
-        dmg:SetDamage(8)
+        dmg:SetDamage(0.05)
         dmg:SetDamageType(DMG_DROWN)
         self:TakeDamageInfo(dmg)
-      end
+      end)
     end
   end
 
@@ -82,7 +82,9 @@ if SERVER then
     if binds:IsDown("IN_ATTACK") then self:DoMeleeAttack() end
     if binds:IsDown("IN_JUMP") then
       local pos = self:PossessorEyeTrace(1000).HitPos
-      self:Jump(pos, self.FaceForward)
+      self:Jump(pos, function(self)
+        self:FaceTowards(self:GetPos() + self:GetVelocity())
+      end)
     end
   end
 
@@ -127,8 +129,7 @@ if SERVER then
   end
 
   hook.Add("PlayerSwitchWeapon", "DrG/PlayerSwitchWeaponBugbait", function(ply, old, new)
-    if (IsValid(old) and old:GetClass() == "weapon_bugbait") or
-    (IsValid(new) and new:GetClass() == "weapon_bugbait") then
+    if (IsValid(old) and old:GetClass() == "weapon_bugbait") or (IsValid(new) and new:GetClass() == "weapon_bugbait") then
       timer.Simple(0, function()
         for nb in DrGBase.NextbotIterator("npc_drg_antlion") do nb:UpdateRelationshipWith(ply) end
       end)
@@ -146,8 +147,9 @@ if SERVER then
         maxs = Vector(10, 10, 10),
         filter = bugbait
       })
-      if IsValid(tr.Entity) then
-        for nb in DrGBase.NextbotIterator("npc_drg_antlion") do nb:DetectEntity(tr.Entity, 30) end
+      for nb in DrGBase.NextbotIterator("npc_drg_antlion") do
+        if IsValid(tr.Entity) then nb:DetectEntity(tr.Entity)
+        else nb:CallInCoroutine(nb.RoamTo, bugbait:GetPos()) end
       end
     end
   end)

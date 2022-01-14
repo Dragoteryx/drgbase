@@ -8,8 +8,8 @@ ENT.Models = {"models/player/gman_high.mdl"}
 
 -- AI --
 ENT.BehaviourType = AI_BEHAV_BASE
-ENT.RangeAttackRange = 100
-ENT.MeleeAttackRange = 0
+ENT.RangeAttackRange = 0
+ENT.MeleeAttackRange = 150
 ENT.ReachEnemyRange = 50
 ENT.AvoidEnemyRange = 25
 
@@ -17,15 +17,20 @@ ENT.AvoidEnemyRange = 25
 ENT.DefaultRelationship = D_NU
 ENT.Factions = {"FACTION_GMAN"}
 
+-- Movements --
+ENT.UseWalkframes = true
+
 -- Animations --
 ENT.WalkAnimation = ACT_HL2MP_WALK
 ENT.RunAnimation = ACT_HL2MP_RUN_FAST
 ENT.IdleAnimation = ACT_HL2MP_IDLE
 ENT.JumpAnimation = ACT_HL2MP_JUMP_KNIFE
 
--- Movements --
-ENT.WalkSpeed = -1
-ENT.RunSpeed = 300
+-- Crouching --
+ENT.EnableCrouching = true
+ENT.CrouchWalkAnimation = ACT_HL2MP_WALK_CROUCH
+ENT.CrouchRunAnimation = ACT_HL2MP_WALK_CROUCH
+ENT.CrouchIdleAnimation = ACT_HL2MP_IDLE_CROUCH
 
 -- Climbing --
 ENT.ClimbLedges = true
@@ -63,12 +68,20 @@ if SERVER then
   function ENT:Initialize()
     self:SetPlayersRelationship(D_HT)
     self:AddAnimEventCycle("walk_all", {0.28, 0.78}, "drg.footstep")
+    self:AddAnimEventCycle("cwalk_all", {0.28, 0.78}, "drg.footstep")
     self:AddAnimEventCycle("run_all_02", {0.28, 0.78}, "drg.footstep")
+  end
+
+  function ENT:DoMeleeAttack()
+    if self:GetCooldown("RiseAndShine") > 0 then return end
+    self:EmitSound("DrGBase.RiseAndShine")
+    self:PlaySequence("gesture_wave")
+    self:SetCooldown("RiseAndShine", 7)
   end
 
   function ENT:OnPossessionBinds(binds)
     if binds:WasPressed("IN_ATTACK") then
-      print(self:PlaySequence("gesture_wave"))
+      self:DoMeleeAttack()
     end
   end
 

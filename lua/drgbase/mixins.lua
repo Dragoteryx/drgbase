@@ -10,14 +10,14 @@ end
 
 local function ApplySENTMixins(ENT, class)
   for mixinClass, mixins in pairs(MIXINS) do
-    if class ~= mixinClass and
-    not scripted_ents.IsBasedOn(class, mixinClass) then continue end
-    ENT.DrG_Mixin = ENT.DrG_Mixin or {}
+    if class ~= mixinClass and not scripted_ents.IsBasedOn(class, mixinClass) then continue end
     for _, mixin in ipairs(mixins) do
       for key, value in pairs(mixin) do
-        if ENT[key] == nil then continue end
-        ENT.DrG_Mixin[key] = ENT[key]
-        ENT[key] = value
+        local oldValue = ENT[key]
+        if not isfunction(oldValue) then continue end
+        ENT[key] = function(self, ...)
+          return value(self, oldValue, ...)
+        end
       end
     end
   end

@@ -32,7 +32,7 @@ if SERVER then
     else self:RoamAtRandom() end
   end
 
-  -- roam
+  -- Roam
 
   function ENT:RoamTo(...)
     local args, n = table.DrG_Pack(...)
@@ -62,7 +62,7 @@ if SERVER then
 
   local OnPatrollingDeprecation = DrGBase.Deprecation("ENT:OnPatrolling()", "ENT:DoRoam()")
   function ENT:DoRoam(pos)
-    if isfunction(self.OnPatrolling) then -- backwards compatibility
+    if isfunction(self.OnPatrolling) then
       OnPatrollingDeprecation()
       return self:OnPatrolling(pos)
     else
@@ -88,10 +88,13 @@ if SERVER then
     else self:Idle(3, 7) end
   end
 
-  -- misc
+  -- Misc
 
   function ENT:ShouldRun()
     return self:GetEnemyDetectState() == DETECT_STATE_DETECTED
+  end
+  function ENT:ShouldCrouch()
+    return false
   end
 
   function ENT:ShouldDropWeapon()

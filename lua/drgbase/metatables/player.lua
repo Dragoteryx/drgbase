@@ -14,6 +14,12 @@ function plyMETA:DrG_IsPossessing()
   return IsValid(self:DrG_GetPossessing())
 end
 
+local PossessingDeprecation = DrGBase.Deprecation("ply:DrG_Possessing()", "ply:DrG_GetPossessing()")
+function plyMETA:DrG_Possessing()
+  PossessingDeprecation()
+  return self:DrG_GetPossessing()
+end
+
 -- Buttons --
 
 hook.Add("PlayerButtonDown", "DrGBasePlayerButtonDown", function(ply, button)
@@ -114,7 +120,9 @@ function PlayerBinds:new(ply)
 end
 
 function PlayerBinds.prototype:IsUp(key)
-  if string.StartWith(key, "IN_") then
+  if isnumber(key) then
+    return not self.Player:KeyDown(key)
+  elseif string.StartWith(key, "IN_") then
     return not self.Player:KeyDown(_G[key])
   elseif string.StartWith(key, "KEY_") then
     return self.Player:DrG_ButtonUp(_G[key])
@@ -132,7 +140,9 @@ function PlayerBinds.prototype:IsUp(key)
   end
 end
 function PlayerBinds.prototype:IsDown(key)
-  if string.StartWith(key, "IN_") then
+  if isnumber(key) then
+    return self.Player:KeyDown(key)
+  elseif string.StartWith(key, "IN_") then
     return self.Player:KeyDown(_G[key])
   elseif string.StartWith(key, "KEY_") then
     return self.Player:DrG_ButtonDown(_G[key])
@@ -150,7 +160,9 @@ function PlayerBinds.prototype:IsDown(key)
   end
 end
 function PlayerBinds.prototype:WasPressed(key)
-  if string.StartWith(key, "IN_") then
+  if isnumber(key) then
+    return self.Player:KeyPressed(key)
+  elseif string.StartWith(key, "IN_") then
     return self.Player:KeyPressed(_G[key])
   elseif string.StartWith(key, "KEY_") then
     return self.Player:DrG_ButtonPresed(_G[key])
@@ -168,7 +180,9 @@ function PlayerBinds.prototype:WasPressed(key)
   end
 end
 function PlayerBinds.prototype:WasReleased(key)
-  if string.StartWith(key, "IN_") then
+  if isnumber(key) then
+    return self.Player:KeyReleased(key)
+  elseif string.StartWith(key, "IN_") then
     return self.Player:KeyReleased(_G[key])
   elseif string.StartWith(key, "KEY_") then
     return self.Player:DrG_ButtonReleased(_G[key])
@@ -187,7 +201,7 @@ function PlayerBinds.prototype:WasReleased(key)
 end
 
 function PlayerBinds.prototype:tostring()
-  return ""
+  return "PlayerBinds"
 end
 
 function plyMETA:DrG_Binds()
@@ -227,7 +241,7 @@ function PlayerSelection.prototype:IsSelected(ent)
 end
 
 function PlayerSelection.prototype:tostring()
-  return ""
+  return "PlayerSelection"
 end
 
 function plyMETA:DrG_ToolSelection(mode)
