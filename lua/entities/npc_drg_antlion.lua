@@ -125,6 +125,11 @@ if SERVER then
       self:EmitSlotSound("Landing", 1, "NPC_Antlion.Land")
     end
   end
+  function ENT:OnRemove()
+    if isnumber(self.WingsOpen) then
+      self:StopLoopingSound(self.WingsOpen)
+    end
+  end
 
   function ENT:OnAnimEvent()
     if self:IsAttacking() then
