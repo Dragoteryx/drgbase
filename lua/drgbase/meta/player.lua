@@ -1,3 +1,4 @@
+local UpdateLuminosity = CreateConVar("drgbase_update_luminosity", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
 
 local plyMETA = FindMetaTable("Player")
 
@@ -209,8 +210,12 @@ if SERVER then
 
   -- Misc --
 
+  util.AddNetworkString("DrGBasePlayerLuminosity")
+  net.Receive("DrGBasePlayerLuminosity", function(len, ply)
+    ply._DrGBaseLuminosity = net.ReadFloat()
+  end)
   function plyMETA:DrG_Luminosity()
-    return 1
+    return self._DrGBaseLuminosity or 1
   end
 
   function plyMETA:DrG_Immobilize()
@@ -262,6 +267,15 @@ else
 
   -- Misc --
 
+  local LAST_LUX_UPDATE = 0
+  hook.Add("Think", "DrGBasePlayerLuminosity", function()
+    if not UpdateLuminosity:GetBool() then return end
+    if CurTime() <= LAST_LUX_UPDATE + 1 then return end
+    LAST_LUX_UPDATE = CurTime()
+    net.Start("DrGBasePlayerLuminosity")
+    net.WriteFloat(LocalPlayer():DrG_Luminosity())
+    net.SendToServer()
+  end)
   function plyMETA:DrG_Luminosity()
     local ply = LocalPlayer()
     return math.min(render.GetLightColor(ply:EyePos()):Length()*(1/0.7), 1)
