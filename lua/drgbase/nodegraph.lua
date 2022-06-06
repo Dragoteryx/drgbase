@@ -59,26 +59,6 @@ function Node:DistToSqr(pos)
   return self:GetPos():DistToSqr(pos)
 end
 
-function Node:__tostring()
-  local start = "Node"
-  local type = self:GetType()
-  if type == NODE_TYPE_GROUND then
-    start = "Ground Node"
-  elseif type == NODE_TYPE_AIR then
-    start = "Air Node"
-  elseif type == NODE_TYPE_CLIMB then
-    start = "Climb Node"
-  elseif type == NODE_TYPE_WATER then
-    start = "Water Node"
-  end
-  local linked = self:GetLinked()
-  local ids = {}
-  for id, node in pairs(linked) do
-    table.insert(ids, id)
-  end
-  return start.."["..self:GetID().."]=>["..table.concat(ids, ",").."]"
-end
-
 -- ACCESS NODEGRAPH --
 
 function DrGBase.GetNodegraph()
@@ -141,7 +121,7 @@ if SERVER then
   local function ReadInt(f) return toInt(f:Read(SIZEOF_INT)) end
   local function ReadUShort(f) return toUShort(f:Read(SIZEOF_SHORT)) end
   local function InitNodegraph()
-    f = file.Open("maps/graphs/"..game.GetMap()..".ain", "rb", "GAME")
+    local f = file.Open("maps/graphs/"..game.GetMap()..".ain", "rb", "GAME")
     if not f then return false end
     DRG_NODES = {}
     DRG_NODES_POS = {}

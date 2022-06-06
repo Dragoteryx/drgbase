@@ -566,6 +566,7 @@ if SERVER then
   function ENT:AvoidObstacles(forwardOnly)
     if not AvoidObstacles:GetBool() then return false end
     local hulls = self:CollisionHulls(nil, forwardOnly)
+    local direction
     if forwardOnly then
       if hulls.NorthWest.Hit and hulls.NorthEast.Hit then
         direction = "N"

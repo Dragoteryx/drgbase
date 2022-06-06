@@ -181,6 +181,9 @@ function ENT:Initialize()
     self:AddCallback("PhysicsCollide", function(self, data)
       self:_HandleCollide(data, self:GetPhysicsObject())
     end)
+    if self.IsDrGNextbotSprite then
+      self:DrawShadow(false)
+    end
   else self:SetIK(true) end
   self:AddFlags(FL_OBJECT + FL_NPC)
   self._DrGBaseBaseThinkDelay = 0
