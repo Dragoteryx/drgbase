@@ -9,22 +9,22 @@
 
 if SERVER then
 
-  -- Getters/setters --
+	-- Getters/setters --
 
-  -- Functions --
+	-- Functions --
 
-  -- Hooks --
+	-- Hooks --
 
-  -- Handlers --
+	-- Handlers --
 
 else
 
-  -- Getters/setters --
+	-- Getters/setters --
 
-  -- Functions --
+	-- Functions --
 
-  -- Hooks --
+	-- Hooks --
 
-  -- Handlers --
+	-- Handlers --
 
 end

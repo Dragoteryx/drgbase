@@ -9,9 +9,9 @@ local entMETA = FindMetaTable("Entity")
 
 local old_tostring = entMETA.__tostring
 function entMETA:__tostring()
-  if self.IsDrGProjectile then
-    return "Projectile ["..self:EntIndex().."]["..self:GetClass().."]"
-  elseif self.IsDrGSpawner then
-    return "Spawner ["..self:EntIndex().."]["..self:GetClass().."]"
-  else return old_tostring(self) end
+	if self.IsDrGProjectile then
+		return "Projectile ["..self:EntIndex().."]["..self:GetClass().."]"
+	elseif self.IsDrGSpawner then
+		return "Spawner ["..self:EntIndex().."]["..self:GetClass().."]"
+	else return old_tostring(self) end
 end

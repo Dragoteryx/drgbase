@@ -14,21 +14,21 @@ properties.Add("drgbasepossess", {
 		return true
 	end,
 	Action = function(self, ent)
-    self:MsgStart()
-    net.WriteEntity(ent)
-    self:MsgEnd()
-  end,
+		self:MsgStart()
+		net.WriteEntity(ent)
+		self:MsgEnd()
+	end,
 	Receive = function(self, len, ply)
 		local ent = net.ReadEntity()
-    local possess = ent:Possess(ply)
-    if possess == "ok" then
+		local possess = ent:Possess(ply)
+		if possess == "ok" then
 			net.Start("DrGBaseNextbotCanPossess")
 			net.WriteEntity(ent)
 		else
 			net.Start("DrGBaseNextbotCantPossess")
 			net.WriteEntity(ent)
-      net.WriteString(possess)
-    end
+			net.WriteString(possess)
+		end
 		net.Send(ply)
 	end
 })
@@ -76,7 +76,7 @@ if SERVER then
 	util.AddNetworkString("DrGBaseNextbotCantPossess")
 
 	hook.Add("PlayerUse", "DrGBaseNextbotPossessionDisableUse", function(ply, ent)
-	  if ply:DrG_IsPossessing() then return false end
+		if ply:DrG_IsPossessing() then return false end
 	end)
 
 	hook.Add("EntityTakeDamage", "DrGBaseNextbotProtectPossessingPlayer", function(ent, dmg)

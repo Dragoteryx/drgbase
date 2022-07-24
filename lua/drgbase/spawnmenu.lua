@@ -58,8 +58,11 @@ end, "drgbase")
 
 -- Tool Tab --
 
-hook.Add("PopulateToolMenu", "DrGBaseToolMenu", function()
+hook.Add("AddToolMenuTabs", "DrGBaseToolMenu", function()
   spawnmenu.AddToolTab("DrGBase", "DrGBase", DrGBase.Icon)
+end)
+
+hook.Add("PopulateToolMenu", "DrGBaseToolMenu", function()
   -- Main Menu --
   --[[spawnmenu.AddToolMenuOption("DrGBase", "Main Menu", "drgbase_mm_about", "About", "", "", function(panel)
     panel:ClearControls()

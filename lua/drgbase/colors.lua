@@ -13,9 +13,9 @@ DrGBase.CLR_LIGHTGRAY = Color(200, 200, 200)
 -- Transparent --
 
 local function Transparent(color)
-  color = color:ToVector():ToColor()
-  color.a = 0
-  return color
+	color = color:ToVector():ToColor()
+	color.a = 0
+	return color
 end
 
 DrGBase.CLR_WHITE_TR = Transparent(DrGBase.CLR_WHITE)

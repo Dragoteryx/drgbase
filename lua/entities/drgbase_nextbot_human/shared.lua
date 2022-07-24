@@ -40,92 +40,92 @@ ENT.PossessionPrompt = true
 ENT.PossessionCrosshair = true
 ENT.PossessionMovement = POSSESSION_MOVE_8DIR
 ENT.PossessionViews = {
-  {
-    offset = Vector(0, 30, 20),
-    distance = 100
-  },
-  {
-    offset = Vector(7.5, 0, 2.5),
-    distance = 0,
-    eyepos = true
-  }
+	{
+		offset = Vector(0, 30, 20),
+		distance = 100
+	},
+	{
+		offset = Vector(7.5, 0, 2.5),
+		distance = 0,
+		eyepos = true
+	}
 }
 ENT.PossessionBinds = {
-  [IN_DUCK] = {{
-    coroutine = false,
-    onkeypressed = function(self)
-      self:SetCrouching(not self:IsCrouching())
-    end
-  }},
-  [IN_ATTACK] = {{
-    coroutine = true,
-    onkeydown = function(self)
-      self:PrimaryFire()
-    end
-  }},
-  [IN_ATTACK2] = {{
-    coroutine = true,
-    onkeydown = function(self)
-      self:SecondaryFire()
-    end
-  }},
-  [IN_RELOAD] = {{
-    coroutine = true,
-    onkeydown = function(self)
-      self:Reload()
-    end
-  }}
+	[IN_DUCK] = {{
+		coroutine = false,
+		onkeypressed = function(self)
+			self:SetCrouching(not self:IsCrouching())
+		end
+	}},
+	[IN_ATTACK] = {{
+		coroutine = true,
+		onkeydown = function(self)
+			self:PrimaryFire()
+		end
+	}},
+	[IN_ATTACK2] = {{
+		coroutine = true,
+		onkeydown = function(self)
+			self:SecondaryFire()
+		end
+	}},
+	[IN_RELOAD] = {{
+		coroutine = true,
+		onkeydown = function(self)
+			self:Reload()
+		end
+	}}
 }
 
 if SERVER then
-  AddCSLuaFile()
+	AddCSLuaFile()
 
-  -- Init/Think --
+	-- Init/Think --
 
-  function ENT:_BaseThink()
-    if self:HasWeapon() then
-      if self:IsPossessed() then
-        local lockedOn = self:PossessionGetLockedOn()
-        if not IsValid(lockedOn) then
-          self:AimAt(self:PossessorTrace().HitPos)
-        else self:AimAt(lockedOn) end
-      elseif self:HasEnemy() and self:Visible(self:GetEnemy()) then
-        self:AimAt(self:GetEnemy())
-      else self:AimAt() end
-    else self:AimAt() end
-  end
+	function ENT:_BaseThink()
+		if self:HasWeapon() then
+			if self:IsPossessed() then
+				local lockedOn = self:PossessionGetLockedOn()
+				if not IsValid(lockedOn) then
+					self:AimAt(self:PossessorTrace().HitPos)
+				else self:AimAt(lockedOn) end
+			elseif self:HasEnemy() and self:Visible(self:GetEnemy()) then
+				self:AimAt(self:GetEnemy())
+			else self:AimAt() end
+		else self:AimAt() end
+	end
 
-  -- AI --
+	-- AI --
 
-  function ENT:OnLastEnemy()
-    if self:HasWeapon() and not self:IsWeaponFull() then self:Reload() end
-  end
+	function ENT:OnLastEnemy()
+		if self:HasWeapon() and not self:IsWeaponFull() then self:Reload() end
+	end
 
-  -- Weapons --
+	-- Weapons --
 
-  function ENT:PrimaryFire()
-    if not self:HasWeapon() then return end
-    return self:WeaponPrimaryFire(self:GetShootAnimation())
-  end
-  function ENT:SecondaryFire()
-    if not self:HasWeapon() then return end
-    return self:WeaponSecondaryFire(self:GetShootAnimation())
-  end
-  function ENT:Reload()
-    if not self:HasWeapon() then return end
-    return self:WeaponReload(self:GetReloadAnimation())
-  end
+	function ENT:PrimaryFire()
+		if not self:HasWeapon() then return end
+		return self:WeaponPrimaryFire(self:GetShootAnimation())
+	end
+	function ENT:SecondaryFire()
+		if not self:HasWeapon() then return end
+		return self:WeaponSecondaryFire(self:GetShootAnimation())
+	end
+	function ENT:Reload()
+		if not self:HasWeapon() then return end
+		return self:WeaponReload(self:GetReloadAnimation())
+	end
 
-  -- Hooks --
+	-- Hooks --
 
-  function ENT:OnLandOnGround()
-    self:EmitFootstep()
-  end
+	function ENT:OnLandOnGround()
+		self:EmitFootstep()
+	end
 
-  function ENT:OnAnimEvent(event)
-    if event == "PlayerStep" then
-      self:EmitFootstep()
-    end
-  end
+	function ENT:OnAnimEvent(event)
+		if event == "PlayerStep" then
+			self:EmitFootstep()
+		end
+	end
 
 end

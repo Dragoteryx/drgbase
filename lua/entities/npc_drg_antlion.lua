@@ -39,114 +39,114 @@ ENT.PossessionEnabled = true
 ENT.PossessionMovement = POSSESSION_MOVE_8DIR
 ENT.PossessionCrosshair = true
 ENT.PossessionViews = {
-  {
-    offset = Vector(0, 40, 0),
-    distance = 125
-  },
-  {
-    offset = Vector(7.5, 0, 10),
-    distance = 0,
-    eyepos = true
-  }
+	{
+		offset = Vector(0, 40, 0),
+		distance = 125
+	},
+	{
+		offset = Vector(7.5, 0, 10),
+		distance = 0,
+		eyepos = true
+	}
 }
 ENT.PossessionBinds = {
-  [IN_JUMP] = {{
-    coroutine = false,
-    onkeypressed = function(self)
-      if not self:IsOnGround() then return end
-      self:LeaveGround()
-      self:SetVelocity(self:PossessorNormal()*1500)
-    end
-  }},
-  [IN_ATTACK] = {{
-    coroutine = true,
-    onkeydown = function(self)
-      self:PlaySequenceAndMove("attack"..math.random(6), 1, self.PossessionFaceForward)
-    end
-  }},
-  [IN_ATTACK2] = {{
-    coroutine = true,
-    onkeydown = function(self)
-      self:BurrowTo(self:PossessorTrace().HitPos)
-    end
-  }}
+	[IN_JUMP] = {{
+		coroutine = false,
+		onkeypressed = function(self)
+			if not self:IsOnGround() then return end
+			self:LeaveGround()
+			self:SetVelocity(self:PossessorNormal()*1500)
+		end
+	}},
+	[IN_ATTACK] = {{
+		coroutine = true,
+		onkeydown = function(self)
+			self:PlaySequenceAndMove("attack"..math.random(6), 1, self.PossessionFaceForward)
+		end
+	}},
+	[IN_ATTACK2] = {{
+		coroutine = true,
+		onkeydown = function(self)
+			self:BurrowTo(self:PossessorTrace().HitPos)
+		end
+	}}
 }
 
 if SERVER then
 
-  -- Antlion --
+	-- Antlion --
 
-  function ENT:BurrowTo(pos)
-    self:PlaySequenceAndMove("digin")
-    if navmesh.IsLoaded() then
-      pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
-    end
-    self:SetPos(pos)
-    self:DropToFloor()
-    self:PlaySequenceAndMove("digout")
-  end
+	function ENT:BurrowTo(pos)
+		self:PlaySequenceAndMove("digin")
+		if navmesh.IsLoaded() then
+			pos = navmesh.GetNearestNavArea(pos):GetClosestPointOnArea(pos) or pos
+		end
+		self:SetPos(pos)
+		self:DropToFloor()
+		self:PlaySequenceAndMove("digout")
+	end
 
-  -- Init/Think --
+	-- Init/Think --
 
-  function ENT:CustomInitialize()
-    self:SetDefaultRelationship(D_HT)
-  end
+	function ENT:CustomInitialize()
+		self:SetDefaultRelationship(D_HT)
+	end
 
-  -- AI --
+	-- AI --
 
-  function ENT:OnRangeAttack(enemy)
-    if not self:IsInRange(enemy, 500) then
-      self:Leap(enemy, 1000)
-      self:PauseCoroutine(0.25)
-    end
-  end
-  function ENT:OnMeleeAttack(enemy)
-    self:PlaySequenceAndMove("attack"..math.random(6), 1, self.FaceEnemy)
-  end
+	function ENT:OnRangeAttack(enemy)
+		if not self:IsInRange(enemy, 500) then
+			self:Leap(enemy, 1000)
+			self:PauseCoroutine(0.25)
+		end
+	end
+	function ENT:OnMeleeAttack(enemy)
+		self:PlaySequenceAndMove("attack"..math.random(6), 1, self.FaceEnemy)
+	end
 
-  function ENT:OnReachedPatrol()
-    self:Wait(math.random(3, 7))
-  end
-  function ENT:OnIdle()
-    self:AddPatrolPos(self:RandomPos(1500))
-  end
+	function ENT:OnReachedPatrol()
+		self:Wait(math.random(3, 7))
+	end
+	function ENT:OnIdle()
+		self:AddPatrolPos(self:RandomPos(1500))
+	end
 
-  -- Animations/Sounds --
+	-- Animations/Sounds --
 
-  function ENT:OnLeaveGround()
-    self:SetBodygroup(1, 1)
-    self:PlayActivity(ACT_JUMP)
-    self.WingsOpen = self:StartLoopingSound("NPC_Antlion.WingsOpen")
-  end
-  function ENT:OnLandOnGround()
-    self:SetBodygroup(1, 0)
-    if isnumber(self.WingsOpen) then
-      self:StopLoopingSound(self.WingsOpen)
-      self:EmitSlotSound("Landing", 1, "NPC_Antlion.Land")
-    end
-  end
-  function ENT:OnRemove()
-    if isnumber(self.WingsOpen) then
-      self:StopLoopingSound(self.WingsOpen)
-    end
-  end
+	function ENT:OnLeaveGround()
+		self:SetBodygroup(1, 1)
+		self:PlayActivity(ACT_JUMP)
+		self.WingsOpen = self:StartLoopingSound("NPC_Antlion.WingsOpen")
+	end
+	function ENT:OnLandOnGround()
+		self:SetBodygroup(1, 0)
+		if isnumber(self.WingsOpen) then
+			self:StopLoopingSound(self.WingsOpen)
+			self:EmitSlotSound("Landing", 1, "NPC_Antlion.Land")
+		end
+	end
+	function ENT:OnRemove()
+		if isnumber(self.WingsOpen) then
+			self:StopLoopingSound(self.WingsOpen)
+		end
+	end
 
-  function ENT:OnAnimEvent()
-    if self:IsAttacking() then
-      if self:GetCycle() > 0.3 then
-        self:Attack({
-          damage = 5,
-          range = 50,
-          type = DMG_SLASH,
-          viewpunch = Angle(10, 0, 0)
-        }, function(self, hit)
-          if #hit > 0 then self:EmitSound("NPC_Antlion.MeleeAttack") end
-        end)
-      else self:EmitSound("NPC_Antlion.MeleeAttackSingle") end
-    elseif self:IsOnGround() then
-      self:EmitSound("NPC_Antlion.Footstep")
-    end
-  end
+	function ENT:OnAnimEvent()
+		if self:IsAttacking() then
+			if self:GetCycle() > 0.3 then
+				self:Attack({
+					damage = 5,
+					range = 50,
+					type = DMG_SLASH,
+					viewpunch = Angle(10, 0, 0)
+				}, function(self, hit)
+					if #hit > 0 then self:EmitSound("NPC_Antlion.MeleeAttack") end
+				end)
+			else self:EmitSound("NPC_Antlion.MeleeAttackSingle") end
+		elseif self:IsOnGround() then
+			self:EmitSound("NPC_Antlion.Footstep")
+		end
+	end
 
 end
 

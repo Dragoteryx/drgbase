@@ -19,29 +19,29 @@ TOOL.BuildCPanel = function(panel)
 end
 
 function TOOL:LeftClick(tr)
-  if not IsValid(tr.Entity) then return false end
-  if not tr.Entity.IsDrGNextbot and
+	if not IsValid(tr.Entity) then return false end
+	if not tr.Entity.IsDrGNextbot and
 	not tr.Entity:IsNPC() then return false end
 	if CLIENT then return true end
-  self:GetOwner():DrG_CleverEntitySelect(tr.Entity)
-  return true
+	self:GetOwner():DrG_CleverEntitySelect(tr.Entity)
+	return true
 end
 function TOOL:RightClick(tr)
-  if not IsValid(tr.Entity) and not tr.Entity:IsWorld() then return false end
+	if not IsValid(tr.Entity) and not tr.Entity:IsWorld() then return false end
 	if CLIENT then return true end
 	if tr.Entity:IsWorld() then tr.Entity = self:GetOwner() end
 	local disp = self:GetClientNumber("disposition")
 	if self:GetOwner():KeyDown(IN_SPEED) then
 		for ent in self:GetOwner():DrG_SelectedEntities() do
 			for ent2 in self:GetOwner():DrG_SelectedEntities() do
-		    if ent == ent2 then continue end
+				if ent == ent2 then continue end
 				if ent.IsDrGNextbot then
 					ent:_SetRelationship(ent2, disp)
 				elseif ent:IsNPC() then
 					ent:DrG_SetRelationship(ent2, disp)
 				end
-		  end
-	  end
+			end
+		end
 	else
 		for ent in self:GetOwner():DrG_SelectedEntities() do
 			if ent.IsDrGNextbot then
@@ -49,14 +49,14 @@ function TOOL:RightClick(tr)
 			elseif ent:IsNPC() then
 				ent:DrG_SetRelationship(tr.Entity, disp)
 			end
-	  end
+		end
 	end
-  return true
+	return true
 end
 function TOOL:Reload(tr)
 	if CLIENT then return true end
-  self:GetOwner():DrG_ClearSelectedEntities()
-  return true
+	self:GetOwner():DrG_ClearSelectedEntities()
+	return true
 end
 
 if CLIENT then
@@ -64,12 +64,12 @@ if CLIENT then
 	language.Add("tool.drgbase_tool_relationship_simple.desc", "Change relationship of a nextbot towards an entity.")
 	language.Add("tool.drgbase_tool_relationship_simple.0", "Left click to select/deselect a nextbot/NPC (hold shift to select multiple entities), right click to set the relationship towards an entity (aim at the ground to set the relationship towards yourself) and reload to clear the list of selected entities.")
 
-  hook.Add("PreDrawHalos", "DrGBaseToolRelationshipHalos", function()
+	hook.Add("PreDrawHalos", "DrGBaseToolRelationshipHalos", function()
 		local ply = LocalPlayer()
-    local wep = ply:GetActiveWeapon()
-    if not IsValid(wep) or wep:GetClass() ~= "gmod_tool" then return end
-    local tool = ply:GetTool()
-    if tool == nil or tool.Mode ~= "drgbase_tool_relationship_simple" then return end
+		local wep = ply:GetActiveWeapon()
+		if not IsValid(wep) or wep:GetClass() ~= "gmod_tool" then return end
+		local tool = ply:GetTool()
+		if tool == nil or tool.Mode ~= "drgbase_tool_relationship_simple" then return end
 		local allies = {}
 		local enemies = {}
 		local afraid = {}
@@ -90,5 +90,5 @@ if CLIENT then
 		halo.Add(afraid, DrGBase.CLR_PURPLE)
 		halo.Add(neutrals, DrGBase.CLR_CYAN)
 		halo.Add(errors, DrGBase.CLR_ORANGE)
-  end)
+	end)
 end

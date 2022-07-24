@@ -13,13 +13,13 @@ local PAGE_NAMES = {
 }
 
 function TOOL:LeftClick(tr)
-  if not IsValid(tr.Entity) then return false end
-  if not tr.Entity.IsDrGNextbot then return false end
+	if not IsValid(tr.Entity) then return false end
+	if not tr.Entity.IsDrGNextbot then return false end
 	if CLIENT then return true end
 	local owner = self:GetOwner()
 	owner:SetNW2Int("DrGBaseNextbotInfoToolPage", 1)
 	owner:DrG_SingleEntitySelect(tr.Entity)
-  return true
+	return true
 end
 function TOOL:RightClick()
 	if CLIENT then return false end
@@ -34,9 +34,9 @@ function TOOL:RightClick()
 	return false
 end
 function TOOL:Reload(tr)
-  if CLIENT then return true end
-  self:GetOwner():DrG_ClearSelectedEntities()
-  return true
+	if CLIENT then return true end
+	self:GetOwner():DrG_ClearSelectedEntities()
+	return true
 end
 
 if CLIENT then
@@ -158,16 +158,16 @@ function TOOL:DrawToolScreen(width, height)
 end
 
 if CLIENT then
-  language.Add("tool.drgbase_tool_info.name", "Nextbot Info")
+	language.Add("tool.drgbase_tool_info.name", "Nextbot Info")
 	language.Add("tool.drgbase_tool_info.desc", "View and edit information about the nextbot.")
 	language.Add("tool.drgbase_tool_info.0", "Left click to select/deselect a nextbot.")
 
-  hook.Add("PreDrawHalos", "DrGBaseToolNextbotInfoHalos", function()
+	hook.Add("PreDrawHalos", "DrGBaseToolNextbotInfoHalos", function()
 		local ply = LocalPlayer()
-    local wep = ply:GetActiveWeapon()
-    if not IsValid(wep) or wep:GetClass() ~= "gmod_tool" then return end
-    local tool = ply:GetTool()
-    if tool == nil or tool.Mode ~= "drgbase_tool_info" then return end
+		local wep = ply:GetActiveWeapon()
+		if not IsValid(wep) or wep:GetClass() ~= "gmod_tool" then return end
+		local tool = ply:GetTool()
+		if tool == nil or tool.Mode ~= "drgbase_tool_info" then return end
 		local selected = ply:DrG_GetSelectedEntities()[1]
 		if not IsValid(selected) then return end
 		local page = ply:GetNW2Int("DrGBaseNextbotInfoToolPage")
@@ -194,13 +194,13 @@ if CLIENT then
 		elseif not DrGBase.INFO_TOOL.Viewcam then
 			halo.Add({selected}, DrGBase.CLR_CYAN, nil, nil, nil, nil, true)
 		end
-  end)
+	end)
 
 	hook.Add("ShouldDrawLocalPlayer", "DrGBaseNextbotInfoToolDrawPlayer", function(ply)
 		local weapon = ply:GetActiveWeapon()
-    if not IsValid(weapon) or weapon:GetClass() ~= "gmod_tool" then return end
-    local tool = ply:GetTool()
-    if tool == nil or tool.Mode ~= "drgbase_tool_info" then return end
+		if not IsValid(weapon) or weapon:GetClass() ~= "gmod_tool" then return end
+		local tool = ply:GetTool()
+		if tool == nil or tool.Mode ~= "drgbase_tool_info" then return end
 		local selected = ply:DrG_GetSelectedEntities()[1]
 		if not IsValid(selected) then return end
 		local page = ply:GetNW2Int("DrGBaseNextbotInfoToolPage")

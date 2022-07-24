@@ -35,10 +35,10 @@ IN_ATTACK3 = 33554432
 
 if CLIENT then
 
-  D_ER = 0
-  D_HT = 1
-  D_FR = 2
-  D_LI = 3
-  D_NU = 4
+	D_ER = 0
+	D_HT = 1
+	D_FR = 2
+	D_LI = 3
+	D_NU = 4
 
 end

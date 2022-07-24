@@ -26,25 +26,25 @@ ENT.OnContactEffects = {}
 ENT.OnRemoveEffects = {}
 
 if SERVER then
-  AddCSLuaFile()
+	AddCSLuaFile()
 
-  function ENT:CustomInitialize()
-    self:DynamicLight(Color(150, 255, 0), 300, 0.1)
-  end
+	function ENT:CustomInitialize()
+		self:DynamicLight(Color(150, 255, 0), 300, 0.1)
+	end
 
-  function ENT:CustomThink()
-    if not self:GetPhysicsObject():IsGravityEnabled() then
-      local velocity = self:GetVelocity()
-      self:SetVelocity(velocity:GetNormalized()*500)
-    end
-  end
+	function ENT:CustomThink()
+		if not self:GetPhysicsObject():IsGravityEnabled() then
+			local velocity = self:GetVelocity()
+			self:SetVelocity(velocity:GetNormalized()*500)
+		end
+	end
 
-  function ENT:OnContact(ent)
-    if ent:GetClass() == self:GetClass() then
-      self:Remove()
-      ent:Remove()
-    else self:DealDamage(ent, ent:Health(), DMG_SHOCK + DMG_DISSOLVE) end
-    if self:GetPhysicsObject():IsGravityEnabled() then self:Remove() end
-  end
+	function ENT:OnContact(ent)
+		if ent:GetClass() == self:GetClass() then
+			self:Remove()
+			ent:Remove()
+		else self:DealDamage(ent, ent:Health(), DMG_SHOCK + DMG_DISSOLVE) end
+		if self:GetPhysicsObject():IsGravityEnabled() then self:Remove() end
+	end
 
 end

@@ -62,7 +62,7 @@ function TOOL:Reload()
 end
 
 if CLIENT then
-  language.Add("tool.drgbase_tool_damage.name", "Inflict Damage")
+	language.Add("tool.drgbase_tool_damage.name", "Inflict Damage")
 	language.Add("tool.drgbase_tool_damage.desc", "Inflict damage to an entity.")
 	language.Add("tool.drgbase_tool_damage.0", "Left click to inflict damage.")
 end

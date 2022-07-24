@@ -38,63 +38,63 @@ ENT.EyeOffset = Vector(0, 0, 30)
 ENT.PossessionEnabled = true
 ENT.PossessionMovement = POSSESSION_MOVE_8DIR
 ENT.PossessionViews = {
-  {
-    offset = Vector(0, 30, 20),
-    distance = 100
-  },
-  {
-    offset = Vector(5, 0, 0),
-    distance = 0,
-    eyepos = true
-  }
+	{
+		offset = Vector(0, 30, 20),
+		distance = 100
+	},
+	{
+		offset = Vector(5, 0, 0),
+		distance = 0,
+		eyepos = true
+	}
 }
 ENT.PossessionBinds = {
-  [IN_JUMP] = {{
-    coroutine = false,
-    onkeypressed = function(self)
-      if not self:IsOnGround() then return end
-      self:EmitFootstep()
-      self:Jump()
-    end
-  }}
+	[IN_JUMP] = {{
+		coroutine = false,
+		onkeypressed = function(self)
+			if not self:IsOnGround() then return end
+			self:EmitFootstep()
+			self:Jump()
+		end
+	}}
 }
 
 if SERVER then
 
-  -- Init/Think --
+	-- Init/Think --
 
-  function ENT:CustomInitialize()
-    self:SetSelfClassRelationship(D_HT)
-    self:SetDefaultRelationship(D_HT, 2)
-    self:SetPlayersRelationship(D_HT, 3)
-    self:SpriteAnimEvent("walk", {1, 2}, function(self, frame)
-      self:EmitFootstep()
-    end)
-    self:SpriteAnimEvent("climb", {1, 2}, function(self, frame)
-      if self:IsClimbingLadder() then self:EmitSound("player/footsteps/ladder"..math.random(4)..".wav") end
-    end)
-    self:SetColor(Color(math.random(0, 255), math.random(0, 255), math.random(0, 255)))
-  end
+	function ENT:CustomInitialize()
+		self:SetSelfClassRelationship(D_HT)
+		self:SetDefaultRelationship(D_HT, 2)
+		self:SetPlayersRelationship(D_HT, 3)
+		self:SpriteAnimEvent("walk", {1, 2}, function(self, frame)
+			self:EmitFootstep()
+		end)
+		self:SpriteAnimEvent("climb", {1, 2}, function(self, frame)
+			if self:IsClimbingLadder() then self:EmitSound("player/footsteps/ladder"..math.random(4)..".wav") end
+		end)
+		self:SetColor(Color(math.random(0, 255), math.random(0, 255), math.random(0, 255)))
+	end
 
-  -- AI --
+	-- AI --
 
-  function ENT:OnRangeAttack(enemy)
-    self:PauseCoroutine(0.5)
-    self:EmitFootstep()
-    self:Jump()
-  end
-  function ENT:OnReachedPatrol()
-    self:Wait(math.random(3, 7))
-  end
-  function ENT:OnIdle()
-    self:AddPatrolPos(self:RandomPos(1500))
-  end
+	function ENT:OnRangeAttack(enemy)
+		self:PauseCoroutine(0.5)
+		self:EmitFootstep()
+		self:Jump()
+	end
+	function ENT:OnReachedPatrol()
+		self:Wait(math.random(3, 7))
+	end
+	function ENT:OnIdle()
+		self:AddPatrolPos(self:RandomPos(1500))
+	end
 
-  -- Sounds --
+	-- Sounds --
 
-  function ENT:OnLandOnGround()
-    self:EmitFootstep()
-  end
+	function ENT:OnLandOnGround()
+		self:EmitFootstep()
+	end
 
 end
 

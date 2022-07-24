@@ -27,18 +27,18 @@ DrGBase.IncludeFile("primary.lua")
 DrGBase.IncludeFile("secondary.lua")
 
 function SWEP:Initialize()
-  if SERVER then
-    self:SetHoldType(self.HoldType)
-  end
-  self:_BaseInitialize()
-  self:CustomInitialize()
+	if SERVER then
+		self:SetHoldType(self.HoldType)
+	end
+	self:_BaseInitialize()
+	self:CustomInitialize()
 end
 function SWEP:_BaseInitialize() end
 function SWEP:CustomInitialize() end
 
 function SWEP:Think()
-  self:_BaseThink()
-  self:CustomThink()
+	self:_BaseThink()
+	self:CustomThink()
 end
 function SWEP:_BaseThink() end
 function SWEP:CustomThink() end
@@ -49,15 +49,15 @@ end
 
 if CLIENT then
 
-  function SWEP:CalcViewModelView(vm, oldpos, oldang, pos, ang)
-    local aimpos = pos +
-    self.Owner:GetForward()*self.ViewModelOffset.x +
-    self.Owner:GetUp()*self.ViewModelOffset.z
-    if self.ViewModelFlip then
-      aimpos = aimpos - self.Owner:GetRight()*self.ViewModelOffset.y
-    else aimpos = aimpos + self.Owner:GetRight()*self.ViewModelOffset.y end
-    local aimang = ang + self.ViewModelAngle
-    return aimpos, aimang
-  end
+	function SWEP:CalcViewModelView(vm, oldpos, oldang, pos, ang)
+		local aimpos = pos +
+		self.Owner:GetForward()*self.ViewModelOffset.x +
+		self.Owner:GetUp()*self.ViewModelOffset.z
+		if self.ViewModelFlip then
+			aimpos = aimpos - self.Owner:GetRight()*self.ViewModelOffset.y
+		else aimpos = aimpos + self.Owner:GetRight()*self.ViewModelOffset.y end
+		local aimang = ang + self.ViewModelAngle
+		return aimpos, aimang
+	end
 
 end
