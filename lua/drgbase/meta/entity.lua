@@ -171,6 +171,7 @@ if SERVER then
 	end
 
 	function entMETA:DrG_DeathNotice(attacker, inflictor)
+		if not IsValid(inflictor) then inflictor = attacker end
 		if self:IsPlayer() then
 			hook.Run("PlayerDeath", self, inflictor, attacker)
 		else hook.Run("OnNPCKilled", self, attacker, inflictor) end

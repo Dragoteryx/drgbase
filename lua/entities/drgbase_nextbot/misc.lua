@@ -421,6 +421,7 @@ if SERVER then
 		if not ragdoll:IsRagdoll() then
 			local dmg = DamageInfo()
 			dmg:SetAttacker(self)
+			dmg:SetInflictor(self)
 			ragdoll = ragdoll:DrG_RagdollDeath(dmg)
 		end
 		if not IsValid(ragdoll) then return NULL end
