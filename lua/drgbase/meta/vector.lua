@@ -193,7 +193,7 @@ function vecMETA:DrG_Copy()
 end
 
 function vecMETA:DrG_Join(other, ratio)
-	return self*(1-ratio)+other*ratio
+	return LerpVector(ratio, self, other)
 end
 
 function vecMETA:DrG_Away(pos)

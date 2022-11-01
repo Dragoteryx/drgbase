@@ -33,7 +33,6 @@ function ENT:CycleViewPresets()
 	elseif self:IsPossessedByLocalPlayer() then
 		net.Start("DrGBasePossessionCycleViewPresets")
 		net.WriteEntity(self)
-		net.WriteEntity(LocalPlayer())
 		net.SendToServer()
 	end
 end
@@ -47,67 +46,54 @@ end
 
 function ENT:PossessorView()
 	if not self:IsPossessed() then return end
-	local current, preset = self:CurrentViewPreset()
-	local offset = preset.offset or Vector(0, 0, 0)
-	local center = self:WorldSpaceCenter()
-	local eyes = self:GetPossessor():EyeAngles()
-	local angles = Angle(-eyes.p, eyes.y + 180, 0)
-	if current == -1 then
-		return center, angles
+	local current, view = self:CurrentViewPreset()
+
+	local origin
+	local distance
+	if current == -1 or view.auto then
+		origin = self:WorldSpaceCenter() +
+			Vector(0, 0, self:Height() / 3)
+		distance = self:Length() * 3
 	else
-		if preset.invertpitch then
-			angles.p = -angles.p
-		end
-		if preset.invertyaw then
-			angles.y = -angles.y
-		end
-		if preset.eyepos then
-			center = self:EyePos()
-		elseif isstring(preset.bone) then
-			local boneid = self:LookupBone(preset.bone)
+		local offset = view.offset or Vector(0, 0, 0)
+		if view.eyepos then
+			origin = self:EyePos()
+		elseif isstring(view.bone) then
+			local boneid = self:LookupBone(view.bone)
 			if boneid ~= nil then
 				center = self:GetBonePosition(boneid)
 			end
-		end
-		local forward = -Angle(0, angles.y, 0):Forward()
-		local right = Angle(0, angles.y + 90, 0):Forward()
-		local up = Vector(0, 0, 1)
-		local origin = center +
-		forward*offset.x*self:GetModelScale() +
-		right*offset.y*self:GetModelScale() +
-		up*offset.z*self:GetModelScale()
-		local tr1 = util.TraceLine({
-			start = center,
-			endpos = origin,
-			collisiongroup = COLLISION_GROUP_DEBRIS
-		})
-		if tr1.HitWorld then origin = tr1.HitPos + tr1.Normal*-10 end
-		local distance = preset.distance or 1
-		if distance < 1 then distance = 1 end
-		local endpos = origin + angles:Forward()*distance*self:GetModelScale()
-		local tr2 = util.TraceLine({
+		else origin = self:WorldSpaceCenter() end
+
+		local tr = self:TraceLine(
+			self:PossessorForward() * offset.x * self:GetModelScale() +
+			self:PossessorRight() * offset.y * self:GetModelScale() +
+			self:PossessorUp() * offset.z * self:GetModelScale(), {
 			start = origin,
-			endpos = endpos,
-			collisiongroup = COLLISION_GROUP_DEBRIS
 		})
-		if tr2.HitWorld then endpos = tr2.HitPos + tr2.Normal*-10 end
-		local viewangle = (tr2.Normal*-1):Angle()
-		return endpos, viewangle
+
+		origin = tr.HitPos
+		distance = view.distance or 0
 	end
+
+	local tr = self:TraceLine(-self:PossessorNormal() * distance * self:GetModelScale(), {start = origin})
+	return tr.HitPos, self:GetPossessor():EyeAngles()
 end
+
 function ENT:PossessorTrace(options)
 	if not self:IsPossessed() then return end
 	local origin, angles = self:PossessorView()
 	options = options or {}
 	options.start = origin
-	options.endpos = origin + angles:Forward()*999999999
+	options.endpos = origin + angles:Forward() * 999999999
 	return self:TraceLine(nil, options)
 end
+
 function ENT:PossessorNormal()
 	if not self:IsPossessed() then return end
-	local origin, angles = self:PossessorView()
-	return angles:Forward()
+	return self:GetPossessor():EyeAngles():Forward()
 end
+
 function ENT:PossessorForward()
 	if not self:IsPossessed() then return end
 	local lockedOn = self:PossessionGetLockedOn()
@@ -121,12 +107,14 @@ function ENT:PossessorForward()
 		return normal:GetNormalized()
 	end
 end
+
 function ENT:PossessorRight()
 	if not self:IsPossessed() then return end
 	local forward = self:PossessorForward()
 	forward:Rotate(Angle(0, -90, 0))
 	return forward
 end
+
 function ENT:PossessorUp()
 	return Vector(0, 0, 1)
 end
@@ -374,11 +362,9 @@ if SERVER then
 	hook.Add("PlayerSpawnedSWEP", "DrGBasePlayerPossessingSpawnedSWEP", MoveEnt)
 	hook.Add("PlayerSpawnedVehicle", "DrGBasePlayerPossessingSpawnedVehicle", MoveEnt)
 
-	net.Receive("DrGBasePossessionCycleViewPresets", function()
+	net.Receive("DrGBasePossessionCycleViewPresets", function(_, ply)
 		local ent = net.ReadEntity()
 		if not IsValid(ent) then return end
-		local ply = net.ReadEntity()
-		if not IsValid(ply) or not ply:IsPlayer() then return end
 		if ent:IsPossessed() and ent:GetPossessor() == ply then
 			ent:CycleViewPresets()
 		end
