@@ -55,9 +55,15 @@ function entMETA:DrG_TraceLine(vec, data)
 	else trdata.filter = data.filter or self end
 	return util.DrG_TraceLine(trdata)
 end
+
 function entMETA:DrG_TraceHull(vec, data)
 	if not isvector(vec) then vec = Vector(0, 0, 0) end
 	local bound1, bound2 = self:GetCollisionBounds()
+	local scale = self:GetModelScale()
+	if scale > 1 then
+		bound1 = bound1 * (1 + 0.01 * scale)
+		bound2 = bound2 * (1 + 0.01 * scale)
+	end
 	if bound1.z < bound2.z then
 		local temp = bound1
 		bound1 = bound2
@@ -79,6 +85,7 @@ function entMETA:DrG_TraceHull(vec, data)
 	trdata.mins = data.mins or bound2
 	return util.DrG_TraceHull(trdata)
 end
+
 function entMETA:DrG_TraceLineRadial(distance, precision, data)
 	local traces = {}
 	for i = 1, precision do
@@ -91,6 +98,7 @@ function entMETA:DrG_TraceLineRadial(distance, precision, data)
 	end)
 	return traces
 end
+
 function entMETA:DrG_TraceHullRadial(distance, precision, data)
 	local traces = {}
 	for i = 1, precision do
@@ -111,6 +119,7 @@ function entMETA:DrG_Timer(duration, callback, ...)
 		if IsValid(self) then callback(self, ...) end
 	end, ...)
 end
+
 function entMETA:DrG_LoopTimer(delay, callback, ...)
 	timer.DrG_Loop(delay, function(...)
 		if not IsValid(self) then return false end
