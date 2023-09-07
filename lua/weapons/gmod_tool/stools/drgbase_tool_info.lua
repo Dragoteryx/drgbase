@@ -159,7 +159,7 @@ end
 
 if CLIENT then
 	language.Add("tool.drgbase_tool_info.name", "Nextbot Info")
-	language.Add("tool.drgbase_tool_info.desc", "View and edit information about the nextbot.")
+	language.Add("tool.drgbase_tool_info.desc", "View information about the nextbot.")
 	language.Add("tool.drgbase_tool_info.0", "Left click to select/deselect a nextbot.")
 
 	hook.Add("PreDrawHalos", "DrGBaseToolNextbotInfoHalos", function()
