@@ -14,7 +14,7 @@ function TOOL:LeftClick(tr)
 end
 
 if CLIENT then
-	language.Add("tool.drgbase_tool_omniscient.name", "Set Omniscient")
+	language.Add("tool.drgbase_tool_omniscient.name", "Toggle Omniscient")
 	language.Add("tool.drgbase_tool_omniscient.desc", "Disable/enable omniscience for a nextbot.")
 	language.Add("tool.drgbase_tool_omniscient.0", "Left click to toggle omniscience. (Green => Enabled / Red => Disabled)")
 

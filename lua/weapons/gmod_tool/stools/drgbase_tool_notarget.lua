@@ -16,7 +16,7 @@ function TOOL:LeftClick(tr)
 end
 
 if CLIENT then
-	language.Add("tool.drgbase_tool_notarget.name", "Set Notarget")
+	language.Add("tool.drgbase_tool_notarget.name", "Toggle Notarget")
 	language.Add("tool.drgbase_tool_notarget.desc", "Disable/enable notarget for a nextbot.")
 	language.Add("tool.drgbase_tool_notarget.0", "Left click to toggle notarget. (Green => Enabled / Red => Disabled)")
 
