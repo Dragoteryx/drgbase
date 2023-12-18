@@ -15,22 +15,14 @@ end
 hook.Add("PlayerButtonDown", "DrGBasePlayerButtonDown", function(ply, button)
 	ply._DrGBaseButtonsDown = ply._DrGBaseButtonsDown or {}
 	ply._DrGBaseButtonsDown[button] = {
-		down = true, recent = true
+		down = true, time = CurTime()
 	}
-	timer.Simple(0, function()
-		if not IsValid(ply) then return end
-		ply._DrGBaseButtonsDown[button].recent = false
-	end)
 end)
 hook.Add("PlayerButtonUp", "DrGBasePlayerButtonUp", function(ply, button)
 	ply._DrGBaseButtonsDown = ply._DrGBaseButtonsDown or {}
 	ply._DrGBaseButtonsDown[button] = {
-		down = false, recent = true
+		down = false, time = CurTime()
 	}
-	timer.Simple(0, function()
-		if not IsValid(ply) then return end
-		ply._DrGBaseButtonsDown[button].recent = false
-	end)
 end)
 function plyMETA:DrG_ButtonUp(button)
 	self._DrGBaseButtonsDown = self._DrGBaseButtonsDown or {}
@@ -42,7 +34,7 @@ function plyMETA:DrG_ButtonPressed(button)
 	self._DrGBaseButtonsDown = self._DrGBaseButtonsDown or {}
 	local data = self._DrGBaseButtonsDown[button]
 	if data == nil then return false end
-	return tobool(data.down and data.recent)
+	return data.down and data.time == CurTime()
 end
 function plyMETA:DrG_ButtonDown(button)
 	self._DrGBaseButtonsDown = self._DrGBaseButtonsDown or {}
@@ -54,7 +46,7 @@ function plyMETA:DrG_ButtonReleased(button)
 	self._DrGBaseButtonsDown = self._DrGBaseButtonsDown or {}
 	local data = self._DrGBaseButtonsDown[button]
 	if data == nil then return false end
-	return tobool(not data.down and data.recent)
+	return not data.down and data.time == CurTime()
 end
 
 -- Toolgun --
