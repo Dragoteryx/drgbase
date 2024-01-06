@@ -109,6 +109,41 @@ function ENT:RandomizeBodygroups()
 	end
 end
 
+if SERVER then
+	util.AddNetworkString('DrGBaseCallOnRealm')
+
+	function ENT:CallOnClient(funcname, ply, ...)
+		net.Start('DrGBaseCallOnRealm')
+		net.DrG_WriteMessage(self, funcname, ...)
+		
+		if ply then
+			net.Send(ply)
+		else
+			net.Broadcast()
+		end
+	end
+else
+	function ENT:CallOnServer(funcname, ...)
+		net.Start('DrGBaseCallOnRealm')
+		net.DrG_WriteMessage(self, funcname, ...)
+		net.SendToServer()
+	end
+end
+
+net.Receive('DrGBaseCallOnRealm', function(len, ply)
+	local args = net.DrG_ReadMessage()
+	local ent = args[1]
+
+	if IsValid(ent) then
+		local funcname = args[2]
+		local func = ent[funcname]
+
+		if func and isfunction(func) then
+			func(ent, ply or LocalPlayer(), table.DrG_Unpack(args, #args, 3))
+		end
+	end
+end)
+
 -- Hooks --
 
 function ENT:OnAngleChange() end
