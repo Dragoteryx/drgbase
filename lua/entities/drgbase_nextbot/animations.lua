@@ -248,7 +248,8 @@ if SERVER then
 				end
 				vec:Rotate(self:GetAngles() + angles)
 				self:SetAngles(self:LocalToWorldAngles(angles))
-				if not options.collisions or not self:TraceHull(vec, {step = self:IsOnGround()}).Hit then
+				local tr = self:TraceHull(vec, {step = self:IsOnGround()})
+				if not options.collisions or not tr.Hit then
 					if not options.gravity then
 						previousPos = previousPos + vec*self:GetModelScale()
 						self:SetPos(previousPos)
@@ -256,9 +257,14 @@ if SERVER then
 						previousPos = self:GetPos() + vec*self:GetModelScale()
 						self:SetPos(previousPos)
 					else previousPos = self:GetPos() end
-				elseif options.stoponcollide then return true
-				elseif not options.gravity then
-					self:SetPos(previousPos)
+				else
+					if IsValid(tr.Entity) then
+						self:OnContact(tr.Entity)
+					end
+					if options.stoponcollide then return true
+					elseif not options.gravity then
+						self:SetPos(previousPos)
+					end
 				end
 			end
 			previousCycle = cycle
