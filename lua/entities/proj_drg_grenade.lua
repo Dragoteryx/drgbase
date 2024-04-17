@@ -7,6 +7,8 @@ ENT.PrintName = "HE Grenade"
 ENT.Category = "DrGBase"
 ENT.Models = {"models/weapons/w_eq_fraggrenade.mdl"}
 ENT.Spawnable = true
+ENT.VJTag_ID_Grenade = true
+ENT.VJTag_IsPickupable = true
 
 -- Physics --
 ENT.Physgun = true
