@@ -7,6 +7,7 @@ ENT.Category = "DrGBase"
 ENT.Models = {"models/headcrabclassic.mdl"}
 ENT.CollisionBounds = Vector(12, 12, 24)
 ENT.BloodColor = BLOOD_COLOR_GREEN
+ENT.VJTag_ID_Headcrab = true
 
 -- Stats --
 ENT.SpawnHealth = 40
