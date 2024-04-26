@@ -622,7 +622,7 @@ if SERVER then
 					if not GetConVar("ai_serverragdolls"):GetBool() or DisableRagCollisions:GetBool() then
 						ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
 					end
-					if not self.OnRagdoll(ragdoll, dmg) and RemoveRagdolls:GetFloat() >= 0 then
+					if not self.OnRagdoll(ragdoll, dmg, self) and RemoveRagdolls:GetFloat() >= 0 then
 						ragdoll:Fire("fadeandremove", math.Clamp(RagdollFadeOut:GetFloat(), 0, math.huge), RemoveRagdolls:GetFloat())
 					end
 				end
