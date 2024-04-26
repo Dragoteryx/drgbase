@@ -681,7 +681,7 @@ if SERVER then
 	-- Handlers --
 
 	function ENT:_UpdateNPCRelationship(ent, relationship)
-		if not IsValid(ent) or not ent:IsNPC() then return end
+		if not IsValid(ent) or not ent:IsNPC() or not ent.DrG_SetRelationship then return end
 		if relationship == D_FR then
 			ent:DrG_SetRelationship(self, D_HT)
 		elseif relationship == D_HT and self:IsFrightening() then
