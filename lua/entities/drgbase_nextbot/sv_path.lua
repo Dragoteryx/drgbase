@@ -1,5 +1,3 @@
-if CLIENT then return end
-
 -- Handlers --
 
 function ENT:_InitPath()

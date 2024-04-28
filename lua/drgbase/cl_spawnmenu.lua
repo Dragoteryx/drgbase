@@ -1,5 +1,3 @@
-if SERVER then return end
-
 function DrGBase.GetIcon(name)
   return list.Get("DrGBaseIcons")[name]
 end
