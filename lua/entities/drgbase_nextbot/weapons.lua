@@ -219,6 +219,8 @@ if SERVER then
 	function ENT:PickupWeapon(weapon)
 		if not IsWeapon(weapon) then return false end
 		if self:HasWeapon(weapon:GetClass()) then return false end
+		weapon:SetPos(self:WorldSpaceCenter())
+		weapon:SetNotSolid(true)
 		weapon:SetMoveType(MOVETYPE_NONE)
 		weapon:SetOwner(self)
 		weapon:SetParent(self)
@@ -255,6 +257,7 @@ if SERVER then
 		self:NetMessage("DrGBaseDropWeapon", weapon:GetClass())
 		if active == weapon then self:SwitchWeapon() end
 		weapon:SetNoDraw(false)
+		weapon:SetNotSolid(false)
 		return weapon
 	end
 
