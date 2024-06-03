@@ -304,7 +304,7 @@ if SERVER then
 		if navmesh.IsLoaded() and self:GetGroundEntity():IsWorld() then
 			local path = self:GetPath()
 			path:SetGoalTolerance(tolerance)
-			local area = navmesh.GetNearestNavArea(pos)
+			local area = navmesh.GetNearestNavArea(pos,false,10000,false,false)
 			if IsValid(area) then pos = area:GetClosestPointOnArea(pos) or pos end
 			if not IsValid(path) and
 			self:GetRangeSquaredTo(pos) <= path:GetGoalTolerance()^2 then return "reached" end
