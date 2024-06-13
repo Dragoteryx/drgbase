@@ -17,7 +17,6 @@ DrGBase.IncludeFile("movements.lua")
 -- Climbing --
 ENT.ClimbLadders = true
 ENT.ClimbLaddersUp = true
-ENT.LaddersUpDistance = 20
 ENT.ClimbLaddersUpMaxHeight = math.huge
 ENT.ClimbLaddersUpMinHeight = 0
 ENT.ClimbSpeed = 60

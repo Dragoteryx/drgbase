@@ -347,8 +347,8 @@ if SERVER then
 	}
 	function ENT:OnUpdateAnimation()
 		local anims = self:GetAnimList()
-		if self:IsClimbingUp() then return anims.ClimbUpAnimation, self.ClimbAnimRate end
-		if self:IsClimbingDown() then return anims.ClimbDownAnimation, self.ClimbAnimRate end
+		if self:IsClimbingUp() then return self.ClimbUpAnimation, self.ClimbAnimRate end
+		if self:IsClimbingDown() then return self.ClimbDownAnimation, self.ClimbAnimRate end
 		local holdtype = self:HasWeapon() and self:GetWeapon():GetHoldType() or "normal"
 		if not self:IsPossessed() and not self:HadEnemy() then
 			if passives[holdtype] then holdtype = "passive"

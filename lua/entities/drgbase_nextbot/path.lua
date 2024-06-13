@@ -71,7 +71,6 @@ function ENT:BlacklistedNavAreas()
 	return areas
 end
 
-local ENABLE_JUMPING = false
 function ENT:GetPathGenerator()
 	return function(area, fromArea, ladder, elevator, length)
 		if not IsValid(fromArea) then return 0 end
@@ -84,48 +83,51 @@ function ENT:GetPathGenerator()
 		elseif length > 0 then dist = length
 		else dist = fromArea:GetCenter():Distance(area:GetCenter()) end
 		local cost = fromArea:GetCostSoFar() + dist
-		local height = fromArea:ComputeAdjacentConnectionHeightChange(area)
-		if height > 0 then
-			if IsValid(ladder) then
+		if IsValid(ladder) then
+			local height = ladder:GetTop().z - ladder:GetBottom().z
+			if ladder:GetBottomArea() == fromArea then
 				if not self.ClimbLaddersUp then return -1 end
 				if height < self.ClimbLaddersUpMinHeight then return -1 end
 				if height > self.ClimbLaddersUpMaxHeight then return -1 end
 				local res = self:OnComputePathLadderUp(fromArea, area, ladder)
-				if res >= 0 then cost = cost + dist*res else return -1 end
-			elseif height < self.loco:GetStepHeight() then
-				local res = self:OnComputePathStep(fromArea, area, height)
-				if res >= 0 then cost = cost + dist*res else return -1 end
-			elseif ENABLE_JUMPING and height < self.loco:GetJumpHeight() then
-				local res = self:OnComputePathJump(fromArea, area, height)
-				if res >= 0 then cost = cost + dist*res else return -1 end
-			elseif self.ClimbLedges then
-				if height < self.ClimbLedgesMinHeight then return -1 end
-				if height > self.ClimbLedgesMaxHeight then return -1 end
-				local res = self:OnComputePathLedge(fromArea, area, height)
-				if res >= 0 then cost = cost + dist*res else return -1 end
-			else return -1 end
-		elseif height < 0 then
-			local drop = -height
-			if IsValid(ladder) then
+				if res >= 0 then cost = cost + dist * res else return -1 end
+			else
+				local drop = -height
 				if not self.ClimbLaddersDown then return -1 end
 				if drop < self.ClimbLaddersDownMinHeight then return -1 end
 				if drop > self.ClimbLaddersDownMaxHeight then return -1 end
 				local res = self:OnComputePathLadderDown(fromArea, area, ladder)
-				if res >= 0 then cost = cost + dist*res else return -1 end
-			elseif drop < self.loco:GetDeathDropHeight() then
-				local res = self:OnComputePathDrop(fromArea, area, drop)
-				if res >= 0 then cost = cost + dist*res else return -1 end
-			else return -1 end
+				if res >= 0 then cost = cost + dist * res else return -1 end
+			end
 		else
-			local res = self:OnComputePathFlat(fromArea, area)
-			if res >= 0 then cost = cost + dist*res else return -1 end
+			local height = fromArea:ComputeAdjacentConnectionHeightChange(area)
+			if height > 0 then
+				if height < self.loco:GetStepHeight() then
+					local res = self:OnComputePathStep(fromArea, area, height)
+					if res >= 0 then cost = cost + dist * res else return -1 end
+				elseif self.ClimbLedges then
+					if height < self.ClimbLedgesMinHeight then return -1 end
+					if height > self.ClimbLedgesMaxHeight then return -1 end
+					local res = self:OnComputePathLedge(fromArea, area, height)
+					if res >= 0 then cost = cost + dist * res else return -1 end
+				else return -1 end
+			elseif height < 0 then
+				local drop = -height
+				if drop < self.loco:GetDeathDropHeight() then
+					local res = self:OnComputePathDrop(fromArea, area, drop)
+					if res >= 0 then cost = cost + dist * res else return -1 end
+				else return -1 end
+			else
+				local res = self:OnComputePathFlat(fromArea, area)
+				if res >= 0 then cost = cost + dist * res else return -1 end
+			end
+			if area:IsUnderwater() then
+				local res = self:OnComputePathUnderwater(fromArea, area)
+				if res >= 0 then cost = cost + dist * res else return -1 end
+			end
+			local res = self:OnComputePath(fromArea, area)
+			if res >= 0 then return cost + dist * res else return -1 end
 		end
-		if area:IsUnderwater() then
-			local res = self:OnComputePathUnderwater(fromArea, area)
-			if res >= 0 then cost = cost + dist*res else return -1 end
-		end
-		local res = self:OnComputePath(fromArea, area)
-		if res >= 0 then return cost + dist*res else return -1 end
 	end
 end
 
