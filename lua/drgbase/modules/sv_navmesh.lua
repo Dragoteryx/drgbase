@@ -1,5 +1,3 @@
-if CLIENT then return end
-
 local NAVAREAS_CENTERS = {}
 function navmesh.DrG_GetAreaFromCenter(pos)
 	return NAVAREAS_CENTERS[tostring(pos)]
