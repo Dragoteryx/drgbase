@@ -59,11 +59,6 @@ end
 function entMETA:DrG_TraceHull(vec, data)
 	if not isvector(vec) then vec = Vector(0, 0, 0) end
 	local bound1, bound2 = self:GetCollisionBounds()
-	local scale = self:GetModelScale()
-	if scale > 1 then
-		bound1 = bound1 * (1 + 0.01 * scale)
-		bound2 = bound2 * (1 + 0.01 * scale)
-	end
 	if bound1.z < bound2.z then
 		local temp = bound1
 		bound1 = bound2
