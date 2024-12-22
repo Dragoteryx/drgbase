@@ -444,14 +444,14 @@ if SERVER then
 				if down then
 					pos = ladder:GetPosAtHeight(lastHeight - self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
 					self:SetPos(pos + offset)
-					if ladder:GetBottom().z - pos.z <= 0 then break end
+					if ladder:GetBottom().z >= pos.z then break end
 					local remaining = (ladder:GetBottom().z - pos.z)/self:GetScale()
 					if self:OnClimbing(ladder, remaining, true) then break end
 					if isfunction(callback) and callback(self, ladder, remaining, true) then break end
 				else
 					pos = ladder:GetPosAtHeight(lastHeight + self:GetSpeed()*self:GetScale()*(CurTime()-lastTime))
 					self:SetPos(pos + offset)
-					if ladder:GetTop().z - pos.z <= 0 then break end
+					if ladder:GetTop().z <= pos.z then break end
 					local remaining = (ladder:GetTop().z - pos.z)/self:GetScale()
 					if self:OnClimbing(ladder, remaining, false) then break end
 					if isfunction(callback) and callback(self, ladder, remaining, false) then break end

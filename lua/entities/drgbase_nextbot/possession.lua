@@ -61,7 +61,7 @@ function ENT:PossessorView()
 		elseif isstring(view.bone) then
 			local boneid = self:LookupBone(view.bone)
 			if boneid ~= nil then
-				center = self:GetBonePosition(boneid)
+				origin = self:GetBonePosition(boneid)
 			end
 		else origin = self:WorldSpaceCenter() end
 

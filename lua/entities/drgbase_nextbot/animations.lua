@@ -242,6 +242,7 @@ if SERVER then
 		local previousPos = self:GetPos()
 		local res = self:PlaySequenceAndWait(seq, options.rate, function(self, cycle)
 			local success, vec, angles = self:GetSequenceMovement(seq, previousCycle, cycle)
+			local collided = false
 			if success then
 				if isvector(options.multiply) then
 					vec = Vector(vec.x*options.multiply.x, vec.y*options.multiply.y, vec.z*options.multiply.z)
@@ -258,17 +259,19 @@ if SERVER then
 						self:SetPos(previousPos)
 					else previousPos = self:GetPos() end
 				else
+					collided = true
 					if IsValid(tr.Entity) then
 						self:OnContact(tr.Entity)
 					end
 					if options.stoponcollide then return true
+					elseif options.gravityoncollide then options.gravity = true
 					elseif not options.gravity then
 						self:SetPos(previousPos)
 					end
 				end
 			end
 			previousCycle = cycle
-			if isfunction(callback) then return callback(self, cycle) end
+			if isfunction(callback) then return callback(self, cycle, collided) end
 		end)
 		if not options.gravity then
 			self:SetPos(previousPos)
