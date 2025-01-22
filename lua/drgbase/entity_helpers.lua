@@ -123,15 +123,18 @@ if SERVER then
 			local up = Vector(0, 0, 1)
 			local vec = forward*force.x + right*force.y + up*force.z
 			local phys = ent:GetPhysicsObject()
-			if ent.IsDrGNextbot then
-				ent:LeaveGround()
-				ent:SetVelocity(ent:GetVelocity()+vec)
-			elseif ent.Type == "nextbot" then
+			if ent:IsNextBot() then
 				local jumpHeight = ent.loco:GetJumpHeight()
+				local seq = ent:GetSequence()
+				local rate = ent:GetPlaybackRate()
+				local cycle = ent:GetCycle()
 				ent.loco:SetJumpHeight(1)
 				ent.loco:Jump()
 				ent.loco:SetJumpHeight(jumpHeight)
 				ent.loco:SetVelocity(ent.loco:GetVelocity()+vec)
+				ent:ResetSequence(seq)
+				ent:SetPlaybackRate(rate)
+				ent:SetCycle(cycle)
 			elseif IsValid(phys) and not ent:IsPlayer() then
 				phys:AddVelocity(vec)
 			else ent:SetVelocity(ent:GetVelocity()+vec) end
