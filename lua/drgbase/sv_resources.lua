@@ -1,0 +1,1 @@
+resource.AddFile("materials/drgbase/icon16.png")
