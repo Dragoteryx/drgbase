@@ -1,3 +1,6 @@
+local PrecacheModels = CreateConVar("drgbase_precache_models", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+local PrecacheSounds = CreateConVar("drgbase_precache_sounds", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED})
+
 -- Registry --
 
 function DrGBase.AddNextbotMixins(ENT)
@@ -45,20 +48,24 @@ end
 function DrGBase.AddNextbot(ENT)
 	local class = string.Replace(ENT.Folder, "entities/", "")
 	if ENT.PrintName == nil or ENT.Category == nil then return false end
-	for i, model in ipairs(ENT.Models or {}) do
-		if not isstring(model) then continue end
-		util.PrecacheModel(model)
+	if PrecacheModels:GetBool() then
+		for i, model in ipairs(ENT.Models or {}) do
+			if not isstring(model) then continue end
+			util.PrecacheModel(model)
+		end
 	end
-	for i, sounds in ipairs({
-		ENT.OnSpawnSounds,
-		ENT.OnIdleSounds,
-		ENT.OnDamageSounds,
-		ENT.OnDeathSounds
-	}) do
-		if not istable(sounds) then continue end
-		for h, soundName in ipairs(sounds) do
-			if not isstring(soundName) then continue end
-			util.PrecacheSound(soundName)
+	if PrecacheSounds:GetBool() then
+		for i, sounds in ipairs({
+			ENT.OnSpawnSounds,
+			ENT.OnIdleSounds,
+			ENT.OnDamageSounds,
+			ENT.OnDeathSounds
+		}) do
+			if not istable(sounds) then continue end
+			for h, soundName in ipairs(sounds) do
+				if not isstring(soundName) then continue end
+				util.PrecacheSound(soundName)
+			end
 		end
 	end
 	if CLIENT then
