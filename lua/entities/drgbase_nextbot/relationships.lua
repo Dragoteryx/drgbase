@@ -259,7 +259,6 @@ if SERVER then
 		if ent:IsPlayer() and not ent:Alive() then return true end
 		if ent:IsPlayer() and GetConVar("ai_ignoreplayers"):GetBool() then return true end
 		if ent:IsFlagSet(FL_NOTARGET) then return true end
-		if ent.IsVJBaseSNPC and ent.VJ_NoTarget then return true end
 		if ent.CPTBase_NPC and ent.UseNotarget then return true end
 		if ent:IsNPC() and NPC_STATES_IGNORED[ent:GetNPCState()] then return true end
 		if (ent:IsPlayer() or ent:IsNPC() or ent:IsNextBot()) and ent:Health() <= 0 then return true end
@@ -681,7 +680,7 @@ if SERVER then
 	-- Handlers --
 
 	function ENT:_UpdateNPCRelationship(ent, relationship)
-		if not IsValid(ent) or not ent:IsNPC() or not ent.DrG_SetRelationship then return end
+		if not IsValid(ent) or not ent:IsNPC() or not ent.DrG_SetRelationship or ent.IsVJBaseSNPC then return end
 		if relationship == D_FR then
 			ent:DrG_SetRelationship(self, D_HT)
 		elseif relationship == D_HT and self:IsFrightening() then
@@ -712,13 +711,7 @@ if SERVER then
 	end
 	hook.Add("OnEntityCreated", "DrGBaseNextbotRelationshipsInit", function(ent)
 		ent:DrG_Timer(0, function()
-			if ent.IsVJBaseSNPC and isfunction(ent.DoHardEntityCheck) then
-				local old_DoHardEntityCheck = ent.DoHardEntityCheck
-				ent.DoHardEntityCheck = function(ent, tbl)
-					local entities = old_DoHardEntityCheck(ent, tbl)
-					return table.Merge(entities, DrGBase.GetNextbots())
-				end
-			elseif ent.CPTBase_NPC then
+			if ent.CPTBase_NPC then
 				local old_LocateEnemies = ent.LocateEnemies
 				ent.LocateEnemies = function(ent)
 					local enemy = old_LocateEnemies(ent)

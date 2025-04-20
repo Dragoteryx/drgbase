@@ -170,7 +170,6 @@ function ENT:Initialize()
 			)
 		else self:SetCollisionBounds(self:GetModelBounds()) end
 		self:SetUseType(SIMPLE_USE)
-		self.VJ_AddEntityToSNPCAttackList = true
 		self.vFireIsCharacter = true
 		self._DrGBaseCorReacts = {}
 		self._DrGBaseCorCalls = {}
