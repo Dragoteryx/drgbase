@@ -15,6 +15,7 @@ ENT.RagdollOnDeath = true
 
 -- Stats --
 DrGBase.IncludeFile("status.lua")
+
 ENT.SpawnHealth = 100
 ENT.HealthRegen = 0
 ENT.MinPhysDamage = 10
@@ -23,6 +24,7 @@ ENT.MinFallDamage = 10
 -- AI --
 DrGBase.IncludeFile("ai.lua")
 DrGBase.IncludeFile("patrol.lua")
+
 ENT.BehaviourType = AI_BEHAV_BASE
 ENT.Omniscient = false
 ENT.SpotDuration = 30
@@ -35,6 +37,7 @@ ENT.WatchAfraidOfRange = 750
 
 -- Relationships --
 DrGBase.IncludeFile("relationships.lua")
+
 ENT.DefaultRelationship = D_NU
 ENT.Factions = {}
 ENT.Frightening = false
@@ -45,6 +48,7 @@ ENT.NeutralDamageTolerance = 0.33
 -- Detection --
 DrGBase.IncludeFile("awareness.lua")
 DrGBase.IncludeFile("detection.lua")
+
 ENT.EyeBone = ""
 ENT.EyeOffset = Vector(0, 0, 0)
 ENT.EyeAngle = Angle(0, 0, 0)
@@ -55,8 +59,11 @@ ENT.MaxLuminosity = 1
 ENT.HearingCoefficient = 1
 
 -- Locomotion --
-DrGBase.IncludeFile("locomotion.lua")
-DrGBase.IncludeFile("path.lua")
+if SERVER then
+	DrGBase.IncludeFile("sv_locomotion.lua")
+	DrGBase.IncludeFile("sv_path.lua")
+end
+
 ENT.Acceleration = 1000
 ENT.Deceleration = 1000
 ENT.JumpHeight = 50
@@ -66,6 +73,7 @@ ENT.DeathDropHeight = 200
 
 -- Movements --
 DrGBase.IncludeFile("movements.lua")
+
 ENT.UseWalkframes = false
 ENT.WalkSpeed = 100
 ENT.RunSpeed = 200
@@ -93,6 +101,7 @@ ENT.ClimbOffset = Vector(0, 0, 0)
 
 -- Animations --
 DrGBase.IncludeFile("animations.lua")
+
 ENT.WalkAnimation = ACT_WALK
 ENT.WalkAnimRate = 1
 ENT.RunAnimation = ACT_RUN
@@ -115,6 +124,7 @@ ENT.Footsteps = {}
 
 -- Weapons --
 DrGBase.IncludeFile("weapons.lua")
+
 ENT.UseWeapons = false
 ENT.Weapons = {}
 ENT.DropWeaponOnDeath = false
@@ -122,6 +132,7 @@ ENT.AcceptPlayerWeapons = true
 
 -- Possession --
 DrGBase.IncludeFile("possession.lua")
+
 ENT.PossessionEnabled = false
 ENT.PossessionPrompt = true
 ENT.PossessionCrosshair = false
