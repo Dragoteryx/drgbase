@@ -285,10 +285,11 @@ if SERVER then
 
 	local function ShouldCompute(self, path, pos)
 		if not IsValid(path) then return true end
-		local segments = #path:GetAllSegments()
-		if path:GetAge() >= ComputeDelay:GetFloat()*segments then
-			return path:GetEnd():DistToSqr(pos) > path:GetGoalTolerance()^2
-		else return false end
+		local path_length = path:GetLength()
+		local cursor_pos = path:GetCursorPosition()
+		local remaining_length = path_length - cursor_pos
+		return self._DrGBasePathLastSegment.pos:Distance(pos)
+			> remaining_length / 2
 	end
 	function ENT:FollowPath(pos, tolerance, generator)
 		if isentity(pos) then
@@ -308,7 +309,10 @@ if SERVER then
 			if IsValid(area) then pos = area:GetClosestPointOnArea(pos) or pos end
 			if not IsValid(path) and
 			self:GetRangeSquaredTo(pos) <= path:GetGoalTolerance()^2 then return "reached" end
-			if ShouldCompute(self, path, pos) then path:Compute(self, pos, generator) end
+			if ShouldCompute(self, path, pos) then
+				path:Compute(self, pos, generator)
+				self._DrGBasePathLastSegment = path:LastSegment()
+			end
 			if not IsValid(path) then return "unreachable" end
 			local current = path:GetCurrentGoal()
 			local ledge = self:FindLedge(current.type ~= 2)
