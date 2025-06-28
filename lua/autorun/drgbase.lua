@@ -71,9 +71,15 @@ function DrGBase.IncludeFile(fileName)
 	local explode = string.Explode("[/\\]", fileName, true)
 	local last = explode[#explode]
 	if string.StartWith(last, "sv_") then
-		if SERVER then return IncludeFile(fileName) end
+		if SERVER then 
+			return IncludeFile(fileName) 
+		end
 	elseif string.StartWith(last, "cl_") then
-		if CLIENT then return IncludeFile(fileName) end
+		if SERVER then
+			AddCSLuaFile(fileName)
+		else
+			return IncludeFile(fileName) 
+		end
 	else
 		AddCSLuaFile(fileName)
 		return IncludeFile(fileName)
