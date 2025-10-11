@@ -141,6 +141,11 @@ local EnablePatrol = CreateConVar("drgbase_ai_patrol", "1", {FCVAR_ARCHIVE, FCVA
 
 -- Initialize --
 function ENT:Initialize()
+	
+	-- HACK: Force every entity to have a unique Seed so that math.random can properly work
+	math.randomseed(SysTime()*CurTime())
+	math.random();math.random();math.random()
+
 	if SERVER then
 		if istable(self.Models) and #self.Models > 0 then
 			self:SetModel(self.Models[math.random(#self.Models)])
