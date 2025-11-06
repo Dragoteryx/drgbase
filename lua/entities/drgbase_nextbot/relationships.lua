@@ -521,7 +521,16 @@ if SERVER then
 						break
 					end
 				elseif ent.CPTBase_NPC or ent.IV04NextBot then
-					if string.upper(ent.Faction) == faction then table.insert(relationships, relationship) end
+					if isstring(ent.Faction) and string.upper(ent.Faction) == faction then
+						table.insert(relationships, relationship)
+					elseif istable(ent.Faction) then
+						for i, fac in ipairs(ent.Faction) do
+							if isstring(fac) and string.upper(fac) == faction then
+								table.insert(relationships, relationship)
+								break
+							end
+						end
+					end
 				else
 					local def = DEFAULT_FACTIONS[ent:GetClass()]
 					if def == faction then table.insert(relationships, relationship) end
