@@ -264,6 +264,7 @@ if SERVER then
 		if (ent:IsPlayer() or ent:IsNPC() or ent:IsNextBot()) and ent:Health() <= 0 then return true end
 		if ent.IsDrGNextbot and (ent:IsDown() or ent:IsDead()) then return true end
 		if self:ShouldIgnore(ent) then return true end
+		if ent:IsPlayer() and ent:GetNoDraw() then return true end
 		return self._DrGBaseIgnoredEntities[ent] or false
 	end
 	function ENT:SetIgnored(ent, bool)
