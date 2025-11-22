@@ -92,6 +92,18 @@ function DrGBase.AddNextbot(ENT)
 	return true
 end
 
+hook.Add("SpawnmenuIconMenuOpen", "DrGBaseNextBotSpawnmenuIconMenuOpen", function(menu, icon, type)
+	if type == "npc" then
+		local class = icon:GetSpawnName()
+		local tbl = scripted_ents.Get(class)
+		if tbl and scripted_ents.IsBasedOn(class, "drgbase_nextbot") then
+			if isfunction(tbl.OnSpawnmenuIconMenuOpen) then
+				tbl.OnSpawnmenuIconMenuOpen(nil, menu, icon)
+			end
+		end
+	end
+end)
+
 hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseNextbots", function(pnlContent, tree, node)
 	local list = list.Get("DrGBaseNextbots")
 	local categories = {}
