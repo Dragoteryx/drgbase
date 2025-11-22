@@ -148,7 +148,7 @@ if SERVER then
 		if IsValid(ply) and isfunction(Spawn_NPC) then
 			local ent = Spawn_NPC(ply, args[1], args[2])
 			if IsValid(ent) and ent.IsDrGNextbot then
-				ent:Timer(0.1, function()
+				ent:Timer(0, function()
 					if not IsValid(ply) then return end
 					local possess = ent:Possess(ply)
 					if possess == "ok" then
