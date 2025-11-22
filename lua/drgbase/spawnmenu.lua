@@ -1,11 +1,12 @@
 if SERVER then return end
 
 function DrGBase.GetIcon(name)
-  return list.Get("DrGBaseIcons")[name]
+  return list.GetEntry("DrGBaseIcons", name)
 end
 function DrGBase.SetIcon(name, icon)
-  list.Set("DrGBaseIcons", name, icon)
+  list.Set("ContentCategoryIcons", name, icon)
 end
+
 DrGBase.SetIcon("DrGBase", DrGBase.Icon)
 
 -- Creation Tab --
