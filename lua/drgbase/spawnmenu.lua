@@ -1,7 +1,7 @@
 if SERVER then return end
 
 function DrGBase.GetIcon(name)
-  return list.GetEntry("DrGBaseIcons", name)
+  return list.GetEntry("ContentCategoryIcons", name)
 end
 function DrGBase.SetIcon(name, icon)
   list.Set("ContentCategoryIcons", name, icon)
