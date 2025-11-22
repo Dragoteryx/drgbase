@@ -97,6 +97,16 @@ hook.Add("SpawnmenuIconMenuOpen", "DrGBaseNextBotSpawnmenuIconMenuOpen", functio
 		local class = icon:GetSpawnName()
 		local tbl = scripted_ents.Get(class)
 		if tbl and scripted_ents.IsBasedOn(class, "drgbase_nextbot") then
+			if tbl.PossessionEnabled and tbl.PossessionPrompt then
+				local weapons = icon:GetNPCWeapon()
+				menu:AddOption("Spawn and possess", function()
+					local npc_weapon = GetConVar("gmod_npcweapon"):GetString()
+					local weapon = table.Random(weapons) or npc_weapon
+					RunConsoleCommand("drgbase_cmd_possess_nextbot", class, weapon)
+					surface.PlaySound("ui/buttonclickrelease.wav")
+				end):SetIcon("icon16/controller_add.png")
+			end
+
 			if isfunction(tbl.OnSpawnmenuIconMenuOpen) then
 				tbl.OnSpawnmenuIconMenuOpen(nil, menu, icon)
 			end

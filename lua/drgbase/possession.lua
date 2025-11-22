@@ -144,6 +144,27 @@ if SERVER then
 		end
 	end)
 
+	concommand.Add("drgbase_cmd_possess_nextbot", function(ply, _, args, _)
+		if IsValid(ply) and isfunction(Spawn_NPC) then
+			local ent = Spawn_NPC(ply, args[1], args[2])
+			if IsValid(ent) and ent.IsDrGNextbot then
+				ent:Timer(0.1, function()
+					if not IsValid(ply) then return end
+					local possess = ent:Possess(ply)
+					if possess == "ok" then
+						net.Start("DrGBaseNextbotCanPossess")
+						net.WriteEntity(ent)
+					else
+						net.Start("DrGBaseNextbotCantPossess")
+						net.WriteEntity(ent)
+						net.WriteString(possess)
+					end
+					net.Send(ply)
+				end)
+			end
+		end
+	end)
+
 else
 
 	CreateClientConVar("drgbase_possession_exit", tostring(KEY_E), true, true)
