@@ -45,20 +45,22 @@ hook.Add("StartCommand", "DrGBasePossessionStartCommand", function(ply, cmd)
 			ply:Give("drgbase_possession")
 		end
 		-- lock on entity
-		local lockedOn = possessing:PossessionGetLockedOn()
-		if IsValid(lockedOn) then
-			local origin = possessing:PossessorView()
-			local viewAng = cmd:GetViewAngles()
-			local targetAng = origin:DrG_Direction(lockedOn:WorldSpaceCenter()):Angle()
-			local bone = lockedOn.DrGBase_LockOnBone
-			if isstring(bone) then bone = lockedOn:LookupBone(bone) end
-			if isnumber(bone) then
-				targetAng = origin:DrG_Direction(lockedOn:GetBonePosition(bone)):Angle()
-			end
-			if SERVER then
-				cmd:SetViewAngles(LerpAngle(ply:GetInfoNum("drgbase_possession_lockon_speed", 0.05), viewAng, targetAng))
-			else
-				cmd:SetViewAngles(LerpAngle(GetConVar("drgbase_possession_lockon_speed"):GetFloat(), viewAng, targetAng))
+		if isfunction(possessing.PossessionGetLockedOn) then
+			local lockedOn = possessing:PossessionGetLockedOn()
+			if IsValid(lockedOn) then
+				local origin = possessing:PossessorView()
+				local viewAng = cmd:GetViewAngles()
+				local targetAng = origin:DrG_Direction(lockedOn:WorldSpaceCenter()):Angle()
+				local bone = lockedOn.DrGBase_LockOnBone
+				if isstring(bone) then bone = lockedOn:LookupBone(bone) end
+				if isnumber(bone) then
+					targetAng = origin:DrG_Direction(lockedOn:GetBonePosition(bone)):Angle()
+				end
+				if SERVER then
+					cmd:SetViewAngles(LerpAngle(ply:GetInfoNum("drgbase_possession_lockon_speed", 0.05), viewAng, targetAng))
+				else
+					cmd:SetViewAngles(LerpAngle(GetConVar("drgbase_possession_lockon_speed"):GetFloat(), viewAng, targetAng))
+				end
 			end
 		end
 	elseif SERVER then
