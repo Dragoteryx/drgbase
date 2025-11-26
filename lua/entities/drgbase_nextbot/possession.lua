@@ -77,7 +77,7 @@ function ENT:PossessorView()
 	end
 
 	local tr = self:TraceLine(-self:PossessorNormal() * distance * self:GetModelScale(), {start = origin})
-	return tr.HitPos, self:GetPossessor():EyeAngles()
+	return tr.HitPos, self:GetPossessor():LocalEyeAngles()
 end
 
 function ENT:PossessorTrace(options)
@@ -91,7 +91,7 @@ end
 
 function ENT:PossessorNormal()
 	if not self:IsPossessed() then return end
-	return self:GetPossessor():EyeAngles():Forward()
+	return self:GetPossessor():LocalEyeAngles():Forward()
 end
 
 function ENT:PossessorForward()
@@ -289,6 +289,8 @@ if SERVER then
 		ply:Flashlight(false)
 		ply:AllowFlashlight(false)
 		ply:SetEyeAngles(self:EyeAngles())
+		ply:SetPos(self:GetPos())
+		ply:SetParent(self)
 		self:UpdateEnemy()
 		self:SetNW2Entity("DrGBasePossessionLockedOn", NULL)
 		self:SetNW2Int("DrGBasePossessionView", 1)
@@ -300,6 +302,7 @@ if SERVER then
 		if not self:IsPossessed() then return "not possessed" end
 		local ply = self:GetPossessor()
 		if not self:CanDispossess(ply) then return "not allowed" end
+		ply:SetParent(NULL)
 		if not tobool(ply:GetInfoNum("drgbase_possession_teleport", 0)) then
 			ply:SetPos(ply:GetNW2Vector("DrGBasePrePossessPos"))
 			ply:SetAngles(ply:GetNW2Angle("DrGBasePrePossessAngle"))
