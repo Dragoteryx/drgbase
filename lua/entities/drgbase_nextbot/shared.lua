@@ -298,6 +298,7 @@ function ENT:Think()
 	end
 	if self:IsPossessed() and (SERVER or self:IsPossessedByLocalPlayer()) then
 		local possessor = self:GetPossessor()
+		possessor:SetKeyValue("waterlevel", self:WaterLevel())
 		self:_HandlePossession(false)
 		if CurTime() > self._DrGBasePossessionThinkDelay then
 			local delay = self:PossessionThink(possessor) or 0
