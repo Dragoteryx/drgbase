@@ -43,6 +43,14 @@ function DrGBase.AddNextbotMixins(ENT)
 			return old_TakeDamage(self, dmg, hitgroup)
 		end
 	end
+	if isfunction(ENT.SetupDataTables) then
+		local old_SetupDataTables = ENT.SetupDataTables
+		function ENT:SetupDataTables()
+			local res = old_SetupDataTables(self)
+			self:NetworkVar("Entity", "__DrGBaseSpawnAndPossessPlayer")
+			return res
+		end
+	end
 end
 
 function DrGBase.AddNextbot(ENT)

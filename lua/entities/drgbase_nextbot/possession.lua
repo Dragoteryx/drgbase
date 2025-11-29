@@ -134,6 +134,11 @@ function ENT:_InitPossession()
 			if not IsValid(old) and IsValid(new) then self:OnPossessed(new)
 			elseif IsValid(old) and not IsValid(new) then self:OnDispossessed(old) end
 		end)
+		if self:Get__DrGBaseSpawnAndPossessPlayer() == LocalPlayer() then
+			net.Start("DrGBaseNextbotPossess")
+			net.WriteEntity(self)
+			net.SendToServer()
+		end
 	end
 end
 

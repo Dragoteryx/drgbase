@@ -14,22 +14,9 @@ properties.Add("drgbasepossess", {
 		return true
 	end,
 	Action = function(self, ent)
-		self:MsgStart()
+		net.Start("DrGBaseNextbotPossess")
 		net.WriteEntity(ent)
-		self:MsgEnd()
-	end,
-	Receive = function(self, len, ply)
-		local ent = net.ReadEntity()
-		local possess = ent:Possess(ply)
-		if possess == "ok" then
-			net.Start("DrGBaseNextbotCanPossess")
-			net.WriteEntity(ent)
-		else
-			net.Start("DrGBaseNextbotCantPossess")
-			net.WriteEntity(ent)
-			net.WriteString(possess)
-		end
-		net.Send(ply)
+		net.SendToServer()
 	end
 })
 
@@ -76,6 +63,7 @@ end)
 if SERVER then
 	util.AddNetworkString("DrGBaseNextbotCanPossess")
 	util.AddNetworkString("DrGBaseNextbotCantPossess")
+	util.AddNetworkString("DrGBaseNextbotPossess")
 
 	hook.Add("PlayerUse", "DrGBaseNextbotPossessionDisableUse", function(ply, ent)
 		if ply:DrG_IsPossessing() then return false end
@@ -150,21 +138,23 @@ if SERVER then
 		if IsValid(ply) and isfunction(Spawn_NPC) then
 			local ent = Spawn_NPC(ply, args[1], args[2])
 			if IsValid(ent) and ent.IsDrGNextbot then
-				ent:Timer(0, function()
-					if not IsValid(ply) then return end
-					local possess = ent:Possess(ply)
-					if possess == "ok" then
-						net.Start("DrGBaseNextbotCanPossess")
-						net.WriteEntity(ent)
-					else
-						net.Start("DrGBaseNextbotCantPossess")
-						net.WriteEntity(ent)
-						net.WriteString(possess)
-					end
-					net.Send(ply)
-				end)
+				ent:Set__DrGBaseSpawnAndPossessPlayer(ply)
 			end
 		end
+	end)
+
+	net.Receive("DrGBaseNextbotPossess", function(_, ply)
+		local ent = net.ReadEntity()
+		local possess = ent:Possess(ply)
+		if possess == "ok" then
+			net.Start("DrGBaseNextbotCanPossess")
+			net.WriteEntity(ent)
+		else
+			net.Start("DrGBaseNextbotCantPossess")
+			net.WriteEntity(ent)
+			net.WriteString(possess)
+		end
+		net.Send(ply)
 	end)
 
 else

@@ -210,6 +210,7 @@ function ENT:Initialize()
 end
 function ENT:_BaseInitialize() end
 function ENT:CustomInitialize() end
+function ENT:SetupDataTables() end
 function ENT:_InitModules()
 	if SERVER then
 		self:_InitLocomotion()
