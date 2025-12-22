@@ -6,6 +6,7 @@ ENT.PrintName = "Zombie"
 ENT.Category = "DrGBase"
 ENT.Models = {"models/Zombie/Classic.mdl"}
 ENT.BloodColor = BLOOD_COLOR_GREEN
+ENT.VJ_ID_Undead = true
 
 -- Sounds --
 ENT.OnDamageSounds = {"Zombie.Pain"}
