@@ -129,6 +129,7 @@ function ENT:OnDispossessed() end
 function ENT:_InitPossession()
 	if SERVER then
 		self:SetPossessionEnabled(self.PossessionEnabled)
+		self._DrGBaseMoveDir = Vector(0, 0)
 	else
 		self:SetNW2VarProxy("DrGBasePossessor", function(self, name, old, new)
 			if not IsValid(old) and IsValid(new) then self:OnPossessed(new)
@@ -147,15 +148,19 @@ function ENT:_HandlePossession(cor)
 	local possessor = self:GetPossessor()
 	if cor and self:OnPossession() then return end
 	if cor then
-		local f = possessor:KeyDown(IN_FORWARD)
-		local b = possessor:KeyDown(IN_BACK)
-		local l = possessor:KeyDown(IN_MOVELEFT)
-		local r = possessor:KeyDown(IN_MOVERIGHT)
-		local forward = f and not b
-		local backward = b and not f
-		local right = r and not l
-		local left = l and not r
-		if self.PossessionMovement == POSSESSION_MOVE_8DIR then
+		local forward = self._DrGBaseMoveDir.x > 0
+		local backward = self._DrGBaseMoveDir.x < 0
+		local left = self._DrGBaseMoveDir.y > 0
+		local right = self._DrGBaseMoveDir.y < 0
+		if self.PossessionMovement == POSSESSION_MOVE_ANALOG then
+			self:PossessionFaceForward()
+			if not self._DrGBaseMoveDir:IsZero() then
+				local moveDir = self._DrGBaseMoveDir:GetNormalized()
+				local ang = self:PossessorForward():Angle()
+				moveDir:Rotate(ang)
+				self:Approach(self:GetPos() + moveDir)
+			end
+		elseif self.PossessionMovement == POSSESSION_MOVE_8DIR then
 			self:PossessionFaceForward()
 			if forward then self:PossessionMoveForward()
 			elseif backward then self:PossessionMoveBackward() end
@@ -178,15 +183,19 @@ function ENT:_HandlePossession(cor)
 				self._DrGBasePossLast4DIR = "W"
 			else self._DrGBasePossLast4DIR = "" end
 		elseif self.PossessionMovement == POSSESSION_MOVE_1DIR then
-			local direction = self:GetPos()
-			if forward then direction = direction + self:PossessorForward()
-			elseif backward then direction = direction - self:PossessorForward() end
-			if right then direction = direction + self:PossessorRight()
-			elseif left then direction = direction - self:PossessorRight() end
-			if direction ~= self:GetPos() then self:MoveTowards(direction)
-			else self:PossessionFaceForward() end
+			if self._DrGBaseMoveDir:IsZero() then
+				self:PossessionFaceForward()
+			else
+				local moveDir = self._DrGBaseMoveDir:GetNormalized()
+				local ang = self:PossessorForward():Angle()
+				moveDir:Rotate(ang)
+				self:MoveTowards(self:GetPos() + moveDir)
+			end
 		elseif self.PossessionMovement == POSSESSION_MOVE_CUSTOM then
-			self:PossessionControls(forward, backward, right, left)
+			local moveDir = self._DrGBaseMoveDir:GetNormalized()
+			local ang = self:PossessorForward():Angle()
+			moveDir:Rotate(ang)
+			self:PossessionControls(forward, backward, right, left, moveDir)
 		end
 		if possessor:DrG_ButtonDown(possessor:GetInfoNum("drgbase_possession_climb", KEY_C)) then
 			if self.ClimbLadders and navmesh.IsLoaded() then
@@ -305,6 +314,7 @@ if SERVER then
 			ply:SetAngles(ply:GetNW2Angle("DrGBasePrePossessAngle"))
 			ply:SetEyeAngles(ply:GetNW2Angle("DrGBasePrePossessEyes"))
 		else ply:SetPos(ply:DrG_TraceHull(-self:PossessorForward()*self:Length()).HitPos) end
+		self._DrGBaseMoveDir = Vector(0, 0)
 		self:SetNW2Entity("DrGBasePossessor", NULL)
 		ply:SetNW2Entity("DrGBasePossessing", NULL)
 		ply:SetCollisionGroup(COLLISION_GROUP_PLAYER)

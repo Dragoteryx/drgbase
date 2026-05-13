@@ -37,7 +37,7 @@ ENT.AcceptPlayerWeapons = true
 ENT.PossessionEnabled = true
 ENT.PossessionPrompt = true
 ENT.PossessionCrosshair = true
-ENT.PossessionMovement = POSSESSION_MOVE_8DIR
+ENT.PossessionMovement = POSSESSION_MOVE_ANALOG
 ENT.PossessionViews = {
 	{
 		offset = Vector(0, 30, 20),

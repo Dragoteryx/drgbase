@@ -25,7 +25,9 @@ hook.Add("StartCommand", "DrGBasePossessionStartCommand", function(ply, cmd)
 	if ply:DrG_IsPossessing() then
 		local possessing = ply:DrG_GetPossessing()
 		-- disable movement
-		cmd:ClearMovement()
+		local forward, side = cmd:GetForwardMove(), cmd:GetSideMove()
+		possessing._DrGBaseMoveDir = Vector(forward, -side)
+		-- disable weapon
 		if ply:HasWeapon("drgbase_possession") then
 			cmd:SelectWeapon(ply:GetWeapon("drgbase_possession"))
 		elseif SERVER then

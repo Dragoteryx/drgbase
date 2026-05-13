@@ -36,7 +36,7 @@ ENT.EyeAngle = Angle(0, 0, 0)
 
 -- Possession --
 ENT.PossessionEnabled = true
-ENT.PossessionMovement = POSSESSION_MOVE_8DIR
+ENT.PossessionMovement = POSSESSION_MOVE_ANALOG
 ENT.PossessionCrosshair = true
 ENT.PossessionViews = {
 	{
