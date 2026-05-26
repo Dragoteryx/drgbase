@@ -38,7 +38,9 @@ end
 -- Functions --
 
 function ENT:SelectRandomSequence(anim)
-	return self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
+	local seq = self:SelectWeightedSequenceSeeded(anim, math.random(0, 255))
+	if not isnumber(seq) then seq = -1 end -- idk why but sometimes it returns nil
+	return seq
 end
 
 function ENT:SequenceEvent(seq, cycles, callback, ...)
