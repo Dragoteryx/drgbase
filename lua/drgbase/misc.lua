@@ -40,7 +40,8 @@ if SERVER then
 		["npc_tripmine"] = true,
 		["npc_satchel"] = true,
 		["npc_antlion_grub"] = true,
-		["monster_cockroach"] = true
+		["monster_cockroach"] = true,
+		["obj_vj_bullseye"] = true
 	}
 	local TARGET_WHITELIST = {
 		["replicator_melon"] = true,
