@@ -92,7 +92,8 @@ function DrGBase.AddNextbot(ENT)
 	local nextbot = {
 		Name = ENT.PrintName,
 		Class = class,
-		Category = ENT.Category
+		Category = ENT.Category,
+		SubCategory = ENT.SubCategory or nil
 	}
 	if ENT.Spawnable ~= false then
 		list.Set("NPC", class, nextbot)
@@ -143,13 +144,27 @@ hook.Add("PopulateDrGBaseSpawnmenu", "AddDrGBaseNextbots", function(pnlContent, 
 			self.PropPanel = vgui.Create("ContentContainer", pnlContent)
 			self.PropPanel:SetVisible(false)
 			self.PropPanel:SetTriggerSpawnlistChange(false)
-			for class, ent in SortedPairsByMemberValue(category, "Name") do
-				spawnmenu.CreateContentIcon("npc", self.PropPanel, {
-					nicename	= ent.Name or class,
-					spawnname	= class,
-					material = "entities/"..class..".png",
-					admin	= ent.AdminOnly or false
-				})
+			local subcategories = {}
+			for class, ent in pairs(category) do
+				local subcategory = language.GetPhrase(ent.SubCategory or "")
+				local tab = subcategories[subcategory] or {}
+				tab[class] = ent
+				subcategories[subcategory] = tab
+			end
+			for subcategoryName, subcategory in SortedPairs(subcategories) do
+				if subcategoryName ~= "" then
+					local header = vgui.Create("ContentHeader")
+					header:SetText(subcategoryName)
+					self.PropPanel:Add(header)
+				end
+				for class, ent in SortedPairsByMemberValue(subcategory, "Name") do
+					spawnmenu.CreateContentIcon("npc", self.PropPanel, {
+						nicename	= ent.Name or class,
+						spawnname	= class,
+						material = "entities/"..class..".png",
+						admin	= ent.AdminOnly or false
+					})
+				end
 			end
 		end
 		node.DoClick = function(self)
