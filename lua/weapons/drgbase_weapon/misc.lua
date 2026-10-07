@@ -8,6 +8,7 @@ function SWEP:ShootBullet(damage, num_bullets, aimcone)
 	bullet.Tracer	= 1
 	bullet.Force = damage/10
 	bullet.Damage	= damage
+	bullet.TracerName = self.TracerName or nil
 	bullet.AmmoType = "Pistol"
 	bullet.Callback = function(ent, tr, dmg)
 		dmg:SetAttacker(self.Owner)
