@@ -92,7 +92,8 @@ function DrGBase.AddNextbot(ENT)
 	local nextbot = {
 		Name = ENT.PrintName,
 		Class = class,
-		Category = ENT.Category
+		Category = ENT.Category,
+		SubCategory = ENT.SubCategory or nil
 	}
 	if ENT.Spawnable ~= false then
 		list.Set("NPC", class, nextbot)
