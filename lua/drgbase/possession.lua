@@ -206,16 +206,22 @@ else
 		if name == "CHudCrosshair" and not ply:DrG_Possessing().PossessionCrosshair then return false end
 	end)
 
+	local calcView = { drawviewer = true }
+	local cFrame, cEnt, cOrigin, cAngles
 	hook.Add("CalcView", "DrGBasePossessionCalcView", function(ply, origin, angles, fov, znear, zfar)
 		if not isfunction(ply.DrG_IsPossessing) then return end
-		if not ply:DrG_IsPossessing() then return end
 		local possessing = ply:DrG_Possessing()
+		if not IsValid(possessing) then return end
 		if not isfunction(possessing.PossessorView) then return end
-		local view = {}
-		view.origin, view.angles = possessing:PossessorView()
-		view.fov, view.znear, view.zfar = fov, znear, zfar
-		view.drawviewer = true
-		return view
+		local frame = FrameNumber()
+		if cFrame ~= frame or cEnt ~= possessing then
+			local o, a = possessing:PossessorView()
+			if not o then return end
+			cFrame, cEnt, cOrigin, cAngles = frame, possessing, o, a
+		end
+		calcView.origin, calcView.angles = cOrigin, cAngles
+		calcView.fov, calcView.znear, calcView.zfar = fov, znear, zfar
+		return calcView
 	end)
 
 	hook.Add("ContextMenuOpen", "DrGBasePossessionDisableCMenu", function()
